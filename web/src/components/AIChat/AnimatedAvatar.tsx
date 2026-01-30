@@ -40,72 +40,74 @@ const imgSizeClasses: Record<"sm" | "md" | "lg" | "xl", string> = {
  * - Thinking: 呼吸动画
  * - Typing: 波浪/脉冲效果
  */
-export const AnimatedAvatar = memo(forwardRef<HTMLDivElement, AnimatedAvatarProps>(
-  ({ src, alt, size = "md", isThinking = false, isTyping = false, className, onClick }, ref) => {
-    const [isHovered, setIsHovered] = useState(false);
+export const AnimatedAvatar = memo(
+  forwardRef<HTMLDivElement, AnimatedAvatarProps>(
+    ({ src, alt, size = "md", isThinking = false, isTyping = false, className, onClick }, ref) => {
+      const [isHovered, setIsHovered] = useState(false);
 
-    // 性能优化：仅在有动画状态时应用 will-change
-    const hasAnimation = isThinking || isTyping || isHovered;
+      // 性能优化：仅在有动画状态时应用 will-change
+      const hasAnimation = isThinking || isTyping || isHovered;
 
-    return (
-      <div
-        ref={ref}
-        onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={cn(
-          "relative flex items-center justify-center overflow-hidden cursor-pointer rounded-full transition-all duration-300 ease-out",
-          // 基础样式
-          "shadow-md",
-          // Hover 效果
-          isHovered && "scale-110 shadow-xl",
-          // 思考状态 - 呼吸动画
-          isThinking && "animate-avatar-breathe",
-          // 打字状态 - 脉冲效果
-          isTyping && "animate-avatar-pulse",
-          // 性能优化：仅在动画时启用 GPU 加速
-          hasAnimation && "will-change-transform",
-          // 不同尺寸
-          sizeClasses[size],
-          className
-        )}
-      >
-        {/* 光晕背景层 */}
+      return (
         <div
+          ref={ref}
+          onClick={onClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           className={cn(
-            "absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 opacity-0 transition-opacity duration-300",
-            (isHovered || isThinking || isTyping) && "opacity-100"
+            "relative flex items-center justify-center overflow-hidden cursor-pointer rounded-full transition-all duration-300 ease-out",
+            // 基础样式
+            "shadow-md",
+            // Hover 效果
+            isHovered && "scale-110 shadow-xl",
+            // 思考状态 - 呼吸动画
+            isThinking && "animate-avatar-breathe",
+            // 打字状态 - 脉冲效果
+            isTyping && "animate-avatar-pulse",
+            // 性能优化：仅在动画时启用 GPU 加速
+            hasAnimation && "will-change-transform",
+            // 不同尺寸
+            sizeClasses[size],
+            className,
           )}
-        />
+        >
+          {/* 光晕背景层 */}
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 opacity-0 transition-opacity duration-300",
+              (isHovered || isThinking || isTyping) && "opacity-100",
+            )}
+          />
 
-        {/* 波纹环 - 打字时显示 */}
-        {isTyping && (
-          <>
-            <div className="absolute inset-0 rounded-xl border-2 border-primary/30 animate-avatar-wave" />
-            <div className="absolute inset-0 rounded-xl border-2 border-primary/20 animate-avatar-wave delay-100" />
-            <div className="absolute inset-0 rounded-xl border-2 border-primary/10 animate-avatar-wave delay-200" />
-          </>
-        )}
-
-        {/* 头像图片 */}
-        <img
-          src={src}
-          alt={alt}
-          className={cn(
-            "relative z-10 object-cover rounded-full transition-transform duration-300",
-            imgSizeClasses[size],
-            // Hover 时的 3D 倾斜效果
-            isHovered && "animate-avatar-tilt"
+          {/* 波纹环 - 打字时显示 */}
+          {isTyping && (
+            <>
+              <div className="absolute inset-0 rounded-xl border-2 border-primary/30 animate-avatar-wave" />
+              <div className="absolute inset-0 rounded-xl border-2 border-primary/20 animate-avatar-wave delay-100" />
+              <div className="absolute inset-0 rounded-xl border-2 border-primary/10 animate-avatar-wave delay-200" />
+            </>
           )}
-        />
 
-        {/* 状态指示器 */}
-        {(isThinking || isTyping) && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background animate-pulse" />
-        )}
-      </div>
-    );
-  },
-));
+          {/* 头像图片 */}
+          <img
+            src={src}
+            alt={alt}
+            className={cn(
+              "relative z-10 object-cover rounded-full transition-transform duration-300",
+              imgSizeClasses[size],
+              // Hover 时的 3D 倾斜效果
+              isHovered && "animate-avatar-tilt",
+            )}
+          />
+
+          {/* 状态指示器 */}
+          {(isThinking || isTyping) && (
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background animate-pulse" />
+          )}
+        </div>
+      );
+    },
+  ),
+);
 
 AnimatedAvatar.displayName = "AnimatedAvatar";

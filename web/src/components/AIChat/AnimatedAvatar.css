@@ -5,7 +5,8 @@
    性能优化：使用 transform 和 opacity，避免 layout
    ============================================ */
 @keyframes avatar-breathe {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
@@ -27,7 +28,8 @@
    性能优化：仅 transform，避免 box-shadow
    ============================================ */
 @keyframes avatar-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -105,7 +107,8 @@
    性能优化：使用 transform 而非 top/bottom
    ============================================ */
 @keyframes avatar-float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -122,7 +125,8 @@
    弹跳动画 - 消息发送时
    ============================================ */
 @keyframes avatar-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) scale(1);
   }
   25% {
@@ -151,7 +155,8 @@
 }
 
 @keyframes avatar-breathe-geek {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 0 0 rgba(34, 197, 94, 0);
   }
@@ -166,7 +171,8 @@
 }
 
 @keyframes avatar-pulse-geek {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 0 0 rgba(34, 197, 94, 0);
   }
@@ -182,7 +188,8 @@
 }
 
 @keyframes avatar-breathe-evo {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1) rotate(0deg);
     box-shadow: 0 0 0 rgba(168, 85, 247, 0);
   }
@@ -203,7 +210,8 @@
 }
 
 @keyframes avatar-pulse-evo {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
