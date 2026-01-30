@@ -40,3 +40,19 @@ dist
 
 # Loki logs
 .loki
+
+# Go test & coverage
+coverage.out
+coverage.html
+*.test
+*.prof
+
+# Debug binaries
+__debug_bin*
+
+# Air live reload
+.air.toml
+tmp/
+
+# Qoder
+.qoder/
