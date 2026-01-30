@@ -60,14 +60,12 @@ const ChatMessages = memo(function ChatMessages({
   const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
   const lastScrollTimeRef = useRef(0);
   const isUserScrollingRef = useRef(false);
-  // Phase 1: 追踪上次消息数量，优化滚动触发
-  const lastItemsLengthRef = useRef(0);
+  // Phase 1: 追踪流式内容长度，优化滚动触发
   const lastContentLengthRef = useRef(0);
 
   const scrollToBottomLocked = useCallback(() => {
     if (rafIdRef.current) return;
 
-    const startTime = performance.now();
     rafIdRef.current = requestAnimationFrame(() => {
       rafIdRef.current = null;
 
