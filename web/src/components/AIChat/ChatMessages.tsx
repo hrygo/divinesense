@@ -352,19 +352,9 @@ const MessageBubble = memo(function MessageBubble({
     >
       {/* Avatar */}
       {role === "user" ? (
-        <AnimatedAvatar
-          src="/user-avatar.webp"
-          alt="User"
-          size="md"
-        />
+        <AnimatedAvatar src="/user-avatar.webp" alt="User" size="md" />
       ) : icon?.startsWith("/") ? (
-        <AnimatedAvatar
-          src={icon}
-          alt=""
-          size="md"
-          isThinking={isTyping && isLastAssistant}
-          isTyping={isTyping && isLastAssistant}
-        />
+        <AnimatedAvatar src={icon} alt="" size="md" isThinking={isTyping && isLastAssistant} isTyping={isTyping && isLastAssistant} />
       ) : (
         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm bg-muted">
           <span className="text-lg md:text-xl">{icon || "🤖"}</span>

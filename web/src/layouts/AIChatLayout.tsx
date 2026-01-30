@@ -94,7 +94,7 @@ const AIChatLayoutContent = () => {
     <section
       className={cn(
         "@container w-full h-screen flex flex-col lg:h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950",
-        getBgEffectClass(currentMode)
+        getBgEffectClass(currentMode),
       )}
     >
       {/* Mobile Header */}

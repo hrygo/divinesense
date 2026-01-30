@@ -41,12 +41,7 @@ export function DivineEye({ mode, className }: DivineEyeProps) {
   const modeClasses = getModeClasses();
 
   return (
-    <svg
-      viewBox="0 0 200 200"
-      className={cn("h-8 w-8", className)}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg viewBox="0 0 200 200" className={cn("h-8 w-8", className)} fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         {/* 普通模式渐变 */}
         <linearGradient id="eye_gradient_normal" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -87,9 +82,11 @@ export function DivineEye({ mode, className }: DivineEyeProps) {
         className={cn(
           "transition-all duration-500",
           modeClasses.eye,
-          mode === "geek" ? "stroke-[url(#eye_gradient_geek)]" :
-          mode === "evolution" ? "stroke-[url(#eye_gradient_evolution)]" :
-          "stroke-[url(#eye_gradient_normal)]"
+          mode === "geek"
+            ? "stroke-[url(#eye_gradient_geek)]"
+            : mode === "evolution"
+              ? "stroke-[url(#eye_gradient_evolution)]"
+              : "stroke-[url(#eye_gradient_normal)]",
         )}
         strokeWidth="3"
         fill="none"
@@ -143,9 +140,11 @@ export function DivineEye({ mode, className }: DivineEyeProps) {
         className={cn(
           "transition-all duration-300",
           modeClasses.pupil,
-          mode === "geek" ? "fill-[url(#eye_gradient_geek)]" :
-          mode === "evolution" ? "fill-[url(#eye_gradient_evolution)]" :
-          "fill-[url(#eye_gradient_normal)]"
+          mode === "geek"
+            ? "fill-[url(#eye_gradient_geek)]"
+            : mode === "evolution"
+              ? "fill-[url(#eye_gradient_evolution)]"
+              : "fill-[url(#eye_gradient_normal)]",
         )}
         filter="url(#eye_glow)"
       />
@@ -180,7 +179,7 @@ export function DivineEyeCompact({ mode, className }: DivineEyeCompactProps) {
           "absolute inset-0 rounded-full border-2 transition-all duration-500",
           mode === "geek" && "border-green-500 divine-eye-compact-geek",
           mode === "evolution" && "border-purple-500 divine-eye-compact-evolution",
-          mode === "normal" && "border-cyan-500 divine-eye-compact-normal"
+          mode === "normal" && "border-cyan-500 divine-eye-compact-normal",
         )}
       />
 
@@ -190,7 +189,7 @@ export function DivineEyeCompact({ mode, className }: DivineEyeCompactProps) {
           "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full transition-all duration-300",
           mode === "geek" && "bg-green-500 divine-pupil-compact-geek",
           mode === "evolution" && "bg-purple-500 divine-pupil-compact-evolution",
-          mode === "normal" && "bg-cyan-500 divine-pupil-compact-normal"
+          mode === "normal" && "bg-cyan-500 divine-pupil-compact-normal",
         )}
       />
 

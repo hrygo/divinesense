@@ -437,7 +437,8 @@ body img[src="/logo.webp"] {
 
 /* Keyframes */
 @keyframes logo-breathe-gentle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
     transform: scale(1);
   }
@@ -475,7 +476,8 @@ body img[src="/logo.webp"] {
 }
 
 @keyframes logo-evolution {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.85;
     transform: scale(1) rotate(0deg);
   }

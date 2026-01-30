@@ -173,6 +173,7 @@ export function useChat() {
       // Root cause: @bufbuild/protobuf create() omits default bool values (false)
       // in JSON serialization, but backend expects explicit false for mode routing.
       if (params.evolutionMode && request.evolutionMode === undefined) {
+        // biome-ignore lint/suspicious/noExplicitAny: Protobuf workaround for default bool values
         (request as any).evolutionMode = true;
       }
 

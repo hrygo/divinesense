@@ -103,10 +103,7 @@ function UnifiedChatView({
   };
 
   return (
-    <div className={cn(
-      "w-full h-full flex flex-col relative bg-background",
-      getModeContainerClass(currentMode)
-    )}>
+    <div className={cn("w-full h-full flex flex-col relative bg-background", getModeContainerClass(currentMode))}>
       {/* Desktop Header */}
       {md && (
         <ChatHeader
@@ -307,91 +304,89 @@ const AIChat = () => {
       };
 
       try {
-        await chatHook.stream(streamParams,
-          {
-            onThinking: (msg) => {
-              if (lastAssistantMessageIdRef.current) {
-                // Handle i18n keys from backend (e.g., "ai.geek_mode.thinking")
-                const content = msg.startsWith("ai.") ? t(msg) : msg;
-                updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                  content,
-                });
-              }
-            },
-            onToolUse: (toolName) => {
-              setCapabilityStatus("processing");
-              if (lastAssistantMessageIdRef.current) {
-                updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                  content: toolName,
-                });
-              }
-            },
-            onToolResult: (_result) => {
-              // Tool result received, no action needed
-            },
-            onMemoQueryResult: (result) => {
-              if (_messageId === messageIdRef.current) {
-                setMemoQueryResults((prev) => [...prev, result]);
-                addReferencedMemos(conversationId, result.memos);
-              }
-            },
-            onScheduleQueryResult: (result) => {
-              if (_messageId === messageIdRef.current) {
-                const transformedResult: ScheduleQueryResultData = {
-                  schedules: result.schedules.map((s) => ({
-                    uid: s.uid,
-                    title: s.title,
-                    startTimestamp: Number(s.startTs),
-                    endTimestamp: Number(s.endTs),
-                    allDay: s.allDay,
-                    location: s.location || undefined,
-                    status: s.status,
-                  })),
-                  query: "",
-                  count: result.schedules.length,
-                  timeRangeDescription: result.timeRangeDescription,
-                  queryType: result.queryType,
-                };
-                setScheduleQueryResults((prev) => [...prev, transformedResult]);
-              }
-            },
-            onUIMemoPreview: (data) => {
-              if (_messageId === messageIdRef.current) {
-                uiTools.processEvent({
-                  type: "ui_memo_preview",
-                  data: JSON.stringify(data),
-                  uiType: "ui_memo_preview",
-                  uiData: data,
-                });
-              }
-            },
-            onContent: (content) => {
-              if (lastAssistantMessageIdRef.current) {
-                streamingContentRef.current += content;
-                updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                  content: streamingContentRef.current,
-                });
-              }
-            },
-            onDone: () => {
-              setIsTyping(false);
-              setIsThinking(false);
-              setCapabilityStatus("idle");
-            },
-            onError: (error) => {
-              setIsTyping(false);
-              setIsThinking(false);
-              setCapabilityStatus("idle");
-              console.error("[Parrot Error]", error);
-              if (lastAssistantMessageIdRef.current) {
-                updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                  content: streamingContentRef.current || t("ai.error-generic") || "Sorry, something went wrong. Please try again.",
-                  error: true,
-                });
-              }
-            },
+        await chatHook.stream(streamParams, {
+          onThinking: (msg) => {
+            if (lastAssistantMessageIdRef.current) {
+              // Handle i18n keys from backend (e.g., "ai.geek_mode.thinking")
+              const content = msg.startsWith("ai.") ? t(msg) : msg;
+              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
+                content,
+              });
+            }
           },
-        );
+          onToolUse: (toolName) => {
+            setCapabilityStatus("processing");
+            if (lastAssistantMessageIdRef.current) {
+              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
+                content: toolName,
+              });
+            }
+          },
+          onToolResult: (_result) => {
+            // Tool result received, no action needed
+          },
+          onMemoQueryResult: (result) => {
+            if (_messageId === messageIdRef.current) {
+              setMemoQueryResults((prev) => [...prev, result]);
+              addReferencedMemos(conversationId, result.memos);
+            }
+          },
+          onScheduleQueryResult: (result) => {
+            if (_messageId === messageIdRef.current) {
+              const transformedResult: ScheduleQueryResultData = {
+                schedules: result.schedules.map((s) => ({
+                  uid: s.uid,
+                  title: s.title,
+                  startTimestamp: Number(s.startTs),
+                  endTimestamp: Number(s.endTs),
+                  allDay: s.allDay,
+                  location: s.location || undefined,
+                  status: s.status,
+                })),
+                query: "",
+                count: result.schedules.length,
+                timeRangeDescription: result.timeRangeDescription,
+                queryType: result.queryType,
+              };
+              setScheduleQueryResults((prev) => [...prev, transformedResult]);
+            }
+          },
+          onUIMemoPreview: (data) => {
+            if (_messageId === messageIdRef.current) {
+              uiTools.processEvent({
+                type: "ui_memo_preview",
+                data: JSON.stringify(data),
+                uiType: "ui_memo_preview",
+                uiData: data,
+              });
+            }
+          },
+          onContent: (content) => {
+            if (lastAssistantMessageIdRef.current) {
+              streamingContentRef.current += content;
+              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
+                content: streamingContentRef.current,
+              });
+            }
+          },
+          onDone: () => {
+            setIsTyping(false);
+            setIsThinking(false);
+            setCapabilityStatus("idle");
+          },
+          onError: (error) => {
+            setIsTyping(false);
+            setIsThinking(false);
+            setCapabilityStatus("idle");
+            console.error("[Parrot Error]", error);
+            if (lastAssistantMessageIdRef.current) {
+              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
+                content: streamingContentRef.current || t("ai.error-generic") || "Sorry, something went wrong. Please try again.",
+                error: true,
+              });
+            }
+          },
+        });
       } catch (error) {
         setIsTyping(false);
         setIsThinking(false);

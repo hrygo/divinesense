@@ -17,30 +17,28 @@
 // Phase 1
 // export { default as StreamingCodeBlock } from "./StreamingCodeBlock";
 
-// Phase 2
-export { default as StreamingMarkdown } from "./StreamingMarkdown";
-export {
-  default as useStreamingStateMachine,
-  StreamingStateIndicator,
-  isStreamingState,
-  isToolUseState,
-  isDoneState,
-  isErrorState,
-} from "./hooks/useStreamingStateMachine";
-
-// Phase 3
-export { useIntentPrediction } from "@/hooks/useIntentPrediction";
-export { default as MultiStepWizard } from "./MultiStepWizard";
-export { default as PersistentToolContainer } from "./PersistentToolContainer";
-
-// 类型导出
-export type { StreamingState } from "./hooks/useStreamingStateMachine";
 export type {
   IntentPrediction,
   SuggestedAction,
 } from "@/hooks/useIntentPrediction";
+// Phase 3
+export { useIntentPrediction } from "@/hooks/useIntentPrediction";
+// 类型导出
+export type { StreamingState } from "./hooks/useStreamingStateMachine";
+export {
+  default as useStreamingStateMachine,
+  isDoneState,
+  isErrorState,
+  isStreamingState,
+  isToolUseState,
+  StreamingStateIndicator,
+} from "./hooks/useStreamingStateMachine";
 export type {
+  MultiStepWizardProps,
   WizardStep,
   WizardStepProps,
-  MultiStepWizardProps,
 } from "./MultiStepWizard";
+export { default as MultiStepWizard } from "./MultiStepWizard";
+export { default as PersistentToolContainer } from "./PersistentToolContainer";
+// Phase 2
+export { default as StreamingMarkdown } from "./StreamingMarkdown";

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
-import { Routes } from "@/router";
 import { cn } from "@/lib/utils";
+import { Routes } from "@/router";
 import type { AIMode } from "@/types/aichat";
 
 interface RouteHeaderImageProps {
@@ -53,10 +53,7 @@ const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
     <img
       src={headerSrc}
       alt="Page Header"
-      className={cn(
-        "h-8 w-auto object-contain select-none opacity-90 dark:opacity-100",
-        getAnimationClass(mode)
-      )}
+      className={cn("h-8 w-auto object-contain select-none opacity-90 dark:opacity-100", getAnimationClass(mode))}
     />
   );
 };

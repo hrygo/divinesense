@@ -39,13 +39,7 @@ export interface MultiStepWizardProps {
   className?: string;
 }
 
-const MultiStepWizard = memo(function MultiStepWizard({
-  steps,
-  initialData = {},
-  onComplete,
-  onCancel,
-  className,
-}: MultiStepWizardProps) {
+const MultiStepWizard = memo(function MultiStepWizard({ steps, initialData = {}, onComplete, onCancel, className }: MultiStepWizardProps) {
   const { t } = useTranslation();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepData, setStepData] = useState<Record<string, unknown>>(initialData);

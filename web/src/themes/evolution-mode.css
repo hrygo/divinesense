@@ -330,7 +330,8 @@
    Evolution Mode Animations (简化版)
    ============================================================ */
 @keyframes evo-bio-grow {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.08;
   }
@@ -343,7 +344,8 @@
 /* 删除 evo-particles-float，不再使用 */
 
 @keyframes evo-cell-divide {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.5);
   }
@@ -354,7 +356,8 @@
 }
 
 @keyframes evo-breathe {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.15;
     transform: scale(1);
   }
@@ -367,7 +370,8 @@
 /* 删除 evo-vine-grow，不再使用 */
 
 @keyframes evo-float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -493,7 +497,8 @@
 }
 
 @keyframes evo-flow-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.1;
     transform: scale(1);
   }

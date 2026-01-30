@@ -4,6 +4,7 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
+import { ParrotAgentType } from "@/types/parrot";
 import TypingCursor from "./TypingCursor";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
@@ -11,7 +12,7 @@ type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 interface StreamingMarkdownProps {
   content: string;
   isStreaming?: boolean;
-  parrotId?: string;
+  parrotId?: ParrotAgentType;
   className?: string;
   enableTypingCursor?: boolean;
   onContentChange?: (complete: string, streaming: string) => void;
@@ -141,7 +142,7 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
           <span>{streamingPart}</span>
           {enableTypingCursor && (
             <span className="ml-0.5">
-              <TypingCursor active={true} parrotId={parrotId as any} variant="cursor" />
+              <TypingCursor active={true} parrotId={parrotId} variant="cursor" />
             </span>
           )}
         </span>
@@ -150,7 +151,7 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
       {/* 流式输出中但无新内容时显示光标 */}
       {isStreaming && !streamingPart && enableTypingCursor && (
         <span className="ml-1">
-          <TypingCursor active={true} parrotId={parrotId as any} variant="cursor" />
+          <TypingCursor active={true} parrotId={parrotId} variant="cursor" />
         </span>
       )}
     </div>

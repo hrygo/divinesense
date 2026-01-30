@@ -120,24 +120,14 @@ export const PersistentToolContainer = memo(function PersistentToolContainer({
       {sortedTools
         .filter((tool) => pinnedToolIds.has(tool.id))
         .map((tool) => (
-          <PinnedToolCard
-            key={tool.id}
-            tool={tool}
-            onDismiss={() => handleManualDismiss(tool.id)}
-            onUnpin={() => togglePin(tool.id)}
-          />
+          <PinnedToolCard key={tool.id} tool={tool} onDismiss={() => handleManualDismiss(tool.id)} onUnpin={() => togglePin(tool.id)} />
         ))}
 
       {/* 普通工具区域 */}
       {sortedTools
         .filter((tool) => !pinnedToolIds.has(tool.id))
         .map((tool) => (
-          <ToolCardWithPin
-            key={tool.id}
-            tool={tool}
-            onDismiss={() => handleDismiss(tool.id)}
-            onPin={() => togglePin(tool.id)}
-          />
+          <ToolCardWithPin key={tool.id} tool={tool} onDismiss={() => handleDismiss(tool.id)} onPin={() => togglePin(tool.id)} />
         ))}
 
       {children}
