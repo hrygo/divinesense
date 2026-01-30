@@ -225,8 +225,8 @@ func (h *ParrotHandler) handleEvolutionMode(
 	// Generate session ID for evolution (must be valid UUID for Claude Code CLI)
 	// Using user-specific namespace to isolate Evolution sessions from Geek sessions
 	// 使用用户特定的命名空间隔离 Evolution 和 Geek 会话
-	// Format: 00000000-0000-0000-0000-<user_id_last_4_hex>
-	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%04x", req.UserID))
+	// Format: 00000000-0000-0000-0000-<user_id_padded_to_12_hex>
+	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", req.UserID))
 	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationID))).String()
 
 	// Create EvolutionParrot (pass store for admin verification)
