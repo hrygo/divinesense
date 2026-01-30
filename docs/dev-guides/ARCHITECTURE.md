@@ -106,6 +106,7 @@ divinesense/
 | `SCHEDULE` | 金刚 | `schedule_parrot_v2.go` | 金刚 | 日程创建和管理 |
 | `AMAZING` | 惊奇 | `amazing_parrot.go` | 惊奇 | 综合助理（笔记 + 日程） |
 | `GEEK` | 极客 | `geek_parrot.go` | 极客 | Claude Code CLI 通信层（零 LLM） |
+| `EVOLUTION` | 进化 | `evolution_parrot.go` | 进化 | 自我进化能力（源代码修改） |
 
 ### 代理路由器
 
@@ -114,7 +115,11 @@ divinesense/
 ChatRouter 实现**三层**意图分类系统：
 
 ```
-用户输入 → GeekMode? ─Yes→ GeekParrot（Claude Code CLI）
+用户输入 → EvolutionMode? ─Yes→ EvolutionParrot（自我进化）
+                  │
+                  No
+                  ↓
+           GeekMode? ─Yes→ GeekParrot（Claude Code CLI）
                   │
                   No
                   ↓
@@ -139,8 +144,15 @@ ChatRouter 实现**三层**意图分类系统：
            路由结果
 ```
 
+**EvolutionMode 最高优先级路由**：
+- 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
+- EvolutionParrot 允许 DivineSense 修改自己的源代码
+- 严格安全约束 + 强制 PR 审查
+- 仅限管理员使用
+- 实现：`server/router/api/v1/ai/handler.go` 中的 `handleEvolutionMode()`
+
 **GeekMode 优先路由**：
-- 当 `GeekMode=true` 时，**绕过所有路由**，直接创建 GeekParrot
+- 当 `GeekMode=true` 时（且 EvolutionMode=false），**绕过所有路由**，直接创建 GeekParrot
 - GeekParrot 是纯通信层，不经过 LLM 处理
 - 零延迟，直接调用 Claude Code CLI
 - 实现：`server/router/api/v1/ai/handler.go` 中的 `handleGeekMode()`
