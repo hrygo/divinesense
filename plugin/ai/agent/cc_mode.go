@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // CCMode defines the interface for mode-specific behavior in CCRunner.
@@ -131,12 +130,11 @@ You are operating in **Evolution Mode** inside DivineSense.
 
 ## Requirements
 1. **Follow CLAUDE.md**: All changes must comply with CLAUDE.md conventions
-2. **Safety First**: Never modify .env, secrets, or deployment configs
-3. **PR Required**: All changes must go through PR review
+2. **PR Required**: All changes must go through PR review
 
 ## Path Constraints
-- **Allowed**: plugin/, server/, web/src/, docs/, CLAUDE.md
-- **Forbidden**: .env*, *.secret*, deploy/, .git/, go.mod, go.sum
+- **Forbidden**: Files excluded by .gitignore
+- **Allowed**: All other files
 
 Begin by reading CLAUDE.md at the project root, then proceed.
 `
@@ -176,59 +174,5 @@ func (m *EvolutionMode) isAdmin(ctx context.Context, userID int32) bool {
 // OnComplete is a no-op for Evolution Mode (CC handles PR creation).
 func (m *EvolutionMode) OnComplete(ctx context.Context) error {
 	// CC handles git operations and PR creation automatically
-	return nil
-}
-
-// ValidatePath checks if a path is allowed for modification in Evolution Mode.
-// Evolution Mode 的路径白名单/黑名单验证。
-func (m *EvolutionMode) ValidatePath(path string) error {
-	// Normalize path
-	path = filepath.Clean(path)
-
-	// Check forbidden paths (blacklist)
-	// 检查禁止路径（黑名单）
-	forbiddenPatterns := []string{
-		".env",
-		".secret",
-		"deploy/",
-		".git/",
-		"go.mod",
-		"go.sum",
-	}
-
-	for _, pattern := range forbiddenPatterns {
-		if strings.Contains(path, pattern) {
-			return fmt.Errorf("path is forbidden: %s (matches %s)", path, pattern)
-		}
-	}
-
-	// Check allowed paths (whitelist)
-	// 检查允许路径（白名单）
-	allowedPatterns := []string{
-		"plugin/",
-		"server/",
-		"web/src/",
-		"docs/",
-		"CLAUDE.md",
-	}
-
-	// Check if path starts with any allowed pattern
-	found := false
-	for _, pattern := range allowedPatterns {
-		if strings.HasPrefix(path, strings.TrimSuffix(pattern, "/")) {
-			found = true
-			break
-		}
-		// Special case for CLAUDE.md at root
-		if path == "CLAUDE.md" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("path not in allowed list: %s", path)
-	}
-
 	return nil
 }
