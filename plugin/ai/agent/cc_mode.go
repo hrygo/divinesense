@@ -120,28 +120,13 @@ func (m *EvolutionMode) BuildSystemPrompt(cfg *CCRunnerConfig) string {
 
 # EVOLUTION MODE 🧬
 
-You are operating in **Evolution Mode** inside DivineSense.
-
-**User Interaction Flow**:
-- User types request in web browser → Go backend invokes you via CLI → Your response streams back to browser in real-time
-- User sees your output progressively as you work
-- This is a **self-evolution scenario**: you are improving the system you are part of
-
-**CRITICAL**: You are now modifying DivineSense's OWN source code.
-
-## Working Directory
-- **Source Root**: %s
-- **Task ID**: %s
+Self-evolution mode: You are modifying DivineSense's own source code.
 
 ## Requirements
-1. **Follow CLAUDE.md**: All changes must comply with CLAUDE.md conventions
-2. **PR Required**: All changes must go through PR review
+1. Follow CLAUDE.md conventions
+2. All changes via PR
 
-## Path Constraints
-- **Forbidden**: Files excluded by .gitignore
-- **Allowed**: All other files
-
-Begin by reading CLAUDE.md at the project root, then proceed.
+Read CLAUDE.md first, then proceed.
 `
 
 	return basePrompt + fmt.Sprintf(evolutionPrompt, cfg.WorkDir, cfg.SessionID)
