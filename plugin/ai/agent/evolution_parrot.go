@@ -16,15 +16,15 @@ import (
 // strict safety constraints and with mandatory PR review.
 // 进化模式允许 DivineSense 在严格的安全约束下修改自己的源代码，并强制进行 PR 审查。
 type EvolutionParrot struct {
-	runner       *CCRunner
-	mode         *EvolutionMode
-	workDir      string
-	sessionID    string
-	userID       int32
-	deviceCtx    string
-	gitService   *GitService
-	taskID       string
-	initialized  bool
+	runner      *CCRunner
+	mode        *EvolutionMode
+	workDir     string
+	sessionID   string
+	userID      int32
+	deviceCtx   string
+	gitService  *GitService
+	taskID      string
+	initialized bool
 }
 
 // NewEvolutionParrot creates a new EvolutionParrot instance.

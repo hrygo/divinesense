@@ -250,8 +250,6 @@ func TestCreatePRRequest(t *testing.T) {
 	req := &CreatePRRequest{
 		HeadBranch: "evolution/test",
 		BaseBranch: "main",
-		Title:      "Test PR",
-		Body:       "Test body",
 	}
 
 	if req.HeadBranch != "evolution/test" {
@@ -266,7 +264,6 @@ func TestCreatePRRequest(t *testing.T) {
 // TestCreatePRResponse tests the response structure.
 func TestCreatePRResponse(t *testing.T) {
 	resp := &CreatePRResponse{
-		URL:    "https://github.com/test/repo/pull/1",
 		Number: 1,
 		State:  "open",
 	}

@@ -214,7 +214,7 @@ func (h *ParrotHandler) handleEvolutionMode(
 	}
 
 	// Generate session ID for evolution
-	sessionID := fmt.Sprintf("evolution_%d_%s", req.ConversationID, req.UserID)
+	sessionID := fmt.Sprintf("evolution_%d_%d", req.ConversationID, req.UserID)
 
 	// Create EvolutionParrot
 	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID)

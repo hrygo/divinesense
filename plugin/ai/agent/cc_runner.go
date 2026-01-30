@@ -30,12 +30,12 @@ type CCRunner struct {
 // CCRunnerConfig defines mode-specific configuration for CCRunner execution.
 // CCRunnerConfig 定义 CCRunner 执行的模式特定配置。
 type CCRunnerConfig struct {
-	Mode          string   // "geek" | "evolution"
-	WorkDir       string   // Working directory for CLI
-	SessionID     string   // Session identifier for persistence
-	UserID        int32    // User ID for logging/context
-	SystemPrompt  string   // Mode-specific system prompt
-	DeviceContext string   // Device/browser context JSON
+	Mode          string // "geek" | "evolution"
+	WorkDir       string // Working directory for CLI
+	SessionID     string // Session identifier for persistence
+	UserID        int32  // User ID for logging/context
+	SystemPrompt  string // Mode-specific system prompt
+	DeviceContext string // Device/browser context JSON
 
 	// Evolution Mode specific
 	// 进化模式专用

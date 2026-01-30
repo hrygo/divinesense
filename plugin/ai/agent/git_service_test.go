@@ -321,8 +321,8 @@ func TestGitStatus_HasFile(t *testing.T) {
 	}
 
 	tests := []struct {
-		file    string
-		want    bool
+		file string
+		want bool
 	}{
 		{"file1.go", true},
 		{"file2.go", true},
