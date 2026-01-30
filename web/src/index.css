@@ -415,140 +415,80 @@
 }
 
 /* ============================================================
-   神识之眼 - Divine Eye Animations
+   神识之眼 Logo 动效 - Divine Eye Logo Animations
    ============================================================ */
 
 /* 普通模式 - 柔和呼吸 */
-.divine-eye-normal {
-  animation: divine-breathe-normal 4s ease-in-out infinite;
+.divine-logo-normal {
+  animation: logo-breathe 4s ease-in-out infinite;
 }
 
-.divine-pupil-normal {
-  animation: divine-pupil-pulse 3s ease-in-out infinite;
-}
-
-.divine-eye-compact-normal {
-  animation: divine-compact-breathe 3s ease-in-out infinite;
-}
-
-.divine-pupil-compact-normal {
-  animation: divine-compact-pupil 2.5s ease-in-out infinite;
-}
-
-/* 极客模式 - 数字脉冲 */
-.divine-eye-geek {
-  animation: divine-pulse-geek 2s steps(4) infinite;
-}
-
-.divine-pupil-geek {
-  animation: divine-pupil-glitch 4s ease-in-out infinite;
-}
-
-.divine-rays-geek line {
-  animation: divine-ray-scan 3s linear infinite;
-}
-
-.divine-eye-compact-geek {
-  animation: divine-compact-geek 1.5s steps(3) infinite;
-}
-
-.divine-pupil-compact-geek {
-  animation: divine-compact-geek-pupil 3s ease-in-out infinite;
+/* 极客模式 - 数字脉冲/故障效果 */
+.divine-logo-geek {
+  animation: logo-glitch 3s steps(3) infinite;
 }
 
 /* 进化模式 - 有机脉动 */
-.divine-eye-evolution {
-  animation: divine-evolution-breathe 3.5s ease-in-out infinite;
-}
-
-.divine-pupil-evolution {
-  animation: divine-pupil-evolve 4s ease-in-out infinite;
-}
-
-.divine-rays-evolution path {
-  animation: divine-tendril-grow 5s ease-in-out infinite alternate;
-}
-
-.divine-eye-compact-evolution {
-  animation: divine-compact-evolution 3s ease-in-out infinite;
-}
-
-.divine-pupil-compact-evolution {
-  animation: divine-compact-evolution-pupil 3.5s ease-in-out infinite;
+.divine-logo-evolution {
+  animation: logo-evolution 3.5s ease-in-out infinite;
 }
 
 /* Keyframes */
-@keyframes divine-breathe-normal {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+@keyframes logo-breathe {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
+  }
 }
 
-@keyframes divine-pupil-pulse {
-  0%, 100% { r: 25; }
-  50% { r: 28; }
+@keyframes logo-glitch {
+  0% {
+    opacity: 0.9;
+    transform: translateX(0);
+    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(34, 197, 94, 0.4));
+  }
+  33% {
+    opacity: 1;
+    transform: translateX(-1px);
+    filter: hue-rotate(10deg) drop-shadow(0 0 6px rgba(34, 197, 94, 0.7));
+  }
+  66% {
+    opacity: 0.95;
+    transform: translateX(1px);
+    filter: hue-rotate(-5deg) drop-shadow(0 0 4px rgba(34, 197, 94, 0.5));
+  }
+  100% {
+    opacity: 0.9;
+    transform: translateX(0);
+    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(34, 197, 94, 0.4));
+  }
 }
 
-@keyframes divine-compact-breathe {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.08); }
-}
-
-@keyframes divine-compact-pupil {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.15); }
-}
-
-@keyframes divine-pulse-geek {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes divine-pupil-glitch {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.1) translateX(-2px); }
-  50% { transform: scale(0.95) translateX(2px); }
-  75% { transform: scale(1.05); }
-}
-
-@keyframes divine-ray-scan {
-  0% { opacity: 0.2; transform-origin: 100px 100px; }
-  50% { opacity: 0.6; }
-  100% { opacity: 0.2; }
-}
-
-@keyframes divine-compact-geek {
-  0%, 66% { opacity: 0.5; }
-  33% { opacity: 1; }
-}
-
-@keyframes divine-compact-geek-pupil {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  33% { transform: translate(-50%, -50%) scale(0.9); }
-  66% { transform: translate(-50%, -50%) scale(1.1); }
-}
-
-@keyframes divine-evolution-breathe {
-  0%, 100% { opacity: 0.5; transform: scale(1) rotate(0deg); }
-  50% { opacity: 0.9; transform: scale(1.08) rotate(5deg); }
-}
-
-@keyframes divine-pupil-evolve {
-  0%, 100% { transform: scale(1); filter: hue-rotate(0deg); }
-  50% { transform: scale(1.15); filter: hue-rotate(20deg); }
-}
-
-@keyframes divine-tendril-grow {
-  0% { opacity: 0.3; transform: scaleX(1) scaleY(1); }
-  100% { opacity: 0.6; transform: scaleX(1.2) scaleY(1.1); }
-}
-
-@keyframes divine-compact-evolution {
-  0%, 100% { opacity: 0.5; transform: scale(1) rotate(0deg); }
-  50% { opacity: 0.9; transform: scale(1.1) rotate(10deg); }
-}
-
-@keyframes divine-compact-evolution-pupil {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  33% { transform: translate(-50%, -50%) scale(0.95) rotate(-15deg); }
-  66% { transform: translate(-50%, -50%) scale(1.1) rotate(15deg); }
+@keyframes logo-evolution {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1) rotate(0deg);
+    filter: hue-rotate(0deg) drop-shadow(0 0 4px rgba(188, 19, 254, 0.4));
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.03) rotate(2deg);
+    filter: hue-rotate(15deg) drop-shadow(0 0 10px rgba(188, 19, 254, 0.6));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06) rotate(0deg);
+    filter: hue-rotate(30deg) drop-shadow(0 0 12px rgba(77, 77, 255, 0.7));
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.03) rotate(-2deg);
+    filter: hue-rotate(15deg) drop-shadow(0 0 10px rgba(77, 77, 255, 0.6));
+  }
 }

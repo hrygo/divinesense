@@ -120,7 +120,7 @@ const Review = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="w-full max-w-[100rem] mx-auto px-4 py-6 space-y-6">
       {/* Header - Hidden on Mobile */}
       {sm && (
         <div className="flex items-center justify-between">

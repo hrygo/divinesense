@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType } from "@/types/capability";
-import { DivineEyeCompact } from "./DivineEye";
 import { ModeCycleButton } from "./ModeCycleButton";
 
 interface ChatHeaderProps {
@@ -129,14 +128,18 @@ export function ChatHeader({
     >
       {/* Left Section */}
       <div className="flex items-center gap-2.5">
-        {/* 神识之眼 - 模式感知动态 logo */}
-        <DivineEyeCompact mode={currentMode} className="shrink-0" />
-
+        {/* Avatar with mode-specific border */}
+        <div
+          className={cn("w-9 h-9 flex items-center justify-center rounded-lg transition-all", modeStyle.avatarBorder, modeStyle.avatarBg)}
+        >
+          <img src="/assistant-avatar.webp" alt={assistantName} className="h-9 w-auto object-contain" />
+        </div>
         <div className="flex flex-col">
           <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>{assistantName}</h1>
           {/* Status */}
           {actionDescription ? (
-            <span className={cn("text-xs", modeStyle.statusText)}>
+            <span className={cn("text-xs flex items-center gap-1.5", modeStyle.statusText)}>
+              {currentMode !== "normal" && <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", modeStyle.statusDot)} />}
               {actionDescription}
             </span>
           ) : (

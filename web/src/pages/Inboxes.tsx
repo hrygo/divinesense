@@ -32,7 +32,7 @@ const Inboxes = () => {
   const archivedCount = allNotifications.filter((n) => n.status === UserNotification_Status.ARCHIVED).length;
 
   return (
-    <section className="@container w-full max-w-5xl min-h-full flex flex-col justify-start items-center sm:pt-3 md:pt-6 pb-8">
+    <section className="@container w-full max-w-[100rem] min-h-full flex flex-col justify-start items-center sm:pt-3 md:pt-6 pb-8">
       <div className="w-full px-4 sm:px-6">
         <div className="w-full border border-border flex flex-col justify-start items-start rounded-xl bg-background text-foreground overflow-hidden">
           {/* Header - Hidden on Mobile */}

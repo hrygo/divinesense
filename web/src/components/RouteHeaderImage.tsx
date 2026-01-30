@@ -1,8 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { Routes } from "@/router";
+import { cn } from "@/lib/utils";
+import type { AIMode } from "@/types/aichat";
 
-const RouteHeaderImage = () => {
+interface RouteHeaderImageProps {
+  mode?: AIMode;
+}
+
+const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
   const location = useLocation();
   const { i18n } = useTranslation();
   const path = location.pathname;
@@ -31,7 +37,28 @@ const RouteHeaderImage = () => {
 
   const headerSrc = `/headers/header-${headerName}${suffix}.svg`;
 
-  return <img src={headerSrc} alt="Page Header" className="h-8 w-auto object-contain select-none opacity-90 dark:opacity-100" />;
+  // 根据模式应用动效
+  const getAnimationClass = (modeParam: AIMode) => {
+    switch (modeParam) {
+      case "geek":
+        return "divine-logo-geek";
+      case "evolution":
+        return "divine-logo-evolution";
+      default:
+        return "divine-logo-normal";
+    }
+  };
+
+  return (
+    <img
+      src={headerSrc}
+      alt="Page Header"
+      className={cn(
+        "h-8 w-auto object-contain select-none opacity-90 dark:opacity-100",
+        getAnimationClass(mode)
+      )}
+    />
+  );
 };
 
 export default RouteHeaderImage;

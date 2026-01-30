@@ -64,9 +64,9 @@ const Schedule = () => {
   };
 
   return (
-    <div className="w-full h-full flex overflow-hidden">
+    <div className="w-full max-w-[100rem] mx-auto h-full flex overflow-hidden">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Header with View Tabs and Search (desktop) */}
         <div className="hidden lg:flex flex-none px-4 py-3 border-b border-border/50 overflow-hidden">
           <div className="flex items-center justify-between gap-4 w-full">

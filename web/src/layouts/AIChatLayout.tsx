@@ -2,7 +2,6 @@ import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AIChatSidebar } from "@/components/AIChat/AIChatSidebar";
-import { DivineEyeCompact } from "@/components/AIChat/DivineEye";
 import { ModeCycleButton } from "@/components/AIChat/ModeCycleButton";
 import { ModeThemeProvider } from "@/components/AIChat/ModeThemeProvider";
 import NavigationDrawer from "@/components/NavigationDrawer";
@@ -122,15 +121,13 @@ const AIChatLayoutContent = () => {
 
         {/* Center - Title with mode-specific styling */}
         <div className={cn("flex items-center gap-2", modeStyles.monoFont && "font-mono")}>
-          {/* Mode indicator - 神识之眼替代呼吸灯小点 */}
-          <DivineEyeCompact mode={currentMode} className="sm:hidden" />
           {isSpecialMode && (
-            <span className={cn("hidden sm:flex items-center gap-1 text-xs", modeStyles.iconColor)}>
+            <span className={cn("flex items-center gap-1 text-xs", modeStyles.iconColor)}>
               <span className={cn("w-2 h-2 rounded-full animate-pulse", modeStyles.dotColor)} />
-              <span>{modeStyles.modeLabel}</span>
+              <span className="hidden sm:inline">{modeStyles.modeLabel}</span>
             </span>
           )}
-          <RouteHeaderImage />
+          <RouteHeaderImage mode={currentMode} />
         </div>
 
         {/* Right - Mode Toggle + Sidebar Toggle */}

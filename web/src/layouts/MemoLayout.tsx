@@ -80,7 +80,7 @@ const MemoLayout = () => {
         </div>
       )}
       <div className={cn("flex-1 min-h-0 overflow-y-auto w-full", lg ? "pl-72" : md ? "pl-56" : "")}>
-        <div className={cn("w-full mx-auto px-4 sm:px-6 md:pt-6 pb-8", "max-w-[95rem]")}>
+        <div className={cn("w-full mx-auto px-4 sm:px-6 md:pt-6 pb-8", "max-w-[100rem]")}>
           <Outlet />
         </div>
       </div>
