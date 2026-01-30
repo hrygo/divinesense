@@ -1,12 +1,12 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#312e81"/> <!-- indigo-900 -->
-      <stop offset="1" stop-color="#020617"/> <!-- slate-950 -->
+      <stop offset="0" stop-color="#312e81"/>
+      <stop offset="1" stop-color="#020617"/>
     </linearGradient>
     <linearGradient id="primary" x1="128" y1="128" x2="384" y2="384" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#06b6d4"/> <!-- cyan-500 -->
-      <stop offset="1" stop-color="#8b5cf6"/> <!-- violet-500 -->
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur"/>
@@ -18,23 +18,82 @@
       <feBlend in="SourceGraphic" in2="glow" mode="screen"/>
     </filter>
   </defs>
-  
+
+  <style>
+    /* 眼眶 - 呼吸动画 */
+    .eye-shape {
+      animation: eye-breathe 4s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    /* 瞳孔 - 脉动动画 */
+    .pupil {
+      animation: pupil-pulse 3s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    /* 射线 - 闪烁扫描 */
+    .ray {
+      animation: ray-pulse 2s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .ray-top { animation-delay: 0s; }
+    .ray-right { animation-delay: 0.3s; }
+    .ray-bottom { animation-delay: 0.6s; }
+    .ray-left { animation-delay: 0.9s; }
+
+    @keyframes eye-breathe {
+      0%, 100% {
+        opacity: 0.7;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.02);
+      }
+    }
+
+    @keyframes pupil-pulse {
+      0%, 100% {
+        r: 64;
+        opacity: 1;
+      }
+      50% {
+        r: 72;
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes ray-pulse {
+      0%, 100% {
+        opacity: 0.3;
+        stroke-width: 8;
+      }
+      50% {
+        opacity: 0.8;
+        stroke-width: 12;
+      }
+    }
+  </style>
+
   <!-- Base Shape: Rounded Square (Squircle) -->
   <rect width="512" height="512" rx="128" fill="url(#bg)"/>
-  
+
   <!-- Central "Divine Sense" Symbol -->
   <g filter="url(#glow)">
     <!-- Eye / Core Shape -->
-    <path d="M256 128 C160 128 96 256 96 256 C96 256 160 384 256 384 C352 384 416 256 416 256 C416 256 352 128 256 128 Z" 
+    <path class="eye-shape"
+          d="M256 128 C160 128 96 256 96 256 C96 256 160 384 256 384 C352 384 416 256 416 256 C416 256 352 128 256 128 Z"
           stroke="url(#primary)" stroke-width="16" fill="url(#bg)" fill-opacity="0.3"/>
-    
+
     <!-- Pupil / Spark -->
-    <circle cx="256" cy="256" r="64" fill="url(#primary)"/>
-    
+    <circle class="pupil" cx="256" cy="256" r="64" fill="url(#primary)"/>
+
     <!-- Neural Connections / Rays -->
-    <path d="M256 96 L256 64" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
-    <path d="M256 416 L256 448" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
-    <path d="M96 256 L64 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
-    <path d="M416 256 L448 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+    <path class="ray ray-top" d="M256 96 L256 64" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+    <path class="ray ray-right" d="M256 416 L256 448" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+    <path class="ray ray-bottom" d="M96 256 L64 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+    <path class="ray ray-left" d="M416 256 L448 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
   </g>
 </svg>
