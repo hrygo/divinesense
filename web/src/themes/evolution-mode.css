@@ -228,6 +228,191 @@
 }
 
 /* ============================================================
+   Evolution Mode Vine/Bio Background - 有机藤蔓背景
+   ============================================================ */
+.evolution-mode .evo-bio-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-bio-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    /* Vine-like growing curves - 藤蔓曲线 */
+    radial-gradient(ellipse 80% 20% at 20% 80%, var(--evo-glow) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 30% at 80% 20%, var(--evo-blue) / 0.5 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 90%, var(--evo-primary) 0%, transparent 50%);
+  opacity: 0.15;
+  animation: evo-bio-grow 15s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.evolution-mode .evo-bio-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    /* Floating organic particles - 漂浮有机微粒 */
+    radial-gradient(circle at 30% 70%, var(--evo-glow) 0%, transparent 8%),
+    radial-gradient(circle at 70% 30%, var(--evo-blue) / 0.5 0%, transparent 10%),
+    radial-gradient(circle at 50% 50%, var(--evo-cyan) 0%, transparent 6%);
+  opacity: 0.6;
+  animation: evo-particles-float 20s linear infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Cell Division - 细胞分裂效果
+   ============================================================ */
+.evolution-mode .evo-cell-division {
+  position: relative;
+}
+
+.evolution-mode .evo-cell-division::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--evo-glow);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: evo-cell-divide 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Breathing/Pulsing Background - 呼吸背景
+   ============================================================ */
+.evolution-mode .evo-breathing {
+  position: relative;
+}
+
+.evolution-mode .evo-breathing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, var(--evo-glow) 0%, transparent 60%);
+  opacity: 0.3;
+  animation: evo-breathe 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Vine Border - 藤蔓边框效果
+   ============================================================ */
+.evolution-mode .evo-vine-border {
+  position: relative;
+}
+
+.evolution-mode .evo-vine-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(100% + 2px);
+  border: 2px solid transparent;
+  border-image: linear-gradient(
+    0deg,
+    var(--evo-primary) 0deg,
+    var(--evo-blue) 60deg,
+    var(--evo-primary) 120deg,
+    var(--evo-blue) 180deg,
+    var(--evo-primary) 240deg,
+    var(--evo-blue) 300deg,
+    var(--evo-primary) 360deg
+  ) 1;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) 0 2px,
+    linear-gradient(#fff 0 0) 0 2px;
+  mask:
+    linear-gradient(#fff 0 0) 0 2px,
+    linear-gradient(#fff 0 0) 0 2px;
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+  opacity: 0.6;
+  animation: evo-vine-grow 8s linear infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Organic Floating Elements - 有机漂浮元素
+   ============================================================ */
+.evolution-mode .evo-float {
+  animation: evo-float 6s ease-in-out infinite;
+}
+
+@keyframes evo-bio-grow {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.05) translate(2%, -2%);
+  }
+}
+
+@keyframes evo-particles-float {
+  0% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px);
+  }
+  50% {
+    transform: translateY(-5px) translateX(-3px);
+  }
+  75% {
+    transform: translateY(-15px) translateX(8px);
+  }
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+}
+
+@keyframes evo-cell-divide {
+  0%, 100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes evo-breathe {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes evo-vine-grow {
+  0% {
+    border-image-offset: 0;
+  }
+  100% {
+    border-image-offset: 100;
+  }
+}
+
+@keyframes evo-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+   50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ============================================================
    Evolution Mode Organic Flow Background
    ============================================================ */
 .evolution-mode .evo-flow-bg {

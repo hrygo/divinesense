@@ -374,6 +374,212 @@
 }
 
 /* ============================================================
+   Geek Mode Matrix Digital Rain Effect - 黑客帝国数字雨
+   ============================================================ */
+.geek-mode .geek-matrix-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Matrix rain columns - 雨滴列效果 */
+.geek-mode .geek-matrix-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    /* Create multiple rain columns with varying speeds */
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 8px,
+      var(--geek-glow) 8px,
+      var(--geek-glow) 12px,
+      transparent 12px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 15px,
+      var(--geek-primary) 15px,
+      var(--geek-primary) 20px,
+      transparent 20px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 5px,
+      oklch(0.75 0.18 145) 5px,
+      oklch(0.75 0.18 145) 10px,
+      transparent 10px,
+      transparent 25px
+    );
+  background-position:
+    5% 0,
+    15% -10px,
+    25% -20px,
+    35% 0,
+    45% -15px,
+    55% 0,
+    65% -25px,
+    75% 0,
+    85% -5px,
+    95% 0;
+  background-size:
+    3% 100%,
+    2% 100%,
+    4% 100%;
+  opacity: 0.15;
+  animation: geek-rain-fall 20s linear infinite;
+  pointer-events: none;
+}
+
+/* Matrix glow trail - 发光拖尾效果 */
+.geek-mode .geek-matrix-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 2px 8px at 10% 20%, var(--geek-primary) 0%, transparent 70%),
+    radial-gradient(ellipse 2px 12px at 30% 60%, var(--geek-glow) 0%, transparent 70%),
+    radial-gradient(ellipse 2px 6px at 50% 30%, oklch(0.7 0.18 145) 0%, transparent 70%),
+    radial-gradient(ellipse 2px 10px at 70% 80%, var(--geek-primary) 0%, transparent 70%),
+    radial-gradient(ellipse 2px 8px at 90% 40%, var(--geek-glow) 0%, transparent 70%);
+  opacity: 0.4;
+  animation: geek-matrix-glow 15s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Intense matrix rain for hero sections */
+.geek-mode .geek-matrix-intense {
+  position: relative;
+  overflow: hidden;
+}
+
+.geek-mode .geek-matrix-intense::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    /* Dense rain columns */
+    repeating-linear-gradient(180deg,
+      transparent 0px, transparent 4px,
+      var(--geek-primary-dim) 4px, var(--geek-primary-dim) 6px,
+      transparent 6px, transparent 20px
+    ),
+    repeating-linear-gradient(180deg,
+      transparent 0px, transparent 8px,
+      var(--geek-glow) 8px, var(--geek-glow) 12px,
+      transparent 12px, transparent 30px
+    ),
+    repeating-linear-gradient(180deg,
+      transparent 0px, transparent 3px,
+      oklch(0.8 0.2 145) 3px, oklch(0.8 0.2 145) 5px,
+      transparent 5px, transparent 18px
+    );
+  background-position:
+    2% 0, 8% -5px, 14% 0, 20% -8px, 26% 0,
+    32% -3px, 38% 0, 44% -10px, 50% 0, 56% -6px,
+    62% 0, 68% -4px, 74% 0, 80% -7px, 86% 0,
+    92% -5px, 98% 0;
+  opacity: 0.25;
+  animation: geek-rain-fall 12s linear infinite;
+  pointer-events: none;
+}
+
+/* Matrix character burst effect - 字符爆发效果 */
+.geek-mode .geek-matrix-burst {
+  position: relative;
+}
+
+.geek-mode .geek-matrix-burst::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background:
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      transparent 2deg,
+      var(--geek-primary) 2deg,
+      var(--geek-primary) 3deg,
+      transparent 3deg,
+      transparent 10deg
+    );
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: geek-burst 8s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Matrix grid overlay - 网格叠加 */
+.geek-mode .geek-matrix-grid {
+  position: relative;
+}
+
+.geek-mode .geek-matrix-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--geek-primary-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--geek-primary-dim) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Matrix Animations
+   ============================================================ */
+@keyframes geek-rain-fall {
+  0% {
+    background-position:
+      5% -100px, 15% -200px, 25% -150px,
+      35% -100px, 45% -180px, 55% -120px,
+      65% -160px, 75% -100px, 85% -140px, 95% -120px;
+  }
+  100% {
+    background-position:
+      5% calc(100% + 100px), 15% calc(100% + 200px), 25% calc(100% + 150px),
+      35% calc(100% + 100px), 45% calc(100% + 180px), 55% calc(100% + 120px),
+      65% calc(100% + 160px), 75% calc(100% + 100px), 85% calc(100% + 140px), 95% calc(100% + 120px);
+  }
+}
+
+@keyframes geek-matrix-glow {
+  0% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.3;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes geek-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+  }
+  20% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5) rotate(180deg);
+  }
+}
+
+/* ============================================================
    Accessibility: Reduced Motion Support
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
@@ -382,7 +588,11 @@
   .geek-mode .geek-glow-pulse::before,
   .geek-mode .geek-cursor,
   .geek-mode .geek-status-dot,
-  .geek-mode .geek-status-dot.active {
+  .geek-mode .geek-status-dot.active,
+  .geek-mode .geek-matrix-bg::before,
+  .geek-mode .geek-matrix-bg::after,
+  .geek-mode .geek-matrix-intense::before,
+  .geek-mode .geek-matrix-burst::before {
     animation: none !important;
   }
 
@@ -397,6 +607,12 @@
 
   .geek-mode .geek-status-dot {
     opacity: 1;
+  }
+
+  /* Static matrix background for reduced motion */
+  .geek-mode .geek-matrix-bg::before,
+  .geek-mode .geek-matrix-bg::after {
+    opacity: 0.1;
   }
 
   /* Keep transitions but make them faster */
