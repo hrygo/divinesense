@@ -27,7 +27,7 @@ type CCMode interface {
 	// CheckPermission validates if the user can use this mode.
 	CheckPermission(ctx context.Context, userID int32) error
 
-	// OnComplete is called after successful execution (for PR creation, etc.).
+	// OnComplete is called after successful execution.
 	OnComplete(ctx context.Context) error
 }
 
@@ -73,51 +73,38 @@ func (m *GeekMode) CheckPermission(ctx context.Context, userID int32) error {
 	return nil
 }
 
-// OnComplete is a no-op for Geek Mode (no PR needed).
+// OnComplete is a no-op for Geek Mode.
 func (m *GeekMode) OnComplete(ctx context.Context) error {
 	return nil
 }
 
 // EvolutionMode implements CCMode for Evolution Mode (self-evolution).
 // EvolutionMode 为进化模式（自我进化）实现 CCMode。
+//
+// Evolution Mode allows DivineSense to modify its own source code using Claude Code CLI.
+// The actual git operations and PR creation are handled by CC itself - this mode
+// only provides configuration and permission checking.
 type EvolutionMode struct {
-	sourceDir     string
-	gitService    *GitService
-	githubService *GitHubService
-	adminOnly     bool
-	envEnabled    bool
+	sourceDir  string
+	adminOnly  bool
+	envEnabled bool
 }
 
 // EvolutionModeConfig holds configuration for EvolutionMode.
 // EvolutionModeConfig 保存 EvolutionMode 的配置。
 type EvolutionModeConfig struct {
-	SourceDir       string
-	GitHubToken     string // Optional: for PR creation
-	RepositoryOwner string // For PR creation
-	RepositoryName  string // For PR creation
-	AdminOnly       bool
+	SourceDir string // Project root directory for evolution
+	AdminOnly bool   // Whether only admins can use evolution mode
 }
 
 // NewEvolutionMode creates a new EvolutionMode instance.
 // NewEvolutionMode 创建一个新的 EvolutionMode 实例。
 func NewEvolutionMode(cfg *EvolutionModeConfig) *EvolutionMode {
-	mode := &EvolutionMode{
+	return &EvolutionMode{
 		sourceDir:  cfg.SourceDir,
 		adminOnly:  cfg.AdminOnly,
 		envEnabled: os.Getenv("DIVINESENSE_EVOLUTION_ENABLED") == "true",
 	}
-
-	// Initialize Git service
-	if cfg.SourceDir != "" {
-		mode.gitService = NewGitService(cfg.SourceDir)
-	}
-
-	// Initialize GitHub service if token provided
-	if cfg.GitHubToken != "" {
-		mode.githubService = NewGitHubService(cfg.GitHubToken, cfg.RepositoryOwner, cfg.RepositoryName)
-	}
-
-	return mode
 }
 
 // Name returns the mode identifier.
@@ -141,27 +128,34 @@ This is a self-evolution scenario where you improve the system you are part of.
 
 ## Working Directory
 - **Source Root**: %s
-- **Current Branch**: evolution/%s
-- **Session**: %s
+- **Task ID**: %s
 
 ## Evolution Guidelines
 1. **Safety First**: Never modify .env, secrets, or deployment configs
 2. **Atomic Changes**: Make small, focused commits
 3. **Test Before Commit**: Run tests before committing
 4. **Update Docs**: If you change behavior, update CLAUDE.md
-5. **Git Hygiene**: Use conventional commits (feat/fix/refactor)
+5. **Git Hygiene**: Use conventional commits (feat/fix/refactor/docs)
+6. **PR Required**: All changes must go through PR review
 
 ## Path Constraints
 - **Allowed**: plugin/, server/, web/src/, docs/, CLAUDE.md
 - **Forbidden**: .env*, *.secret*, deploy/, .git/, go.mod, go.sum
 
+## Workflow
+1. Analyze the code and understand the context
+2. Propose a plan before making changes
+3. Make atomic commits with clear messages
+4. Run tests locally
+5. Create a PR for review
+
 Begin by analyzing the relevant code, then propose a plan before making changes.
 `
 
-	return basePrompt + fmt.Sprintf(evolutionPrompt, cfg.WorkDir, cfg.SessionID, cfg.SessionID)
+	return basePrompt + fmt.Sprintf(evolutionPrompt, cfg.WorkDir, cfg.SessionID)
 }
 
-// GetWorkDir returns the source code directory.
+// GetWorkDir returns the source code directory for evolution.
 func (m *EvolutionMode) GetWorkDir(userID int32) string {
 	return m.sourceDir
 }
@@ -174,7 +168,7 @@ func (m *EvolutionMode) CheckPermission(ctx context.Context, userID int32) error
 		return fmt.Errorf("evolution mode is disabled (set DIVINESENSE_EVOLUTION_ENABLED=true)")
 	}
 
-	// Check admin status (implementation depends on auth system)
+	// Check admin status
 	if m.adminOnly && !m.isAdmin(ctx, userID) {
 		return fmt.Errorf("evolution mode requires admin privileges")
 	}
@@ -190,36 +184,9 @@ func (m *EvolutionMode) isAdmin(ctx context.Context, userID int32) bool {
 	return false
 }
 
-// OnComplete creates a GitHub PR after evolution execution.
+// OnComplete is a no-op for Evolution Mode (CC handles PR creation).
 func (m *EvolutionMode) OnComplete(ctx context.Context) error {
-	if m.githubService == nil {
-		// No GitHub service configured, skip PR creation
-		return nil
-	}
-
-	// Get current branch
-	currentBranch, err := m.gitService.GetCurrentBranch()
-	if err != nil {
-		return fmt.Errorf("failed to get current branch: %w", err)
-	}
-
-	// Create PR
-	prURL, err := m.githubService.CreatePR(ctx, &CreatePRRequest{
-		HeadBranch: currentBranch,
-		BaseBranch: "main",
-		Title:      fmt.Sprintf("Evolution: %s", currentBranch),
-		Body:       "Automated evolution changes. Please review carefully.",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create PR: %w", err)
-	}
-
-	// Log PR creation
-	logger := ctx.Value("logger").(*struct{ URL string })
-	if logger != nil {
-		logger.URL = prURL
-	}
-
+	// CC handles git operations and PR creation automatically
 	return nil
 }
 
@@ -246,8 +213,8 @@ func (m *EvolutionMode) ValidatePath(path string) error {
 		}
 	}
 
-	// Check allowed paths (whitelist) - if specified, only allow these
-	// 检查允许路径（白名单）- 如果指定，只允许这些
+	// Check allowed paths (whitelist)
+	// 检查允许路径（白名单）
 	allowedPatterns := []string{
 		"plugin/",
 		"server/",
@@ -256,18 +223,22 @@ func (m *EvolutionMode) ValidatePath(path string) error {
 		"CLAUDE.md",
 	}
 
-	// If path is in project root, check if it's explicitly allowed
-	if !strings.Contains(filepath.Dir(path), "/") {
-		found := false
-		for _, pattern := range allowedPatterns {
-			if strings.HasPrefix(path, strings.TrimSuffix(pattern, "/")) {
-				found = true
-				break
-			}
+	// Check if path starts with any allowed pattern
+	found := false
+	for _, pattern := range allowedPatterns {
+		if strings.HasPrefix(path, strings.TrimSuffix(pattern, "/")) {
+			found = true
+			break
 		}
-		if !found {
-			return fmt.Errorf("path not in allowed list: %s", path)
+		// Special case for CLAUDE.md at root
+		if path == "CLAUDE.md" {
+			found = true
+			break
 		}
+	}
+
+	if !found {
+		return fmt.Errorf("path not in allowed list: %s", path)
 	}
 
 	return nil

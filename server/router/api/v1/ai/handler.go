@@ -230,7 +230,6 @@ func (h *ParrotHandler) handleEvolutionMode(
 		slog.String("agent_name", evoParrot.Name()),
 		slog.String("source_dir", sourceDir),
 		slog.String("task_id", evoParrot.GetTaskID()),
-		slog.String("branch", evoParrot.GetBranchName()),
 	)
 
 	// Execute with streaming

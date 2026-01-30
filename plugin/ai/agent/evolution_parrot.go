@@ -13,8 +13,8 @@ import (
 // EvolutionParrot 实现进化模式代理用于自我进化。
 //
 // Evolution Mode allows DivineSense to modify its own source code under
-// strict safety constraints and with mandatory PR review.
-// 进化模式允许 DivineSense 在严格的安全约束下修改自己的源代码，并强制进行 PR 审查。
+// strict safety constraints. All git operations and PR creation are handled
+// by Claude Code CLI itself - this parrot only provides configuration.
 type EvolutionParrot struct {
 	runner      *CCRunner
 	mode        *EvolutionMode
@@ -22,7 +22,6 @@ type EvolutionParrot struct {
 	sessionID   string
 	userID      int32
 	deviceCtx   string
-	gitService  *GitService
 	taskID      string
 	initialized bool
 }
@@ -48,16 +47,12 @@ func NewEvolutionParrot(sourceDir string, userID int32, sessionID string) (*Evol
 		AdminOnly: true,
 	})
 
-	// Create GitService
-	gitService := NewGitService(sourceDir)
-
 	return &EvolutionParrot{
 		runner:      runner,
 		mode:        mode,
 		workDir:     sourceDir,
 		sessionID:   sessionID,
 		userID:      userID,
-		gitService:  gitService,
 		taskID:      taskID,
 		initialized: false,
 	}, nil
@@ -90,16 +85,6 @@ func (p *EvolutionParrot) ExecuteWithCallback(
 		return NewParrotError(p.Name(), "CheckPermission", err)
 	}
 
-	// Initialize evolution session if first call
-	// 如果是首次调用，初始化进化会话
-	if !p.initialized {
-		if err := p.initializeEvolution(ctx); err != nil {
-			p.sendError(callback, fmt.Sprintf("Failed to initialize evolution: %s", err.Error()))
-			return NewParrotError(p.Name(), "InitializeEvolution", err)
-		}
-		p.initialized = true
-	}
-
 	// Build config for CCRunner
 	// 为 CCRunner 构建配置
 	cfg := &CCRunnerConfig{
@@ -117,35 +102,14 @@ func (p *EvolutionParrot) ExecuteWithCallback(
 		return NewParrotError(p.Name(), "Execute", err)
 	}
 
-	// Call completion callback for PR creation
-	// 调用完成回调以创建 PR
-	if err := p.mode.OnComplete(ctx); err != nil {
-		slog.Warn("EvolutionParrot: OnComplete callback failed",
+	// Mark as initialized after first successful execution
+	// 首次成功执行后标记为已初始化
+	if !p.initialized {
+		p.initialized = true
+		slog.Info("EvolutionParrot: Session initialized",
 			"user_id", p.userID,
-			"error", err)
-		// Don't fail the request if PR creation fails
+			"task_id", p.taskID)
 	}
-
-	return nil
-}
-
-// initializeEvolution sets up the evolution environment.
-// initializeEvolution 设置进化环境。
-func (p *EvolutionParrot) initializeEvolution(ctx context.Context) error {
-	slog.Info("EvolutionParrot: Initializing evolution session",
-		"user_id", p.userID,
-		"task_id", p.taskID)
-
-	// Create evolution branch
-	// 创建进化分支
-	branchName, err := p.gitService.CreateEvolutionBranch(p.taskID)
-	if err != nil {
-		return fmt.Errorf("failed to create evolution branch: %w", err)
-	}
-
-	slog.Info("EvolutionParrot: Created evolution branch",
-		"user_id", p.userID,
-		"branch", branchName)
 
 	return nil
 }
@@ -179,45 +143,6 @@ func (p *EvolutionParrot) GetTaskID() string {
 	return p.taskID
 }
 
-// GetBranchName returns the evolution branch name.
-// GetBranchName 返回进化分支名称。
-func (p *EvolutionParrot) GetBranchName() string {
-	return "evolution/" + p.taskID
-}
-
-// GetCurrentStatus returns the current evolution status.
-// GetCurrentStatus 返回当前进化状态。
-func (p *EvolutionParrot) GetCurrentStatus() (*EvolutionStatus, error) {
-	status := &EvolutionStatus{
-		TaskID:    p.taskID,
-		SessionID: p.sessionID,
-		Branch:    p.GetBranchName(),
-		WorkDir:   p.workDir,
-	}
-
-	// Get git status
-	gitStatus, err := p.gitService.GetStatus()
-	if err == nil {
-		status.HasChanges = !gitStatus.IsClean()
-		status.ModifiedFiles = gitStatus.Modified
-		status.AddedFiles = gitStatus.Added
-	}
-
-	return status, nil
-}
-
-// EvolutionStatus represents the current state of an evolution session.
-// EvolutionStatus 表示进化会话的当前状态。
-type EvolutionStatus struct {
-	TaskID        string   `json:"task_id"`
-	SessionID     string   `json:"session_id"`
-	Branch        string   `json:"branch"`
-	WorkDir       string   `json:"work_dir"`
-	HasChanges    bool     `json:"has_changes"`
-	ModifiedFiles []string `json:"modified_files,omitempty"`
-	AddedFiles    []string `json:"added_files,omitempty"`
-}
-
 // SelfDescribe returns the EvolutionParrot's metacognitive information.
 // SelfDescribe 返回进化鹦鹉的元认知信息。
 func (p *EvolutionParrot) SelfDescribe() *ParrotSelfCognition {
@@ -231,10 +156,9 @@ func (p *EvolutionParrot) SelfDescribe() *ParrotSelfCognition {
 			"协作 (Collaborative)",
 		},
 		Capabilities: []string{
-			"修改 DivineSense 自身源代码",
-			"创建 Git 分支和提交",
-			"生成 GitHub PR 供审查",
+			"通过 Claude Code CLI 修改 DivineSense 源代码",
 			"遵循 CLAUDE.md 规范",
+			"通过 PR 审查进行代码变更",
 		},
 		Limitations: []string{
 			"仅限管理员访问",
