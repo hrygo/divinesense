@@ -44,6 +44,8 @@ interface UnifiedChatViewProps {
   uiTools: ReturnType<typeof useAITools>;
   geekMode: boolean;
   onGeekModeToggle: (enabled: boolean) => void;
+  evolutionMode: boolean;
+  onEvolutionModeToggle: (enabled: boolean) => void;
   immersiveMode: boolean;
   onImmersiveModeToggle: (enabled: boolean) => void;
 }
@@ -69,6 +71,8 @@ function UnifiedChatView({
   uiTools,
   geekMode,
   onGeekModeToggle,
+  evolutionMode,
+  onEvolutionModeToggle,
   immersiveMode,
   onImmersiveModeToggle,
 }: UnifiedChatViewProps) {
@@ -97,6 +101,8 @@ function UnifiedChatView({
           isThinking={isThinking}
           geekMode={geekMode}
           onGeekModeToggle={onGeekModeToggle}
+          evolutionMode={evolutionMode}
+          onEvolutionModeToggle={onEvolutionModeToggle}
           immersiveMode={immersiveMode}
           onImmersiveModeToggle={onImmersiveModeToggle}
         />
@@ -230,12 +236,14 @@ const AIChat = () => {
     setCurrentCapability,
     setCapabilityStatus,
     toggleGeekMode,
+    toggleEvolutionMode,
     toggleImmersiveMode,
   } = aiChat;
 
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
   const capabilityStatus = state.capabilityStatus || "idle";
   const geekMode = state.geekMode || false;
+  const evolutionMode = state.evolutionMode || false;
   const immersiveMode = state.immersiveMode || false;
 
   // Get messages from current conversation
@@ -280,6 +288,7 @@ const AIChat = () => {
             userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             conversationId: _conversationIdNum,
             geekMode: geekMode,
+            evolutionMode: evolutionMode,
           },
           {
             onThinking: (msg) => {
@@ -601,6 +610,8 @@ const AIChat = () => {
       uiTools={uiTools}
       geekMode={geekMode}
       onGeekModeToggle={toggleGeekMode}
+      evolutionMode={evolutionMode}
+      onEvolutionModeToggle={toggleEvolutionMode}
       immersiveMode={immersiveMode}
       onImmersiveModeToggle={toggleImmersiveMode}
     />

@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "./themes/default.css";
 @import "./themes/geek-mode.css";
+@import "./themes/evolution-mode.css";
 
 /* Use class-based dark mode instead of media-based */
 @custom-variant dark (&:where(.dark, .dark *));

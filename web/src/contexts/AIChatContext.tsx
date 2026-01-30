@@ -22,6 +22,9 @@ const MESSAGE_CACHE_LIMIT = 100; // Maximum MSG messages to cache per conversati
 // LocalStorage key for Geek Mode preference
 const GEEK_MODE_STORAGE_KEY = "divinesense.geek_mode";
 
+// LocalStorage key for Evolution Mode preference
+const EVOLUTION_MODE_STORAGE_KEY = "divinesense.evolution_mode";
+
 // LocalStorage key for Immersive Mode preference
 const IMMERSIVE_MODE_STORAGE_KEY = "divinesense.immersive_mode";
 
@@ -66,6 +69,7 @@ const DEFAULT_STATE: AIChatState = {
   currentCapability: CapabilityType.AUTO,
   capabilityStatus: "idle",
   geekMode: false,
+  evolutionMode: false,
   immersiveMode: false,
 };
 
@@ -117,12 +121,14 @@ function enforceFIFOMessages(messages: ChatItem[]): ChatItem[] {
 export function AIChatProvider({ children, initialState }: AIChatProviderProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<AIChatState>(() => {
-    // Load geek mode preference from localStorage
+    // Load mode preferences from localStorage
     let savedGeekMode = false;
+    let savedEvolutionMode = false;
     let savedImmersiveMode = false;
     if (typeof window !== "undefined") {
       try {
         savedGeekMode = localStorage.getItem(GEEK_MODE_STORAGE_KEY) === "true";
+        savedEvolutionMode = localStorage.getItem(EVOLUTION_MODE_STORAGE_KEY) === "true";
         savedImmersiveMode = localStorage.getItem(IMMERSIVE_MODE_STORAGE_KEY) === "true";
       } catch {
         console.warn("Failed to load preferences");
@@ -133,6 +139,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
       ...DEFAULT_STATE,
       ...initialState,
       geekMode: savedGeekMode,
+      evolutionMode: savedEvolutionMode,
       immersiveMode: savedImmersiveMode,
     };
   });
@@ -859,7 +866,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   }, []);
 
   // ============================================================
-  // GEEK MODE ACTIONS (新增 - 极客模式)
+  // GEEK MODE ACTIONS (极客模式)
   // ============================================================
   const toggleGeekMode = useCallback((enabled: boolean) => {
     setState((prev) => ({ ...prev, geekMode: enabled }));
@@ -874,7 +881,28 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   }, []);
 
   // ============================================================
-  // IMMERSIVE MODE ACTIONS (新增 - 沉浸模式)
+  // EVOLUTION MODE ACTIONS (进化模式)
+  // ============================================================
+  const toggleEvolutionMode = useCallback((enabled: boolean) => {
+    // Evolution mode is mutually exclusive with geek mode
+    setState((prev) => ({
+      ...prev,
+      evolutionMode: enabled,
+      // Disable geek mode when evolution mode is enabled
+      geekMode: enabled ? false : prev.geekMode,
+    }));
+    // Persist to localStorage
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(EVOLUTION_MODE_STORAGE_KEY, String(enabled));
+      } catch (e) {
+        console.error("Failed to save evolution mode preference:", e);
+      }
+    }
+  }, []);
+
+  // ============================================================
+  // IMMERSIVE MODE ACTIONS (沉浸模式)
   // ============================================================
   const toggleImmersiveMode = useCallback((enabled: boolean) => {
     setState((prev) => ({ ...prev, immersiveMode: enabled }));
@@ -984,6 +1012,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     setCurrentCapability,
     setCapabilityStatus,
     toggleGeekMode,
+    toggleEvolutionMode,
     toggleImmersiveMode,
     saveToStorage,
     loadFromStorage,

@@ -1,0 +1,424 @@
+/**
+ * Evolution Mode Theme - 进化模式主题
+ *
+ * 视觉语言：DNA/科幻/进化风格
+ * 当 .evolution-mode 类应用于 body 时激活
+ *
+ * Color scheme: Purple (#BC13FE) + Blue (#4D4DFF) gradient
+ */
+
+/* ============================================================
+   Evolution Mode Color Variables
+   ============================================================ */
+:root {
+  /* Evolution purple - the primary evolution color */
+  --evo-primary: oklch(0.6 0.15 280);
+  --evo-primary-dim: oklch(0.5 0.12 280);
+  --evo-glow: oklch(0.65 0.18 280 / 0.6);
+
+  /* Evolution blue - the secondary accent color */
+  --evo-blue: oklch(0.65 0.12 240);
+  --evo-blue-bright: oklch(0.7 0.14 250);
+
+  /* Evolution cyan - for highlights */
+  --evo-cyan: oklch(0.75 0.1 210);
+
+  /* Organic flow gradient colors */
+  --evo-purple-soft: oklch(0.55 0.1 290);
+  --evo-purple-deep: oklch(0.45 0.12 285);
+
+  /* Dark evolution background */
+  --evo-bg: oklch(0.18 0.02 280);
+  --evo-bg-dim: oklch(0.15 0.015 280);
+
+  /* DNA helix animation colors */
+  --evo-dna-color-1: oklch(0.7 0.15 280);
+  --evo-dna-color-2: oklch(0.65 0.12 240);
+}
+
+/* Light mode adjustments */
+:root:not(.dark) {
+  --evo-primary: oklch(0.5 0.18 280);
+  --evo-bg: oklch(0.95 0.02 280);
+  --evo-bg-dim: oklch(0.92 0.015 280);
+}
+
+/* ============================================================
+   Base Evolution Mode Styles
+   ============================================================ */
+.evolution-mode {
+  /* Override primary color with evolution purple */
+  --color-primary: var(--evo-primary);
+  --color-ring: var(--evo-primary-dim);
+}
+
+/* ============================================================
+   Evolution Mode Glow Effects
+   ============================================================ */
+.evolution-mode .evo-glow {
+  position: relative;
+}
+
+.evolution-mode .evo-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--evo-primary), var(--evo-blue), var(--evo-primary));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+  animation: evo-rotate 4s linear infinite;
+}
+
+.evolution-mode .evo-glow-pulse::before {
+  animation:
+    evo-rotate 4s linear infinite,
+    evo-pulse 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   Evolution Mode Border Styles
+   ============================================================ */
+.evolution-mode .evo-border {
+  border: 1px solid var(--evo-primary-dim);
+  box-shadow:
+    0 0 0 1px var(--evo-glow),
+    0 0 25px -5px var(--evo-glow);
+  transition: box-shadow 0.3s ease;
+}
+
+.evolution-mode .evo-border:hover,
+.evolution-mode .evo-border:focus-within {
+  box-shadow:
+    0 0 0 1px var(--evo-primary),
+    0 0 35px -5px var(--evo-glow);
+}
+
+/* ============================================================
+   Evolution Mode Text Styles
+   ============================================================ */
+.evolution-mode .evo-text {
+  color: var(--evo-primary);
+}
+
+.evolution-mode .evo-text-gradient {
+  background: linear-gradient(135deg, var(--evo-primary), var(--evo-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.evolution-mode .evo-text-glow {
+  color: var(--evo-primary);
+  text-shadow:
+    0 0 10px var(--evo-glow),
+    0 0 20px var(--evo-glow),
+    0 0 30px var(--evo-blue);
+}
+
+/* ============================================================
+   Evolution Mode Button Styles
+   ============================================================ */
+.evolution-mode button.evo-btn {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--evo-primary-dim);
+  color: var(--evo-primary);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.evolution-mode button.evo-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--evo-glow), transparent);
+  transition: left 0.6s ease;
+}
+
+.evolution-mode button.evo-btn:hover::before {
+  left: 100%;
+}
+
+.evolution-mode button.evo-btn:hover {
+  background: linear-gradient(135deg, var(--evo-glow), var(--evo-blue) / 0.2);
+  box-shadow:
+    0 0 15px var(--evo-glow),
+    inset 0 0 15px var(--evo-glow);
+}
+
+/* ============================================================
+   Evolution Mode DNA Helix Animation Background
+   ============================================================ */
+.evolution-mode .evo-dna-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-dna-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 20px,
+      var(--evo-glow) 21px,
+      var(--evo-glow) 22px,
+      transparent 23px,
+      transparent 40px
+    );
+  opacity: 0.05;
+  animation: evo-dna-flow 20s linear infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Organic Flow Background
+   ============================================================ */
+.evolution-mode .evo-flow-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-flow-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, var(--evo-glow) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, var(--evo-blue) / 0.4 0%, transparent 50%);
+  opacity: 0.3;
+  animation: evo-flow-pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Evolution Mode Header Special Style
+   ============================================================ */
+.evolution-mode .evo-header {
+  background: linear-gradient(180deg, var(--evo-bg-dim) 0%, var(--evo-bg) 100%);
+  border-bottom: 1px solid var(--evo-primary-dim);
+  position: relative;
+}
+
+.evolution-mode .evo-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--evo-blue), var(--evo-primary), var(--evo-blue), transparent);
+  opacity: 0.7;
+}
+
+/* ============================================================
+   Evolution Mode Status Indicators
+   ============================================================ */
+.evolution-mode .evo-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--evo-primary);
+  box-shadow:
+    0 0 5px var(--evo-primary),
+    0 0 10px var(--evo-blue);
+  animation: evo-pulse 2.5s ease-in-out infinite;
+}
+
+.evolution-mode .evo-status-dot.active {
+  background: var(--evo-blue-bright);
+  animation: evo-pulse 1.5s ease-in-out infinite;
+  box-shadow:
+    0 0 8px var(--evo-primary),
+    0 0 15px var(--evo-blue);
+}
+
+/* ============================================================
+   Evolution Mode Progress Ring (for phase indicators)
+   ============================================================ */
+.evolution-mode .evo-progress-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.evolution-mode .evo-progress-ring::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--evo-primary);
+  border-right-color: var(--evo-blue);
+  animation: evo-rotate 2s linear infinite;
+}
+
+/* ============================================================
+   Evolution Mode Animations
+   ============================================================ */
+@keyframes evo-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes evo-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes evo-dna-flow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes evo-flow-pulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes evo-mutation {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(30deg);
+  }
+  100% {
+    filter: hue-rotate(0deg);
+  }
+}
+
+/* ============================================================
+   Evolution Mode Input Focus
+   ============================================================ */
+.evolution-mode input:focus,
+.evolution-mode textarea:focus,
+.evolution-mode [contenteditable]:focus {
+  outline: none;
+  border-color: var(--evo-primary);
+  box-shadow:
+    0 0 0 1px var(--evo-primary),
+    0 0 20px -3px var(--evo-glow),
+    0 0 30px -5px var(--evo-blue);
+}
+
+/* ============================================================
+   Evolution Mode Scrollbar
+   ============================================================ */
+.evolution-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.evolution-mode ::-webkit-scrollbar-track {
+  background: var(--evo-bg-dim);
+}
+
+.evolution-mode ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--evo-primary-dim), var(--evo-blue));
+  border-radius: 4px;
+}
+
+.evolution-mode ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--evo-primary), var(--evo-blue-bright));
+}
+
+/* ============================================================
+   Evolution Mode Phase Cards (for Analyzing/Planning/Coding phases)
+   ============================================================ */
+.evolution-mode .evo-phase-card {
+  background: linear-gradient(135deg, var(--evo-bg-dim), var(--evo-bg));
+  border: 1px solid var(--evo-primary-dim);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-phase-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--evo-primary), var(--evo-blue));
+}
+
+.evolution-mode .evo-phase-card.active {
+  box-shadow:
+    0 0 0 1px var(--evo-glow),
+    0 0 20px -5px var(--evo-glow);
+}
+
+/* ============================================================
+   Accessibility: Reduced Motion Support
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations for users who prefer reduced motion */
+  .evolution-mode .evo-glow::before,
+  .evolution-mode .evo-glow-pulse::before,
+  .evolution-mode .evo-status-dot,
+  .evolution-mode .evo-status-dot.active,
+  .evolution-mode .evo-dna-bg::after,
+  .evolution-mode .evo-flow-bg::before {
+    animation: none !important;
+  }
+
+  /* Replace animations with static states */
+  .evolution-mode .evo-glow::before {
+    opacity: 0.8;
+  }
+
+  .evolution-mode .evo-dna-bg::after {
+    opacity: 0.05;
+  }
+
+  .evolution-mode .evo-status-dot {
+    opacity: 1;
+  }
+
+  /* Keep transitions but make them faster */
+  .evolution-mode .evo-border,
+  .evolution-mode button.evo-btn {
+    transition-duration: 0.1s;
+  }
+}

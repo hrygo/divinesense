@@ -296,6 +296,17 @@
       "exit_label": "退出",
       "thinking": "Claude Code 思考中..."
     },
+    "evolution_mode": {
+      "label": "进化",
+      "tooltip": "切换进化模式，系统自我进化 (仅管理员)",
+      "aria_label": "切换进化模式",
+      "enabled": "进化模式已启用",
+      "disabled": "进化模式已关闭",
+      "enable_label": "启用进化模式",
+      "disable_label": "退出进化",
+      "exit_label": "退出",
+      "thinking": "系统自我进化中..."
+    },
     "enter-immersive": "进入沉浸模式",
     "exit-immersive": "退出沉浸模式"
   },

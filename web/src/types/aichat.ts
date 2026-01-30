@@ -128,9 +128,11 @@ export interface AIChatState {
   // 能力状态 (新增 - 支持"个人专属助手"模式)
   currentCapability?: CapabilityType;
   capabilityStatus?: CapabilityStatus;
-  // 极客模式 (新增 - Geek Mode for Claude Code CLI)
+  // 极客模式 (Geek Mode for Claude Code CLI)
   geekMode: boolean;
-  // 沉浸模式 (新增 - 全屏沉浸体验)
+  // 进化模式 (Evolution Mode for self-evolution)
+  evolutionMode: boolean;
+  // 沉浸模式 (沉浸模式 - 全屏沉浸体验)
   immersiveMode: boolean;
 }
 
@@ -177,7 +179,10 @@ export interface AIChatContextValue {
   // Geek Mode action (新增 - 极客模式)
   toggleGeekMode: (enabled: boolean) => void;
 
-  // Immersive Mode action (新增 - 沉浸模式)
+  // Evolution Mode action (进化模式 - 自我进化)
+  toggleEvolutionMode: (enabled: boolean) => void;
+
+  // Immersive Mode action (沉浸模式 - 全屏沉浸体验)
   toggleImmersiveMode: (enabled: boolean) => void;
 
   // Persistence

@@ -301,6 +301,17 @@
       "exit_label": "Exit",
       "thinking": "Claude Code thinking..."
     },
+    "evolution_mode": {
+      "label": "Evolution",
+      "tooltip": "Toggle Evolution Mode for system self-evolution (admin only)",
+      "aria_label": "Toggle Evolution Mode",
+      "enabled": "Evolution Mode enabled",
+      "disabled": "Evolution Mode disabled",
+      "enable_label": "Enable Evolution Mode",
+      "disable_label": "Exit Evolution",
+      "exit_label": "Exit",
+      "thinking": "System self-evolution in progress..."
+    },
     "enter-immersive": "Enter Immersive Mode",
     "exit-immersive": "Exit Immersive Mode"
   },
