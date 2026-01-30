@@ -25,6 +25,7 @@ type ChatRequest struct {
 	ConversationID     int32
 	IsTempConversation bool
 	GeekMode           bool
+	EvolutionMode      bool
 }
 
 // Handler is the interface for handling chat requests.

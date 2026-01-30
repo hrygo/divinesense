@@ -47,6 +47,12 @@ func (h *ParrotHandler) SetChatRouter(router *agentpkg.ChatRouter) {
 
 // Handle implements Handler interface for parrot agent requests.
 func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream ChatStream) error {
+	// PRIORITY CHECK: EvolutionMode has highest priority (admin-only, self-evolution)
+	// 优先检查：进化模式具有最高优先级（仅管理员，自我进化）
+	if req.EvolutionMode {
+		return h.handleEvolutionMode(ctx, req, stream)
+	}
+
 	// PRIORITY CHECK: GeekMode bypasses ALL normal routing
 	// 优先检查：极客模式绕过所有常规路由
 	if req.GeekMode {
@@ -183,6 +189,76 @@ func (h *ParrotHandler) handleGeekMode(
 	return nil
 }
 
+// handleEvolutionMode creates and executes EvolutionParrot for self-evolution.
+// handleEvolutionMode 创建并执行 EvolutionParrot 进行自我进化。
+// Evolution Mode allows DivineSense to modify its own source code under
+// strict safety constraints and with mandatory PR review.
+// 进化模式允许 DivineSense 在严格的安全约束下修改自己的源代码，并强制进行 PR 审查。
+func (h *ParrotHandler) handleEvolutionMode(
+	ctx context.Context,
+	req *ChatRequest,
+	stream ChatStream,
+) error {
+	// Create logger for this request
+	logger := observability.NewRequestContext(slog.Default(), "evolution", req.UserID)
+	logger.Info("AI chat started (Evolution Mode - self-evolution)",
+		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
+		slog.Int("history_count", len(req.History)),
+	)
+
+	// Get source directory (DivineSense root)
+	sourceDir, err := h.getSourceDir()
+	if err != nil {
+		logger.Error("Failed to get source directory", err)
+		return status.Error(codes.Internal, "evolution mode requires source directory configuration")
+	}
+
+	// Generate session ID for evolution
+	sessionID := fmt.Sprintf("evolution_%d_%s", req.ConversationID, req.UserID)
+
+	// Create EvolutionParrot
+	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID)
+	if err != nil {
+		logger.Error("Failed to create EvolutionParrot", err)
+		return status.Error(codes.Internal, fmt.Sprintf("failed to create EvolutionParrot: %v", err))
+	}
+
+	// Pass device context
+	evoParrot.SetDeviceContext(req.DeviceContext)
+
+	logger.Debug("EvolutionParrot created",
+		slog.String("agent_name", evoParrot.Name()),
+		slog.String("source_dir", sourceDir),
+		slog.String("task_id", evoParrot.GetTaskID()),
+		slog.String("branch", evoParrot.GetBranchName()),
+	)
+
+	// Execute with streaming
+	if err := h.executeAgent(ctx, evoParrot, req, stream, logger); err != nil {
+		logger.Error("EvolutionMode execution failed", err)
+		return status.Error(codes.Internal, fmt.Sprintf("EvolutionMode execution failed: %v", err))
+	}
+
+	logger.Info("AI chat completed (Evolution Mode)",
+		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
+	)
+
+	return nil
+}
+
+// getSourceDir returns the DivineSense source code directory.
+// getSourceDir 返回 DivineSense 源代码目录。
+func (h *ParrotHandler) getSourceDir() (string, error) {
+	// Try to get from environment variable first
+	if dir := os.Getenv("DIVINESENSE_SOURCE_DIR"); dir != "" {
+		return dir, nil
+	}
+
+	// Fallback to current working directory
+	// This works when running from the project root
+	return os.Getwd()
+}
+
 // getWorkDirForUser returns the working directory for Claude Code CLI for a specific user.
 // getWorkDirForUser 返回特定用户的 Claude Code CLI 工作目录。
 // Each user gets an isolated working directory for security and session management.
@@ -308,6 +384,7 @@ func ToChatRequest(pbReq *v1pb.ChatRequest) *ChatRequest {
 		ConversationID:     pbReq.ConversationId,
 		IsTempConversation: pbReq.IsTempConversation,
 		GeekMode:           pbReq.GeekMode,
+		EvolutionMode:      pbReq.EvolutionMode,
 		DeviceContext:      pbReq.DeviceContext,
 	}
 }

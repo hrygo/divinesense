@@ -238,6 +238,7 @@ message ChatRequest {
   int32 conversation_id = 6; // Conversation ID to persist message to
   bool is_temp_conversation = 7; // Whether to create a temporary conversation (true) or fixed conversation (false)
   bool geek_mode = 10; // Geek Mode: Enable Claude Code CLI for code-related tasks (optional, defaults to false)
+  bool evolution_mode = 12; // Evolution Mode: Self-evolution with admin privileges (optional, defaults to false)
   string device_context = 11; // Detailed client/device context (JSON string containing UA, screen info, location, etc.)
 }
 

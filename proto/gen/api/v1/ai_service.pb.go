@@ -613,6 +613,7 @@ type ChatRequest struct {
 	IsTempConversation bool                   `protobuf:"varint,7,opt,name=is_temp_conversation,json=isTempConversation,proto3" json:"is_temp_conversation,omitempty"`                                  // Whether to create a temporary conversation (true) or fixed conversation (false)
 	GeekMode           bool                   `protobuf:"varint,10,opt,name=geek_mode,json=geekMode,proto3" json:"geek_mode,omitempty"`                                                                 // Geek Mode: Enable Claude Code CLI for code-related tasks (optional, defaults to false)
 	DeviceContext      string                 `protobuf:"bytes,11,opt,name=device_context,json=deviceContext,proto3" json:"device_context,omitempty"`                                                   // Detailed client/device context (JSON string containing UA, screen info, location, etc.)
+	EvolutionMode      bool                   `protobuf:"varint,12,opt,name=evolution_mode,json=evolutionMode,proto3" json:"evolution_mode,omitempty"`                                                  // Evolution Mode: Self-evolution with admin privileges (optional, defaults to false)
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -708,6 +709,13 @@ func (x *ChatRequest) GetDeviceContext() string {
 		return x.DeviceContext
 	}
 	return ""
+}
+
+func (x *ChatRequest) GetEvolutionMode() bool {
+	if x != nil {
+		return x.EvolutionMode
+	}
+	return false
 }
 
 // AIConversation represents an AI chat session.

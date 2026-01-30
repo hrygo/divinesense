@@ -1,0 +1,417 @@
+package agent
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sync"
+	"time"
+)
+
+// CCRunner is the unified Claude Code CLI integration layer.
+// CCRunner 是统一的 Claude Code CLI 集成层。
+//
+// It provides a shared implementation for all modes that need to interact
+// with Claude Code CLI (Geek Mode, Evolution Mode, etc.).
+// 它为所有需要与 Claude Code CLI 交互的模式提供共享实现（极客模式、进化模式等）。
+type CCRunner struct {
+	cliPath string
+	timeout time.Duration
+	logger  *slog.Logger
+	mu      sync.Mutex
+}
+
+// CCRunnerConfig defines mode-specific configuration for CCRunner execution.
+// CCRunnerConfig 定义 CCRunner 执行的模式特定配置。
+type CCRunnerConfig struct {
+	Mode          string   // "geek" | "evolution"
+	WorkDir       string   // Working directory for CLI
+	SessionID     string   // Session identifier for persistence
+	UserID        int32    // User ID for logging/context
+	SystemPrompt  string   // Mode-specific system prompt
+	DeviceContext string   // Device/browser context JSON
+
+	// Evolution Mode specific
+	// 进化模式专用
+	AllowedPaths   []string // Path whitelist (evolution mode)
+	ForbiddenPaths []string // Path blacklist (evolution mode)
+}
+
+// NewCCRunner creates a new CCRunner instance.
+// NewCCRunner 创建一个新的 CCRunner 实例。
+func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
+	cliPath, err := exec.LookPath("claude")
+	if err != nil {
+		return nil, fmt.Errorf("Claude Code CLI not found: %w", err)
+	}
+
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	return &CCRunner{
+		cliPath: cliPath,
+		timeout: timeout,
+		logger:  logger,
+	}, nil
+}
+
+// Execute runs Claude Code CLI with the given configuration and streams events.
+// Execute 使用给定配置运行 Claude Code CLI 并流式传输事件。
+func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Validate configuration
+	// 验证配置
+	if err := r.validateConfig(cfg); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+
+	// Ensure working directory exists
+	// 确保工作目录存在
+	if err := os.MkdirAll(cfg.WorkDir, 0755); err != nil {
+		return fmt.Errorf("failed to create work directory: %w", err)
+	}
+
+	// Determine if this is a first call or resume
+	// 确定是首次调用还是恢复
+	sessionDir := filepath.Join(cfg.WorkDir, ".claude", "sessions", cfg.SessionID)
+	firstCall := r.isFirstCall(sessionDir)
+
+	if firstCall {
+		if err := os.MkdirAll(sessionDir, 0755); err != nil {
+			r.logger.Warn("Failed to create session directory",
+				"user_id", cfg.UserID,
+				"session_id", cfg.SessionID,
+				"error", err)
+		}
+		r.logger.Info("CCRunner: Starting NEW session",
+			"user_id", cfg.UserID,
+			"mode", cfg.Mode,
+			"session_id", cfg.SessionID)
+	} else {
+		r.logger.Info("CCRunner: Resuming EXISTING session",
+			"user_id", cfg.UserID,
+			"mode", cfg.Mode,
+			"session_id", cfg.SessionID)
+	}
+
+	// Send thinking event
+	// 发送思考事件
+	if callback != nil {
+		if err := callback(EventTypeThinking, fmt.Sprintf("ai.%s_mode.thinking", cfg.Mode)); err != nil {
+			return err
+		}
+	}
+
+	// Execute CLI with session management
+	// 执行 CLI 并管理会话
+	if err := r.executeWithSession(ctx, cfg, prompt, firstCall, callback); err != nil {
+		r.logger.Error("CCRunner: execution failed",
+			"user_id", cfg.UserID,
+			"mode", cfg.Mode,
+			"error", err)
+		return err
+	}
+
+	return nil
+}
+
+// validateConfig validates the CCRunnerConfig.
+// validateConfig 验证 CCRunnerConfig。
+func (r *CCRunner) validateConfig(cfg *CCRunnerConfig) error {
+	if cfg.Mode == "" {
+		return fmt.Errorf("mode is required")
+	}
+	if cfg.WorkDir == "" {
+		return fmt.Errorf("work_dir is required")
+	}
+	if cfg.SessionID == "" {
+		return fmt.Errorf("session_id is required")
+	}
+	if cfg.UserID == 0 {
+		return fmt.Errorf("user_id is required")
+	}
+	return nil
+}
+
+// isFirstCall checks if this is the first call for a session.
+// isFirstCall 检查是否是会话的首次调用。
+func (r *CCRunner) isFirstCall(sessionDir string) bool {
+	_, err := os.Stat(sessionDir)
+	return os.IsNotExist(err)
+}
+
+// executeWithSession executes Claude Code CLI with appropriate session flags.
+// executeWithSession 使用适当的会话标志执行 Claude Code CLI。
+func (r *CCRunner) executeWithSession(
+	ctx context.Context,
+	cfg *CCRunnerConfig,
+	prompt string,
+	firstCall bool,
+	callback EventCallback,
+) error {
+	// Build system prompt
+	// 构建系统提示词
+	systemPrompt := cfg.SystemPrompt
+	if systemPrompt == "" {
+		systemPrompt = buildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
+	}
+
+	// Build command arguments
+	// 构建命令参数
+	var args []string
+	if firstCall {
+		args = []string{
+			"--print",
+			"--verbose",
+			"--append-system-prompt", systemPrompt,
+			"--session-id", cfg.SessionID,
+			"--output-format", "stream-json",
+			prompt,
+		}
+	} else {
+		args = []string{
+			"--print",
+			"--verbose",
+			"--append-system-prompt", systemPrompt,
+			"--resume", cfg.SessionID,
+			"--output-format", "stream-json",
+			prompt,
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, r.cliPath, args...)
+	cmd.Dir = cfg.WorkDir
+
+	// Set environment for programmatic usage
+	// 设置程序化使用环境变量
+	cmd.Env = append(os.Environ(),
+		"CLAUDE_DISABLE_TELEMETRY=1",
+	)
+
+	// Get pipes
+	// 获取管道
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("stdout pipe: %w", err)
+	}
+	defer stdout.Close()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("stderr pipe: %w", err)
+	}
+	defer stderr.Close()
+
+	// Start command
+	// 启动命令
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start command: %w", err)
+	}
+
+	// Stream output with timeout
+	// 带超时流式输出
+	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback); err != nil {
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		return err
+	}
+
+	// Wait for command completion
+	// 等待命令完成
+	waitErr := cmd.Wait()
+	if waitErr != nil {
+		exitCode := 0
+		if cmd.ProcessState != nil {
+			exitCode = cmd.ProcessState.ExitCode()
+		}
+		return fmt.Errorf("command exited with code %d: %w", exitCode, waitErr)
+	}
+
+	return nil
+}
+
+// streamOutput reads and parses stream-json output from CLI.
+// streamOutput 读取并解析 CLI 的 stream-json 输出。
+func (r *CCRunner) streamOutput(
+	ctx context.Context,
+	cfg *CCRunnerConfig,
+	stdout, stderr io.ReadCloser,
+	callback EventCallback,
+) error {
+	var wg sync.WaitGroup
+	errCh := make(chan error, 2)
+	done := make(chan struct{})
+
+	// Stream stdout
+	// 流式处理 stdout
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdout)
+		buf := make([]byte, 0, scannerInitialBufSize)
+		scanner.Buffer(buf, scannerMaxBufSize)
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				continue
+			}
+
+			var msg StreamMessage
+			if err := json.Unmarshal([]byte(line), &msg); err != nil {
+				// Not JSON, treat as plain text
+				if len(line) > maxNonJSONOutputLength {
+					line = line[:maxNonJSONOutputLength]
+				}
+				r.logger.Debug("CCRunner: non-JSON output",
+					"user_id", cfg.UserID,
+					"mode", cfg.Mode,
+					"line", line)
+				if callback != nil {
+					callback(EventTypeAnswer, line)
+				}
+				continue
+			}
+
+			// Log message type for debugging
+			r.logger.Debug("CCRunner: received message",
+				"user_id", cfg.UserID,
+				"mode", cfg.Mode,
+				"type", msg.Type,
+				"has_name", msg.Name != "",
+				"has_output", msg.Output != "",
+				"has_error", msg.Error != "")
+
+			// Dispatch event to callback
+			if callback != nil {
+				if err := r.dispatchCallback(msg, callback); err != nil {
+					errCh <- err
+					return
+				}
+			}
+
+			// Check for completion
+			if msg.Type == "result" || msg.Type == "error" {
+				return
+			}
+		}
+		errCh <- scanner.Err()
+	}()
+
+	// Stream stderr to log
+	// 流式处理 stderr 到日志
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			r.logger.Warn("CCRunner: stderr from Claude Code CLI",
+				"user_id", cfg.UserID,
+				"mode", cfg.Mode,
+				"line", scanner.Text())
+		}
+		errCh <- scanner.Err()
+	}()
+
+	// Wait for completion or timeout
+	// 等待完成或超时
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	timer := time.NewTimer(r.timeout)
+	defer timer.Stop()
+
+	select {
+	case <-done:
+		// Collect any errors
+		var errors []string
+		for i := 0; i < 2; i++ {
+			select {
+			case err := <-errCh:
+				if err != nil {
+					errors = append(errors, err.Error())
+				}
+			default:
+			}
+		}
+		if len(errors) > 0 {
+			return fmt.Errorf("stream errors: %s", errors[0])
+		}
+		return nil
+	case <-ctx.Done():
+		timer.Stop()
+		return ctx.Err()
+	case <-timer.C:
+		return fmt.Errorf("execution timeout after %v", r.timeout)
+	}
+}
+
+// dispatchCallback dispatches stream events to the callback.
+// dispatchCallback 将流事件分发给回调。
+func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback) error {
+	switch msg.Type {
+	case "error":
+		if msg.Error != "" {
+			return callback(EventTypeError, msg.Error)
+		}
+	case "thinking", "status":
+		for _, block := range msg.GetContentBlocks() {
+			if block.Type == "text" && block.Text != "" {
+				if err := callback(EventTypeThinking, block.Text); err != nil {
+					return err
+				}
+			}
+		}
+	case "tool_use":
+		if msg.Name != "" {
+			if err := callback(EventTypeToolUse, msg.Name); err != nil {
+				return err
+			}
+		}
+	case "tool_result":
+		if msg.Output != "" {
+			if err := callback(EventTypeToolResult, msg.Output); err != nil {
+				return err
+			}
+		}
+	case "message", "content", "text", "delta", "assistant":
+		for _, block := range msg.GetContentBlocks() {
+			if block.Type == "text" && block.Text != "" {
+				if err := callback(EventTypeAnswer, block.Text); err != nil {
+					return err
+				}
+			}
+		}
+	default:
+		// Try to extract any text content
+		for _, block := range msg.GetContentBlocks() {
+			if block.Type == "text" && block.Text != "" {
+				callback(EventTypeAnswer, block.Text)
+			}
+		}
+	}
+	return nil
+}
+
+// GetCLIVersion returns the Claude Code CLI version.
+// GetCLIVersion 返回 Claude Code CLI 版本。
+func (r *CCRunner) GetCLIVersion() (string, error) {
+	cmd := exec.Command(r.cliPath, "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get CLI version: %w", err)
+	}
+	return string(output), nil
+}
