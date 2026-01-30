@@ -15,6 +15,7 @@ import { useChat } from "@/hooks/useAIQueries";
 import { useAITools } from "@/hooks/useAITools";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { cn } from "@/lib/utils";
 import type { AIMode, ChatItem } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
 import type { MemoQueryResultData, ScheduleQueryResultData } from "@/types/parrot";
@@ -89,8 +90,23 @@ function UnifiedChatView({
     // TODO: Implement message deletion
   };
 
+  // Get mode-specific container classes
+  const getModeContainerClass = (mode: AIMode) => {
+    switch (mode) {
+      case "geek":
+        return "geek-matrix-grid";
+      case "evolution":
+        return "evo-flow-bg";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <div className="w-full h-full flex flex-col relative bg-background">
+    <div className={cn(
+      "w-full h-full flex flex-col relative bg-background",
+      getModeContainerClass(currentMode)
+    )}>
       {/* Desktop Header */}
       {md && (
         <ChatHeader

@@ -78,8 +78,25 @@ const AIChatLayoutContent = () => {
   const modeStyles = getModeStyles(currentMode);
   const isSpecialMode = currentMode !== "normal";
 
+  // Get mode-specific background effect class
+  const getBgEffectClass = (mode: AIMode) => {
+    switch (mode) {
+      case "geek":
+        return "geek-matrix-bg";
+      case "evolution":
+        return "evo-bio-bg";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <section className="@container w-full h-screen flex flex-col lg:h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <section
+      className={cn(
+        "@container w-full h-screen flex flex-col lg:h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950",
+        getBgEffectClass(currentMode)
+      )}
+    >
       {/* Mobile Header */}
       <div
         className={cn(
