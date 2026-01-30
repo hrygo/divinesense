@@ -146,15 +146,18 @@ ChatRouter 实现**三层**意图分类系统：
 
 **EvolutionMode 最高优先级路由**：
 - 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
-- EvolutionParrot 允许 DivineSense 修改自己的源代码
-- 严格安全约束 + 强制 PR 审查
+- **工作目录**: DivineSense 源代码根目录
+- **产出物**: 强制 GitHub PR，需人工 Review 后合并
+- **安全等级**: 高（需管理员权限 + 环境变量启用 + PR 审核）
 - 仅限管理员使用
 - 实现：`server/router/api/v1/ai/handler.go` 中的 `handleEvolutionMode()`
 
 **GeekMode 优先路由**：
 - 当 `GeekMode=true` 时（且 EvolutionMode=false），**绕过所有路由**，直接创建 GeekParrot
-- GeekParrot 是纯通信层，不经过 LLM 处理
-- 零延迟，直接调用 Claude Code CLI
+- **工作目录**: `~/.divinesense/claude/user_{id}`（用户沙箱）
+- **产出物**: 用户可浏览/下载的代码产物
+- **安全等级**: 中（沙箱隔离）
+- 所有用户可用
 - 实现：`server/router/api/v1/ai/handler.go` 中的 `handleGeekMode()`
 
 **三层路由**（当 `router.Service` 已配置时）：
