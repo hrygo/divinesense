@@ -77,6 +77,14 @@ export type ChatItem = ConversationMessage | ContextSeparator;
 export type ConversationViewMode = "hub" | "chat";
 
 /**
+ * AI Mode type - 三态循环模式
+ * - normal: 普通模式 - AI 智能助理
+ * - geek: 极客模式 - Claude Code CLI 代码执行
+ * - evolution: 进化模式 - 系统自我进化
+ */
+export type AIMode = "normal" | "geek" | "evolution";
+
+/**
  * Sidebar tab type
  */
 export type SidebarTab = "history" | "memos";
@@ -128,9 +136,10 @@ export interface AIChatState {
   // 能力状态 (新增 - 支持"个人专属助手"模式)
   currentCapability?: CapabilityType;
   capabilityStatus?: CapabilityStatus;
-  // 极客模式 (Geek Mode for Claude Code CLI)
+  // AI 模式 - 三态循环 (普通/极客/进化)
+  currentMode: AIMode;
+  // 兼容旧代码的 getter (computed from currentMode)
   geekMode: boolean;
-  // 进化模式 (Evolution Mode for self-evolution)
   evolutionMode: boolean;
   // 沉浸模式 (沉浸模式 - 全屏沉浸体验)
   immersiveMode: boolean;
@@ -176,10 +185,13 @@ export interface AIChatContextValue {
   setCurrentCapability: (capability: CapabilityType) => void;
   setCapabilityStatus: (status: CapabilityStatus) => void;
 
-  // Geek Mode action (新增 - 极客模式)
+  // AI Mode action (三态模式切换)
+  setMode: (mode: AIMode) => void;
+
+  // Geek Mode action (新增 - 极客模式) - 兼容旧代码
   toggleGeekMode: (enabled: boolean) => void;
 
-  // Evolution Mode action (进化模式 - 自我进化)
+  // Evolution Mode action (进化模式 - 自我进化) - 兼容旧代码
   toggleEvolutionMode: (enabled: boolean) => void;
 
   // Immersive Mode action (沉浸模式 - 全屏沉浸体验)

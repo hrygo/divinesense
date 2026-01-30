@@ -126,6 +126,7 @@
       "chat-default-placeholder": "询问你的笔记或日程...",
       "chat-placeholder": "与 {{name}} 对话...",
       "geek-chat-placeholder": "输入你想让 Claude Code 完成的任务…",
+      "evolution-chat-placeholder": "系统自我进化中，描述你的需求…",
       "close": "关闭",
       "cognition": {
         "amazing": {
@@ -284,6 +285,16 @@
       "quick-note": "快速记录",
       "reason-morning": "开始新的一天，先看看今天的安排",
       "reason-friday": "周末将至，回顾一下本周进展"
+    },
+    "mode": {
+      "normal": "普通",
+      "normal_tooltip": "普通模式 - AI 智能助理",
+      "geek": "极客",
+      "geek_tooltip": "极客模式 - Claude Code CLI 代码执行",
+      "evolution": "进化",
+      "evolution_tooltip": "进化模式 - 系统自我进化",
+      "evolution_locked": "进化(仅管理员)",
+      "evolution_locked_tooltip": "进化模式仅限管理员使用"
     },
     "geek_mode": {
       "label": "极客",

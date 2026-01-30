@@ -126,6 +126,7 @@
       "chat-default-placeholder": "Ask about your notes or schedules...",
       "chat-placeholder": "Chat with {{name}}...",
       "geek-chat-placeholder": "Enter a task for Claude Code to complete…",
+      "evolution-chat-placeholder": "System evolving, describe your needs…",
       "close": "Close",
       "cognition": {
         "amazing": {
@@ -289,6 +290,16 @@
       "quick-note": "Quick Note",
       "reason-morning": "Start your day with a schedule overview",
       "reason-friday": "End of week - review your progress"
+    },
+    "mode": {
+      "normal": "Normal",
+      "normal_tooltip": "Normal Mode - AI Assistant",
+      "geek": "Geek",
+      "geek_tooltip": "Geek Mode - Claude Code CLI execution",
+      "evolution": "Evolution",
+      "evolution_tooltip": "Evolution Mode - System self-evolution",
+      "evolution_locked": "Evolution (Admin)",
+      "evolution_locked_tooltip": "Evolution Mode is admin-only"
     },
     "geek_mode": {
       "label": "Geek",

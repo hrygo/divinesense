@@ -15,7 +15,7 @@ import { useChat } from "@/hooks/useAIQueries";
 import { useAITools } from "@/hooks/useAITools";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
 import useMediaQuery from "@/hooks/useMediaQuery";
-import type { ChatItem } from "@/types/aichat";
+import type { AIMode, ChatItem } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
 import type { MemoQueryResultData, ScheduleQueryResultData } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
@@ -42,12 +42,11 @@ interface UnifiedChatViewProps {
   recentMemoCount?: number;
   upcomingScheduleCount?: number;
   uiTools: ReturnType<typeof useAITools>;
-  geekMode: boolean;
-  onGeekModeToggle: (enabled: boolean) => void;
-  evolutionMode: boolean;
-  onEvolutionModeToggle: (enabled: boolean) => void;
+  currentMode: AIMode;
+  onModeChange: (mode: AIMode) => void;
   immersiveMode: boolean;
   onImmersiveModeToggle: (enabled: boolean) => void;
+  isAdmin?: boolean;
 }
 
 function UnifiedChatView({
@@ -69,12 +68,11 @@ function UnifiedChatView({
   recentMemoCount,
   upcomingScheduleCount,
   uiTools,
-  geekMode,
-  onGeekModeToggle,
-  evolutionMode,
-  onEvolutionModeToggle,
+  currentMode,
+  onModeChange,
   immersiveMode,
   onImmersiveModeToggle,
+  isAdmin = true,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
   const md = useMediaQuery("md");
@@ -99,12 +97,11 @@ function UnifiedChatView({
           currentCapability={currentCapability}
           capabilityStatus={capabilityStatus}
           isThinking={isThinking}
-          geekMode={geekMode}
-          onGeekModeToggle={onGeekModeToggle}
-          evolutionMode={evolutionMode}
-          onEvolutionModeToggle={onEvolutionModeToggle}
+          currentMode={currentMode}
+          onModeChange={onModeChange}
           immersiveMode={immersiveMode}
           onImmersiveModeToggle={onImmersiveModeToggle}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -138,10 +135,10 @@ function UnifiedChatView({
         onNewChat={onNewChat}
         onClearContext={onClearContext}
         onClearChat={() => setClearDialogOpen(true)}
-        onGeekModeToggle={onGeekModeToggle}
+        onModeChange={onModeChange}
         disabled={isTyping}
         isTyping={isTyping}
-        geekMode={geekMode}
+        currentMode={currentMode}
       />
 
       {/* Clear Chat Confirmation Dialog */}
@@ -235,15 +232,13 @@ const AIChat = () => {
     state,
     setCurrentCapability,
     setCapabilityStatus,
-    toggleGeekMode,
-    toggleEvolutionMode,
+    setMode,
     toggleImmersiveMode,
   } = aiChat;
 
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
   const capabilityStatus = state.capabilityStatus || "idle";
-  const geekMode = state.geekMode || false;
-  const evolutionMode = state.evolutionMode || false;
+  const currentMode = state.currentMode || "normal";
   const immersiveMode = state.immersiveMode || false;
 
   // Get messages from current conversation
@@ -280,16 +275,28 @@ const AIChat = () => {
 
       const explicitMessage = userMessage;
 
+      // Debug: Log current mode
+      console.log("[AIChat] handleParrotChat called", {
+        currentMode,
+        geekMode: currentMode === "geek",
+        evolutionMode: currentMode === "evolution",
+      });
+
+      // Prepare stream params
+      const streamParams = {
+        message: explicitMessage,
+        agentType: parrotId,
+        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        conversationId: _conversationIdNum,
+        geekMode: currentMode === "geek",
+        evolutionMode: currentMode === "evolution",
+      };
+
+      // Debug: Log params before sending
+      console.log("[AIChat] Sending stream params", JSON.stringify(streamParams));
+
       try {
-        await chatHook.stream(
-          {
-            message: explicitMessage,
-            agentType: parrotId,
-            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            conversationId: _conversationIdNum,
-            geekMode: geekMode,
-            evolutionMode: evolutionMode,
-          },
+        await chatHook.stream(streamParams,
           {
             onThinking: (msg) => {
               if (lastAssistantMessageIdRef.current) {
@@ -386,6 +393,14 @@ const AIChat = () => {
 
   const handleSend = useCallback(
     async (messageContent?: string) => {
+      // Debug: Log currentMode at the start of handleSend
+      console.log("[AIChat] handleSend called", {
+        currentMode,
+        geekMode: currentMode === "geek",
+        evolutionMode: currentMode === "evolution",
+        rawState: JSON.stringify({ currentMode: state.currentMode, evolutionMode: state.evolutionMode }),
+      });
+
       const userMessage = (messageContent || input).trim();
       if (!userMessage) return;
 
@@ -608,12 +623,11 @@ const AIChat = () => {
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}
       uiTools={uiTools}
-      geekMode={geekMode}
-      onGeekModeToggle={toggleGeekMode}
-      evolutionMode={evolutionMode}
-      onEvolutionModeToggle={toggleEvolutionMode}
+      currentMode={currentMode}
+      onModeChange={setMode}
       immersiveMode={immersiveMode}
       onImmersiveModeToggle={toggleImmersiveMode}
+      isAdmin={true}
     />
   );
 };

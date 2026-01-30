@@ -76,18 +76,21 @@
   mask-composite: exclude;
   opacity: 0.8;
   animation: evo-rotate 4s linear infinite;
+  pointer-events: none;
 }
 
 .evolution-mode .evo-glow-pulse::before {
   animation:
     evo-rotate 4s linear infinite,
     evo-pulse 3s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* ============================================================
    Evolution Mode Border Styles
    ============================================================ */
-.evolution-mode .evo-border {
+.evolution-mode .evo-border,
+.evolution-mode .evolution-border {
   border: 1px solid var(--evo-primary-dim);
   box-shadow:
     0 0 0 1px var(--evo-glow),
@@ -96,10 +99,39 @@
 }
 
 .evolution-mode .evo-border:hover,
-.evolution-mode .evo-border:focus-within {
+.evolution-mode .evolution-border:hover,
+.evolution-mode .evo-border:focus-within,
+.evolution-mode .evolution-border:focus-within {
   box-shadow:
     0 0 0 1px var(--evo-primary),
     0 0 35px -5px var(--evo-glow);
+}
+
+/* Gradient border effect */
+.evolution-mode .evolution-gradient {
+  position: relative;
+  background: linear-gradient(135deg, var(--evo-bg-dim), var(--evo-bg));
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.evolution-mode .evolution-gradient::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--evo-primary), var(--evo-blue), var(--evo-primary));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 /* ============================================================
@@ -107,6 +139,13 @@
    ============================================================ */
 .evolution-mode .evo-text {
   color: var(--evo-primary);
+}
+
+/* Mono font for code/terminal feel */
+.evolution-mode .evo-mono,
+.evolution-mode .evolution-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
 }
 
 .evolution-mode .evo-text-gradient {
@@ -127,7 +166,8 @@
 /* ============================================================
    Evolution Mode Button Styles
    ============================================================ */
-.evolution-mode button.evo-btn {
+.evolution-mode button.evo-btn,
+.evolution-mode button.evolution-btn {
   position: relative;
   background: transparent;
   border: 1px solid var(--evo-primary-dim);
@@ -136,7 +176,8 @@
   transition: all 0.3s ease;
 }
 
-.evolution-mode button.evo-btn::before {
+.evolution-mode button.evo-btn::before,
+.evolution-mode button.evolution-btn::before {
   content: "";
   position: absolute;
   top: 0;
@@ -147,11 +188,13 @@
   transition: left 0.6s ease;
 }
 
-.evolution-mode button.evo-btn:hover::before {
+.evolution-mode button.evo-btn:hover::before,
+.evolution-mode button.evolution-btn:hover::before {
   left: 100%;
 }
 
-.evolution-mode button.evo-btn:hover {
+.evolution-mode button.evo-btn:hover,
+.evolution-mode button.evolution-btn:hover {
   background: linear-gradient(135deg, var(--evo-glow), var(--evo-blue) / 0.2);
   box-shadow:
     0 0 15px var(--evo-glow),
@@ -265,6 +308,7 @@
   border-top-color: var(--evo-primary);
   border-right-color: var(--evo-blue);
   animation: evo-rotate 2s linear infinite;
+  pointer-events: none;
 }
 
 /* ============================================================

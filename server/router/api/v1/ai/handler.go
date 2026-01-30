@@ -47,9 +47,18 @@ func (h *ParrotHandler) SetChatRouter(router *agentpkg.ChatRouter) {
 
 // Handle implements Handler interface for parrot agent requests.
 func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream ChatStream) error {
+	// IMPORTANT: Log at INFO level to see evolution_mode value
+	slog.Info("AI chat handler received request",
+		"agent_type", req.AgentType,
+		"geek_mode", req.GeekMode,
+		"evolution_mode", req.EvolutionMode,
+		"evolution_mode_raw", fmt.Sprintf("%v", req.EvolutionMode),
+	)
+
 	// PRIORITY CHECK: EvolutionMode has highest priority (admin-only, self-evolution)
 	// 优先检查：进化模式具有最高优先级（仅管理员，自我进化）
 	if req.EvolutionMode {
+		slog.Info("Evolution mode detected, routing to EvolutionParrot")
 		return h.handleEvolutionMode(ctx, req, stream)
 	}
 
@@ -213,8 +222,12 @@ func (h *ParrotHandler) handleEvolutionMode(
 		return status.Error(codes.Internal, "evolution mode requires source directory configuration")
 	}
 
-	// Generate session ID for evolution
-	sessionID := fmt.Sprintf("evolution_%d_%d", req.ConversationID, req.UserID)
+	// Generate session ID for evolution (must be valid UUID for Claude Code CLI)
+	// Using user-specific namespace to isolate Evolution sessions from Geek sessions
+	// 使用用户特定的命名空间隔离 Evolution 和 Geek 会话
+	// Format: 00000000-0000-0000-0000-<user_id_last_4_hex>
+	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%04x", req.UserID))
+	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationID))).String()
 
 	// Create EvolutionParrot (pass store for admin verification)
 	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID, h.factory.store)

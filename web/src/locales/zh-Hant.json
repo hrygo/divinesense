@@ -554,6 +554,7 @@
       "chat-default-placeholder": "詢問你的筆記或日程...",
       "chat-placeholder": "與 {{name}} 對話...",
       "geek-chat-placeholder": "輸入你想讓 Claude Code 完成的任務…",
+      "evolution-chat-placeholder": "系統自我進化中，描述你的需求…",
       "geek_mode": {
         "label": "極客",
         "tooltip": "切換極客模式，使用 Claude Code CLI 處理代碼任務",

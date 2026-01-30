@@ -169,11 +169,64 @@ export function useChat() {
         }),
       });
 
+      // WORKAROUND: Manually set evolutionMode if create() didn't include it
+      // This is a temporary fix for the protobuf serialization issue
+      if (params.evolutionMode && request.evolutionMode === undefined) {
+        (request as any).evolutionMode = true;
+        console.log("[AI Chat] WORKAROUND: Manually set evolutionMode=true");
+      }
+
+      // Debug: ALWAYS log request params (remove DEV check)
+      const evoValue = (request as any).evolutionMode;
+      console.log("[AI Chat] Request params", {
+        inputParams: { geekMode: params.geekMode, evolutionMode: params.evolutionMode },
+        requestFields: {
+          evolutionMode: evoValue,
+          geekMode: request.geekMode,
+          evoType: typeof evoValue,
+          evoValueStr: String(evoValue),
+          geekType: typeof request.geekMode,
+        },
+        allKeys: Object.keys(request),
+        hasEvolution: "evolutionMode" in request,
+        evoIsTrue: evoValue === true,
+      });
+
+      // Debug: Check toJson serialization
+      console.log("[AI Chat] Checking serialization methods", {
+        hasToJson: typeof (request as any).toJson,
+        hasToJsonMethod: "toJson" in request,
+      });
+
+      try {
+        const toJsonResult = (request as any).toJson?.();
+        console.log("[AI Chat] toJson result", {
+          exists: toJsonResult !== undefined,
+          type: typeof toJsonResult,
+          hasEvolution: toJsonResult && "evolutionMode" in toJsonResult,
+          evolutionValue: toJsonResult?.evolutionMode,
+          result: toJsonResult,
+        });
+      } catch (e) {
+        console.log("[AI Chat] toJson failed", e);
+      }
+
+      // Debug: Log serialized request to verify evolutionMode is set
+      if (import.meta.env.DEV) {
+        console.debug("[AI Chat] Request serialized", {
+          evolutionMode: request.evolutionMode,
+          geekMode: request.geekMode,
+          fullRequest: request,
+        });
+      }
+
       if (import.meta.env.DEV) {
         console.debug("[AI Chat] Starting stream", {
           messageLength: params.message.length,
           agentType: params.agentType,
           historyCount: params.history?.length ?? 0,
+          geekMode: params.geekMode,
+          evolutionMode: params.evolutionMode,
         });
       }
 

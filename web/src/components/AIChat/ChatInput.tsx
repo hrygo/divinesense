@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { GeekModeToggle } from "./GeekModeToggle";
+import type { AIMode } from "@/types/aichat";
 
 interface ChatInputProps {
   value: string;
@@ -13,14 +13,14 @@ interface ChatInputProps {
   onNewChat?: () => void;
   onClearContext?: () => void;
   onClearChat?: () => void;
-  onGeekModeToggle?: (enabled: boolean) => void;
+  onModeChange?: (mode: AIMode) => void;
   disabled?: boolean;
   isTyping?: boolean;
   placeholder?: string;
   className?: string;
   showQuickActions?: boolean;
   quickActions?: React.ReactNode;
-  geekMode?: boolean;
+  currentMode?: AIMode;
 }
 
 export function ChatInput({
@@ -30,14 +30,14 @@ export function ChatInput({
   onNewChat,
   onClearContext,
   onClearChat,
-  onGeekModeToggle,
+  onModeChange,
   disabled = false,
   isTyping = false,
   placeholder,
   className,
   showQuickActions = false,
   quickActions,
-  geekMode = false,
+  currentMode = "normal",
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -88,8 +88,39 @@ export function ChatInput({
     }
   }, [value]);
 
-  // Use geek-specific placeholder in geek mode, otherwise use default
-  const placeholderText = geekMode ? t("ai.parrot.geek-chat-placeholder") : placeholder || t("ai.parrot.chat-default-placeholder");
+  // Use mode-specific placeholder
+  const placeholderText =
+    currentMode === "geek"
+      ? t("ai.parrot.geek-chat-placeholder")
+      : currentMode === "evolution"
+        ? t("ai.parrot.evolution-chat-placeholder")
+        : placeholder || t("ai.parrot.chat-default-placeholder");
+
+  // Mode-specific styles helper
+  const getModeStyles = (mode: AIMode) => {
+    switch (mode) {
+      case "geek":
+        return {
+          border: "geek-border geek-terminal",
+          input: "geek-mono placeholder:text-green-500/50",
+          button: "geek-btn",
+        };
+      case "evolution":
+        return {
+          border: "evolution-border evolution-gradient",
+          input: "evolution-mono placeholder:text-purple-500/50",
+          button: "evolution-btn",
+        };
+      default:
+        return {
+          border: "",
+          input: "",
+          button: "",
+        };
+    }
+  };
+
+  const modeStyles = getModeStyles(currentMode);
 
   return (
     <div
@@ -101,7 +132,7 @@ export function ChatInput({
         {showQuickActions && quickActions}
 
         {/* Toolbar - 工具栏 */}
-        {(onNewChat || onClearContext || onClearChat || onGeekModeToggle) && (
+        {(onNewChat || onClearContext || onClearChat || onModeChange) && (
           <div className="flex items-center gap-1 mb-2">
             {onNewChat && (
               <Button
@@ -151,10 +182,12 @@ export function ChatInput({
                 </span>
               </Button>
             )}
-            {/* Spacer to push geek mode toggle to the right */}
+            {/* Spacer to push mode cycle button to the right */}
             <div className="flex-1" />
-            {/* Geek Mode Toggle - always shown in toolbar on all screen sizes */}
-            {onGeekModeToggle && <GeekModeToggle enabled={geekMode} onToggle={onGeekModeToggle} variant="toolbar" />}
+            {/* Mode Cycle Button - mobile only, shows mode selector */}
+            {onModeChange && currentMode !== "normal" && (
+              <div className="hidden md:block">{/* Could add compact mode indicator here for mobile */}</div>
+            )}
           </div>
         )}
 
@@ -164,8 +197,7 @@ export function ChatInput({
             "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border",
             "focus-within:ring-2 focus-within:ring-offset-2 shadow-sm",
             "bg-card border-border focus-within:ring-ring",
-            // Geek mode styles
-            geekMode && "geek-border geek-terminal",
+            modeStyles.border,
           )}
         >
           <Textarea
@@ -181,7 +213,7 @@ export function ChatInput({
             className={cn(
               "flex-1 min-h-[44px] max-h-[120px] bg-transparent border-0 outline-none resize-none text-sm leading-relaxed",
               "text-foreground placeholder:text-muted-foreground",
-              geekMode && "geek-mono placeholder:text-green-500/50",
+              modeStyles.input,
             )}
             rows={1}
           />
@@ -192,14 +224,19 @@ export function ChatInput({
               "hover:scale-105 active:scale-95",
               value.trim() && !isTyping ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-              // Geek mode styles
-              geekMode && "geek-btn",
+              modeStyles.button,
             )}
             onClick={() => onSend()}
             disabled={!value.trim() || isTyping || disabled}
             aria-label={t("ai.send-shortcut")}
           >
-            {geekMode && value.trim() ? <Terminal className="w-5 h-5" /> : <SendIcon className="w-5 h-5" />}
+            {currentMode === "geek" && value.trim() ? (
+              <Terminal className="w-5 h-5" />
+            ) : currentMode === "evolution" && value.trim() ? (
+              <Terminal className="w-5 h-5 text-purple-500" />
+            ) : (
+              <SendIcon className="w-5 h-5" />
+            )}
           </Button>
         </div>
       </div>
