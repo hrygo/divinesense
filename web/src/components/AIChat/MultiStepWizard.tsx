@@ -44,7 +44,6 @@ const MultiStepWizard = memo(function MultiStepWizard({
   initialData = {},
   onComplete,
   onCancel,
-  onDismiss,
   className,
 }: MultiStepWizardProps) {
   const { t } = useTranslation();
@@ -56,20 +55,6 @@ const MultiStepWizard = memo(function MultiStepWizard({
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
   const isFirstStep = currentStepIndex === 0;
-
-  // 计算跳过的步骤
-  const getEffectiveStepIndex = useCallback(
-    (displayIndex: number) => {
-      let effectiveIndex = 0;
-      for (let i = 0; i < displayIndex; i++) {
-        if (!steps[i].skipIf || !steps[i].skipIf!(stepData)) {
-          effectiveIndex++;
-        }
-      }
-      return effectiveIndex;
-    },
-    [steps, stepData],
-  );
 
   // 检查当前步骤是否应该跳过
   const shouldSkipCurrentStep = currentStep?.skipIf?.(stepData);

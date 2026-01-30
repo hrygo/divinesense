@@ -213,9 +213,10 @@
 }
 
 /* ============================================
-   响应式调整
+   响应式调整 & 无障碍支持
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
+  /* 禁用所有动画 */
   .animate-avatar-breathe,
   .animate-avatar-pulse,
   .animate-avatar-wave,
@@ -226,21 +227,9 @@
   }
 }
 
-/* ============================================
-   性能优化：降低动画复杂度
-   ============================================ */
 @media (max-width: 768px) {
   /* 移动端简化动画效果 */
   .animate-avatar-wave {
-    animation: none;
-  }
-}
-
-/* 低端设备检测 */
-@media (prefers-reduced-motion: reduce), (max-width: 768px) {
-  /* 禁用复杂动画 */
-  .animate-avatar-breathe,
-  .animate-avatar-pulse {
     animation: none;
   }
 }

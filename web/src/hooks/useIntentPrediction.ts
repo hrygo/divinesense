@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { CapabilityType } from "@/types/capability";
+import { CapabilityType } from "@/types/capability";
 
 /**
  * Phase 3: 意图预判系统
@@ -115,7 +115,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
     const actions: SuggestedAction[] = [];
 
     switch (intent) {
-      case "schedule":
+      case CapabilityType.SCHEDULE:
         actions.push({
           id: "quick-schedule",
           label: "快速创建日程",
@@ -135,7 +135,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
         }
         break;
 
-      case "memo":
+      case CapabilityType.MEMO:
         actions.push({
           id: "search-memo",
           label: "搜索笔记",
@@ -145,7 +145,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
         });
         break;
 
-      case "amazing":
+      case CapabilityType.AMAZING:
         actions.push({
           id: "analyze",
           label: "开始分析",

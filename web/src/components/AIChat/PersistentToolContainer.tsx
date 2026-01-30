@@ -59,7 +59,7 @@ function savePinnedTools(pinned: Set<string>) {
 
 export const PersistentToolContainer = memo(function PersistentToolContainer({
   tools,
-  onAction,
+  onAction: _onAction,
   onDismiss,
   children,
   className,
@@ -70,9 +70,6 @@ export const PersistentToolContainer = memo(function PersistentToolContainer({
   useEffect(() => {
     savePinnedTools(pinnedToolIds);
   }, [pinnedToolIds]);
-
-  // 工具是否被固定
-  const isPinned = useCallback((toolId: string) => pinnedToolIds.has(toolId), [pinnedToolIds]);
 
   // 切换固定状态
   const togglePin = useCallback((toolId: string) => {
@@ -126,7 +123,6 @@ export const PersistentToolContainer = memo(function PersistentToolContainer({
           <PinnedToolCard
             key={tool.id}
             tool={tool}
-            onAction={onAction}
             onDismiss={() => handleManualDismiss(tool.id)}
             onUnpin={() => togglePin(tool.id)}
           />
@@ -139,7 +135,6 @@ export const PersistentToolContainer = memo(function PersistentToolContainer({
           <ToolCardWithPin
             key={tool.id}
             tool={tool}
-            onAction={onAction}
             onDismiss={() => handleDismiss(tool.id)}
             onPin={() => togglePin(tool.id)}
           />
@@ -153,12 +148,11 @@ export const PersistentToolContainer = memo(function PersistentToolContainer({
 // 普通工具卡片（带固定按钮）
 interface ToolCardProps {
   tool: GenerativeUIContainerProps["tools"][number];
-  onAction: (action: { type: string; toolId: string; data?: unknown }) => void;
   onDismiss: () => void;
   onPin: () => void;
 }
 
-const ToolCardWithPin = memo(function ToolCardWithPin({ tool, onAction, onDismiss, onPin }: ToolCardProps) {
+const ToolCardWithPin = memo(function ToolCardWithPin({ tool, onDismiss: _onDismiss, onPin }: ToolCardProps) {
   return (
     <div className="relative group">
       {/* 固定按钮 - hover 时显示 */}
@@ -191,12 +185,11 @@ const ToolCardWithPin = memo(function ToolCardWithPin({ tool, onAction, onDismis
 // 固定的工具卡片（带解除固定按钮）
 interface PinnedToolCardProps {
   tool: GenerativeUIContainerProps["tools"][number];
-  onAction: (action: { type: string; toolId: string; data?: unknown }) => void;
   onDismiss: () => void;
   onUnpin: () => void;
 }
 
-const PinnedToolCard = memo(function PinnedToolCard({ tool, onAction, onDismiss, onUnpin }: PinnedToolCardProps) {
+const PinnedToolCard = memo(function PinnedToolCard({ tool, onDismiss, onUnpin }: PinnedToolCardProps) {
   return (
     <div className="relative">
       <div className="absolute -top-1 -right-1 flex gap-1">

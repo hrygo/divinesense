@@ -326,7 +326,7 @@ const AIChat = () => {
                 });
               }
             },
-            onToolResult: (result) => {
+            onToolResult: (_result) => {
               // Tool result received, no action needed
             },
             onMemoQueryResult: (result) => {
