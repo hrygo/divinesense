@@ -28,6 +28,7 @@
     .pupil-center {
       animation: pupil-pulse 2.5s ease-in-out infinite;
       transform-origin: center;
+      will-change: transform;
     }
 
     .pupil-outer {
@@ -56,11 +57,11 @@
 
     @keyframes pupil-pulse {
       0%, 100% {
-        r: 15;
+        transform: scale(1);
         opacity: 1;
       }
       50% {
-        r: 20;
+        transform: scale(1.3);
         opacity: 0.9;
       }
     }
