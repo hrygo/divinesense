@@ -3,13 +3,24 @@ package agent
 import (
 	"context"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 )
 
+// skipIfNoCLI skips the test if Claude Code CLI is not available.
+func skipIfNoCLI(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("Claude Code CLI not found in PATH - skipping test")
+	}
+}
+
 // TestNewEvolutionParrot tests EvolutionParrot creation.
 func TestNewEvolutionParrot(t *testing.T) {
+	skipIfNoCLI(t)
+
 	// Enable evolution mode for testing
 	t.Setenv("DIVINESENSE_EVOLUTION_ENABLED", "true")
 
@@ -58,6 +69,7 @@ func TestNewEvolutionParrot(t *testing.T) {
 
 // TestEvolutionParrotPermissionDenied tests permission checks.
 func TestEvolutionParrotPermissionDenied(t *testing.T) {
+	skipIfNoCLI(t)
 	t.Run("evolution mode disabled", func(t *testing.T) {
 		t.Setenv("DIVINESENSE_EVOLUTION_ENABLED", "false")
 
@@ -99,6 +111,7 @@ func TestEvolutionParrotPermissionDenied(t *testing.T) {
 
 // TestEvolutionParrotSetDeviceContext tests device context setting.
 func TestEvolutionParrotSetDeviceContext(t *testing.T) {
+	skipIfNoCLI(t)
 	parrot, err := NewEvolutionParrot("/src", 1, "test-session", nil, false)
 	if err != nil {
 		t.Fatalf("NewEvolutionParrot() error = %v", err)
@@ -113,6 +126,7 @@ func TestEvolutionParrotSetDeviceContext(t *testing.T) {
 
 // TestEvolutionParrotSelfDescribe tests metacognitive information.
 func TestEvolutionParrotSelfDescribe(t *testing.T) {
+	skipIfNoCLI(t)
 	parrot, err := NewEvolutionParrot("/src", 1, "test-session", nil, false)
 	if err != nil {
 		t.Fatalf("NewEvolutionParrot() error = %v", err)
@@ -159,6 +173,7 @@ func TestEvolutionParrotSelfDescribe(t *testing.T) {
 
 // TestEvolutionParrotResetSession tests session reset.
 func TestEvolutionParrotResetSession(t *testing.T) {
+	skipIfNoCLI(t)
 	parrot, err := NewEvolutionParrot("/src", 1, "test-session", nil, false)
 	if err != nil {
 		t.Fatalf("NewEvolutionParrot() error = %v", err)
@@ -180,6 +195,7 @@ func TestEvolutionParrotResetSession(t *testing.T) {
 
 // TestEvolutionParrotCancel tests cancellation.
 func TestEvolutionParrotCancel(t *testing.T) {
+	skipIfNoCLI(t)
 	parrot, err := NewEvolutionParrot("/src", 1, "test-session", nil, false)
 	if err != nil {
 		t.Fatalf("NewEvolutionParrot() error = %v", err)
@@ -214,6 +230,7 @@ func TestEvolutionParrotExecuteWithoutCLI(t *testing.T) {
 
 // TestEvolutionParrotAdminOnlyEnvVar tests admin-only environment variable.
 func TestEvolutionParrotAdminOnlyEnvVar(t *testing.T) {
+	skipIfNoCLI(t)
 	t.Setenv("DIVINESENSE_EVOLUTION_ENABLED", "true")
 
 	t.Run("admin only true from env", func(t *testing.T) {
@@ -238,6 +255,7 @@ func TestEvolutionParrotAdminOnlyEnvVar(t *testing.T) {
 
 // TestEvolutionParrotCallbackError tests error callback handling.
 func TestEvolutionParrotCallbackError(t *testing.T) {
+	skipIfNoCLI(t)
 	t.Setenv("DIVINESENSE_EVOLUTION_ENABLED", "true")
 
 	// Use a temp directory that's writable
