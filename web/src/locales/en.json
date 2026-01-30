@@ -123,9 +123,9 @@
         "thinking": "Thinking...",
         "title": "My Capabilities"
       },
-      "chat-default-placeholder": "Ask about your notes or schedules...",
+      "chat-default-placeholder": "What can I help you discover today?",
       "chat-placeholder": "Chat with {{name}}...",
-      "geek-chat-placeholder": "Enter a task for Claude Code to complete…",
+      "geek-chat-placeholder": "🤖 Terminal ready. Enter your command...",
       "evolution-chat-placeholder": "🧬 Evolution never ends, what's on your mind?",
       "close": "Close",
       "cognition": {

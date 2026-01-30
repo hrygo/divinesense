@@ -123,9 +123,9 @@
         "thinking": "思考中...",
         "title": "我的能力"
       },
-      "chat-default-placeholder": "询问你的笔记或日程...",
+      "chat-default-placeholder": "今天有什么我可以帮您发现的？",
       "chat-placeholder": "与 {{name}} 对话...",
-      "geek-chat-placeholder": "输入你想让 Claude Code 完成的任务…",
+      "geek-chat-placeholder": "🤖 终端就绪。请输入指令…",
       "evolution-chat-placeholder": "🧬 进化永无止境，您有什么想法？",
       "close": "关闭",
       "cognition": {
