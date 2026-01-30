@@ -21,12 +21,7 @@ interface EvolutionModeToggleProps {
  * - Admin-only access (disabled for non-admin users)
  * - Consistent across all variants
  */
-export function EvolutionModeToggle({
-  enabled,
-  onToggle,
-  disabled = false,
-  variant = "header",
-}: EvolutionModeToggleProps) {
+export function EvolutionModeToggle({ enabled, onToggle, disabled = false, variant = "header" }: EvolutionModeToggleProps) {
   const { t } = useTranslation();
 
   const isToolbar = variant === "toolbar";
@@ -71,9 +66,7 @@ export function EvolutionModeToggle({
 
       {/* Label */}
       {isToolbar || isHeader ? (
-        <span className={cn(isHeader && "hidden sm:inline", isToolbar && "ml-1 whitespace-nowrap")}>
-          {label}
-        </span>
+        <span className={cn(isHeader && "hidden sm:inline", isToolbar && "ml-1 whitespace-nowrap")}>{label}</span>
       ) : null}
     </button>
   );

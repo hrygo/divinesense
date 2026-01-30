@@ -107,6 +107,7 @@ export function useChat() {
         userTimezone?: string;
         conversationId?: number;
         geekMode?: boolean;
+        evolutionMode?: boolean;
       },
       callbacks?: {
         onContent?: (content: string) => void;
@@ -155,6 +156,7 @@ export function useChat() {
         userTimezone: params.userTimezone,
         conversationId: params.conversationId,
         geekMode: params.geekMode ?? false,
+        evolutionMode: params.evolutionMode ?? false,
         deviceContext: JSON.stringify({
           userAgent: navigator.userAgent,
           isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),

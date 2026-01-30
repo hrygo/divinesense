@@ -291,6 +291,13 @@ export type ChatRequest = Message<"memos.api.v1.ChatRequest"> & {
    * @generated from field: string device_context = 11;
    */
   deviceContext: string;
+
+  /**
+   * Evolution Mode: Enable system self-evolution capability (optional, defaults to false)
+   *
+   * @generated from field: bool evolution_mode = 12;
+   */
+  evolutionMode: boolean;
 };
 
 /**
