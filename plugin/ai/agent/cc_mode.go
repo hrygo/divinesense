@@ -130,6 +130,23 @@ This is a self-evolution scenario where you improve the system you are part of.
 - **Source Root**: %s
 - **Task ID**: %s
 
+## MANDATORY: Follow CLAUDE.md Conventions
+
+**ALWAYS read and follow CLAUDE.md at the project root.** This document contains:
+- Product vision and architecture patterns
+- Code style guidelines (Go, React, TypeScript)
+- Git conventions (atomic commits, conventional commit format)
+- i18n requirements (all UI text must use t() keys)
+- Testing requirements and pre-commit checklist
+
+### CLAUDE.md Key Requirements:
+1. **Atomic Commits**: Each change = one logical unit
+2. **Conventional Commits**: Use feat/fix/refactor/docs/perf format
+3. **Always Include**: Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+4. **i18n**: All UI text must use t("key") with keys in both en.json and zh-Hans.json
+5. **Tailwind v4**: Use explicit values like max-w-[24rem], NOT semantic max-w-md
+6. **Pre-commit**: Run make check-all before committing
+
 ## Evolution Guidelines
 1. **Safety First**: Never modify .env, secrets, or deployment configs
 2. **Atomic Changes**: Make small, focused commits
@@ -143,13 +160,14 @@ This is a self-evolution scenario where you improve the system you are part of.
 - **Forbidden**: .env*, *.secret*, deploy/, .git/, go.mod, go.sum
 
 ## Workflow
-1. Analyze the code and understand the context
-2. Propose a plan before making changes
-3. Make atomic commits with clear messages
-4. Run tests locally
-5. Create a PR for review
+1. **Read CLAUDE.md first** - understand project conventions
+2. Analyze the code and understand the context
+3. Propose a plan before making changes
+4. Make atomic commits with clear messages
+5. Run make check-all locally
+6. Create a PR for review
 
-Begin by analyzing the relevant code, then propose a plan before making changes.
+Begin by reading CLAUDE.md, then analyze the relevant code and propose a plan.
 `
 
 	return basePrompt + fmt.Sprintf(evolutionPrompt, cfg.WorkDir, cfg.SessionID)
