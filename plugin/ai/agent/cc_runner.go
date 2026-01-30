@@ -10,9 +10,126 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
+
+const (
+	// Scanner buffer sizes for CLI output parsing.
+	// 扫描器缓冲区大小，用于 CLI 输出解析。
+	scannerInitialBufSize = 256 * 1024  // 256 KB
+	scannerMaxBufSize     = 1024 * 1024 // 1 MB
+
+	// Maximum length of non-JSON output to log.
+	// 非 JSON 输出的最大日志长度。
+	maxNonJSONOutputLength = 100
+)
+
+// buildSystemPrompt provides minimal, high-signal context for Claude Code CLI.
+// buildSystemPrompt 为 Claude Code CLI 提供最小化、高信噪比的上下文。
+func buildSystemPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
+	osName := runtime.GOOS
+	arch := runtime.GOARCH
+	if osName == "darwin" {
+		osName = "macOS"
+	}
+
+	timestamp := time.Now().Format(time.RFC3339)
+
+	// Try to parse device context for better formatting
+	// 尝试解析设备上下文以便更好地格式化
+	var contextMap map[string]any
+	userAgent := "Unknown"
+	deviceInfo := "Unknown"
+	if deviceContext != "" {
+		if err := json.Unmarshal([]byte(deviceContext), &contextMap); err == nil {
+			if ua, ok := contextMap["userAgent"].(string); ok {
+				userAgent = ua
+			}
+			if mobile, ok := contextMap["isMobile"].(bool); ok {
+				if mobile {
+					deviceInfo = "Mobile"
+				} else {
+					deviceInfo = "Desktop"
+				}
+			}
+			// Add more fields if available (screen, language, etc.)
+			// 如果有更多字段则添加（屏幕、语言等）
+			if w, ok := contextMap["screenWidth"].(float64); ok {
+				if h, ok := contextMap["screenHeight"].(float64); ok {
+					deviceInfo = fmt.Sprintf("%s (%dx%d)", deviceInfo, int(w), int(h))
+				}
+			}
+			if lang, ok := contextMap["language"].(string); ok {
+				deviceInfo = fmt.Sprintf("%s, Language: %s", deviceInfo, lang)
+			}
+		} else {
+			// Fallback: use raw string if not JSON
+			userAgent = deviceContext
+		}
+	}
+
+	return fmt.Sprintf(`# Context
+
+You are running inside DivineSense, an intelligent assistant system.
+
+**User Interaction**: Users type questions in their web browser, which invokes you via a Go backend. Your response streams back to their browser in real-time.
+
+- **User ID**: %d
+- **Client Device**: %s
+- **User Agent**: %s
+- **Server OS**: %s (%s)
+- **Time**: %s
+- **Workspace**: %s
+- **Mode**: Non-interactive headless (--print)
+- **Session**: %s (persists via --session-id/--resume)
+`, userID, deviceInfo, userAgent, osName, arch, timestamp, workDir, sessionID)
+}
+
+// StreamMessage represents a single event in the stream-json format.
+// StreamMessage 表示 stream-json 格式中的单个事件。
+type StreamMessage struct {
+	Message   *AssistantMessage `json:"message,omitempty"`
+	Input     map[string]any    `json:"input,omitempty"`
+	Type      string            `json:"type"`
+	Timestamp string            `json:"timestamp,omitempty"`
+	SessionID string            `json:"session_id,omitempty"`
+	Role      string            `json:"role,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Output    string            `json:"output,omitempty"`
+	Status    string            `json:"status,omitempty"`
+	Error     string            `json:"error,omitempty"`
+	Content   []ContentBlock    `json:"content,omitempty"`
+	Duration  int               `json:"duration_ms,omitempty"`
+}
+
+// GetContentBlocks returns the content blocks, checking both direct and nested locations.
+// GetContentBlocks 返回内容块，同时检查直接和嵌套位置。
+func (m *StreamMessage) GetContentBlocks() []ContentBlock {
+	if m.Message != nil && len(m.Message.Content) > 0 {
+		return m.Message.Content
+	}
+	return m.Content
+}
+
+// AssistantMessage represents the nested message structure in assistant events.
+// AssistantMessage 表示 assistant 事件中的嵌套消息结构。
+type AssistantMessage struct {
+	ID      string         `json:"id,omitempty"`
+	Type    string         `json:"type,omitempty"`
+	Role    string         `json:"role,omitempty"`
+	Content []ContentBlock `json:"content,omitempty"`
+}
+
+// ContentBlock represents a content block in stream-json format.
+// ContentBlock 表示 stream-json 格式中的内容块。
+type ContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
+	Name string `json:"name,omitempty"`
+	ID   string `json:"id,omitempty"`
+}
 
 // CCRunner is the unified Claude Code CLI integration layer.
 // CCRunner 是统一的 Claude Code CLI 集成层。

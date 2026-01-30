@@ -49,9 +49,15 @@ func (m *GeekMode) Name() string {
 
 // BuildSystemPrompt builds the Geek Mode system prompt.
 // Geek Mode is a general-purpose assistant for code-related tasks.
+// Adds File Output section (Geek-specific) to base prompt.
 func (m *GeekMode) BuildSystemPrompt(cfg *CCRunnerConfig) string {
-	// Use the existing buildSystemPrompt function from geek_parrot.go
-	return buildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
+	basePrompt := buildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
+	return basePrompt + `
+
+# File Output
+
+When you create a file, announce the filename so the user knows it was created.
+`
 }
 
 // GetWorkDir returns the user-specific sandbox directory.
