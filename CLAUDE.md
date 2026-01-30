@@ -48,7 +48,26 @@
 
 详细规范 → @.claude/rules/code-style.md
 
-### 4. 数据库策略
+### 4. Lint 工作流
+
+**前端** (在 `web/` 目录下运行):
+```bash
+pnpm lint       # 检查 TypeScript + Biome 格式
+pnpm lint:fix   # 自动修复格式问题
+```
+
+**后端**:
+```bash
+go fmt ./...    # 格式化 Go 代码
+go vet ./...    # 静态分析
+```
+
+**Pre-commit Hook**:
+- 已配置 `.git/hooks/pre-commit` 自动运行格式检查
+- 提交前自动执行：`go fmt` + `go vet` + `pnpm lint:fix`
+- 如格式问题被自动修复，请 `git add` 变更后重新提交
+
+### 5. 数据库策略
 
 - **PostgreSQL**：生产环境，完整 AI 支持 (pgvector)
 - **SQLite**：开发环境，**不支持 AI 功能**
@@ -91,6 +110,7 @@ DivineSense 对自身知识状态、检索质量、代理决策的监控与反�
 
 - **Evolution Mode 路由失败** (2025-01): Protobuf JSON 序列化导致 `evolutionMode` 丢失
 - **前端布局宽度不统一** (2025-01): Tailwind v4 语义化类名陷阱、组件内部宽度限制
+- **Biome 格式检查失败** (2025-01): Import 顺序要求 react 第三方库优先、CSS 选择器逗号后需换行
 
 详细内容 → @docs/research/DEBUG_LESSONS.md
 
