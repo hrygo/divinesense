@@ -139,7 +139,12 @@ function UnifiedChatView({
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
         {items.length === 0 && (
-          <PartnerGreeting recentMemoCount={recentMemoCount} upcomingScheduleCount={upcomingScheduleCount} onSendMessage={onSend} />
+          <PartnerGreeting
+            recentMemoCount={recentMemoCount}
+            upcomingScheduleCount={upcomingScheduleCount}
+            onSendMessage={onSend}
+            currentMode={currentMode}
+          />
         )}
       </ChatMessages>
 
@@ -291,13 +296,6 @@ const AIChat = () => {
 
       const explicitMessage = userMessage;
 
-      // Debug: Log current mode
-      console.log("[AIChat] handleParrotChat called", {
-        currentMode,
-        geekMode: currentMode === "geek",
-        evolutionMode: currentMode === "evolution",
-      });
-
       // Prepare stream params
       const streamParams = {
         message: explicitMessage,
@@ -307,9 +305,6 @@ const AIChat = () => {
         geekMode: currentMode === "geek",
         evolutionMode: currentMode === "evolution",
       };
-
-      // Debug: Log params before sending
-      console.log("[AIChat] Sending stream params", JSON.stringify(streamParams));
 
       try {
         await chatHook.stream(streamParams,
@@ -332,7 +327,7 @@ const AIChat = () => {
               }
             },
             onToolResult: (result) => {
-              console.log("[Parrot Tool Result]", result);
+              // Tool result received, no action needed
             },
             onMemoQueryResult: (result) => {
               if (_messageId === messageIdRef.current) {
@@ -409,14 +404,6 @@ const AIChat = () => {
 
   const handleSend = useCallback(
     async (messageContent?: string) => {
-      // Debug: Log currentMode at the start of handleSend
-      console.log("[AIChat] handleSend called", {
-        currentMode,
-        geekMode: currentMode === "geek",
-        evolutionMode: currentMode === "evolution",
-        rawState: JSON.stringify({ currentMode: state.currentMode, evolutionMode: state.evolutionMode }),
-      });
-
       const userMessage = (messageContent || input).trim();
       if (!userMessage) return;
 
@@ -431,12 +418,6 @@ const AIChat = () => {
       // 如果识别出不同的能力，切换能力
       if (targetCapability !== currentCapability && targetCapability !== CapabilityType.AUTO) {
         setCurrentCapability(targetCapability);
-        console.debug("[AI Chat] Auto-switching capability", {
-          from: currentCapability,
-          to: targetCapability,
-          confidence: intentResult.confidence,
-          reasoning: intentResult.reasoning,
-        });
       }
 
       // 确定使用哪个 Agent

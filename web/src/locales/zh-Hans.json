@@ -125,8 +125,8 @@
       },
       "chat-default-placeholder": "💡 今天又有什么灵感？有什么需要我为您安排？",
       "chat-placeholder": "与 {{name}} 对话...",
-      "geek-chat-placeholder": "🤖 终端已就绪，等待您的指令…",
-      "evolution-chat-placeholder": "🧬 进化永无止境，您有什么想法？",
+      "geek-chat-placeholder": "描述你想让代码做什么…",
+      "evolution-chat-placeholder": "你想让 DivineSense 如何改进？",
       "close": "关闭",
       "cognition": {
         "amazing": {
@@ -177,6 +177,22 @@
         },
         "sound-effects": "拟声词",
         "title": "鹦鹉拟态认知"
+      },
+      "geek": {
+        "greeting": "终端已连接",
+        "hint": "描述任务，我将执行代码",
+        "prompt-refactor": "重构这个函数，让它更高效",
+        "prompt-test": "为 API 编写单元测试",
+        "prompt-fix": "修复这段代码的类型错误",
+        "prompt-analyze": "分析这个组件的性能瓶颈"
+      },
+      "evolution": {
+        "greeting": "进化模式已激活",
+        "hint": "提出改进想法，我将生成 PR",
+        "prompt-feature": "添加笔记导出为 PDF 功能",
+        "prompt-optimize": "优化 AI 路由性能",
+        "prompt-fix": "修复日程冲突检测的 bug",
+        "prompt-refactor": "重构后端数据库连接池"
       },
       "confirm": "确认",
       "error-chat-failed": "鹦鹉聊天失败",
@@ -291,8 +307,10 @@
       "normal_tooltip": "普通模式 - AI 智能助理",
       "geek": "极客",
       "geek_tooltip": "极客模式 - Claude Code CLI 代码执行",
+      "geek_status": "$ ready",
       "evolution": "进化",
       "evolution_tooltip": "进化模式 - 系统自我进化",
+      "evolution_status": "⚡ 进化就绪",
       "evolution_locked": "进化(仅管理员)",
       "evolution_locked_tooltip": "进化模式仅限管理员使用"
     },

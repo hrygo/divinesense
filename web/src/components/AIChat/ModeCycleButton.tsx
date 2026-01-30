@@ -34,13 +34,6 @@ export function ModeCycleButton({ currentMode, onModeChange, disabled = false, v
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
     const nextMode = modes[nextIndex];
-
-    console.log("[ModeCycleButton] Mode change", {
-      currentMode,
-      nextMode,
-      allModes: modes,
-    });
-
     onModeChange(nextMode);
   };
 

@@ -125,8 +125,8 @@
       },
       "chat-default-placeholder": "Any inspiration today? How can I assist?",
       "chat-placeholder": "Chat with {{name}}...",
-      "geek-chat-placeholder": "🤖 Terminal ready. Waiting for your command...",
-      "evolution-chat-placeholder": "🧬 Evolution never ends, what's on your mind?",
+      "geek-chat-placeholder": "Describe what you want the code to do…",
+      "evolution-chat-placeholder": "How would you like DivineSense to improve?",
       "close": "Close",
       "cognition": {
         "amazing": {
@@ -182,6 +182,22 @@
         },
         "sound-effects": "Sound Effects",
         "title": "Parrot Cognition"
+      },
+      "geek": {
+        "greeting": "Terminal Connected",
+        "hint": "Describe a task, I'll execute code",
+        "prompt-refactor": "Refactor this function for better performance",
+        "prompt-test": "Write unit tests for the API",
+        "prompt-fix": "Fix type errors in this code",
+        "prompt-analyze": "Analyze performance bottlenecks in this component"
+      },
+      "evolution": {
+        "greeting": "Evolution Mode Activated",
+        "hint": "Propose an improvement, I'll generate a PR",
+        "prompt-feature": "Add PDF export feature for memos",
+        "prompt-optimize": "Optimize AI routing performance",
+        "prompt-fix": "Fix schedule conflict detection bug",
+        "prompt-refactor": "Refactor backend database connection pool"
       },
       "confirm": "Confirm",
       "error-chat-failed": "Parrot chat failed",
@@ -296,8 +312,10 @@
       "normal_tooltip": "Normal Mode - AI Assistant",
       "geek": "Geek",
       "geek_tooltip": "Geek Mode - Claude Code CLI execution",
+      "geek_status": "$ ready",
       "evolution": "Evolution",
       "evolution_tooltip": "Evolution Mode - System self-evolution",
+      "evolution_status": "⚡ Evolution Ready",
       "evolution_locked": "Evolution (Admin)",
       "evolution_locked_tooltip": "Evolution Mode is admin-only"
     },
