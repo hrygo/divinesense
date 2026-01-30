@@ -12,7 +12,7 @@ export function MasonryColumn({
   prefixElementRef,
 }: MasonryColumnProps) {
   return (
-    <div className="min-w-0 mx-auto w-full max-w-2xl">
+    <div className="min-w-0 w-full">
       {/* Prefix element (like memo editor) goes in first column */}
       {isFirstColumn && prefixElement && <div ref={prefixElementRef}>{prefixElement}</div>}
 

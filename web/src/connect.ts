@@ -113,18 +113,8 @@ const createTimeoutFetch = (baseFetch: typeof fetch, timeoutMs: number): typeof 
   };
 };
 
-// The timeout interceptor is now minimal since timeout is handled in the fetch wrapper
-const timeoutInterceptor: Interceptor = (next) => async (req) => {
-  // Debug: Log request method and URL (ALWAYS log for Chat method)
-  if (req.method.name === "Chat") {
-    console.log("[Connect RPC] Chat request", {
-      url: req.url.toString(),
-      methodName: req.method.name,
-      headers: Object.fromEntries(req.header.entries()),
-    });
-  }
-  return next(req);
-};
+// The timeout interceptor is minimal since timeout is handled in the fetch wrapper
+const timeoutInterceptor: Interceptor = (next) => async (req) => next(req);
 
 // ============================================================================
 // Authentication Interceptor
@@ -176,31 +166,13 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 // Create timeout-enabled fetch for streaming requests
 const timeoutFetch = createTimeoutFetch(fetchWithCredentials, DEFAULT_STREAM_TIMEOUT_MS);
 
-// Combine logging with timeout
-const loggingTimeoutFetch: typeof fetch = (input, init) => {
-  // ALWAYS log the request URL and body for Chat RPC
-  if (typeof input === "string" && input.includes("/memos.api.v1.AIService/Chat")) {
-    // Try to read the body for debugging
-    let bodyDebug = typeof init?.body;
-    if (init?.body instanceof ReadableStream) {
-      bodyDebug = "ReadableStream (cannot preview)";
-    } else if (typeof init?.body === "string") {
-      bodyDebug = init.body.slice(0, 1000);
-    }
-    console.log("[Connect RPC] Chat API call", {
-      url: input,
-      hasBody: !!init?.body,
-      bodyPreview: bodyDebug,
-      contentType: init?.headers?.["Content-Type"] || init?.headers?.["content-type"],
-    });
-  }
-  return timeoutFetch(input, init);
-};
+// Wrap timeout fetch for streaming requests
+const streamingFetch: typeof fetch = timeoutFetch;
 
 const transport = createConnectTransport({
   baseUrl: window.location.origin,
   useBinaryFormat: false,
-  fetch: loggingTimeoutFetch,
+  fetch: streamingFetch,
   interceptors: [timeoutInterceptor, authInterceptor],
 });
 
