@@ -6,14 +6,14 @@
 
 ## 部署模式对比
 
-| 特性 | Docker 模式 | 二进制模式 |
-|:-----|:-----------|:---------|
-| Geek Mode 支持 | ⚠️ 需额外配置 | ✅ 原生支持 |
-| 资源占用 | 高 (容器开销) | 低 |
-| 启动速度 | 慢 | 快 |
-| 更新方式 | 重建镜像 | 替换二进制 |
-| 数据隔离 | 容器隔离 | 需手动配置 |
-| 适用场景 | 快速部署、测试 | Geek Mode、生产环境 |
+| 特性           | Docker 模式    | 二进制模式          |
+| :------------- | :------------- | :------------------ |
+| Geek Mode 支持 | ⚠️ 需额外配置   | ✅ 原生支持          |
+| 资源占用       | 高 (容器开销)  | 低                  |
+| 启动速度       | 慢             | 快                  |
+| 更新方式       | 重建镜像       | 替换二进制          |
+| 数据隔离       | 容器隔离       | 需手动配置          |
+| 适用场景       | 快速部署、测试 | Geek Mode、生产环境 |
 
 ---
 
@@ -124,6 +124,27 @@ npx @z_ai/coding-helper
 # 启用 Geek Mode
 DIVINESENSE_CLAUDE_CODE_ENABLED=true
 DIVINESENSE_CLAUDE_CODE_WORKDIR=/opt/divinesense/data
+```
+
+重启服务：
+
+```bash
+sudo systemctl restart divinesense
+```
+
+### 启用 Evolution Mode (进化模式)
+
+Evolution Mode 是 Geek Mode 的高级形态，解锁完整的 Claude Code Agent 能力。
+
+编辑 `/etc/divinesense/config`：
+
+```bash
+# 启用 Evolution Mode (需先启用 Geek Mode)
+DIVINESENSE_CLAUDE_CODE_ENABLED=true
+DIVINESENSE_EVOLUTION_ENABLED=true
+
+# 可选: 仅管理员可用
+DIVINESENSE_EVOLUTION_ADMIN_ONLY=true
 ```
 
 重启服务：

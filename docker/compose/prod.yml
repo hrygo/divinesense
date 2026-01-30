@@ -80,6 +80,9 @@ services:
       - DIVINESENSE_AI_RERANK_MODEL=${DIVINESENSE_AI_RERANK_MODEL:-BAAI/bge-reranker-v2-m3}
       # Geek Mode: Claude Code CLI integration (optional)
       - DIVINESENSE_CLAUDE_CODE_ENABLED=${DIVINESENSE_CLAUDE_CODE_ENABLED:-false}
+      # Evolution Mode: Advanced Claude Code Agent (optional)
+      - DIVINESENSE_EVOLUTION_ENABLED=${DIVINESENSE_EVOLUTION_ENABLED:-false}
+      - DIVINESENSE_EVOLUTION_ADMIN_ONLY=${DIVINESENSE_EVOLUTION_ADMIN_ONLY:-true}
     ports:
       - "${DIVINESENSE_PORT:-5230}:5230"
     volumes:
