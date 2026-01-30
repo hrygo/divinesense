@@ -239,29 +239,15 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    /* Vine-like growing curves - 藤蔓曲线 */
-    radial-gradient(ellipse 80% 20% at 20% 80%, var(--evo-glow) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 30% at 80% 20%, var(--evo-blue) / 0.5 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 50% 90%, var(--evo-primary) 0%, transparent 50%);
-  opacity: 0.15;
-  animation: evo-bio-grow 15s ease-in-out infinite alternate;
+  /* 简化为单层渐变，减少渲染负担 */
+  background: radial-gradient(ellipse 60% 40% at 30% 70%, var(--evo-glow) 0%, transparent 70%);
+  opacity: 0.1;
+  animation: evo-bio-grow 20s ease-in-out infinite alternate;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
-.evolution-mode .evo-bio-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    /* Floating organic particles - 漂浮有机微粒 */
-    radial-gradient(circle at 30% 70%, var(--evo-glow) 0%, transparent 8%),
-    radial-gradient(circle at 70% 30%, var(--evo-blue) / 0.5 0%, transparent 10%),
-    radial-gradient(circle at 50% 50%, var(--evo-cyan) 0%, transparent 6%);
-  opacity: 0.6;
-  animation: evo-particles-float 20s linear infinite;
-  pointer-events: none;
-}
+/* 删除 ::after 伪元素，减少一层渲染 */
 
 /* ============================================================
    Evolution Mode Cell Division - 细胞分裂效果
@@ -283,6 +269,7 @@
   opacity: 0;
   animation: evo-cell-divide 4s ease-in-out infinite;
   pointer-events: none;
+  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -297,9 +284,10 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 50%, var(--evo-glow) 0%, transparent 60%);
-  opacity: 0.3;
-  animation: evo-breathe 4s ease-in-out infinite;
+  opacity: 0.2;
+  animation: evo-breathe 5s ease-in-out infinite;
   pointer-events: none;
+  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -313,29 +301,21 @@
   content: "";
   position: absolute;
   inset: -2px;
-  border-radius: calc(100% + 2px);
-  border: 2px solid transparent;
-  border-image: linear-gradient(
-    0deg,
-    var(--evo-primary) 0deg,
-    var(--evo-blue) 60deg,
-    var(--evo-primary) 120deg,
-    var(--evo-blue) 180deg,
-    var(--evo-primary) 240deg,
-    var(--evo-blue) 300deg,
-    var(--evo-primary) 360deg
-  ) 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--evo-primary), var(--evo-blue), var(--evo-primary));
   -webkit-mask:
-    linear-gradient(#fff 0 0) 0 2px,
-    linear-gradient(#fff 0 0) 0 2px;
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   mask:
-    linear-gradient(#fff 0 0) 0 2px,
-    linear-gradient(#fff 0 0) 0 2px;
-  -webkit-mask-composite: source-over;
-  mask-composite: add;
-  opacity: 0.6;
-  animation: evo-vine-grow 8s linear infinite;
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  animation: evo-rotate 8s linear infinite;
   pointer-events: none;
+  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -343,34 +323,24 @@
    ============================================================ */
 .evolution-mode .evo-float {
   animation: evo-float 6s ease-in-out infinite;
+  will-change: transform;
 }
 
+/* ============================================================
+   Evolution Mode Animations (简化版)
+   ============================================================ */
 @keyframes evo-bio-grow {
   0%, 100% {
-    transform: scale(1) translate(0, 0);
+    transform: scale(1);
+    opacity: 0.08;
   }
   50% {
-    transform: scale(1.05) translate(2%, -2%);
+    transform: scale(1.1);
+    opacity: 0.12;
   }
 }
 
-@keyframes evo-particles-float {
-  0% {
-    transform: translateY(0) translateX(0);
-  }
-  25% {
-    transform: translateY(-10px) translateX(5px);
-  }
-  50% {
-    transform: translateY(-5px) translateX(-3px);
-  }
-  75% {
-    transform: translateY(-15px) translateX(8px);
-  }
-  100% {
-    transform: translateY(0) translateX(0);
-  }
-}
+/* 删除 evo-particles-float，不再使用 */
 
 @keyframes evo-cell-divide {
   0%, 100% {
@@ -378,42 +348,35 @@
     transform: translate(-50%, -50%) scale(0.5);
   }
   50% {
-    opacity: 0.8;
+    opacity: 0.6;
     transform: translate(-50%, -50%) scale(1);
   }
 }
 
 @keyframes evo-breathe {
   0%, 100% {
-    opacity: 0.2;
+    opacity: 0.15;
     transform: scale(1);
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.25;
     transform: scale(1.02);
   }
 }
 
-@keyframes evo-vine-grow {
-  0% {
-    border-image-offset: 0;
-  }
-  100% {
-    border-image-offset: 100;
-  }
-}
+/* 删除 evo-vine-grow，不再使用 */
 
 @keyframes evo-float {
   0%, 100% {
     transform: translateY(0px);
   }
-   50% {
-    transform: translateY(-8px);
+  50% {
+    transform: translateY(-6px);
   }
 }
 
 /* ============================================================
-   Evolution Mode Organic Flow Background
+   Evolution Mode Organic Flow Background (性能优化版)
    ============================================================ */
 .evolution-mode .evo-flow-bg {
   position: relative;
@@ -424,12 +387,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 30%, var(--evo-glow) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, var(--evo-blue) / 0.4 0%, transparent 50%);
-  opacity: 0.3;
-  animation: evo-flow-pulse 8s ease-in-out infinite;
+  /* 简化为单层渐变 */
+  background: radial-gradient(ellipse at 30% 50%, var(--evo-glow) 0%, transparent 60%);
+  opacity: 0.15;
+  animation: evo-flow-pulse 10s ease-in-out infinite;
   pointer-events: none;
+  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -530,28 +493,17 @@
 }
 
 @keyframes evo-flow-pulse {
-  0%,
-  100% {
-    opacity: 0.2;
+  0%, 100% {
+    opacity: 0.1;
     transform: scale(1);
   }
   50% {
-    opacity: 0.4;
-    transform: scale(1.05);
+    opacity: 0.18;
+    transform: scale(1.03);
   }
 }
 
-@keyframes evo-mutation {
-  0% {
-    filter: hue-rotate(0deg);
-  }
-  50% {
-    filter: hue-rotate(30deg);
-  }
-  100% {
-    filter: hue-rotate(0deg);
-  }
-}
+/* 删除 evo-mutation，filter 动画性能较差 */
 
 /* ============================================================
    Evolution Mode Input Focus
