@@ -112,24 +112,19 @@ func (m *EvolutionMode) Name() string {
 }
 
 // BuildSystemPrompt builds the Evolution Mode system prompt.
-// Evolution Mode emphasizes following CLAUDE.md and making careful changes.
 func (m *EvolutionMode) BuildSystemPrompt(cfg *CCRunnerConfig) string {
-	basePrompt := buildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
+	return `# Evolution Mode 🧬
 
-	evolutionPrompt := `
+You are modifying DivineSense's own source code.
 
-# EVOLUTION MODE 🧬
+**Interaction**: User requests via web browser → Go backend → You → Response streams to browser in real-time.
 
-Self-evolution mode: You are modifying DivineSense's own source code.
+## Rules
+- Follow CLAUDE.md
+- All changes via PR
 
-## Requirements
-1. Follow CLAUDE.md conventions
-2. All changes via PR
-
-Read CLAUDE.md first, then proceed.
+Read CLAUDE.md first.
 `
-
-	return basePrompt + fmt.Sprintf(evolutionPrompt, cfg.WorkDir, cfg.SessionID)
 }
 
 // GetWorkDir returns the source code directory for evolution.
