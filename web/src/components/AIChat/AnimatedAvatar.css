@@ -1,0 +1,246 @@
+/* AnimatedAvatar 交互动效 - 性能优化版本 */
+
+/* ============================================
+   呼吸动画 - 思考状态
+   性能优化：使用 transform 和 opacity，避免 layout
+   ============================================ */
+@keyframes avatar-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  }
+}
+
+.animate-avatar-breathe {
+  animation: avatar-breathe 3s ease-in-out infinite;
+  /* 性能优化：使用 transform 和 opacity */
+  transform-origin: center;
+  will-change: transform, box-shadow;
+}
+
+/* ============================================
+   脉冲动画 - 打字状态
+   性能优化：仅 transform，避免 box-shadow
+   ============================================ */
+@keyframes avatar-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.animate-avatar-pulse {
+  animation: avatar-pulse 1.5s ease-in-out infinite;
+  /* 性能优化：仅 transform */
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* ============================================
+   波浪扩散 - 打字时的波纹效果
+   性能优化：使用 transform 和 opacity
+   ============================================ */
+@keyframes avatar-wave {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-avatar-wave {
+  animation: avatar-wave 2s ease-out infinite;
+  /* 性能优化：避免影响 layout */
+  position: absolute;
+  pointer-events: none;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+/* ============================================
+   3D 倾斜效果 - Hover 时
+   性能优化：仅在使用时触发
+   ============================================ */
+@keyframes avatar-tilt {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-5deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(0deg) scale(1.15);
+  }
+  75% {
+    transform: rotate(5deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.animate-avatar-tilt {
+  animation: avatar-tilt 0.6s ease-in-out;
+  /* 性能优化：仅在 hover 时使用 */
+  transform-origin: center center;
+}
+
+/* ============================================
+   悬浮动画 - 轻微上下浮动
+   性能优化：使用 transform 而非 top/bottom
+   ============================================ */
+@keyframes avatar-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-avatar-float {
+  animation: avatar-float 3s ease-in-out infinite;
+  /* 性能优化：transform 优于 top */
+}
+
+/* ============================================
+   弹跳动画 - 消息发送时
+   ============================================ */
+@keyframes avatar-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-8px) scale(0.95);
+  }
+  50% {
+    transform: translateY(0) scale(1.05);
+  }
+  75% {
+    transform: translateY(-2px) scale(0.98);
+  }
+}
+
+.animate-avatar-bounce {
+  animation: avatar-bounce 0.5s ease-out;
+  /* 性能优化：使用 transform */
+}
+
+/* ============================================
+   模式特定动画
+   ============================================ */
+
+/* Geek Mode - 绿色终端风格 */
+.geek-mode .animate-avatar-breathe {
+  animation-name: avatar-breathe-geek;
+}
+
+@keyframes avatar-breathe-geek {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+}
+
+.geek-mode .animate-avatar-pulse {
+  animation-name: avatar-pulse-geek;
+}
+
+@keyframes avatar-pulse-geek {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+  }
+}
+
+/* Evolution Mode - 紫色进化风格 */
+.evolution-mode .animate-avatar-breathe {
+  animation-name: avatar-breathe-evo;
+}
+
+@keyframes avatar-breathe-evo {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 0 rgba(168, 85, 247, 0);
+  }
+  25% {
+    transform: scale(1.02) rotate(2deg);
+  }
+  50% {
+    transform: scale(1.06) rotate(0deg);
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
+  }
+  75% {
+    transform: scale(1.02) rotate(-2deg);
+  }
+}
+
+.evolution-mode .animate-avatar-pulse {
+  animation-name: avatar-pulse-evo;
+}
+
+@keyframes avatar-pulse-evo {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: brightness(1.1);
+  }
+}
+
+/* ============================================
+   响应式调整
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-avatar-breathe,
+  .animate-avatar-pulse,
+  .animate-avatar-wave,
+  .animate-avatar-tilt,
+  .animate-avatar-float,
+  .animate-avatar-bounce {
+    animation: none !important;
+  }
+}
+
+/* ============================================
+   性能优化：降低动画复杂度
+   ============================================ */
+@media (max-width: 768px) {
+  /* 移动端简化动画效果 */
+  .animate-avatar-wave {
+    animation: none;
+  }
+}
+
+/* 低端设备检测 */
+@media (prefers-reduced-motion: reduce), (max-width: 768px) {
+  /* 禁用复杂动画 */
+  .animate-avatar-breathe,
+  .animate-avatar-pulse {
+    animation: none;
+  }
+}

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import MessageActions from "@/components/AIChat/MessageActions";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
@@ -36,15 +37,6 @@ interface ChatMessagesProps {
 
 const SCROLL_THRESHOLD = 150;
 const SCROLL_THROTTLE_MS = 50;
-
-// Phase 1: 性能监控 - 开发模式下记录关键指标
-const PERF_MONITOR = import.meta.env.DEV;
-
-function logPerfMetric(metric: string, value: number) {
-  if (PERF_MONITOR) {
-    console.log(`[ChatMessages Perf] ${metric}:`, value);
-  }
-}
 
 const ChatMessages = memo(function ChatMessages({
   items,
@@ -87,8 +79,6 @@ const ChatMessages = memo(function ChatMessages({
           scrollRef.current.scrollTop = scrollHeight;
         }
       }
-
-      logPerfMetric("scrollToBottom", performance.now() - startTime);
     });
   }, []);
 
@@ -229,6 +219,7 @@ const ChatMessages = memo(function ChatMessages({
                 icon={msg.role === "user" ? undefined : currentIcon}
                 isLastAssistant={msg.role === "assistant" && isLastMessage}
                 isNew={isNew}
+                isTyping={isTyping}
                 onCopy={() => onCopyMessage?.(msg.content)}
                 onRegenerate={onRegenerate}
                 onDelete={() => onDeleteMessage?.(index)}
@@ -301,6 +292,7 @@ interface MessageBubbleProps {
   icon?: string;
   isLastAssistant?: boolean;
   isNew?: boolean;
+  isTyping?: boolean;
   onCopy?: () => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
@@ -315,6 +307,7 @@ const MessageBubble = memo(function MessageBubble({
   icon,
   isLastAssistant = false,
   isNew = false,
+  isTyping = false,
   onCopy,
   onRegenerate,
   onDelete,
@@ -360,15 +353,25 @@ const MessageBubble = memo(function MessageBubble({
       )}
     >
       {/* Avatar */}
-      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
-        {role === "user" ? (
-          <img src="/user-avatar.webp" alt="User" className="w-full h-full object-cover" />
-        ) : icon?.startsWith("/") ? (
-          <img src={icon} alt="" className="w-8 h-8 md:w-9 md:h-9 object-contain" />
-        ) : (
+      {role === "user" ? (
+        <AnimatedAvatar
+          src="/user-avatar.webp"
+          alt="User"
+          size="md"
+        />
+      ) : icon?.startsWith("/") ? (
+        <AnimatedAvatar
+          src={icon}
+          alt=""
+          size="md"
+          isThinking={isTyping && isLastAssistant}
+          isTyping={isTyping && isLastAssistant}
+        />
+      ) : (
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm bg-muted">
           <span className="text-lg md:text-xl">{icon || "🤖"}</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Message content area */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">

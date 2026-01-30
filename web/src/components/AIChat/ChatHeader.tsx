@@ -1,5 +1,6 @@
 import { Maximize2, Minimize2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType } from "@/types/capability";
@@ -55,7 +56,7 @@ function getActionDescription(capability: CapabilityType, status: CapabilityStat
 /**
  * 根据当前模式获取样式配置
  */
-function getModeStyle(mode: AIMode) {
+function getModeStyle(mode: AIMode, t: (key: string) => string) {
   switch (mode) {
     case "geek":
       return {
@@ -67,7 +68,7 @@ function getModeStyle(mode: AIMode) {
         avatarBg: "bg-green-500/10",
         statusText: "text-green-600 dark:text-green-400",
         statusDot: "bg-green-500",
-        statusPrefix: "$ ready",
+        statusPrefix: t("ai.mode.geek_status"),
         thinking: "text-green-600 dark:text-green-400",
       };
     case "evolution":
@@ -80,7 +81,7 @@ function getModeStyle(mode: AIMode) {
         avatarBg: "bg-purple-500/15",
         statusText: "text-purple-600 dark:text-purple-400",
         statusDot: "bg-purple-500",
-        statusPrefix: "⚡ 进化就绪",
+        statusPrefix: t("ai.mode.evolution_status"),
         thinking: "text-purple-600 dark:text-purple-400",
       };
     default:
@@ -113,7 +114,7 @@ export function ChatHeader({
   const { t } = useTranslation();
   const assistantName = t("ai.assistant-name");
   const actionDescription = getActionDescription(currentCapability, capabilityStatus, t);
-  const modeStyle = getModeStyle(currentMode);
+  const modeStyle = getModeStyle(currentMode, t);
 
   return (
     <header
@@ -128,12 +129,15 @@ export function ChatHeader({
     >
       {/* Left Section */}
       <div className="flex items-center gap-2.5">
-        {/* Avatar with mode-specific border */}
-        <div
-          className={cn("w-9 h-9 flex items-center justify-center rounded-lg transition-all", modeStyle.avatarBorder, modeStyle.avatarBg)}
-        >
-          <img src="/assistant-avatar.webp" alt={assistantName} className="h-9 w-auto object-contain" />
-        </div>
+        {/* Avatar with animated effects */}
+        <AnimatedAvatar
+          src="/assistant-avatar.webp"
+          alt={assistantName}
+          size="sm"
+          isThinking={isThinking}
+          isTyping={isThinking}
+          className={cn("rounded-lg", modeStyle.avatarBorder, modeStyle.avatarBg)}
+        />
         <div className="flex flex-col">
           <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>{assistantName}</h1>
           {/* Status */}

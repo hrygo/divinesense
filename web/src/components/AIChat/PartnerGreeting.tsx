@@ -1,6 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import { cn } from "@/lib/utils";
+import type { AIMode } from "@/types/aichat";
 
 interface PartnerGreetingProps {
   userName?: string;
@@ -10,6 +12,7 @@ interface PartnerGreetingProps {
   onSendMessage?: (message: string) => void;
   onSendComplete?: () => void;
   className?: string;
+  currentMode?: AIMode;
 }
 
 /**
@@ -82,6 +85,70 @@ interface SuggestedPrompt {
   category: PromptCategory;
   promptKey: string;
   prompt: string;
+}
+
+/**
+ * 获取极客模式专属配置
+ */
+function getGeekModePrompts(t: (key: string) => string): SuggestedPrompt[] {
+  return [
+    {
+      icon: "⚡",
+      category: "amazing",
+      promptKey: "ai.parrot.geek.prompt-refactor",
+      prompt: t("ai.parrot.geek.prompt-refactor"),
+    },
+    {
+      icon: "🧪",
+      category: "create",
+      promptKey: "ai.parrot.geek.prompt-test",
+      prompt: t("ai.parrot.geek.prompt-test"),
+    },
+    {
+      icon: "🐛",
+      category: "memo",
+      promptKey: "ai.parrot.geek.prompt-fix",
+      prompt: t("ai.parrot.geek.prompt-fix"),
+    },
+    {
+      icon: "📊",
+      category: "amazing",
+      promptKey: "ai.parrot.geek.prompt-analyze",
+      prompt: t("ai.parrot.geek.prompt-analyze"),
+    },
+  ];
+}
+
+/**
+ * 获取进化模式专属配置
+ */
+function getEvolutionModePrompts(t: (key: string) => string): SuggestedPrompt[] {
+  return [
+    {
+      icon: "🚀",
+      category: "create",
+      promptKey: "ai.parrot.evolution.prompt-feature",
+      prompt: t("ai.parrot.evolution.prompt-feature"),
+    },
+    {
+      icon: "⚡",
+      category: "amazing",
+      promptKey: "ai.parrot.evolution.prompt-optimize",
+      prompt: t("ai.parrot.evolution.prompt-optimize"),
+    },
+    {
+      icon: "🐛",
+      category: "memo",
+      promptKey: "ai.parrot.evolution.prompt-fix",
+      prompt: t("ai.parrot.evolution.prompt-fix"),
+    },
+    {
+      icon: "🔧",
+      category: "schedule",
+      promptKey: "ai.parrot.evolution.prompt-refactor",
+      prompt: t("ai.parrot.evolution.prompt-refactor"),
+    },
+  ];
 }
 
 /**
@@ -243,25 +310,50 @@ export const PartnerGreeting = memo(function PartnerGreeting({
   recentMemoCount,
   upcomingScheduleCount,
   className,
+  currentMode = "normal",
 }: PartnerGreetingProps) {
   const { t } = useTranslation();
   const timeConfig = useMemo(() => getTimeConfig(), []);
   const [isSending, setIsSending] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const greetingText = t(timeConfig.greetingKey);
-  const timeHint = t(timeConfig.hintKey);
+  // 模式感知的问候语和提示
+  const { greetingText, timeHint } = useMemo(() => {
+    if (currentMode === "geek") {
+      return {
+        greetingText: t("ai.parrot.geek.greeting"),
+        timeHint: t("ai.parrot.geek.hint"),
+      };
+    }
+    if (currentMode === "evolution") {
+      return {
+        greetingText: t("ai.parrot.evolution.greeting"),
+        timeHint: t("ai.parrot.evolution.hint"),
+      };
+    }
+    // 普通模式使用时间感知问候
+    return {
+      greetingText: t(timeConfig.greetingKey),
+      timeHint: t(timeConfig.hintKey),
+    };
+  }, [currentMode, t, timeConfig]);
 
-  // 根据时间段获取示例问题
+  // 根据模式获取示例问题
   const suggestedPrompts = useMemo(() => {
+    if (currentMode === "geek") {
+      return getGeekModePrompts(t);
+    }
+    if (currentMode === "evolution") {
+      return getEvolutionModePrompts(t);
+    }
+    // 普通模式使用时间感知问题
     const prompts = getTimeSpecificPrompts(t, timeConfig.timeOfDay);
-    // 检查是否所有翻译都存在，如果不存在则使用默认
     const hasMissingTranslation = prompts.some((p) => p.prompt === p.promptKey);
     if (hasMissingTranslation) {
       return getDefaultPrompts(t);
     }
     return prompts;
-  }, [t, timeConfig.timeOfDay]);
+  }, [currentMode, t, timeConfig.timeOfDay]);
 
   // 获取统计信息文本
   const statsText = useMemo(() => {
@@ -298,11 +390,14 @@ export const PartnerGreeting = memo(function PartnerGreeting({
 
   return (
     <div className={cn("flex flex-col items-center justify-center h-full w-full px-6 py-8", className)}>
-      {/* 主图标 */}
-      <div className="mb-6">
-        <div className="w-16 h-16 flex items-center justify-center">
-          <img src="/assistant-avatar.webp" alt="AI Agent" className="h-16 w-auto object-contain" />
-        </div>
+      {/* 主图标 - 带悬浮动画 */}
+      <div className="mb-8 animate-in fade-in zoom-in duration-500">
+        <AnimatedAvatar
+          src="/assistant-avatar.webp"
+          alt="AI Agent"
+          size="xl"
+          isThinking={!isSending}
+        />
       </div>
 
       {/* 问候语区域 */}
