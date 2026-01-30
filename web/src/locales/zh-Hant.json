@@ -551,9 +551,9 @@
         "quick-summary": "今日總結",
         "quick-summary-desc": "筆記 + 日程"
       },
-      "chat-default-placeholder": "今天有什麼我可以幫您發現的？",
+      "chat-default-placeholder": "💡 今天又有什麼靈感？有什麼需要我為您安排？",
       "chat-placeholder": "與 {{name}} 對話...",
-      "geek-chat-placeholder": "🤖 終端就緒。請輸入指令…",
+      "geek-chat-placeholder": "🤖 終端已就緒，等待您的指令…",
       "evolution-chat-placeholder": "🧬 進化永無止境，您有什麼想法？",
       "geek_mode": {
         "label": "極客",
