@@ -418,32 +418,31 @@
    神识之眼 Logo 动效 - Divine Eye Logo Animations
    ============================================================ */
 
-/* 普通模式 - 柔和呼吸 */
-.divine-logo-normal {
-  animation: logo-breathe 4s ease-in-out infinite;
+/* Navigation Drawer Logo 动效 - 根据 body 模式类应用 */
+body img[src="/logo.webp"] {
+  animation: logo-breathe-gentle 4s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
-/* 极客模式 - 数字脉冲/故障效果 */
-.divine-logo-geek {
-  animation: logo-glitch 3s steps(3) infinite;
+/* 极客模式 - 故障效果 */
+.geek-mode img[src="/logo.webp"] {
+  animation: logo-glitch 2s steps(3) infinite;
 }
 
 /* 进化模式 - 有机脉动 */
-.divine-logo-evolution {
-  animation: logo-evolution 3.5s ease-in-out infinite;
+.evolution-mode img[src="/logo.webp"] {
+  animation: logo-evolution 3s ease-in-out infinite;
 }
 
 /* Keyframes */
-@keyframes logo-breathe {
+@keyframes logo-breathe-gentle {
   0%, 100% {
-    opacity: 0.9;
+    opacity: 0.85;
     transform: scale(1);
-    filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
   }
   50% {
     opacity: 1;
     transform: scale(1.05);
-    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
   }
 }
 
@@ -451,44 +450,43 @@
   0% {
     opacity: 0.9;
     transform: translateX(0);
-    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(34, 197, 94, 0.4));
   }
-  33% {
+  25% {
     opacity: 1;
     transform: translateX(-1px);
-    filter: hue-rotate(10deg) drop-shadow(0 0 6px rgba(34, 197, 94, 0.7));
   }
-  66% {
+  50% {
     opacity: 0.95;
     transform: translateX(1px);
-    filter: hue-rotate(-5deg) drop-shadow(0 0 4px rgba(34, 197, 94, 0.5));
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(-0.5px);
   }
   100% {
     opacity: 0.9;
     transform: translateX(0);
-    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(34, 197, 94, 0.4));
   }
 }
 
 @keyframes logo-evolution {
   0%, 100% {
     opacity: 0.9;
-    transform: scale(1) rotate(0deg);
-    filter: hue-rotate(0deg) drop-shadow(0 0 4px rgba(188, 19, 254, 0.4));
+    transform: scale(1);
   }
-  25% {
+  33% {
     opacity: 1;
-    transform: scale(1.03) rotate(2deg);
-    filter: hue-rotate(15deg) drop-shadow(0 0 10px rgba(188, 19, 254, 0.6));
+    transform: scale(1.08) rotate(2deg);
   }
-  50% {
+  66% {
     opacity: 1;
-    transform: scale(1.06) rotate(0deg);
-    filter: hue-rotate(30deg) drop-shadow(0 0 12px rgba(77, 77, 255, 0.7));
+    transform: scale(1.05) rotate(-2deg);
   }
-  75% {
-    opacity: 1;
-    transform: scale(1.03) rotate(-2deg);
-    filter: hue-rotate(15deg) drop-shadow(0 0 10px rgba(77, 77, 255, 0.6));
+}
+
+/* 减少动效支持 */
+@media (prefers-reduced-motion: reduce) {
+  body img[src="/logo.webp"] {
+    animation: none !important;
   }
 }
