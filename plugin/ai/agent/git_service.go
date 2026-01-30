@@ -111,21 +111,28 @@ func (s *GitService) GetStatus() (*GitStatus, error) {
 		return status, nil
 	}
 
-	lines := strings.Split(output, "\n")
+	// Don't trim again - git() already trimmed, and we need to split by newline
+	// If output is just whitespace or empty after split, skip
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 	for _, line := range lines {
 		if len(line) < 4 {
 			continue
 		}
 		statusCode := line[:2]
-		filePath := strings.TrimSpace(line[3:])
+		// File path starts after the 2-character status code
+		// Use TrimSpace to handle the space separator and any trailing whitespace
+		filePath := strings.TrimSpace(line[2:])
 
 		switch statusCode {
 		case "M", "MM", " M":
 			status.Modified = append(status.Modified, filePath)
-		case "A", "AM":
+		case "A", "AM", "M ": // Staged modifications also count as added
 			status.Added = append(status.Added, filePath)
 		case "D", "DD":
 			status.Deleted = append(status.Deleted, filePath)
+		case "??", "? ":
+			// Untracked files - add to Added for our purposes
+			status.Added = append(status.Added, filePath)
 		}
 	}
 
