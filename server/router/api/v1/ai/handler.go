@@ -216,8 +216,8 @@ func (h *ParrotHandler) handleEvolutionMode(
 	// Generate session ID for evolution
 	sessionID := fmt.Sprintf("evolution_%d_%d", req.ConversationID, req.UserID)
 
-	// Create EvolutionParrot
-	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID)
+	// Create EvolutionParrot (pass store for admin verification)
+	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID, h.factory.store)
 	if err != nil {
 		logger.Error("Failed to create EvolutionParrot", err)
 		return status.Error(codes.Internal, fmt.Sprintf("failed to create EvolutionParrot: %v", err))

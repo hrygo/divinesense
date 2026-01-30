@@ -236,31 +236,52 @@ func TestEvolutionModeCheckPermission(t *testing.T) {
 	// Enable evolution mode for testing
 	t.Setenv("DIVINESENSE_EVOLUTION_ENABLED", "true")
 
-	mode := NewEvolutionMode(&EvolutionModeConfig{
-		SourceDir: "/src",
-		AdminOnly: true,
+	t.Run("without store - deny by default", func(t *testing.T) {
+		mode := NewEvolutionMode(&EvolutionModeConfig{
+			SourceDir: "/src",
+			AdminOnly: true,
+			Store:     nil, // No store configured
+		})
+
+		// Should fail because no store means no admin verification
+		err := mode.CheckPermission(context.Background(), 1)
+		if err == nil {
+			t.Error("EvolutionMode.CheckPermission() should return error when store is nil and AdminOnly=true")
+		}
 	})
 
-	tests := []struct {
-		name    string
-		userID  int32
-		wantErr bool
-	}{
-		{
-			name:    "admin user - should fail (isAdmin returns false)",
-			userID:  1,
-			wantErr: true, // isAdmin always returns false
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := mode.CheckPermission(context.Background(), tt.userID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("EvolutionMode.CheckPermission() error = %v, wantErr %v", err, tt.wantErr)
-			}
+	t.Run("without store when admin check disabled", func(t *testing.T) {
+		mode := NewEvolutionMode(&EvolutionModeConfig{
+			SourceDir: "/src",
+			AdminOnly: false, // Admin check disabled
+			Store:     nil,
 		})
-	}
+
+		// Should succeed because AdminOnly=false skips admin check
+		err := mode.CheckPermission(context.Background(), 1)
+		if err != nil {
+			t.Errorf("EvolutionMode.CheckPermission() should succeed when AdminOnly=false, got: %v", err)
+		}
+	})
+}
+
+// TestEvolutionModeIsAdmin tests the isAdmin method with store integration.
+// This test is skipped in normal test runs as it requires a valid store.
+func TestEvolutionModeIsAdmin(t *testing.T) {
+	t.Skip("requires valid store connection - integration test only")
+
+	// Example for integration testing with real store:
+	// mode := NewEvolutionMode(&EvolutionModeConfig{
+	// 	SourceDir: "/src",
+	// 	AdminOnly: true,
+	// 	Store:     testStore,
+	// })
+	//
+	// Test admin user access
+	// err := mode.CheckPermission(context.Background(), adminUserID)
+	// if err != nil {
+	// 	t.Errorf("admin should have access: %v", err)
+	// }
 }
 
 // TestEvolutionModeCheckPermissionDisabled tests EvolutionMode when disabled.

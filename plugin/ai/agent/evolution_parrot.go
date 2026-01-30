@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hrygo/divinesense/store"
 )
 
 // EvolutionParrot implements the Evolution Mode agent for self-evolution.
@@ -28,11 +30,27 @@ type EvolutionParrot struct {
 
 // NewEvolutionParrot creates a new EvolutionParrot instance.
 // NewEvolutionParrot 创建一个新的 EvolutionParrot 实例。
-func NewEvolutionParrot(sourceDir string, userID int32, sessionID string) (*EvolutionParrot, error) {
+//
+// Parameters:
+//   - sourceDir: DivineSense source code directory
+//   - userID: User ID requesting evolution mode
+//   - sessionID: Session identifier for persistence
+//   - st: Store for user role checking (required for admin verification)
+//   - adminOnly: Whether only admins can use evolution mode (default: from env or true)
+func NewEvolutionParrot(sourceDir string, userID int32, sessionID string, st *store.Store, adminOnly ...bool) (*EvolutionParrot, error) {
 	// Generate task ID if not provided
 	taskID := uuid.New().String()[:8]
 	if sessionID == "" {
 		sessionID = taskID
+	}
+
+	// Determine adminOnly setting
+	// Priority: explicit parameter > environment variable > default true
+	adminOnlySetting := true
+	if len(adminOnly) > 0 {
+		adminOnlySetting = adminOnly[0]
+	} else if env := os.Getenv("DIVINESENSE_EVOLUTION_ADMIN_ONLY"); env != "" {
+		adminOnlySetting = env == "true" || env == "1"
 	}
 
 	// Create CCRunner
@@ -44,7 +62,8 @@ func NewEvolutionParrot(sourceDir string, userID int32, sessionID string) (*Evol
 	// Create EvolutionMode
 	mode := NewEvolutionMode(&EvolutionModeConfig{
 		SourceDir: sourceDir,
-		AdminOnly: true,
+		AdminOnly: adminOnlySetting,
+		Store:     st,
 	})
 
 	return &EvolutionParrot{

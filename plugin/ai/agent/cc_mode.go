@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/hrygo/divinesense/store"
 )
 
 // CCMode defines the interface for mode-specific behavior in CCRunner.
@@ -93,13 +95,15 @@ type EvolutionMode struct {
 	sourceDir  string
 	adminOnly  bool
 	envEnabled bool
+	store      *store.Store // For user role checking
 }
 
 // EvolutionModeConfig holds configuration for EvolutionMode.
 // EvolutionModeConfig 保存 EvolutionMode 的配置。
 type EvolutionModeConfig struct {
-	SourceDir string // Project root directory for evolution
-	AdminOnly bool   // Whether only admins can use evolution mode
+	SourceDir string       // Project root directory for evolution
+	AdminOnly bool         // Whether only admins can use evolution mode
+	Store     *store.Store // Store for user role checking (optional, skips admin check if nil)
 }
 
 // NewEvolutionMode creates a new EvolutionMode instance.
@@ -109,6 +113,7 @@ func NewEvolutionMode(cfg *EvolutionModeConfig) *EvolutionMode {
 		sourceDir:  cfg.SourceDir,
 		adminOnly:  cfg.AdminOnly,
 		envEnabled: os.Getenv("DIVINESENSE_EVOLUTION_ENABLED") == "true",
+		store:      cfg.Store,
 	}
 }
 
@@ -123,13 +128,11 @@ func (m *EvolutionMode) BuildSystemPrompt(cfg *CCRunnerConfig) string {
 
 You are modifying DivineSense's own source code.
 
-**Interaction**: User requests via web browser → Go backend → You → Response streams to browser in real-time.
-
 ## Rules
-- Follow CLAUDE.md
+- Follow @CLAUDE.md
 - All changes via PR
 
-Read CLAUDE.md first.
+Read @CLAUDE.md first.
 `
 }
 
@@ -155,11 +158,21 @@ func (m *EvolutionMode) CheckPermission(ctx context.Context, userID int32) error
 }
 
 // isAdmin checks if the user is an administrator.
-// This is a placeholder - actual implementation depends on auth system.
+// isAdmin 检查用户是否为管理员。
+//
+// If no Store is configured, returns false (deny by default).
+// 如果没有配置 Store，返回 false（默认拒绝）。
 func (m *EvolutionMode) isAdmin(ctx context.Context, userID int32) bool {
-	// TODO: Implement actual admin check using auth service
-	// For now, return false to require explicit implementation
-	return false
+	if m.store == nil {
+		return false
+	}
+
+	user, err := m.store.GetUser(ctx, &store.FindUser{ID: &userID})
+	if err != nil {
+		return false
+	}
+
+	return user.Role == store.RoleAdmin || user.Role == store.RoleHost
 }
 
 // OnComplete is a no-op for Evolution Mode (CC handles PR creation).
