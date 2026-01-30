@@ -323,7 +323,7 @@
       "enable_label": "启用极客模式",
       "disable_label": "退出极客",
       "exit_label": "退出",
-      "thinking": "Claude Code 思考中..."
+      "thinking": "处理中..."
     },
     "evolution_mode": {
       "label": "进化",

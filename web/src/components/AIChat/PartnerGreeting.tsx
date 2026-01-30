@@ -313,7 +313,6 @@ export const PartnerGreeting = memo(function PartnerGreeting({
   currentMode = "normal",
 }: PartnerGreetingProps) {
   const { t } = useTranslation();
-  const timeConfig = useMemo(() => getTimeConfig(), []);
   const [isSending, setIsSending] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -332,11 +331,12 @@ export const PartnerGreeting = memo(function PartnerGreeting({
       };
     }
     // 普通模式使用时间感知问候
+    const timeConfig = getTimeConfig();
     return {
       greetingText: t(timeConfig.greetingKey),
       timeHint: t(timeConfig.hintKey),
     };
-  }, [currentMode, t, timeConfig]);
+  }, [currentMode, t]);
 
   // 根据模式获取示例问题
   const suggestedPrompts = useMemo(() => {
@@ -347,13 +347,14 @@ export const PartnerGreeting = memo(function PartnerGreeting({
       return getEvolutionModePrompts(t);
     }
     // 普通模式使用时间感知问题
+    const timeConfig = getTimeConfig();
     const prompts = getTimeSpecificPrompts(t, timeConfig.timeOfDay);
     const hasMissingTranslation = prompts.some((p) => p.prompt === p.promptKey);
     if (hasMissingTranslation) {
       return getDefaultPrompts(t);
     }
     return prompts;
-  }, [currentMode, t, timeConfig.timeOfDay]);
+  }, [currentMode, t]);
 
   // 获取统计信息文本
   const statsText = useMemo(() => {
@@ -446,7 +447,7 @@ interface MiniPartnerGreetingProps {
 
 export const MiniPartnerGreeting = memo(function MiniPartnerGreeting({ message, className }: MiniPartnerGreetingProps) {
   const { t } = useTranslation();
-  const timeConfig = useMemo(() => getTimeConfig(), []);
+  const timeConfig = getTimeConfig();
   const greetingText = t(timeConfig.greetingKey);
 
   return (

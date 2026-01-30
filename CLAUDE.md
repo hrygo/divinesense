@@ -82,6 +82,22 @@ DivineSense 对自身知识状态、检索质量、代理决策的监控与反�
 
 ---
 
+## 调试经验
+
+<details>
+<summary>📋 历史调试记录 (点击展开)</summary>
+
+记录开发过程中遇到的典型问题和解决方案，避免重复踩坑：
+
+- **Evolution Mode 路由失败** (2025-01): Protobuf JSON 序列化导致 `evolutionMode` 丢失
+- **前端布局宽度不统一** (2025-01): Tailwind v4 语义化类名陷阱、组件内部宽度限制
+
+详细内容 → @docs/research/DEBUG_LESSONS.md
+
+</details>
+
+---
+
 ## 产品功能
 
 - **笔记**：Markdown 编辑 (KaTeX/Mermaid)、语义搜索、AI 标签

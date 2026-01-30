@@ -564,7 +564,7 @@
         "enable_label": "啟用極客模式",
         "disable_label": "退出極客",
         "exit_label": "退出",
-        "thinking": "Claude Code 思考中..."
+        "thinking": "處理中..."
       }
     }
   },

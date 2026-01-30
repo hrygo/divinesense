@@ -328,7 +328,7 @@
       "enable_label": "Enable Geek Mode",
       "disable_label": "Exit Geek",
       "exit_label": "Exit",
-      "thinking": "Claude Code thinking..."
+      "thinking": "Processing..."
     },
     "evolution_mode": {
       "label": "Evolution",
