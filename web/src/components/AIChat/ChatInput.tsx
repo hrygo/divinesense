@@ -64,7 +64,8 @@ export function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      // Ctrl+Enter or Cmd+Enter to send, Enter alone for new line
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         onSend();
       }
@@ -228,7 +229,7 @@ export function ChatInput({
             )}
             onClick={() => onSend()}
             disabled={!value.trim() || isTyping || disabled}
-            aria-label={t("ai.send-shortcut")}
+            aria-label="Ctrl+Enter 发送"
           >
             {currentMode === "geek" && value.trim() ? (
               <Terminal className="w-5 h-5" />

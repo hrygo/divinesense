@@ -318,7 +318,9 @@ const AIChat = () => {
             setCapabilityStatus("processing");
             if (lastAssistantMessageIdRef.current) {
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                content: toolName,
+                metadata: {
+                  toolName,
+                },
               });
             }
           },
