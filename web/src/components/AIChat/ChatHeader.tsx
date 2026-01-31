@@ -34,7 +34,7 @@ function getActionDescription(capability: CapabilityType, status: CapabilityStat
   if (status === "idle") return null;
 
   if (status === "thinking") {
-    return t("ai.states.thinking");  // UI display text, not event type
+    return t("ai.states.thinking");
   }
 
   if (status === "processing") {
