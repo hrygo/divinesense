@@ -1,3 +1,4 @@
+import { t } from "i18next";
 import AuthFooter from "@/components/AuthFooter";
 import PasswordSignInForm from "@/components/PasswordSignInForm";
 import { useInstance } from "@/contexts/InstanceContext";
