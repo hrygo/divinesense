@@ -156,7 +156,15 @@ const ChatMessages = memo(function ChatMessages({
     }
   }, [isTyping, scrollToBottomLocked]);
 
+  // Reset user scrolling flag when items change AND we're near bottom
+  // Only depend on items.length to avoid triggering on every items reference change
+  const itemsLengthRef = useRef(items.length);
   useEffect(() => {
+    const lengthChanged = items.length !== itemsLengthRef.current;
+    itemsLengthRef.current = items.length;
+
+    if (!lengthChanged) return;
+
     if (scrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
       const distanceToBottom = scrollHeight - scrollTop - clientHeight;
@@ -164,7 +172,7 @@ const ChatMessages = memo(function ChatMessages({
         isUserScrollingRef.current = false;
       }
     }
-  }, [items]);
+  }, [items.length]);
 
   useEffect(() => {
     return () => {
