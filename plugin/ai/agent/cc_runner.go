@@ -467,6 +467,15 @@ func (r *CCRunner) streamOutput(
 				continue
 			}
 
+			// Log raw line for debugging (truncate if too long)
+			logLine := line
+			if len(logLine) > 200 {
+				logLine = logLine[:200] + "..."
+			}
+			r.logger.Debug("CCRunner: raw line",
+				"mode", cfg.Mode,
+				"line", logLine)
+
 			var msg StreamMessage
 			if err := json.Unmarshal([]byte(line), &msg); err != nil {
 				// Not JSON, treat as plain text
@@ -474,7 +483,6 @@ func (r *CCRunner) streamOutput(
 					line = line[:maxNonJSONOutputLength]
 				}
 				r.logger.Debug("CCRunner: non-JSON output",
-					"user_id", cfg.UserID,
 					"mode", cfg.Mode,
 					"line", line)
 				if callback != nil {
@@ -484,11 +492,10 @@ func (r *CCRunner) streamOutput(
 			}
 
 			// Log message type for debugging
-			r.logger.Debug("CCRunner: received message",
-				"user_id", cfg.UserID,
+			r.logger.Info("CCRunner: received message",
 				"mode", cfg.Mode,
 				"type", msg.Type,
-				"has_name", msg.Name != "",
+				"name", msg.Name,
 				"has_output", msg.Output != "",
 				"has_error", msg.Error != "")
 
@@ -592,6 +599,23 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback) e
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				if err := callback(EventTypeAnswer, block.Text); err != nil {
+					return err
+				}
+			} else if block.Type == "tool_use" && block.Name != "" {
+				// Tool use is nested inside assistant message content
+				r.logger.Info("CCRunner: found nested tool_use", "tool_name", block.Name, "id", block.ID)
+				if err := callback(EventTypeToolUse, block.Name); err != nil {
+					return err
+				}
+			}
+		}
+	case "user":
+		// Tool results come as type:"user" with nested tool_result blocks
+		for _, block := range msg.GetContentBlocks() {
+			if block.Type == "tool_result" {
+				r.logger.Info("CCRunner: found nested tool_result", "content_length", len(block.Content))
+				// Send tool_result event - the actual content is in block.Content
+				if err := callback(EventTypeToolResult, block.Content); err != nil {
 					return err
 				}
 			}

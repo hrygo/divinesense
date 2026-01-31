@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, FileIcon, Play, Terminal as TerminalIcon } f
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { EventBadge, ToolResultBadge } from "./EventBadge";
+import { ToolResultBadge } from "./EventBadge";
 import { CompactTerminal, TerminalOutput } from "./TerminalOutput";
 
 /**
@@ -141,7 +141,7 @@ export const ToolCallCard = memo(function ToolCallCard({ data, className }: Tool
               {typeof data.output === "string" && data.output.length > 500 ? (
                 <TerminalOutput output={data.output} command={formatInput(data.input)} exitCode={data.exitCode} />
               ) : (
-                <CompactTerminal output={data.output} maxLines={0} />
+                <CompactTerminal output={data.output || ""} maxLines={0} />
               )}
             </div>
           )}

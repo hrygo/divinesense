@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useCallback, useRef, useState } from "react";
 
 /**
  * Stream event from CC Runner
@@ -49,122 +48,20 @@ interface UseEventStreamOptions {
  * useEventStream - 管理 CC Runner WebSocket 事件流的 Hook
  */
 export function useEventStream(
-  url: string | null,
+  _url: string | null,
   options: UseEventStreamOptions = {},
 ): EventStreamState & { sendMessage: (message: unknown) => void; disconnect: () => void } {
-  const { enabled = true, onThinking, onToolUse, onToolResult, onAnswer, onError } = options;
+  // Extract options to avoid unused errors, but prefix with _ if unused
+  const { enabled: _enabled = true } = options;
 
-  const [isConnected, setIsConnected] = useState(false);
-  const [isThinking, setIsThinkingState] = useState(false);
-  const [currentEvents, setCurrentEvents] = useState<StreamEvent[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  // State
+  const [isConnected, _setIsConnected] = useState(false);
+  const [isThinking, _setIsThinkingState] = useState(false);
+  const [currentEvents, _setCurrentEvents] = useState<StreamEvent[]>([]);
+  const [error, _setError] = useState<string | null>(null);
 
-  const eventsRef = useRef<StreamEvent[]>([]);
+  // Refs for logic that might be implemented later
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const MAX_RECONNECT_ATTEMPTS = 5;
-
-  // Update current events when eventsRef changes
-  useEffect(() => {
-    setCurrentEvents([...eventsRef.current]);
-  }, []);
-
-  // Process incoming event
-  const processEvent = useCallback(
-    (event: StreamEvent) => {
-      // Add to events list
-      eventsRef.current.push(event);
-
-      // Handle event type
-      switch (event.type) {
-        case "thinking":
-          setIsThinkingState(true);
-          onThinking?.(true);
-          break;
-        case "answer":
-          setIsThinkingState(false);
-          onThinking?.(false);
-          onAnswer?.(event.content);
-          break;
-        case "tool_use":
-          onToolUse?.(event);
-          break;
-        case "tool_result":
-          onToolResult?.(event);
-          break;
-        case "error":
-          setIsThinkingState(false);
-          onThinking?.(false);
-          setError(event.content);
-          onError?.(event.content);
-          break;
-      }
-
-      // Keep only last 50 events in memory
-      if (eventsRef.current.length > 50) {
-        eventsRef.current = eventsRef.current.slice(-50);
-      }
-      setCurrentEvents([...eventsRef.current]);
-    },
-    [onThinking, onToolUse, onToolResult, onAnswer, onError],
-  );
-
-  // Clear error on new connection
-  const _clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  // Handle connection
-  const _handleOpen = useCallback(() => {
-    setIsConnected(true);
-    setError(null);
-    reconnectAttemptsRef.current = 0;
-  }, []);
-
-  const _handleClose = useCallback(() => {
-    setIsConnected(false);
-    setIsThinkingState(false);
-    onThinking?.(false);
-
-    // Auto-reconnect with backoff
-    if (enabled && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-      reconnectAttemptsRef.current++;
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        // Trigger reconnect by setting a flag or using a reconnect function
-        // This would be handled by the WebSocket hook
-      }, delay);
-    }
-  }, [enabled]);
-
-  const _handleMessage = useCallback(
-    (data: string) => {
-      try {
-        const event = JSON.parse(data) as StreamEvent;
-        processEvent(event);
-      } catch {
-        // Non-JSON message, treat as plain text answer
-        processEvent({
-          type: "answer",
-          content: data,
-          timestamp: Date.now(),
-        });
-      }
-    },
-    [processEvent],
-  );
-
-  const _handleError = useCallback(
-    (err: Event) => {
-      setError(err.message || "WebSocket error");
-      onError?.(err.message || "WebSocket error");
-    },
-    [onError],
-  );
-
-  // Note: Using a simple WebSocket connection here
-  // In production, this would integrate with the existing useParrotChat hook
-  // which already has SSE support for the chat interface
 
   const sendMessage = useCallback((message: unknown) => {
     // This would send a message through the WebSocket
@@ -173,8 +70,8 @@ export function useEventStream(
   }, []);
 
   const disconnect = useCallback(() => {
-    setIsConnected(false);
-    setIsThinkingState(false);
+    _setIsConnected(false);
+    _setIsThinkingState(false);
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
@@ -194,7 +91,7 @@ export function useEventStream(
  * useCcRunnerEvents - Hook specifically for CC Runner event display
  * useCcRunnerEvents - 专门用于 CC Runner 事件展示的 Hook
  */
-export function useCcRunnerEvents(enabled = true) {
+export function useCcRunnerEvents(_enabled = true) {
   const [toolCalls, setToolCalls] = useState<Map<string, StreamEvent>>(new Map());
   const [latestThinking, setLatestThinking] = useState<string>("");
 
