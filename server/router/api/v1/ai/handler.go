@@ -311,10 +311,18 @@ func (h *ParrotHandler) executeAgent(
 		}
 
 		// Log important events
-		logger.Debug("Agent event",
-			slog.String(observability.LogFieldEventType, eventType),
-			slog.Int("event_count", currentCount),
-		)
+		if eventType == "tool_use" || eventType == "tool_result" {
+			logger.Info("Agent event", // Use Info level for visibility
+				slog.String(observability.LogFieldEventType, eventType),
+				slog.String("event_data", fmt.Sprintf("%v", eventData)),
+				slog.Int("event_count", currentCount),
+			)
+		} else {
+			logger.Debug("Agent event",
+				slog.String(observability.LogFieldEventType, eventType),
+				slog.Int("event_count", currentCount),
+			)
+		}
 
 		// Convert event data to string for streaming
 		var dataStr string

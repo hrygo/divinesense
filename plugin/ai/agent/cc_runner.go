@@ -576,12 +576,14 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback) e
 		}
 	case "tool_use":
 		if msg.Name != "" {
+			r.logger.Debug("CCRunner: sending tool_use event", "tool_name", msg.Name)
 			if err := callback(EventTypeToolUse, msg.Name); err != nil {
 				return err
 			}
 		}
 	case "tool_result":
 		if msg.Output != "" {
+			r.logger.Debug("CCRunner: sending tool_result event", "output_length", len(msg.Output))
 			if err := callback(EventTypeToolResult, msg.Output); err != nil {
 				return err
 			}

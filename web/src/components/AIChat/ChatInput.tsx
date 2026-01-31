@@ -1,5 +1,5 @@
 import { MessageSquarePlus, Scissors, SendIcon, Terminal, Trash2 } from "lucide-react";
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,27 +43,45 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Detect macOS for correct shortcut display
-  const isMac = typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
-  const sendShortcut = isMac ? "⌘+Enter" : "Ctrl+Enter";
+  // Detect macOS for correct shortcut display - memoized
+  const sendShortcut = useMemo(() => {
+    const isMac = typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
+    return isMac ? "⌘+Enter" : "Ctrl+Enter";
+  }, []);
 
-  // Handle mobile keyboard visibility
+  // Handle mobile keyboard visibility with debouncing
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let lastHeight = 0;
 
     const handleResize = () => {
       const viewport = window.visualViewport;
       if (!viewport) return;
 
-      const windowHeight = window.innerHeight;
-      const keyboardVisible = viewport.height < windowHeight * 0.85;
-      const newKeyboardHeight = keyboardVisible ? windowHeight - viewport.height : 0;
+      // Debounce: only update if height significantly changed
+      const currentHeight = viewport.height;
+      if (Math.abs(currentHeight - lastHeight) < 10) {
+        return; // Skip small changes
+      }
+      lastHeight = currentHeight;
 
-      setKeyboardHeight(newKeyboardHeight);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const windowHeight = window.innerHeight;
+        const keyboardVisible = currentHeight < windowHeight * 0.85;
+        const newKeyboardHeight = keyboardVisible ? windowHeight - currentHeight : 0;
+
+        setKeyboardHeight(newKeyboardHeight);
+      }, 100);
     };
 
     window.visualViewport.addEventListener("resize", handleResize);
-    return () => window.visualViewport?.removeEventListener("resize", handleResize);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   const handleKeyDown = useCallback(
@@ -93,17 +111,20 @@ export function ChatInput({
     }
   }, [value]);
 
-  // Use mode-specific placeholder
-  const placeholderText =
-    currentMode === "geek"
-      ? t("ai.parrot.geek-chat-placeholder")
-      : currentMode === "evolution"
-        ? t("ai.parrot.evolution-chat-placeholder")
-        : placeholder || t("ai.parrot.chat-default-placeholder");
+  // Use mode-specific placeholder - memoized
+  const placeholderText = useMemo(() => {
+    if (currentMode === "geek") {
+      return t("ai.parrot.geek-chat-placeholder");
+    }
+    if (currentMode === "evolution") {
+      return t("ai.parrot.evolution-chat-placeholder");
+    }
+    return placeholder || t("ai.parrot.chat-default-placeholder");
+  }, [currentMode, placeholder, t]);
 
-  // Mode-specific styles helper
-  const getModeStyles = (mode: AIMode) => {
-    switch (mode) {
+  // Mode-specific styles - memoized to avoid recreating on every render
+  const modeStyles = useMemo(() => {
+    switch (currentMode) {
       case "geek":
         return {
           border: "geek-border geek-terminal",
@@ -123,9 +144,7 @@ export function ChatInput({
           button: "",
         };
     }
-  };
-
-  const modeStyles = getModeStyles(currentMode);
+  }, [currentMode]);
 
   return (
     <div
@@ -192,8 +211,8 @@ export function ChatInput({
             <div className="flex-1" />
             {/* Shortcut hint */}
             <span className="hidden sm:inline text-xs text-muted-foreground">
-              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 发送
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> {t("ai.input-hint-newline", { key: "Enter" })} ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> {t("ai.input-hint-send", { key: sendShortcut })}
             </span>
             {/* Mode Cycle Button - mobile only, shows mode selector */}
             {onModeChange && currentMode !== "normal" && (

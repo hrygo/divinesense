@@ -71,6 +71,8 @@
     },
     "more-options": "更多选项",
     "newline-shortcut": "换行",
+    "input-hint-newline": "{{key}} 换行",
+    "input-hint-send": "{{key}} 发送",
     "parrot": {
       "agents": {
         "amazing": {

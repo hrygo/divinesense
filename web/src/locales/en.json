@@ -71,6 +71,8 @@
     },
     "more-options": "More options",
     "newline-shortcut": "New line",
+    "input-hint-newline": "{{key}} for new line",
+    "input-hint-send": "{{key}} to send",
     "parrot": {
       "agents": {
         "amazing": {
