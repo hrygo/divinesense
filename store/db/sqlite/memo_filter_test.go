@@ -11,6 +11,10 @@ import (
 )
 
 func TestConvertExprToSQL(t *testing.T) {
+	// Capture a fixed timestamp for tests that use time.Now()
+	// This avoids race conditions where the timestamp changes between test definition and execution
+	testTimestamp := time.Now().Unix()
+
 	tests := []struct {
 		filter string
 		want   string
@@ -99,7 +103,7 @@ func TestConvertExprToSQL(t *testing.T) {
 		{
 			filter: `created_ts > now() - 60 * 60 * 24`,
 			want:   "`memo`.`created_ts` > ?",
-			args:   []any{time.Now().Unix() - 60*60*24},
+			args:   []any{any(testTimestamp - 60*60*24)},
 		},
 		{
 			filter: `size(tags) == 0`,
