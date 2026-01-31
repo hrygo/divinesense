@@ -35,8 +35,9 @@ dist
 # Git worktrees
 .worktrees/
 
-# Claude settings
-.claude/
+# Claude
+.claude/sessions/
+.claude/settings.local.json
 
 # Loki logs
 .loki
