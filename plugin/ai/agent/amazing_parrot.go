@@ -698,6 +698,7 @@ func (p *AmazingParrot) isCasualChatInput(input string) bool {
 	// Check if input contains search-related keywords
 	searchKeywords := []string{
 		"搜索", "search", "查", "find", "笔记", "memo", "日程", "schedule",
+		"提醒", "remind", "待办", "todo", "记下", "安排", "plan",
 		"有什么", "what's", "安排", "plan", "多少", "how many",
 		"什么时候", "when", "在哪", "where", "关于", "about",
 		"总结", "summarize", "回顾", "review", "统计", "count",
