@@ -242,6 +242,10 @@ test-runner: ## 运行 Runner 测试
 build: ## 构建后端
 	@echo "Building backend..."
 	@go build -o $(BACKEND_BIN) ./$(BACKEND_CMD)
+	@if [ "$$(go env GOOS)" = "darwin" ] && command -v codesign >/dev/null 2>&1; then \
+		echo "Signing binary with ad-hoc signature..."; \
+		codesign --force --deep --sign - $(BACKEND_BIN); \
+	fi
 
 build-web: ## 构建前端
 	@echo "Building frontend..."

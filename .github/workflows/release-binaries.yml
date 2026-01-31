@@ -11,7 +11,7 @@ on:
         default: 'v0.71.0'
 
 jobs:
-  build-and-upload:
+  build-linux-windows:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -54,25 +54,25 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Build Binaries
+      - name: Build Binaries (Linux + Windows)
         shell: bash
         run: |
           mkdir -p dist
-          platforms=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64" "windows/arm64")
-          
+          platforms=("linux/amd64" "linux/arm64" "windows/amd64" "windows/arm64")
+
           for platform in "${platforms[@]}"; do
             platform_split=(${platform//\// })
             GOOS=${platform_split[0]}
             GOARCH=${platform_split[1]}
             output_name="divinesense-${VERSION}-${GOOS}-${GOARCH}"
-            
+
             if [ "$GOOS" == "windows" ]; then
               output_name="${output_name}.exe"
             fi
-            
+
             echo "Building for $GOOS/$GOARCH..."
             env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o dist/$output_name ./cmd/divinesense
-            
+
             # Configure SHA256 generation based on OS
             cd dist
             if command -v sha256sum > /dev/null; then
@@ -89,7 +89,86 @@ jobs:
         with:
           files: dist/*
 
-      # Custom upload step for manual dispatch because softprops/action-gh-release relies on release event context
+      - name: Upload Release Assets (Manual)
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: dist/*
+
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
+
+      - name: Set Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
+      # Frontend Build
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+
+      - name: Install Frontend Deps
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Build Frontend
+        run: pnpm release
+        working-directory: web
+
+      # Go Build
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build Binaries (macOS + Ad-hoc Sign)
+        shell: bash
+        run: |
+          mkdir -p dist
+          platforms=("darwin/amd64" "darwin/arm64")
+
+          for platform in "${platforms[@]}"; do
+            platform_split=(${platform//\// })
+            GOOS=${platform_split[0]}
+            GOARCH=${platform_split[1]}
+            output_name="divinesense-${VERSION}-${GOOS}-${GOARCH}"
+
+            echo "Building for $GOOS/$GOARCH..."
+            env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o dist/$output_name ./cmd/divinesense
+
+            # Ad-hoc sign to bypass Gatekeeper
+            echo "  Signing with ad-hoc signature..."
+            codesign --force --deep --sign - dist/$output_name
+            codesign -vvv dist/$output_name 2>&1 | grep -E "(valid on disk|satisfies its Designated Requirement)" || true
+
+            # Generate checksum
+            shasum -a 256 "$output_name" > "$output_name.sha256"
+          done
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+        with:
+          files: dist/*
+
       - name: Upload Release Assets (Manual)
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'workflow_dispatch'

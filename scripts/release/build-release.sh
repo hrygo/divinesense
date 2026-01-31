@@ -146,6 +146,17 @@ build_platform() {
         return 1
     fi
 
+    # Sign macOS binaries to bypass Gatekeeper
+    if [ "$GOOS" == "darwin" ]; then
+        log_info "  Signing macOS binary with ad-hoc signature..."
+        if command -v codesign &>/dev/null; then
+            codesign --force --deep --sign - "${output_path}"
+            codesign -vv "${output_path}" 2>&1 | grep -E "(valid on disk|satisfies)" || true
+        else
+            log_warn "  codesign not found (macOS only). Binary will need xattr -cr on first run."
+        fi
+    fi
+
     # Create checksum
     if command -v sha256sum &>/dev/null; then
         cd "${DIST_DIR}"
