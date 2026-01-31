@@ -39,7 +39,7 @@ jobs:
           EOF
           
           # 检查是否包含 Resolves #123, Refs #123, Fixes #123 等关键字
-          if grep -EiQ "(resolves|fixes|closes|refs|fix|evolution)\s+#([0-9]+)" pr_body.txt; then
+          if grep -Eiq "(resolves|fixes|closes|refs|fix|evolution)\s+#([0-9]+)" pr_body.txt; then
             echo "result=success" >> $GITHUB_OUTPUT
             echo "msg=Issue reference found in PR description." >> $GITHUB_OUTPUT
           else
