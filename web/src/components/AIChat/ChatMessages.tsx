@@ -433,7 +433,7 @@ const MessageBubble = memo(function MessageBubble({
                         },
                       }}
                     >
-                      {content || t("ai.thinking") || "..."}
+                      {content || t("ai.states.thinking") || "..."}  // UI display text, not event type
                     </ReactMarkdown>
                     {children}
                   </div>
