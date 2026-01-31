@@ -9,7 +9,8 @@
 #   ./scripts/release/package-release.sh [version]
 #
 # Output:
-#   releases/divinesense-<version>-<platform>.tar.gz
+#   releases/divinesense-<version>-<platform>.tar.gz (Linux/macOS)
+#   releases/divinesense-<version>-<platform>.zip   (Windows)
 #
 # =============================================================================
 
@@ -50,7 +51,17 @@ print_banner() {
 create_package() {
     local binary=$1
     local platform=$2
-    local package_name="divinesense-${VERSION}-${platform}.tar.gz"
+    local is_windows=false
+    if [[ "$platform" == *"windows"* ]]; then
+        is_windows=true
+    fi
+
+    local package_ext="tar.gz"
+    if [ "$is_windows" = true ]; then
+        package_ext="zip"
+    fi
+
+    local package_name="divinesense-${VERSION}-${platform}.${package_ext}"
     local package_path="${RELEASE_DIR}/${package_name}"
     local staging_dir="${RELEASE_DIR}/.staging/${platform}"
 
@@ -61,14 +72,19 @@ create_package() {
     mkdir -p "${staging_dir}"
 
     # Copy binary
-    cp "${DIST_DIR}/${binary}" "${staging_dir}/divinesense"
-    chmod +x "${staging_dir}/divinesense"
+    if [ "$is_windows" = true ]; then
+        cp "${DIST_DIR}/${binary}" "${staging_dir}/divinesense.exe"
+    else
+        cp "${DIST_DIR}/${binary}" "${staging_dir}/divinesense"
+        chmod +x "${staging_dir}/divinesense"
+        
+        # Copy Linux-specific service file
+        if [ -f "${SCRIPT_DIR}/divinesense.service" ]; then
+            cp "${SCRIPT_DIR}/divinesense.service" "${staging_dir}/"
+        fi
 
-    # Copy service file
-    cp "${SCRIPT_DIR}/divinesense.service" "${staging_dir}/"
-
-    # Create directory structure script
-    cat > "${staging_dir}/install.sh" << 'INSTALL_EOF'
+        # Create directory structure script (Linux only)
+        cat > "${staging_dir}/install.sh" << 'INSTALL_EOF'
 #!/bin/bash
 # Quick install script for extracted release
 
@@ -106,12 +122,22 @@ echo "  1. Configure: sudo vi ${CONFIG_DIR}/config"
 echo "  2. Start service: sudo systemctl enable --now divinesense"
 echo "  3. Check status: sudo systemctl status divinesense"
 INSTALL_EOF
+        chmod +x "${staging_dir}/install.sh"
+    fi
 
-    chmod +x "${staging_dir}/install.sh"
-
-    # Create tarball
+    # Create archive
     cd "${staging_dir}"
-    tar -czf "${package_path}" .
+    if [ "$is_windows" = true ]; then
+        if command -v zip &>/dev/null; then
+            zip -r "${package_path}" .
+        else
+            log_warn "zip command not found, falling back to tar.gz for windows"
+            package_path="${package_path%.zip}.tar.gz"
+            tar -czf "${package_path}" .
+        fi
+    else
+        tar -czf "${package_path}" .
+    fi
 
     # Cleanup
     rm -rf "${staging_dir}"
@@ -157,7 +183,7 @@ main() {
     log_info "Output directory: ${RELEASE_DIR}"
     echo ""
     log_info "Packages:"
-    ls -lh "${RELEASE_DIR}"/*.tar.gz 2>/dev/null | awk '{printf "  %-50s %s\n", $9, $5}'
+    ls -lh "${RELEASE_DIR}"/divinesense-* 2>/dev/null | awk '{printf "  %-50s %s\n", $9, $5}'
     echo ""
 }
 

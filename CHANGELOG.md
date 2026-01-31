@@ -18,6 +18,12 @@ All notable changes to this project will be documented in this file.
 - **Session Redesign**: Laid the groundwork for the new "Hot/Cool Zone" session management strategy to handle large context (Gen UI outputs) more efficiently.
 - **Research**: Added `docs/research/20260131-session-management-redesign.md` detailing the new architecture.
 
+### ⚡ Performance & Runtime Optimization
+- **Static Assets**: Implemented `Gzip` compression (Level 5) for all embedded assets and API responses, significantly reducing transfer size.
+- **Cache Strategy**: Enabled ultra-long (1 year) `immutable` caching for Vite's hashed assets while enforcing `no-cache` for `index.html` to ensure zero-stale UI updates.
+- **Security**: Added `X-Content-Type-Options: nosniff` to prevent MIME-sniffing attacks on embedded files.
+- **Artifact Hosting**: Optimized `/file/geek/...` route with zero-cache headers for real-time artifact verification and directory-to-index.html fallback.
+
 ### 🛠️ Maintenance
 - **GitHub Templates**: Added new Pull Request template and verified Issue templates.
 

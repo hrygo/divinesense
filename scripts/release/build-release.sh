@@ -9,8 +9,9 @@
 #   ./scripts/release/build-release.sh [version]
 #
 # Platforms:
-#   - linux/amd64
-#   - linux/arm64
+#   - linux/amd64, linux/arm64
+#   - darwin/amd64, darwin/arm64
+#   - windows/amd64, windows/arm64
 #
 # Output:
 #   dist/divinesense-<version>-<platform>
@@ -35,7 +36,7 @@ BUILD_TIME="$(date -u '+%Y-%m-%d_%H:%M:%S')"
 LDFLAGS="-X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -s -w"
 
 # Supported platforms
-PLATFORMS=("linux/amd64" "linux/arm64")
+PLATFORMS=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64" "windows/arm64")
 
 # Logging
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -120,6 +121,9 @@ build_platform() {
     local GOOS=$(echo $platform | cut -d'/' -f1)
     local GOARCH=$(echo $platform | cut -d'/' -f2)
     local output_name="divinesense-${VERSION}-${GOOS}-${GOARCH}"
+    if [ "$GOOS" == "windows" ]; then
+        output_name="${output_name}.exe"
+    fi
     local output_path="${DIST_DIR}/${output_name}"
 
     log_info "Building for ${platform}..."

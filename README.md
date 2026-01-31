@@ -12,10 +12,10 @@
 
 ## 为什么选择 DivineSense？
 
-| 🎯 **效率** | 🧠 **知识** | 🤖 **AI 代理** | 🔒 **隐私** |
+| 🎯 **效率** | 🧠 **知识** | 🤖 **AI 代理** | 📦 **分发** |
 | :--------: | :--------: | :-----------: | :--------: |
-| 自动化任务 |  智能存储  |   意图路由    |   自托管   |
-|  节省时间  |  语义搜索  |  多代理协作   |  数据隐私  |
+| 自动化任务 |  智能存储  |   意图路由    |  单机运行  |
+|  节省时间  |  语义搜索  |  多代理协作   | 零依赖部署 |
 
 ---
 
@@ -161,10 +161,11 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyu
 curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --mode=binary
 ```
 
-**优势**：
-- ✅ 原生 Geek Mode（Claude Code CLI 集成）
-- ✅ 更快的启动速度，更低的资源开销
-- ✅ 更便捷的升级流程
+**核心优势**：
+- 🚀 **单二进制架构**：前端、后端、数据库迁移逻辑全部打包入一个文件。
+- ⚡ **极致优化**：支持 Gzip 实时压缩，Vite 哈希资产强缓存，秒级加载。
+- ✅ **原生 Geek Mode**：支持 Claude Code CLI 集成，自动 Host 极客工作空间产物。
+- ✅ **零依赖**：无需 Nginx 或 Node.js 环境，直接拷贝运行。
 
 **详细文档**：[二进制部署指南](docs/deployment/BINARY_DEPLOYMENT.md)
 

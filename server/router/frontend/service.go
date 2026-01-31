@@ -26,11 +26,20 @@ func NewFrontendService(profile *profile.Profile, store *store.Store) *FrontendS
 }
 
 func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
+	// Add Gzip middleware to compress assets and API responses
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: 5,
+	}))
+
 	skipper := func(c echo.Context) bool {
 		// Skip API routes.
 		if util.HasPrefixes(c.Path(), "/api", "/memos.api.v1") {
 			return true
 		}
+
+		// Security: Prevent MIME type sniffing
+		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+
 		// For index.html and root path, set no-cache headers to prevent browser caching
 		// This prevents sensitive data from being accessible via browser back button after logout
 		if c.Path() == "/" || c.Path() == "/index.html" {
@@ -39,12 +48,17 @@ func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
 			c.Response().Header().Set("Expires", "0")
 			return false
 		}
+
 		// Set Cache-Control header for static assets.
-		// Since Vite generates content-hashed filenames (e.g., index-BtVjejZf.js),
-		// we can cache aggressively but use immutable to prevent revalidation checks.
-		// For frequently redeployed instances, use shorter max-age (1 hour) to avoid
-		// serving stale assets after redeployment.
-		c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=3600, immutable") // 1 hour
+		// Since Vite generates content-hashed filenames (e.g., assets/index-BtVjejZf.js),
+		// we can cache aggressively using immutable for files in assets/ directory.
+		if util.HasPrefixes(c.Path(), "/assets/") {
+			c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=31536000, immutable")
+		} else {
+			// For other static assets (like favicon), use a shorter max-age
+			c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=3600")
+		}
+
 		return false
 	}
 

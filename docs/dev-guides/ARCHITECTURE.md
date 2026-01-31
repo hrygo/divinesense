@@ -3,19 +3,19 @@
 ## 项目概述
 
 DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 AI 驱动的「鹦鹉」代理增强用户体验。
-- **核心架构**：Go 后端 (Echo/Connect RPC) + React 前端 (Vite/Tailwind)
+- **核心架构**：Go 后端 (Echo/Connect RPC) + React 前端 (Vite/Tailwind) —— **单二进制分发**
 - **数据存储**：PostgreSQL（生产环境，完整 AI 支持），SQLite（仅开发环境，**无 AI**）详见 [#9](https://github.com/hrygo/divinesense/issues/9)
 - **核心特性**：多代理 AI 系统、语义搜索、日程助理、自托管无遥测
 - **端口**：后端 28081，前端 25173，PostgreSQL 25432（开发环境）
 
 ## 技术栈
 
-| 领域 | 技术选型 |
-|:-----|:--------|
-| 后端 | Go 1.25, Echo, Connect RPC, pgvector |
-| 前端 | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query |
+| 领域   | 技术选型                                                                                             |
+| :----- | :--------------------------------------------------------------------------------------------------- |
+| 后端   | Go 1.25, Echo, Connect RPC, pgvector                                                                 |
+| 前端   | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query                               |
 | 数据库 | PostgreSQL 16+（生产），SQLite（开发，**无 AI**）[#9](https://github.com/hrygo/divinesense/issues/9) |
-| AI | DeepSeek V3（LLM），SiliconFlow（Embedding、Reranker） |
+| AI     | DeepSeek V3（LLM），SiliconFlow（Embedding、Reranker）                                               |
 
 ---
 
@@ -68,9 +68,14 @@ divinesense/
 
 ### 核心组件
 
-1. **服务器初始化**：Profile → DB → Store → Server
+1. **单二进制构建 (Single Binary)**：
+   - **前端集成**：使用 `go:embed` 将 `web/dist` 打包进 Go 二进制文件。
+   - **数据库迁移**：SQL 脚本同样通过 `embed` 嵌入，启动时自动执行 `store/migrator.go` 进行架构升级。
+   - **优势**：分发无需 Node.js/Nginx，直接运行全栈服务。
+
+2. **服务器初始化**：Profile → DB → Store → Server
    - 使用 Echo 框架 + Connect RPC（gRPC/HTTP 转码）
-   - 启动时自动迁移
+   - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **插件系统** (`plugin/ai/`):
    - LLM 提供商：DeepSeek、OpenAI、Ollama
@@ -100,13 +105,13 @@ divinesense/
 
 ### 代理类型 (`plugin/ai/agent/`)
 
-| AgentType | 鹦鹉名称 | 文件 | 中文名 | 描述 |
-|:---------:|:--------|:-----|:-------|:-----|
-| `MEMO` | 灰灰 | `memo_parrot.go` | 灰灰 | 笔记搜索和检索专家 |
-| `SCHEDULE` | 金刚 | `schedule_parrot_v2.go` | 金刚 | 日程创建和管理 |
-| `AMAZING` | 惊奇 | `amazing_parrot.go` | 惊奇 | 综合助理（笔记 + 日程） |
-| `GEEK` | 极客 | `geek_parrot.go` | 极客 | Claude Code CLI 通信层（零 LLM） |
-| `EVOLUTION` | 进化 | `evolution_parrot.go` | 进化 | 自我进化能力（源代码修改） |
+|  AgentType  | 鹦鹉名称 | 文件                    | 中文名 | 描述                             |
+| :---------: | :------- | :---------------------- | :----- | :------------------------------- |
+|   `MEMO`    | 灰灰     | `memo_parrot.go`        | 灰灰   | 笔记搜索和检索专家               |
+| `SCHEDULE`  | 金刚     | `schedule_parrot_v2.go` | 金刚   | 日程创建和管理                   |
+|  `AMAZING`  | 惊奇     | `amazing_parrot.go`     | 惊奇   | 综合助理（笔记 + 日程）          |
+|   `GEEK`    | 极客     | `geek_parrot.go`        | 极客   | Claude Code CLI 通信层（零 LLM） |
+| `EVOLUTION` | 进化     | `evolution_parrot.go`   | 进化   | 自我进化能力（源代码修改）       |
 
 ### 代理路由器
 
@@ -179,13 +184,13 @@ ChatRouter 实现**三层**意图分类系统：
 
 **位置**：`plugin/ai/agent/tools/`
 
-| 工具 | 文件 | 描述 |
-|:-----|:-----|:-----|
-| `memo_search` | `memo_search.go` | 语义笔记搜索 + RRF 融合 |
-| `schedule_add` | `scheduler.go` | 创建新日程 |
-| `schedule_query` | `scheduler.go` | 查询现有日程 |
-| `schedule_update` | `scheduler.go` | 更新现有日程 |
-| `find_free_time` | `scheduler.go` | 查找空闲时间段 |
+| 工具              | 文件             | 描述                    |
+| :---------------- | :--------------- | :---------------------- |
+| `memo_search`     | `memo_search.go` | 语义笔记搜索 + RRF 融合 |
+| `schedule_add`    | `scheduler.go`   | 创建新日程              |
+| `schedule_query`  | `scheduler.go`   | 查询现有日程            |
+| `schedule_update` | `scheduler.go`   | 更新现有日程            |
+| `find_free_time`  | `scheduler.go`   | 查找空闲时间段          |
 
 ### 日程代理 V2
 
@@ -205,14 +210,14 @@ ChatRouter 实现**三层**意图分类系统：
 
 ### 服务概览
 
-| 服务 | 包 | 描述 |
-|:-----|:-----|:-----|
-| Memory | `memory/` | 情景记忆 & 用户偏好 |
-| Session | `session/` | 对话持久化（30 天保留） |
-| Router | `router/` | 三层意图分类 & 路由 |
-| Cache | `cache/` | 带 TTL 的 LRU 缓存（查询结果） |
+| 服务    | 包         | 描述                            |
+| :------ | :--------- | :------------------------------ |
+| Memory  | `memory/`  | 情景记忆 & 用户偏好             |
+| Session | `session/` | 对话持久化（30 天保留）         |
+| Router  | `router/`  | 三层意图分类 & 路由             |
+| Cache   | `cache/`   | 带 TTL 的 LRU 缓存（查询结果）  |
 | Metrics | `metrics/` | 代理 & 工具性能追踪（A/B 测试） |
-| Vector | `vector/` | 多提供商 Embedding 服务 |
+| Vector  | `vector/`  | 多提供商 Embedding 服务         |
 
 ### 会话服务 (`plugin/ai/session/`)
 
@@ -248,12 +253,12 @@ Token 预算分配（带检索）
 
 混合 BM25 + 向量搜索 + 智能融合：
 
-| 策略 | 描述 |
-|:-----|:-----|
-| `BM25Only` | 仅关键词搜索（快，低质量） |
-| `SemanticOnly` | 仅向量搜索（慢，语义） |
-| `HybridStandard` | BM25 + 向量 + RRF 融合（平衡） |
-| `FullPipeline` | 混合 + 重排器（最高质量，最慢） |
+| 策略             | 描述                            |
+| :--------------- | :------------------------------ |
+| `BM25Only`       | 仅关键词搜索（快，低质量）      |
+| `SemanticOnly`   | 仅向量搜索（慢，语义）          |
+| `HybridStandard` | BM25 + 向量 + RRF 融合（平衡）  |
+| `FullPipeline`   | 混合 + 重排器（最高质量，最慢） |
 
 ### RRF 融合
 
@@ -272,16 +277,16 @@ BAAI/bge-reranker-v2-m3 用于结果精炼（可通过策略配置）。
 
 ### 页面组件
 
-| 路径 | 组件 | 布局 | 用途 |
-|:-----|:-----|:-----|:-----|
-| `/` | `Home.tsx` | MainLayout | 主时间线 + 笔记编辑器 |
-| `/explore` | `Explore.tsx` | MainLayout | 搜索和探索内容 |
-| `/archived` | `Archived.tsx` | MainLayout | 已归档笔记 |
-| `/chat` | `AIChat.tsx` | AIChatLayout | AI 聊天界面 + 自动路由 |
-| `/schedule` | `Schedule.tsx` | ScheduleLayout | 日历视图（FullCalendar） |
-| `/review` | `Review.tsx` | MainLayout | 每日回顾 |
-| `/setting` | `Setting.tsx` | MainLayout | 用户设置 |
-| `/u/:username` | `UserProfile.tsx` | MainLayout | 公开用户资料 |
+| 路径           | 组件              | 布局           | 用途                     |
+| :------------- | :---------------- | :------------- | :----------------------- |
+| `/`            | `Home.tsx`        | MainLayout     | 主时间线 + 笔记编辑器    |
+| `/explore`     | `Explore.tsx`     | MainLayout     | 搜索和探索内容           |
+| `/archived`    | `Archived.tsx`    | MainLayout     | 已归档笔记               |
+| `/chat`        | `AIChat.tsx`      | AIChatLayout   | AI 聊天界面 + 自动路由   |
+| `/schedule`    | `Schedule.tsx`    | ScheduleLayout | 日历视图（FullCalendar） |
+| `/review`      | `Review.tsx`      | MainLayout     | 每日回顾                 |
+| `/setting`     | `Setting.tsx`     | MainLayout     | 用户设置                 |
+| `/u/:username` | `UserProfile.tsx` | MainLayout     | 公开用户资料             |
 
 ### 布局层级
 
@@ -297,6 +302,18 @@ RootLayout（全局导航 + 认证）
     └── ScheduleLayout（固定侧边栏：ScheduleCalendar）
         └── /schedule
 ```
+
+### 静态资源优化 (Static Asset Optimization)
+
+为了在单二进制分发中保持极致的 Web 性能，`FrontendService` 实现了以下优化策略：
+
+| 策略                 | 实现细节                                 | 目标                                      |
+| :------------------- | :--------------------------------------- | :---------------------------------------- |
+| **Gzip 压缩**        | `middleware.Gzip(Level: 5)`              | 减少二进制嵌入产物的传输大小（约 70%）    |
+| **强缓存 (Vite)**    | `/assets/*` 匹配 `immutable, max-age=1y` | 针对 Vite 哈希资源实现“零请求”重复访问    |
+| **入口防缓存**       | `index.html` 强制 `no-cache, no-store`   | 确保版本迭代后用户立刻获取最新 JS 引用    |
+| **Geek 工作区 Host** | `/file/geek/:userID/*` 实时 Host         | 极客模式产生的网页/产物可在浏览器实时预览 |
+| **安全加固**         | `X-Content-Type-Options: nosniff`        | 增强针对嵌入式静态资源的安全防御          |
 
 ---
 
@@ -335,13 +352,13 @@ RootLayout（全局导航 + 认证）
 
 ### 核心表
 
-| 表名 | 用途 |
-|:-----|:-----|
-| `memo_embedding` | 向量嵌入（1024 维）用于语义搜索 |
-| `conversation_context` | 会话持久化（30 天保留） |
-| `episodic_memory` | 长期用户记忆和学习 |
-| `user_preferences` | 用户沟通偏好 |
-| `agent_metrics` | A/B 测试指标（prompt 版本、延迟、成功率） |
+| 表名                   | 用途                                      |
+| :--------------------- | :---------------------------------------- |
+| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           |
+| `conversation_context` | 会话持久化（30 天保留）                   |
+| `episodic_memory`      | 长期用户记忆和学习                        |
+| `user_preferences`     | 用户沟通偏好                              |
+| `agent_metrics`        | A/B 测试指标（prompt 版本、延迟、成功率） |
 
 ---
 

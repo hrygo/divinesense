@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -68,7 +67,7 @@ var (
 			// Trigger graceful shutdown on SIGINT or SIGTERM.
 			// The default signal sent by the `kill` command is SIGTERM,
 			// which is taken as the graceful shutdown signal for many systems, eg., Kubernetes, Gunicorn.
-			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+			signal.Notify(c, terminationSignals...)
 
 			if err := s.Start(ctx); err != nil {
 				if !errors.Is(err, http.ErrServerClosed) {
