@@ -26,9 +26,15 @@ func NewFrontendService(profile *profile.Profile, store *store.Store) *FrontendS
 }
 
 func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
-	// Add Gzip middleware to compress assets and API responses
+	// Skipper for Gzip: don't compress API routes (Connect RPC uses binary protobuf)
+	gzipSkipper := func(c echo.Context) bool {
+		return util.HasPrefixes(c.Path(), "/api", "/memos.api.v1")
+	}
+
+	// Add Gzip middleware to compress static assets only
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
-		Level: 5,
+		Level:   5,
+		Skipper: gzipSkipper,
 	}))
 
 	skipper := func(c echo.Context) bool {
