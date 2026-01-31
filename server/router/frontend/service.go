@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 	"net/http"
+	"path/filepath"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -46,9 +47,12 @@ func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
 		// Security: Prevent MIME type sniffing
 		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
 
-		// For index.html and root path, set no-cache headers to prevent browser caching
+		ext := filepath.Ext(c.Path())
+		// For index.html, root path, and SPA routes (no extension),
+		// set no-cache headers to prevent browser caching.
 		// This prevents sensitive data from being accessible via browser back button after logout
-		if c.Path() == "/" || c.Path() == "/index.html" {
+		// and ensures users always get the latest version of the application.
+		if ext == "" || c.Path() == "/index.html" {
 			c.Response().Header().Set(echo.HeaderCacheControl, "no-cache, no-store, must-revalidate")
 			c.Response().Header().Set("Pragma", "no-cache")
 			c.Response().Header().Set("Expires", "0")
@@ -61,7 +65,7 @@ func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
 		if util.HasPrefixes(c.Path(), "/assets/") {
 			c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=31536000, immutable")
 		} else {
-			// For other static assets (like favicon), use a shorter max-age
+			// For other static assets with extensions (like logo.png, favicon.ico), use a shorter max-age
 			c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=3600")
 		}
 
