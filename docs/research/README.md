@@ -45,6 +45,7 @@ research/
 |:---|:---|
 | [BEST_PRACTICE_CLI_AGENT.md](./BEST_PRACTICE_CLI_AGENT.md) | CLI Agent 最佳实践 (Geek Mode) |
 | [DEBUG_LESSONS.md](./DEBUG_LESSONS.md) | 历史调试经验记录 |
+| [idea-researcher-self-research.md](./idea-researcher-self-research.md) | Idea Researcher Skill 自我调研报告 (v3.1→v3.2) |
 
 ---
 
