@@ -63,6 +63,7 @@ WEB_DIR ?= web
 .PHONY: clean clean-all
 .PHONY: test test-ai test-embedding test-runner
 .PHONY: release-build release-package release-all bin-install bin-deploy
+.PHONY: docs-check docs-ref docs-tree docs-tidy docs-index
 
 # ===========================================================================
 # Development Commands
@@ -327,6 +328,39 @@ vet: ## 运行 go vet
 	@echo "Vet OK"
 
 check-lint: lint vet ## 检查代码风格 (Lint + Vet)
+
+# ===========================================================================
+# Documentation Management Commands
+# ===========================================================================
+
+##@ Documentation
+
+docs-check: ## 检查文档完整性和链接
+	@echo "📋 Checking documentation..."
+	@python3 .claude/skills/docs-manager/docs_helper.py check
+
+docs-ref: ## 显示文档引用关系
+	@echo "🔗 Building reference graph..."
+	@python3 .claude/skills/docs-manager/docs_helper.py refs
+
+docs-tree: ## 显示文档结构树
+	@echo "📂 docs/ structure:"
+	@python3 .claude/skills/docs-manager/docs_helper.py tree
+
+docs-tidy: ## 整理文档(检测重复、命名规范)
+	@echo "🧹 Tidy up documentation..."
+	@python3 .claude/skills/docs-manager/docs_helper.py duplicates
+
+docs-index: ## 更新文档索引(需指定目录)
+	@echo "⚠️ Usage: make docs-index DIR={research|specs|dev}"
+	@if [ -z "$(DIR)" ]; then \
+		echo "Error: DIR parameter required. Example: make docs-index DIR=research"; \
+		exit 1; \
+	fi
+	@echo "Updating index for $(DIR)..."
+	@echo "⚠️ Please use /docs-index command for automated index updates"
+
+.PHONY: docs-check docs-ref docs-tree docs-tidy docs-index
 
 # ===========================================================================
 # Release Commands (Binary Deployment)

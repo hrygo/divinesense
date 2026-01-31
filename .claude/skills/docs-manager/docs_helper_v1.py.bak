@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""
+DivineSense 文档管理辅助脚本
+
+为 docs-manager skill 提供核心功能实现：
+1. Spec ID 自动生成
+2. 智能分类规则
+3. 重复内容检测
+4. 链接有效性检查
+5. 引用图构建
+
+使用方式：
+  python docs_helper.py check        # 检查文档完整性
+  python docs_helper.py refs        # 构建引用图
+  python docs_helper.py next-spec   # 生成下一个 Spec ID
+  python docs_helper.py duplicates  # 检测重复内容
+"""
+
+import os
+import re
+import sys
+from pathlib import Path
+from dataclasses import dataclass, field
+from typing import Dict, List, Set, Tuple
+from collections import defaultdict
+import difflib
+
+# 项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+DOCS_DIR = PROJECT_ROOT / "docs"
+
+
+@dataclass
+class Reference:
+    """文档引用"""
+    source: str      # 引用源文件
+    target: str      # 被引用文件
+    line: int        # 行号
+    ref_type: str    # 引用类型: markdown, at_syntax, absolute_url, plain
+    context: str     # 上下文
+
+
+@dataclass
+class DocNode:
+    """文档节点"""
+    path: str                      # 文档路径
+    references: List[Reference] = field(default_factory=list)  # 引用
+    referenced_by: List[str] = field(default_factory=list)     # 反向引用
+
+
+def glob_docs(pattern: str = "**/*.md") -> List[Path]:
+    """扫描文档文件"""
+    return list(DOCS_DIR.rglob(pattern))
+
+
+def extract_references(file_path: Path) -> List[Reference]:
+    """从文件中提取所有引用"""
+    references = []
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    lines = content.split("\n")
+
+    # 引用正则模式
+    patterns = [
+        # Markdown 链接: [text](docs/xxx.md) 或 [text](../docs/xxx.md)
+        (r"\[([^\]]+)\]\((docs/[^)]+\.md)\)", "markdown"),
+        (r"\[([^\]]+)\]\(\.\./(docs/[^)]+\.md)\)", "markdown"),
+        # @ 语法: @docs/dev-guides/ARCHITECTURE.md
+        (r"@docs/[\w/-]+\.md", "at_syntax"),
+        # 绝对 URL
+        (r"https://github\.com/[^)]+/docs/[\w/-]+\.md", "absolute_url"),
+        # 代码注释中的引用
+        (r"[详见参考]*[`‘]docs/[\w/-]+\.md[`’]", "plain"),
+    ]
+
+    for line_no, line in enumerate(lines, 1):
+        for pattern, ref_type in patterns:
+            for match in re.finditer(pattern, line):
+                target = match.group(0)
+                # 清理目标路径
+                if ref_type == "at_syntax":
+                    target = target.replace("@", "")
+                elif ref_type == "plain":
+                    target = re.search(r"docs/[\w/-]+\.md", target).group(0)
+                elif ref_type == "absolute_url":
+                    target = "/docs/" + target.split("/docs/")[-1]
+
+                references.append(Reference(
+                    source=str(file_path.relative_to(PROJECT_ROOT)),
+                    target=target,
+                    line=line_no,
+                    ref_type=ref_type,
+                    context=line.strip()
+                ))
+
+    return references
+
+
+def build_reference_graph() -> Dict[str, DocNode]:
+    """构建文档引用图"""
+    graph = {}
+
+    for doc_file in glob_docs():
+        rel_path = str(doc_file.relative_to(DOCS_DIR))
+        node = DocNode(path=rel_path)
+        node.references = extract_references(doc_file)
+        graph[rel_path] = node
+
+    # 构建反向引用
+    for path, node in graph.items():
+        for ref in node.references:
+            # 标准化目标路径
+            target = ref.target
+            if target.startswith("docs/"):
+                target = target[5:]
+            elif target.startswith("../docs/"):
+                target = target[8:]
+
+            if target in graph:
+                if path not in graph[target].referenced_by:
+                    graph[target].referenced_by.append(path)
+
+    return graph
+
+
+def check_links() -> Dict[str, List[str]]:
+    """检查链接有效性"""
+    issues = defaultdict(list)
+    graph = build_reference_graph()
+
+    # 获取所有存在的文档
+    existing_docs = set(graph.keys())
+
+    for path, node in graph.items():
+        for ref in node.references:
+            target = ref.target
+            # 标准化
+            if target.startswith("docs/"):
+                target = target[5:]
+            elif target.startswith("../docs/"):
+                target = target[8:]
+
+            if target not in existing_docs:
+                issues["broken_links"].append(
+                    f"{path}:{ref.line} -> {target} ({ref.ref_type})"
+                )
+
+    return issues
+
+
+def get_next_spec_id(phase: int, team: str) -> str:
+    """生成下一个 Spec ID"""
+    pattern = f"docs/specs/phase-{phase}/team-{team}/P{phase}-{team}*.md"
+    existing = list(PROJECT_ROOT.glob(pattern))
+
+    if not existing:
+        return f"P{phase}-{team}001"
+
+    max_id = 0
+    for f in existing:
+        match = re.search(rf"P{phase}-{team}(\d+)", f.name)
+        if match:
+            max_id = max(max_id, int(match.group(1)))
+
+    return f"P{phase}-{team}{max_id + 1:03d}"
+
+
+def detect_duplicates(threshold: float = 0.7) -> List[Tuple[str, str, float]]:
+    """检测重复内容"""
+    duplicates = []
+    docs = glob_docs()
+
+    # 读取所有文档内容
+    contents = {}
+    for doc in docs:
+        if "archived" in str(doc) or "node_modules" in str(doc):
+            continue
+        try:
+            content = doc.read_text(encoding="utf-8", errors="ignore")
+            # 移除空白行，保留内容结构
+            lines = [l.strip() for l in content.split("\n") if l.strip()]
+            contents[doc] = " ".join(lines)
+        except:
+            pass
+
+    # 两两比较
+    doc_list = list(contents.items())
+    for i in range(len(doc_list)):
+        for j in range(i + 1, len(doc_list)):
+            doc1, content1 = doc_list[i]
+            doc2, content2 = doc_list[j]
+
+            # 使用 SequenceMatcher 计算相似度
+            similarity = difflib.SequenceMatcher(
+                None, content1, content2
+            ).ratio()
+
+            if similarity >= threshold:
+                duplicates.append((
+                    str(doc1.relative_to(DOCS_DIR)),
+                    str(doc2.relative_to(DOCS_DIR)),
+                    similarity
+                ))
+
+    return sorted(duplicates, key=lambda x: -x[2])
+
+
+def classify_document(file_path: Path) -> Tuple[str, str]:
+    """智能分类文档"""
+    name = file_path.name
+    rel_path = str(file_path.relative_to(DOCS_DIR))
+
+    # 研究文档分类
+    if name.startswith("00-"):
+        return "core", "核心路线图"
+    if name.endswith("-research.md"):
+        return "reports", "研究报告"
+    if name.endswith("-roadmap.md"):
+        return "roadmaps", "路线图"
+    if "PRACTICE" in name or name == "DEBUG_LESSONS.md":
+        return "practices", "最佳实践"
+
+    # Spec 分类
+    spec_match = re.match(r"phase-(\d)/team-([abc])/", rel_path)
+    if spec_match:
+        phase, team = spec_match.groups()
+        return f"Phase {phase}", f"Team {team.upper()}"
+
+    return "other", "其他"
+
+
+def main():
+    """主入口"""
+    command = sys.argv[1] if len(sys.argv) > 1 else "check"
+
+    if command == "check":
+        print("📋 文档检查报告")
+        print("=" * 50)
+
+        issues = check_links()
+
+        if issues["broken_links"]:
+            print(f"\n✗ 断链 ({len(issues['broken_links'])}):")
+            for issue in issues["broken_links"]:
+                print(f"  🔗 {issue}")
+        else:
+            print("\n✓ 无断链")
+
+    elif command == "refs":
+        print("🔗 引用关系图")
+        print("=" * 50)
+
+        graph = build_reference_graph()
+
+        for path, node in sorted(graph.items()):
+            if node.references:
+                print(f"\n{path}:")
+                print(f"  引用: {len(node.references)} 个")
+                print(f"  被引用: {len(node.referenced_by)} 次")
+
+    elif command == "next-spec":
+        phase = int(sys.argv[2]) if len(sys.argv) > 2 else 2
+        team = sys.argv[3] if len(sys.argv) > 3 else "a"
+        spec_id = get_next_spec_id(phase, team)
+        print(f"📄 下一个 Spec ID: {spec_id}")
+
+    elif command == "duplicates":
+        print("🔍 重复内容检测")
+        print("=" * 50)
+
+        dupes = detect_duplicates()
+
+        if dupes:
+            for doc1, doc2, sim in dupes[:10]:
+                print(f"\n{sim:.1%} 相似度:")
+                print(f"  1. {doc1}")
+                print(f"  2. {doc2}")
+        else:
+            print("\n✓ 无重复内容")
+
+    else:
+        print(f"未知命令: {command}")
+        print("可用命令: check, refs, next-spec, duplicates")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
