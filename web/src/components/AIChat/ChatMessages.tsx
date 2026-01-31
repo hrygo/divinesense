@@ -6,6 +6,7 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import MessageActions from "@/components/AIChat/MessageActions";
+import { SessionSummaryPanel } from "@/components/AIChat/SessionSummaryPanel";
 import { InlineToolCall } from "@/components/AIChat/ToolCallCard";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
@@ -13,6 +14,7 @@ import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIConta
 import type { GenerativeUIContainerProps } from "@/components/ScheduleAI/types";
 import { cn } from "@/lib/utils";
 import { ChatItem, ConversationMessage } from "@/types/aichat";
+import type { SessionSummary } from "@/types/parrot";
 import { PARROT_ICONS, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
@@ -34,6 +36,8 @@ interface ChatMessagesProps {
   /** Phase 2: 流式渲染支持 */
   isStreaming?: boolean;
   streamingContent?: string;
+  /** Session summary for Geek/Evolution modes */
+  sessionSummary?: SessionSummary;
 }
 
 const SCROLL_THRESHOLD = 150;
@@ -54,6 +58,7 @@ const ChatMessages = memo(function ChatMessages({
   onUIDismiss,
   isStreaming = false,
   streamingContent = "",
+  sessionSummary,
 }: ChatMessagesProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -262,6 +267,17 @@ const ChatMessages = memo(function ChatMessages({
             </div>
           )}
 
+          {/* Session Summary Panel - for Geek/Evolution modes */}
+          {sessionSummary && !isTyping && (
+            <div className="flex gap-3 md:gap-4 animate-in fade-in duration-300">
+              {/* Spacer for avatar alignment */}
+              <div className="w-9 h-9 md:w-10 md:h-10 shrink-0 invisible" />
+              <div className="flex-1 min-w-0">
+                <SessionSummaryPanel summary={sessionSummary} />
+              </div>
+            </div>
+          )}
+
           {/* Typing indicator - AI Native design */}
           {isTyping &&
             (() => {
@@ -436,6 +452,27 @@ const MessageBubble = memo(function MessageBubble({
                           <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
                         ),
                         p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0 text-sm leading-relaxed" />,
+                        ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 mb-2 space-y-1" />,
+                        ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 mb-2 space-y-1" />,
+                        li: ({ node, ...props }) => <li {...props} className="pl-1" />,
+                        h1: ({ node, ...props }) => <h1 {...props} className="text-xl font-bold mb-2 mt-4 first:mt-0" />,
+                        h2: ({ node, ...props }) => <h2 {...props} className="text-lg font-bold mb-2 mt-3" />,
+                        h3: ({ node, ...props }) => <h3 {...props} className="text-base font-bold mb-1 mt-2" />,
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote {...props} className="border-l-4 border-primary/30 pl-4 py-1 my-2 bg-muted/30 italic rounded-r-lg" />
+                        ),
+                        table: ({ node, ...props }) => (
+                          <div className="my-4 w-full overflow-x-auto rounded-lg border border-border shadow-sm">
+                            <table className="w-full text-sm" {...props} />
+                          </div>
+                        ),
+                        thead: ({ node, ...props }) => <thead className="bg-muted/50 text-xs uppercase" {...props} />,
+                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-border" {...props} />,
+                        tr: ({ node, ...props }) => <tr className="hover:bg-muted/50 transition-colors" {...props} />,
+                        th: ({ node, ...props }) => (
+                          <th className="px-4 py-2.5 text-left font-medium text-muted-foreground tracking-wider" {...props} />
+                        ),
+                        td: ({ node, ...props }) => <td className="px-4 py-2.5 whitespace-pre-wrap" {...props} />,
                         pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
                         code: ({ className, children, inline, ...props }: CodeComponentProps) => {
                           return inline ? (

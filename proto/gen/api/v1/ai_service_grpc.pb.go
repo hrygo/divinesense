@@ -41,6 +41,7 @@ const (
 	AIService_AddContextSeparator_FullMethodName       = "/memos.api.v1.AIService/AddContextSeparator"
 	AIService_ListMessages_FullMethodName              = "/memos.api.v1.AIService/ListMessages"
 	AIService_ClearConversationMessages_FullMethodName = "/memos.api.v1.AIService/ClearConversationMessages"
+	AIService_StopChat_FullMethodName                  = "/memos.api.v1.AIService/StopChat"
 )
 
 // AIServiceClient is the client API for AIService service.
@@ -91,6 +92,8 @@ type AIServiceClient interface {
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(ctx context.Context, in *ClearConversationMessagesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// StopChat cancels an ongoing chat stream and terminates the associated session.
+	StopChat(ctx context.Context, in *StopChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type aIServiceClient struct {
@@ -320,6 +323,16 @@ func (c *aIServiceClient) ClearConversationMessages(ctx context.Context, in *Cle
 	return out, nil
 }
 
+func (c *aIServiceClient) StopChat(ctx context.Context, in *StopChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_StopChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AIServiceServer is the server API for AIService service.
 // All implementations must embed UnimplementedAIServiceServer
 // for forward compatibility.
@@ -368,6 +381,8 @@ type AIServiceServer interface {
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error)
+	// StopChat cancels an ongoing chat stream and terminates the associated session.
+	StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAIServiceServer()
 }
 
@@ -440,6 +455,9 @@ func (UnimplementedAIServiceServer) ListMessages(context.Context, *ListMessagesR
 }
 func (UnimplementedAIServiceServer) ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClearConversationMessages not implemented")
+}
+func (UnimplementedAIServiceServer) StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopChat not implemented")
 }
 func (UnimplementedAIServiceServer) mustEmbedUnimplementedAIServiceServer() {}
 func (UnimplementedAIServiceServer) testEmbeddedByValue()                   {}
@@ -833,6 +851,24 @@ func _AIService_ClearConversationMessages_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_StopChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).StopChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_StopChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).StopChat(ctx, req.(*StopChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AIService_ServiceDesc is the grpc.ServiceDesc for AIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -919,6 +955,10 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearConversationMessages",
 			Handler:    _AIService_ClearConversationMessages_Handler,
+		},
+		{
+			MethodName: "StopChat",
+			Handler:    _AIService_StopChat_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

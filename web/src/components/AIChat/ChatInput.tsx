@@ -1,4 +1,4 @@
-import { MessageSquarePlus, Scissors, SendIcon, Terminal, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Scissors, SendIcon, Square, Terminal, Trash2 } from "lucide-react";
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   onNewChat?: () => void;
   onClearContext?: () => void;
   onClearChat?: () => void;
@@ -27,6 +28,7 @@ export function ChatInput({
   value,
   onChange,
   onSend,
+  onStop,
   onNewChat,
   onClearContext,
   onClearChat,
@@ -86,7 +88,7 @@ export function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      // Ctrl+Enter or Cmd+Enter to send, Enter alone for new line
+      // Ctrl+Enter or Cmd+Enter to send
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         onSend();
@@ -248,7 +250,7 @@ export function ChatInput({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholderText}
-            disabled={disabled || isTyping}
+            disabled={disabled}
             className={cn(
               "flex-1 min-h-[44px] max-h-[120px] bg-transparent border-0 outline-none resize-none text-sm leading-relaxed",
               "text-foreground placeholder:text-muted-foreground",
@@ -261,15 +263,27 @@ export function ChatInput({
             className={cn(
               "shrink-0 h-11 min-w-[44px] rounded-xl transition-all",
               "hover:scale-105 active:scale-95",
-              value.trim() && !isTyping ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+              isTyping
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : value.trim()
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
               modeStyles.button,
             )}
-            onClick={() => onSend()}
-            disabled={!value.trim() || isTyping || disabled}
-            aria-label={`${sendShortcut} 发送`}
+            onClick={() => {
+              if (isTyping && onStop) {
+                onStop();
+              } else {
+                onSend();
+              }
+            }}
+            disabled={(!value.trim() && !isTyping) || disabled}
+            aria-label={isTyping ? "Stop generating" : `${sendShortcut} Send`}
           >
-            {currentMode === "geek" && value.trim() ? (
+            {isTyping ? (
+              <Square className="w-5 h-5 fill-current" />
+            ) : currentMode === "geek" && value.trim() ? (
               <Terminal className="w-5 h-5" />
             ) : currentMode === "evolution" && value.trim() ? (
               <Terminal className="w-5 h-5 text-purple-500" />

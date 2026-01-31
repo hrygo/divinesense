@@ -1446,6 +1446,128 @@ func (x *ClearConversationMessagesRequest) GetConversationId() int32 {
 	return 0
 }
 
+// StopChatRequest is the request for stopping an ongoing chat stream.
+type StopChatRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ConversationId int32                  `protobuf:"varint,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"` // Conversation ID to stop
+	Reason         string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`                                        // Optional reason for stopping (e.g., "user_cancel", "timeout")
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *StopChatRequest) Reset() {
+	*x = StopChatRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopChatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopChatRequest) ProtoMessage() {}
+
+func (x *StopChatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopChatRequest.ProtoReflect.Descriptor instead.
+func (*StopChatRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *StopChatRequest) GetConversationId() int32 {
+	if x != nil {
+		return x.ConversationId
+	}
+	return 0
+}
+
+func (x *StopChatRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// DangerBlockEvent represents a dangerous operation that was blocked.
+type DangerBlockEvent struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Operation      string                 `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`                                 // The dangerous operation that was detected
+	Reason         string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`                                       // Explanation of why it's dangerous
+	PatternMatched string                 `protobuf:"bytes,3,opt,name=pattern_matched,json=patternMatched,proto3" json:"pattern_matched,omitempty"` // The pattern that matched the input
+	BypassAllowed  bool                   `protobuf:"varint,4,opt,name=bypass_allowed,json=bypassAllowed,proto3" json:"bypass_allowed,omitempty"`   // Whether bypass is allowed (admin only)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DangerBlockEvent) Reset() {
+	*x = DangerBlockEvent{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DangerBlockEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DangerBlockEvent) ProtoMessage() {}
+
+func (x *DangerBlockEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DangerBlockEvent.ProtoReflect.Descriptor instead.
+func (*DangerBlockEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *DangerBlockEvent) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *DangerBlockEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *DangerBlockEvent) GetPatternMatched() string {
+	if x != nil {
+		return x.PatternMatched
+	}
+	return ""
+}
+
+func (x *DangerBlockEvent) GetBypassAllowed() bool {
+	if x != nil {
+		return x.BypassAllowed
+	}
+	return false
+}
+
 // ChatResponse is the response for Chat.
 type ChatResponse struct {
 	state                  protoimpl.MessageState  `protogen:"open.v1"`
@@ -1455,15 +1577,19 @@ type ChatResponse struct {
 	ScheduleCreationIntent *ScheduleCreationIntent `protobuf:"bytes,4,opt,name=schedule_creation_intent,json=scheduleCreationIntent,proto3" json:"schedule_creation_intent,omitempty"` // AI-detected schedule creation intent (sent in final chunk)
 	ScheduleQueryResult    *ScheduleQueryResult    `protobuf:"bytes,5,opt,name=schedule_query_result,json=scheduleQueryResult,proto3" json:"schedule_query_result,omitempty"`          // AI-detected schedule query result (sent in final chunk)
 	// Agent event signaling (for schedule agent integration)
-	EventType     string `protobuf:"bytes,6,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"` // Event type: "thinking", "tool_use", "tool_result", "answer", "error", "schedule_updated"
-	EventData     string `protobuf:"bytes,7,opt,name=event_data,json=eventData,proto3" json:"event_data,omitempty"` // Event data (JSON or plain text depending on event type)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	EventType string `protobuf:"bytes,6,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"` // Event type: "thinking", "tool_use", "tool_result", "answer", "error", "schedule_updated", "danger_block"
+	EventData string `protobuf:"bytes,7,opt,name=event_data,json=eventData,proto3" json:"event_data,omitempty"` // Event data (JSON or plain text depending on event type)
+	// Event metadata for Geek Mode and Evolution Mode observability
+	EventMeta *EventMetadata `protobuf:"bytes,8,opt,name=event_meta,json=eventMeta,proto3" json:"event_meta,omitempty"` // Enhanced metadata for events (timing, tokens, tool info)
+	// Session summary sent when done=true
+	SessionSummary *SessionSummary `protobuf:"bytes,9,opt,name=session_summary,json=sessionSummary,proto3" json:"session_summary,omitempty"` // Summary statistics for the completed session
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ChatResponse) Reset() {
 	*x = ChatResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[21]
+	mi := &file_api_v1_ai_service_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1475,7 +1601,7 @@ func (x *ChatResponse) String() string {
 func (*ChatResponse) ProtoMessage() {}
 
 func (x *ChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[21]
+	mi := &file_api_v1_ai_service_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1488,7 +1614,7 @@ func (x *ChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatResponse.ProtoReflect.Descriptor instead.
 func (*ChatResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{21}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ChatResponse) GetContent() string {
@@ -1540,6 +1666,20 @@ func (x *ChatResponse) GetEventData() string {
 	return ""
 }
 
+func (x *ChatResponse) GetEventMeta() *EventMetadata {
+	if x != nil {
+		return x.EventMeta
+	}
+	return nil
+}
+
+func (x *ChatResponse) GetSessionSummary() *SessionSummary {
+	if x != nil {
+		return x.SessionSummary
+	}
+	return nil
+}
+
 // ScheduleCreationIntent represents AI's analysis of user's intent to create a schedule.
 type ScheduleCreationIntent struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -1552,7 +1692,7 @@ type ScheduleCreationIntent struct {
 
 func (x *ScheduleCreationIntent) Reset() {
 	*x = ScheduleCreationIntent{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[22]
+	mi := &file_api_v1_ai_service_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1564,7 +1704,7 @@ func (x *ScheduleCreationIntent) String() string {
 func (*ScheduleCreationIntent) ProtoMessage() {}
 
 func (x *ScheduleCreationIntent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[22]
+	mi := &file_api_v1_ai_service_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1577,7 +1717,7 @@ func (x *ScheduleCreationIntent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleCreationIntent.ProtoReflect.Descriptor instead.
 func (*ScheduleCreationIntent) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{22}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ScheduleCreationIntent) GetDetected() bool {
@@ -1614,7 +1754,7 @@ type ScheduleQueryResult struct {
 
 func (x *ScheduleQueryResult) Reset() {
 	*x = ScheduleQueryResult{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[23]
+	mi := &file_api_v1_ai_service_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1626,7 +1766,7 @@ func (x *ScheduleQueryResult) String() string {
 func (*ScheduleQueryResult) ProtoMessage() {}
 
 func (x *ScheduleQueryResult) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[23]
+	mi := &file_api_v1_ai_service_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1639,7 +1779,7 @@ func (x *ScheduleQueryResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleQueryResult.ProtoReflect.Descriptor instead.
 func (*ScheduleQueryResult) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{23}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ScheduleQueryResult) GetDetected() bool {
@@ -1688,7 +1828,7 @@ type ScheduleSummary struct {
 
 func (x *ScheduleSummary) Reset() {
 	*x = ScheduleSummary{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[24]
+	mi := &file_api_v1_ai_service_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1700,7 +1840,7 @@ func (x *ScheduleSummary) String() string {
 func (*ScheduleSummary) ProtoMessage() {}
 
 func (x *ScheduleSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[24]
+	mi := &file_api_v1_ai_service_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1713,7 +1853,7 @@ func (x *ScheduleSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleSummary.ProtoReflect.Descriptor instead.
 func (*ScheduleSummary) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{24}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ScheduleSummary) GetUid() string {
@@ -1783,7 +1923,7 @@ type GetRelatedMemosRequest struct {
 
 func (x *GetRelatedMemosRequest) Reset() {
 	*x = GetRelatedMemosRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[25]
+	mi := &file_api_v1_ai_service_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1795,7 +1935,7 @@ func (x *GetRelatedMemosRequest) String() string {
 func (*GetRelatedMemosRequest) ProtoMessage() {}
 
 func (x *GetRelatedMemosRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[25]
+	mi := &file_api_v1_ai_service_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1808,7 +1948,7 @@ func (x *GetRelatedMemosRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRelatedMemosRequest.ProtoReflect.Descriptor instead.
 func (*GetRelatedMemosRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{25}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetRelatedMemosRequest) GetName() string {
@@ -1835,7 +1975,7 @@ type GetRelatedMemosResponse struct {
 
 func (x *GetRelatedMemosResponse) Reset() {
 	*x = GetRelatedMemosResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[26]
+	mi := &file_api_v1_ai_service_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1847,7 +1987,7 @@ func (x *GetRelatedMemosResponse) String() string {
 func (*GetRelatedMemosResponse) ProtoMessage() {}
 
 func (x *GetRelatedMemosResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[26]
+	mi := &file_api_v1_ai_service_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1860,7 +2000,7 @@ func (x *GetRelatedMemosResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRelatedMemosResponse.ProtoReflect.Descriptor instead.
 func (*GetRelatedMemosResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{26}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetRelatedMemosResponse) GetMemos() []*SearchResult {
@@ -1889,7 +2029,7 @@ type ParrotSelfCognition struct {
 
 func (x *ParrotSelfCognition) Reset() {
 	*x = ParrotSelfCognition{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[27]
+	mi := &file_api_v1_ai_service_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1901,7 +2041,7 @@ func (x *ParrotSelfCognition) String() string {
 func (*ParrotSelfCognition) ProtoMessage() {}
 
 func (x *ParrotSelfCognition) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[27]
+	mi := &file_api_v1_ai_service_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1914,7 +2054,7 @@ func (x *ParrotSelfCognition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParrotSelfCognition.ProtoReflect.Descriptor instead.
 func (*ParrotSelfCognition) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{27}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ParrotSelfCognition) GetName() string {
@@ -1997,7 +2137,7 @@ type GetParrotSelfCognitionRequest struct {
 
 func (x *GetParrotSelfCognitionRequest) Reset() {
 	*x = GetParrotSelfCognitionRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[28]
+	mi := &file_api_v1_ai_service_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2009,7 +2149,7 @@ func (x *GetParrotSelfCognitionRequest) String() string {
 func (*GetParrotSelfCognitionRequest) ProtoMessage() {}
 
 func (x *GetParrotSelfCognitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[28]
+	mi := &file_api_v1_ai_service_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2022,7 +2162,7 @@ func (x *GetParrotSelfCognitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetParrotSelfCognitionRequest.ProtoReflect.Descriptor instead.
 func (*GetParrotSelfCognitionRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{28}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetParrotSelfCognitionRequest) GetAgentType() AgentType {
@@ -2042,7 +2182,7 @@ type GetParrotSelfCognitionResponse struct {
 
 func (x *GetParrotSelfCognitionResponse) Reset() {
 	*x = GetParrotSelfCognitionResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[29]
+	mi := &file_api_v1_ai_service_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2054,7 +2194,7 @@ func (x *GetParrotSelfCognitionResponse) String() string {
 func (*GetParrotSelfCognitionResponse) ProtoMessage() {}
 
 func (x *GetParrotSelfCognitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[29]
+	mi := &file_api_v1_ai_service_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2067,7 +2207,7 @@ func (x *GetParrotSelfCognitionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetParrotSelfCognitionResponse.ProtoReflect.Descriptor instead.
 func (*GetParrotSelfCognitionResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{29}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetParrotSelfCognitionResponse) GetSelfCognition() *ParrotSelfCognition {
@@ -2086,7 +2226,7 @@ type ListParrotsRequest struct {
 
 func (x *ListParrotsRequest) Reset() {
 	*x = ListParrotsRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[30]
+	mi := &file_api_v1_ai_service_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2098,7 +2238,7 @@ func (x *ListParrotsRequest) String() string {
 func (*ListParrotsRequest) ProtoMessage() {}
 
 func (x *ListParrotsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[30]
+	mi := &file_api_v1_ai_service_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2111,7 +2251,7 @@ func (x *ListParrotsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParrotsRequest.ProtoReflect.Descriptor instead.
 func (*ListParrotsRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{30}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{32}
 }
 
 // ListParrotsResponse is the response for ListParrots.
@@ -2124,7 +2264,7 @@ type ListParrotsResponse struct {
 
 func (x *ListParrotsResponse) Reset() {
 	*x = ListParrotsResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[31]
+	mi := &file_api_v1_ai_service_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2136,7 +2276,7 @@ func (x *ListParrotsResponse) String() string {
 func (*ListParrotsResponse) ProtoMessage() {}
 
 func (x *ListParrotsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[31]
+	mi := &file_api_v1_ai_service_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2149,7 +2289,7 @@ func (x *ListParrotsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParrotsResponse.ProtoReflect.Descriptor instead.
 func (*ListParrotsResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{31}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListParrotsResponse) GetParrots() []*ParrotInfo {
@@ -2171,7 +2311,7 @@ type ParrotInfo struct {
 
 func (x *ParrotInfo) Reset() {
 	*x = ParrotInfo{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[32]
+	mi := &file_api_v1_ai_service_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2183,7 +2323,7 @@ func (x *ParrotInfo) String() string {
 func (*ParrotInfo) ProtoMessage() {}
 
 func (x *ParrotInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[32]
+	mi := &file_api_v1_ai_service_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2196,7 +2336,7 @@ func (x *ParrotInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParrotInfo.ProtoReflect.Descriptor instead.
 func (*ParrotInfo) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{32}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ParrotInfo) GetAgentType() AgentType {
@@ -2233,7 +2373,7 @@ type DetectDuplicatesRequest struct {
 
 func (x *DetectDuplicatesRequest) Reset() {
 	*x = DetectDuplicatesRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[33]
+	mi := &file_api_v1_ai_service_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2245,7 +2385,7 @@ func (x *DetectDuplicatesRequest) String() string {
 func (*DetectDuplicatesRequest) ProtoMessage() {}
 
 func (x *DetectDuplicatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[33]
+	mi := &file_api_v1_ai_service_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2258,7 +2398,7 @@ func (x *DetectDuplicatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetectDuplicatesRequest.ProtoReflect.Descriptor instead.
 func (*DetectDuplicatesRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{33}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *DetectDuplicatesRequest) GetTitle() string {
@@ -2303,7 +2443,7 @@ type DetectDuplicatesResponse struct {
 
 func (x *DetectDuplicatesResponse) Reset() {
 	*x = DetectDuplicatesResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[34]
+	mi := &file_api_v1_ai_service_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2315,7 +2455,7 @@ func (x *DetectDuplicatesResponse) String() string {
 func (*DetectDuplicatesResponse) ProtoMessage() {}
 
 func (x *DetectDuplicatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[34]
+	mi := &file_api_v1_ai_service_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2328,7 +2468,7 @@ func (x *DetectDuplicatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetectDuplicatesResponse.ProtoReflect.Descriptor instead.
 func (*DetectDuplicatesResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{34}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *DetectDuplicatesResponse) GetHasDuplicate() bool {
@@ -2383,7 +2523,7 @@ type SimilarMemo struct {
 
 func (x *SimilarMemo) Reset() {
 	*x = SimilarMemo{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[35]
+	mi := &file_api_v1_ai_service_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2395,7 +2535,7 @@ func (x *SimilarMemo) String() string {
 func (*SimilarMemo) ProtoMessage() {}
 
 func (x *SimilarMemo) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[35]
+	mi := &file_api_v1_ai_service_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2408,7 +2548,7 @@ func (x *SimilarMemo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimilarMemo.ProtoReflect.Descriptor instead.
 func (*SimilarMemo) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{35}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SimilarMemo) GetId() string {
@@ -2479,7 +2619,7 @@ type SimilarityBreakdown struct {
 
 func (x *SimilarityBreakdown) Reset() {
 	*x = SimilarityBreakdown{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[36]
+	mi := &file_api_v1_ai_service_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2491,7 +2631,7 @@ func (x *SimilarityBreakdown) String() string {
 func (*SimilarityBreakdown) ProtoMessage() {}
 
 func (x *SimilarityBreakdown) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[36]
+	mi := &file_api_v1_ai_service_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2504,7 +2644,7 @@ func (x *SimilarityBreakdown) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimilarityBreakdown.ProtoReflect.Descriptor instead.
 func (*SimilarityBreakdown) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{36}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SimilarityBreakdown) GetVector() float64 {
@@ -2539,7 +2679,7 @@ type MergeMemosRequest struct {
 
 func (x *MergeMemosRequest) Reset() {
 	*x = MergeMemosRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[37]
+	mi := &file_api_v1_ai_service_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2551,7 +2691,7 @@ func (x *MergeMemosRequest) String() string {
 func (*MergeMemosRequest) ProtoMessage() {}
 
 func (x *MergeMemosRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[37]
+	mi := &file_api_v1_ai_service_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2564,7 +2704,7 @@ func (x *MergeMemosRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeMemosRequest.ProtoReflect.Descriptor instead.
 func (*MergeMemosRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{37}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *MergeMemosRequest) GetSourceName() string {
@@ -2591,7 +2731,7 @@ type MergeMemosResponse struct {
 
 func (x *MergeMemosResponse) Reset() {
 	*x = MergeMemosResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[38]
+	mi := &file_api_v1_ai_service_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2603,7 +2743,7 @@ func (x *MergeMemosResponse) String() string {
 func (*MergeMemosResponse) ProtoMessage() {}
 
 func (x *MergeMemosResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[38]
+	mi := &file_api_v1_ai_service_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2616,7 +2756,7 @@ func (x *MergeMemosResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeMemosResponse.ProtoReflect.Descriptor instead.
 func (*MergeMemosResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{38}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *MergeMemosResponse) GetMergedName() string {
@@ -2637,7 +2777,7 @@ type LinkMemosRequest struct {
 
 func (x *LinkMemosRequest) Reset() {
 	*x = LinkMemosRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[39]
+	mi := &file_api_v1_ai_service_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2649,7 +2789,7 @@ func (x *LinkMemosRequest) String() string {
 func (*LinkMemosRequest) ProtoMessage() {}
 
 func (x *LinkMemosRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[39]
+	mi := &file_api_v1_ai_service_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2662,7 +2802,7 @@ func (x *LinkMemosRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkMemosRequest.ProtoReflect.Descriptor instead.
 func (*LinkMemosRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{39}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *LinkMemosRequest) GetMemoName_1() string {
@@ -2689,7 +2829,7 @@ type LinkMemosResponse struct {
 
 func (x *LinkMemosResponse) Reset() {
 	*x = LinkMemosResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[40]
+	mi := &file_api_v1_ai_service_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2701,7 +2841,7 @@ func (x *LinkMemosResponse) String() string {
 func (*LinkMemosResponse) ProtoMessage() {}
 
 func (x *LinkMemosResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[40]
+	mi := &file_api_v1_ai_service_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2714,7 +2854,7 @@ func (x *LinkMemosResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkMemosResponse.ProtoReflect.Descriptor instead.
 func (*LinkMemosResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{40}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *LinkMemosResponse) GetSuccess() bool {
@@ -2736,7 +2876,7 @@ type GetKnowledgeGraphRequest struct {
 
 func (x *GetKnowledgeGraphRequest) Reset() {
 	*x = GetKnowledgeGraphRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[41]
+	mi := &file_api_v1_ai_service_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2748,7 +2888,7 @@ func (x *GetKnowledgeGraphRequest) String() string {
 func (*GetKnowledgeGraphRequest) ProtoMessage() {}
 
 func (x *GetKnowledgeGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[41]
+	mi := &file_api_v1_ai_service_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2761,7 +2901,7 @@ func (x *GetKnowledgeGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKnowledgeGraphRequest.ProtoReflect.Descriptor instead.
 func (*GetKnowledgeGraphRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{41}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetKnowledgeGraphRequest) GetTags() []string {
@@ -2798,7 +2938,7 @@ type GetKnowledgeGraphResponse struct {
 
 func (x *GetKnowledgeGraphResponse) Reset() {
 	*x = GetKnowledgeGraphResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[42]
+	mi := &file_api_v1_ai_service_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2810,7 +2950,7 @@ func (x *GetKnowledgeGraphResponse) String() string {
 func (*GetKnowledgeGraphResponse) ProtoMessage() {}
 
 func (x *GetKnowledgeGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[42]
+	mi := &file_api_v1_ai_service_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2823,7 +2963,7 @@ func (x *GetKnowledgeGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKnowledgeGraphResponse.ProtoReflect.Descriptor instead.
 func (*GetKnowledgeGraphResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{42}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetKnowledgeGraphResponse) GetNodes() []*GraphNode {
@@ -2870,7 +3010,7 @@ type GraphNode struct {
 
 func (x *GraphNode) Reset() {
 	*x = GraphNode{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[43]
+	mi := &file_api_v1_ai_service_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2882,7 +3022,7 @@ func (x *GraphNode) String() string {
 func (*GraphNode) ProtoMessage() {}
 
 func (x *GraphNode) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[43]
+	mi := &file_api_v1_ai_service_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2895,7 +3035,7 @@ func (x *GraphNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphNode.ProtoReflect.Descriptor instead.
 func (*GraphNode) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{43}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *GraphNode) GetId() string {
@@ -2960,7 +3100,7 @@ type GraphEdge struct {
 
 func (x *GraphEdge) Reset() {
 	*x = GraphEdge{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[44]
+	mi := &file_api_v1_ai_service_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2972,7 +3112,7 @@ func (x *GraphEdge) String() string {
 func (*GraphEdge) ProtoMessage() {}
 
 func (x *GraphEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[44]
+	mi := &file_api_v1_ai_service_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2985,7 +3125,7 @@ func (x *GraphEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphEdge.ProtoReflect.Descriptor instead.
 func (*GraphEdge) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{44}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *GraphEdge) GetSource() string {
@@ -3031,7 +3171,7 @@ type GraphStats struct {
 
 func (x *GraphStats) Reset() {
 	*x = GraphStats{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[45]
+	mi := &file_api_v1_ai_service_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3043,7 +3183,7 @@ func (x *GraphStats) String() string {
 func (*GraphStats) ProtoMessage() {}
 
 func (x *GraphStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[45]
+	mi := &file_api_v1_ai_service_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3056,7 +3196,7 @@ func (x *GraphStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphStats.ProtoReflect.Descriptor instead.
 func (*GraphStats) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{45}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GraphStats) GetNodeCount() int32 {
@@ -3111,7 +3251,7 @@ type GetDueReviewsRequest struct {
 
 func (x *GetDueReviewsRequest) Reset() {
 	*x = GetDueReviewsRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[46]
+	mi := &file_api_v1_ai_service_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3123,7 +3263,7 @@ func (x *GetDueReviewsRequest) String() string {
 func (*GetDueReviewsRequest) ProtoMessage() {}
 
 func (x *GetDueReviewsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[46]
+	mi := &file_api_v1_ai_service_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3136,7 +3276,7 @@ func (x *GetDueReviewsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDueReviewsRequest.ProtoReflect.Descriptor instead.
 func (*GetDueReviewsRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{46}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *GetDueReviewsRequest) GetLimit() int32 {
@@ -3157,7 +3297,7 @@ type GetDueReviewsResponse struct {
 
 func (x *GetDueReviewsResponse) Reset() {
 	*x = GetDueReviewsResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[47]
+	mi := &file_api_v1_ai_service_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3169,7 +3309,7 @@ func (x *GetDueReviewsResponse) String() string {
 func (*GetDueReviewsResponse) ProtoMessage() {}
 
 func (x *GetDueReviewsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[47]
+	mi := &file_api_v1_ai_service_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3182,7 +3322,7 @@ func (x *GetDueReviewsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDueReviewsResponse.ProtoReflect.Descriptor instead.
 func (*GetDueReviewsResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{47}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *GetDueReviewsResponse) GetItems() []*ReviewItem {
@@ -3218,7 +3358,7 @@ type ReviewItem struct {
 
 func (x *ReviewItem) Reset() {
 	*x = ReviewItem{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[48]
+	mi := &file_api_v1_ai_service_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3230,7 +3370,7 @@ func (x *ReviewItem) String() string {
 func (*ReviewItem) ProtoMessage() {}
 
 func (x *ReviewItem) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[48]
+	mi := &file_api_v1_ai_service_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3243,7 +3383,7 @@ func (x *ReviewItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewItem.ProtoReflect.Descriptor instead.
 func (*ReviewItem) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{48}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ReviewItem) GetMemoUid() string {
@@ -3327,7 +3467,7 @@ type RecordReviewRequest struct {
 
 func (x *RecordReviewRequest) Reset() {
 	*x = RecordReviewRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[49]
+	mi := &file_api_v1_ai_service_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3339,7 +3479,7 @@ func (x *RecordReviewRequest) String() string {
 func (*RecordReviewRequest) ProtoMessage() {}
 
 func (x *RecordReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[49]
+	mi := &file_api_v1_ai_service_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3352,7 +3492,7 @@ func (x *RecordReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordReviewRequest.ProtoReflect.Descriptor instead.
 func (*RecordReviewRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{49}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *RecordReviewRequest) GetMemoUid() string {
@@ -3378,7 +3518,7 @@ type GetReviewStatsRequest struct {
 
 func (x *GetReviewStatsRequest) Reset() {
 	*x = GetReviewStatsRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[50]
+	mi := &file_api_v1_ai_service_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3390,7 +3530,7 @@ func (x *GetReviewStatsRequest) String() string {
 func (*GetReviewStatsRequest) ProtoMessage() {}
 
 func (x *GetReviewStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[50]
+	mi := &file_api_v1_ai_service_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3403,7 +3543,7 @@ func (x *GetReviewStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetReviewStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{50}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{52}
 }
 
 // GetReviewStatsResponse is the response for GetReviewStats.
@@ -3423,7 +3563,7 @@ type GetReviewStatsResponse struct {
 
 func (x *GetReviewStatsResponse) Reset() {
 	*x = GetReviewStatsResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[51]
+	mi := &file_api_v1_ai_service_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3435,7 +3575,7 @@ func (x *GetReviewStatsResponse) String() string {
 func (*GetReviewStatsResponse) ProtoMessage() {}
 
 func (x *GetReviewStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[51]
+	mi := &file_api_v1_ai_service_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3448,7 +3588,7 @@ func (x *GetReviewStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetReviewStatsResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{51}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetReviewStatsResponse) GetTotalMemos() int32 {
@@ -3505,6 +3645,326 @@ func (x *GetReviewStatsResponse) GetAverageAccuracy() int32 {
 		return x.AverageAccuracy
 	}
 	return 0
+}
+
+// EventMetadata provides enhanced metadata for streaming events.
+// This enables better observability for Geek Mode and Evolution Mode sessions.
+type EventMetadata struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Timing information
+	DurationMs      int64 `protobuf:"varint,1,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`                  // Duration of this event in milliseconds
+	TotalDurationMs int64 `protobuf:"varint,2,opt,name=total_duration_ms,json=totalDurationMs,proto3" json:"total_duration_ms,omitempty"` // Total elapsed time since session start (milliseconds)
+	// Tool call information (for tool_use and tool_result events)
+	ToolName string `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"` // Tool name (e.g., "bash", "editor_write", "grep")
+	ToolId   string `protobuf:"bytes,4,opt,name=tool_id,json=toolId,proto3" json:"tool_id,omitempty"`       // Unique tool call ID (UUID for matching use/result)
+	// Token usage (when available from Claude Code CLI)
+	InputTokens      int32 `protobuf:"varint,5,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`                  // Input tokens consumed
+	OutputTokens     int32 `protobuf:"varint,6,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`               // Output tokens generated
+	CacheWriteTokens int32 `protobuf:"varint,7,opt,name=cache_write_tokens,json=cacheWriteTokens,proto3" json:"cache_write_tokens,omitempty"` // Prompt cache write tokens
+	CacheReadTokens  int32 `protobuf:"varint,8,opt,name=cache_read_tokens,json=cacheReadTokens,proto3" json:"cache_read_tokens,omitempty"`    // Prompt cache read tokens
+	// Event status
+	Status   string `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`                      // Status: "running", "success", "error"
+	ErrorMsg string `protobuf:"bytes,10,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"` // Error message if status=error
+	// Input/Output summaries for UI display (truncated for performance)
+	InputSummary  string `protobuf:"bytes,11,opt,name=input_summary,json=inputSummary,proto3" json:"input_summary,omitempty"`    // Human-readable input summary (e.g., "ls -la")
+	OutputSummary string `protobuf:"bytes,12,opt,name=output_summary,json=outputSummary,proto3" json:"output_summary,omitempty"` // Truncated output preview (max 500 chars)
+	// File operations (for tools that operate on files)
+	FilePath      string `protobuf:"bytes,13,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`     // Affected file path (if applicable)
+	LineCount     int32  `protobuf:"varint,14,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"` // Number of lines affected (for edit operations)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventMetadata) Reset() {
+	*x = EventMetadata{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventMetadata) ProtoMessage() {}
+
+func (x *EventMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventMetadata.ProtoReflect.Descriptor instead.
+func (*EventMetadata) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *EventMetadata) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetTotalDurationMs() int64 {
+	if x != nil {
+		return x.TotalDurationMs
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetToolId() string {
+	if x != nil {
+		return x.ToolId
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetInputTokens() int32 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetOutputTokens() int32 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetCacheWriteTokens() int32 {
+	if x != nil {
+		return x.CacheWriteTokens
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetCacheReadTokens() int32 {
+	if x != nil {
+		return x.CacheReadTokens
+	}
+	return 0
+}
+
+func (x *EventMetadata) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetErrorMsg() string {
+	if x != nil {
+		return x.ErrorMsg
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetInputSummary() string {
+	if x != nil {
+		return x.InputSummary
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetOutputSummary() string {
+	if x != nil {
+		return x.OutputSummary
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetFilePath() string {
+	if x != nil {
+		return x.FilePath
+	}
+	return ""
+}
+
+func (x *EventMetadata) GetLineCount() int32 {
+	if x != nil {
+		return x.LineCount
+	}
+	return 0
+}
+
+// SessionSummary provides end-of-session statistics for Geek/Evolution modes.
+// Sent in the final ChatResponse when done=true.
+type SessionSummary struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Session identification
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // Claude Code CLI session ID
+	// Overall timing
+	TotalDurationMs      int64 `protobuf:"varint,2,opt,name=total_duration_ms,json=totalDurationMs,proto3" json:"total_duration_ms,omitempty"`                // Total session duration in milliseconds
+	ThinkingDurationMs   int64 `protobuf:"varint,3,opt,name=thinking_duration_ms,json=thinkingDurationMs,proto3" json:"thinking_duration_ms,omitempty"`       // Time spent in "thinking" state
+	ToolDurationMs       int64 `protobuf:"varint,4,opt,name=tool_duration_ms,json=toolDurationMs,proto3" json:"tool_duration_ms,omitempty"`                   // Time spent executing tools
+	GenerationDurationMs int64 `protobuf:"varint,5,opt,name=generation_duration_ms,json=generationDurationMs,proto3" json:"generation_duration_ms,omitempty"` // Time spent generating responses
+	// Token usage
+	TotalInputTokens      int32 `protobuf:"varint,6,opt,name=total_input_tokens,json=totalInputTokens,proto3" json:"total_input_tokens,omitempty"`                  // Total input tokens consumed
+	TotalOutputTokens     int32 `protobuf:"varint,7,opt,name=total_output_tokens,json=totalOutputTokens,proto3" json:"total_output_tokens,omitempty"`               // Total output tokens generated
+	TotalCacheWriteTokens int32 `protobuf:"varint,8,opt,name=total_cache_write_tokens,json=totalCacheWriteTokens,proto3" json:"total_cache_write_tokens,omitempty"` // Total cache write tokens
+	TotalCacheReadTokens  int32 `protobuf:"varint,9,opt,name=total_cache_read_tokens,json=totalCacheReadTokens,proto3" json:"total_cache_read_tokens,omitempty"`    // Total cache read tokens
+	// Tool call statistics
+	ToolCallCount int32    `protobuf:"varint,10,opt,name=tool_call_count,json=toolCallCount,proto3" json:"tool_call_count,omitempty"` // Total number of tool calls
+	ToolsUsed     []string `protobuf:"bytes,11,rep,name=tools_used,json=toolsUsed,proto3" json:"tools_used,omitempty"`                // List of tools called (e.g., ["bash", "editor_write"])
+	// File operations (for Evolution Mode)
+	FilesModified int32    `protobuf:"varint,12,opt,name=files_modified,json=filesModified,proto3" json:"files_modified,omitempty"` // Number of files modified
+	FilePaths     []string `protobuf:"bytes,13,rep,name=file_paths,json=filePaths,proto3" json:"file_paths,omitempty"`              // List of affected file paths
+	// Status
+	Status        string `protobuf:"bytes,14,opt,name=status,proto3" json:"status,omitempty"`                     // Final session status: "success", "error", "cancelled"
+	ErrorMsg      string `protobuf:"bytes,15,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"` // Error message if status=error
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionSummary) Reset() {
+	*x = SessionSummary{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionSummary) ProtoMessage() {}
+
+func (x *SessionSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionSummary.ProtoReflect.Descriptor instead.
+func (*SessionSummary) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *SessionSummary) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionSummary) GetTotalDurationMs() int64 {
+	if x != nil {
+		return x.TotalDurationMs
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetThinkingDurationMs() int64 {
+	if x != nil {
+		return x.ThinkingDurationMs
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetToolDurationMs() int64 {
+	if x != nil {
+		return x.ToolDurationMs
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetGenerationDurationMs() int64 {
+	if x != nil {
+		return x.GenerationDurationMs
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetTotalInputTokens() int32 {
+	if x != nil {
+		return x.TotalInputTokens
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetTotalOutputTokens() int32 {
+	if x != nil {
+		return x.TotalOutputTokens
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetTotalCacheWriteTokens() int32 {
+	if x != nil {
+		return x.TotalCacheWriteTokens
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetTotalCacheReadTokens() int32 {
+	if x != nil {
+		return x.TotalCacheReadTokens
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetToolCallCount() int32 {
+	if x != nil {
+		return x.ToolCallCount
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetToolsUsed() []string {
+	if x != nil {
+		return x.ToolsUsed
+	}
+	return nil
+}
+
+func (x *SessionSummary) GetFilesModified() int32 {
+	if x != nil {
+		return x.FilesModified
+	}
+	return 0
+}
+
+func (x *SessionSummary) GetFilePaths() []string {
+	if x != nil {
+		return x.FilePaths
+	}
+	return nil
+}
+
+func (x *SessionSummary) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SessionSummary) GetErrorMsg() string {
+	if x != nil {
+		return x.ErrorMsg
+	}
+	return ""
 }
 
 var File_api_v1_ai_service_proto protoreflect.FileDescriptor
@@ -3603,7 +4063,15 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x12latest_message_uid\x18\x04 \x01(\tR\x10latestMessageUid\x12#\n" +
 	"\rsync_required\x18\x05 \x01(\bR\fsyncRequired\"P\n" +
 	" ClearConversationMessagesRequest\x12,\n" +
-	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\"\xcb\x02\n" +
+	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\"W\n" +
+	"\x0fStopChatRequest\x12,\n" +
+	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x98\x01\n" +
+	"\x10DangerBlockEvent\x12\x1c\n" +
+	"\toperation\x18\x01 \x01(\tR\toperation\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12'\n" +
+	"\x0fpattern_matched\x18\x03 \x01(\tR\x0epatternMatched\x12%\n" +
+	"\x0ebypass_allowed\x18\x04 \x01(\bR\rbypassAllowed\"\xce\x03\n" +
 	"\fChatResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12\x12\n" +
@@ -3613,7 +4081,10 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\n" +
 	"event_type\x18\x06 \x01(\tR\teventType\x12\x1d\n" +
 	"\n" +
-	"event_data\x18\a \x01(\tR\teventData\"\x85\x01\n" +
+	"event_data\x18\a \x01(\tR\teventData\x12:\n" +
+	"\n" +
+	"event_meta\x18\b \x01(\v2\x1b.memos.api.v1.EventMetadataR\teventMeta\x12E\n" +
+	"\x0fsession_summary\x18\t \x01(\v2\x1c.memos.api.v1.SessionSummaryR\x0esessionSummary\"\x85\x01\n" +
 	"\x16ScheduleCreationIntent\x12\x1a\n" +
 	"\bdetected\x18\x01 \x01(\bR\bdetected\x121\n" +
 	"\x14schedule_description\x18\x02 \x01(\tR\x13scheduleDescription\x12\x1c\n" +
@@ -3778,7 +4249,45 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\vstreak_days\x18\x06 \x01(\x05R\n" +
 	"streakDays\x12#\n" +
 	"\rtotal_reviews\x18\a \x01(\x05R\ftotalReviews\x12)\n" +
-	"\x10average_accuracy\x18\b \x01(\x05R\x0faverageAccuracy*7\n" +
+	"\x10average_accuracy\x18\b \x01(\x05R\x0faverageAccuracy\"\xf1\x03\n" +
+	"\rEventMetadata\x12\x1f\n" +
+	"\vduration_ms\x18\x01 \x01(\x03R\n" +
+	"durationMs\x12*\n" +
+	"\x11total_duration_ms\x18\x02 \x01(\x03R\x0ftotalDurationMs\x12\x1b\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x17\n" +
+	"\atool_id\x18\x04 \x01(\tR\x06toolId\x12!\n" +
+	"\finput_tokens\x18\x05 \x01(\x05R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x06 \x01(\x05R\foutputTokens\x12,\n" +
+	"\x12cache_write_tokens\x18\a \x01(\x05R\x10cacheWriteTokens\x12*\n" +
+	"\x11cache_read_tokens\x18\b \x01(\x05R\x0fcacheReadTokens\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\x12\x1b\n" +
+	"\terror_msg\x18\n" +
+	" \x01(\tR\berrorMsg\x12#\n" +
+	"\rinput_summary\x18\v \x01(\tR\finputSummary\x12%\n" +
+	"\x0eoutput_summary\x18\f \x01(\tR\routputSummary\x12\x1b\n" +
+	"\tfile_path\x18\r \x01(\tR\bfilePath\x12\x1d\n" +
+	"\n" +
+	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xfd\x04\n" +
+	"\x0eSessionSummary\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12*\n" +
+	"\x11total_duration_ms\x18\x02 \x01(\x03R\x0ftotalDurationMs\x120\n" +
+	"\x14thinking_duration_ms\x18\x03 \x01(\x03R\x12thinkingDurationMs\x12(\n" +
+	"\x10tool_duration_ms\x18\x04 \x01(\x03R\x0etoolDurationMs\x124\n" +
+	"\x16generation_duration_ms\x18\x05 \x01(\x03R\x14generationDurationMs\x12,\n" +
+	"\x12total_input_tokens\x18\x06 \x01(\x05R\x10totalInputTokens\x12.\n" +
+	"\x13total_output_tokens\x18\a \x01(\x05R\x11totalOutputTokens\x127\n" +
+	"\x18total_cache_write_tokens\x18\b \x01(\x05R\x15totalCacheWriteTokens\x125\n" +
+	"\x17total_cache_read_tokens\x18\t \x01(\x05R\x14totalCacheReadTokens\x12&\n" +
+	"\x0ftool_call_count\x18\n" +
+	" \x01(\x05R\rtoolCallCount\x12\x1d\n" +
+	"\n" +
+	"tools_used\x18\v \x03(\tR\ttoolsUsed\x12%\n" +
+	"\x0efiles_modified\x18\f \x01(\x05R\rfilesModified\x12\x1d\n" +
+	"\n" +
+	"file_paths\x18\r \x03(\tR\tfilePaths\x12\x16\n" +
+	"\x06status\x18\x0e \x01(\tR\x06status\x12\x1b\n" +
+	"\terror_msg\x18\x0f \x01(\tR\berrorMsg*7\n" +
 	"\x11ScheduleQueryMode\x12\b\n" +
 	"\x04AUTO\x10\x00\x12\f\n" +
 	"\bSTANDARD\x10\x01\x12\n" +
@@ -3795,7 +4304,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x14REVIEW_QUALITY_AGAIN\x10\x01\x12\x17\n" +
 	"\x13REVIEW_QUALITY_HARD\x10\x02\x12\x17\n" +
 	"\x13REVIEW_QUALITY_GOOD\x10\x03\x12\x17\n" +
-	"\x13REVIEW_QUALITY_EASY\x10\x042\xee\x15\n" +
+	"\x13REVIEW_QUALITY_EASY\x10\x042\xd2\x16\n" +
 	"\tAIService\x12y\n" +
 	"\x0eSemanticSearch\x12#.memos.api.v1.SemanticSearchRequest\x1a$.memos.api.v1.SemanticSearchResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/ai/search\x12v\n" +
 	"\vSuggestTags\x12 .memos.api.v1.SuggestTagsRequest\x1a!.memos.api.v1.SuggestTagsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/ai/suggest-tags\x12[\n" +
@@ -3818,7 +4327,8 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x14DeleteAIConversation\x12).memos.api.v1.DeleteAIConversationRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/ai/conversations/{id}\x12\x98\x01\n" +
 	"\x13AddContextSeparator\x12(.memos.api.v1.AddContextSeparatorRequest\x1a\x16.google.protobuf.Empty\"?\x82\xd3\xe4\x93\x029:\x01*\"4/api/v1/ai/conversations/{conversation_id}/separator\x12\x92\x01\n" +
 	"\fListMessages\x12!.memos.api.v1.ListMessagesRequest\x1a\".memos.api.v1.ListMessagesResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/ai/conversations/{conversation_id}/messages\x12\xa0\x01\n" +
-	"\x19ClearConversationMessages\x12..memos.api.v1.ClearConversationMessagesRequest\x1a\x16.google.protobuf.Empty\";\x82\xd3\xe4\x93\x025*3/api/v1/ai/conversations/{conversation_id}/messages2\xaa\x02\n" +
+	"\x19ClearConversationMessages\x12..memos.api.v1.ClearConversationMessagesRequest\x1a\x16.google.protobuf.Empty\";\x82\xd3\xe4\x93\x025*3/api/v1/ai/conversations/{conversation_id}/messages\x12b\n" +
+	"\bStopChat\x12\x1d.memos.api.v1.StopChatRequest\x1a\x16.google.protobuf.Empty\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/ai/chat/stop2\xaa\x02\n" +
 	"\x14ScheduleAgentService\x12\x7f\n" +
 	"\x04Chat\x12&.memos.api.v1.ScheduleAgentChatRequest\x1a'.memos.api.v1.ScheduleAgentChatResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/schedule-agent/chat\x12\x90\x01\n" +
 	"\n" +
@@ -3838,7 +4348,7 @@ func file_api_v1_ai_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_v1_ai_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_api_v1_ai_service_proto_goTypes = []any{
 	(ScheduleQueryMode)(0),                   // 0: memos.api.v1.ScheduleQueryMode
 	(AgentType)(0),                           // 1: memos.api.v1.AgentType
@@ -3864,38 +4374,42 @@ var file_api_v1_ai_service_proto_goTypes = []any{
 	(*ListMessagesRequest)(nil),              // 21: memos.api.v1.ListMessagesRequest
 	(*ListMessagesResponse)(nil),             // 22: memos.api.v1.ListMessagesResponse
 	(*ClearConversationMessagesRequest)(nil), // 23: memos.api.v1.ClearConversationMessagesRequest
-	(*ChatResponse)(nil),                     // 24: memos.api.v1.ChatResponse
-	(*ScheduleCreationIntent)(nil),           // 25: memos.api.v1.ScheduleCreationIntent
-	(*ScheduleQueryResult)(nil),              // 26: memos.api.v1.ScheduleQueryResult
-	(*ScheduleSummary)(nil),                  // 27: memos.api.v1.ScheduleSummary
-	(*GetRelatedMemosRequest)(nil),           // 28: memos.api.v1.GetRelatedMemosRequest
-	(*GetRelatedMemosResponse)(nil),          // 29: memos.api.v1.GetRelatedMemosResponse
-	(*ParrotSelfCognition)(nil),              // 30: memos.api.v1.ParrotSelfCognition
-	(*GetParrotSelfCognitionRequest)(nil),    // 31: memos.api.v1.GetParrotSelfCognitionRequest
-	(*GetParrotSelfCognitionResponse)(nil),   // 32: memos.api.v1.GetParrotSelfCognitionResponse
-	(*ListParrotsRequest)(nil),               // 33: memos.api.v1.ListParrotsRequest
-	(*ListParrotsResponse)(nil),              // 34: memos.api.v1.ListParrotsResponse
-	(*ParrotInfo)(nil),                       // 35: memos.api.v1.ParrotInfo
-	(*DetectDuplicatesRequest)(nil),          // 36: memos.api.v1.DetectDuplicatesRequest
-	(*DetectDuplicatesResponse)(nil),         // 37: memos.api.v1.DetectDuplicatesResponse
-	(*SimilarMemo)(nil),                      // 38: memos.api.v1.SimilarMemo
-	(*SimilarityBreakdown)(nil),              // 39: memos.api.v1.SimilarityBreakdown
-	(*MergeMemosRequest)(nil),                // 40: memos.api.v1.MergeMemosRequest
-	(*MergeMemosResponse)(nil),               // 41: memos.api.v1.MergeMemosResponse
-	(*LinkMemosRequest)(nil),                 // 42: memos.api.v1.LinkMemosRequest
-	(*LinkMemosResponse)(nil),                // 43: memos.api.v1.LinkMemosResponse
-	(*GetKnowledgeGraphRequest)(nil),         // 44: memos.api.v1.GetKnowledgeGraphRequest
-	(*GetKnowledgeGraphResponse)(nil),        // 45: memos.api.v1.GetKnowledgeGraphResponse
-	(*GraphNode)(nil),                        // 46: memos.api.v1.GraphNode
-	(*GraphEdge)(nil),                        // 47: memos.api.v1.GraphEdge
-	(*GraphStats)(nil),                       // 48: memos.api.v1.GraphStats
-	(*GetDueReviewsRequest)(nil),             // 49: memos.api.v1.GetDueReviewsRequest
-	(*GetDueReviewsResponse)(nil),            // 50: memos.api.v1.GetDueReviewsResponse
-	(*ReviewItem)(nil),                       // 51: memos.api.v1.ReviewItem
-	(*RecordReviewRequest)(nil),              // 52: memos.api.v1.RecordReviewRequest
-	(*GetReviewStatsRequest)(nil),            // 53: memos.api.v1.GetReviewStatsRequest
-	(*GetReviewStatsResponse)(nil),           // 54: memos.api.v1.GetReviewStatsResponse
-	(*emptypb.Empty)(nil),                    // 55: google.protobuf.Empty
+	(*StopChatRequest)(nil),                  // 24: memos.api.v1.StopChatRequest
+	(*DangerBlockEvent)(nil),                 // 25: memos.api.v1.DangerBlockEvent
+	(*ChatResponse)(nil),                     // 26: memos.api.v1.ChatResponse
+	(*ScheduleCreationIntent)(nil),           // 27: memos.api.v1.ScheduleCreationIntent
+	(*ScheduleQueryResult)(nil),              // 28: memos.api.v1.ScheduleQueryResult
+	(*ScheduleSummary)(nil),                  // 29: memos.api.v1.ScheduleSummary
+	(*GetRelatedMemosRequest)(nil),           // 30: memos.api.v1.GetRelatedMemosRequest
+	(*GetRelatedMemosResponse)(nil),          // 31: memos.api.v1.GetRelatedMemosResponse
+	(*ParrotSelfCognition)(nil),              // 32: memos.api.v1.ParrotSelfCognition
+	(*GetParrotSelfCognitionRequest)(nil),    // 33: memos.api.v1.GetParrotSelfCognitionRequest
+	(*GetParrotSelfCognitionResponse)(nil),   // 34: memos.api.v1.GetParrotSelfCognitionResponse
+	(*ListParrotsRequest)(nil),               // 35: memos.api.v1.ListParrotsRequest
+	(*ListParrotsResponse)(nil),              // 36: memos.api.v1.ListParrotsResponse
+	(*ParrotInfo)(nil),                       // 37: memos.api.v1.ParrotInfo
+	(*DetectDuplicatesRequest)(nil),          // 38: memos.api.v1.DetectDuplicatesRequest
+	(*DetectDuplicatesResponse)(nil),         // 39: memos.api.v1.DetectDuplicatesResponse
+	(*SimilarMemo)(nil),                      // 40: memos.api.v1.SimilarMemo
+	(*SimilarityBreakdown)(nil),              // 41: memos.api.v1.SimilarityBreakdown
+	(*MergeMemosRequest)(nil),                // 42: memos.api.v1.MergeMemosRequest
+	(*MergeMemosResponse)(nil),               // 43: memos.api.v1.MergeMemosResponse
+	(*LinkMemosRequest)(nil),                 // 44: memos.api.v1.LinkMemosRequest
+	(*LinkMemosResponse)(nil),                // 45: memos.api.v1.LinkMemosResponse
+	(*GetKnowledgeGraphRequest)(nil),         // 46: memos.api.v1.GetKnowledgeGraphRequest
+	(*GetKnowledgeGraphResponse)(nil),        // 47: memos.api.v1.GetKnowledgeGraphResponse
+	(*GraphNode)(nil),                        // 48: memos.api.v1.GraphNode
+	(*GraphEdge)(nil),                        // 49: memos.api.v1.GraphEdge
+	(*GraphStats)(nil),                       // 50: memos.api.v1.GraphStats
+	(*GetDueReviewsRequest)(nil),             // 51: memos.api.v1.GetDueReviewsRequest
+	(*GetDueReviewsResponse)(nil),            // 52: memos.api.v1.GetDueReviewsResponse
+	(*ReviewItem)(nil),                       // 53: memos.api.v1.ReviewItem
+	(*RecordReviewRequest)(nil),              // 54: memos.api.v1.RecordReviewRequest
+	(*GetReviewStatsRequest)(nil),            // 55: memos.api.v1.GetReviewStatsRequest
+	(*GetReviewStatsResponse)(nil),           // 56: memos.api.v1.GetReviewStatsResponse
+	(*EventMetadata)(nil),                    // 57: memos.api.v1.EventMetadata
+	(*SessionSummary)(nil),                   // 58: memos.api.v1.SessionSummary
+	(*emptypb.Empty)(nil),                    // 59: google.protobuf.Empty
 }
 var file_api_v1_ai_service_proto_depIdxs = []int32{
 	8,  // 0: memos.api.v1.SemanticSearchResponse.results:type_name -> memos.api.v1.SearchResult
@@ -3906,74 +4420,78 @@ var file_api_v1_ai_service_proto_depIdxs = []int32{
 	12, // 5: memos.api.v1.ListAIConversationsResponse.conversations:type_name -> memos.api.v1.AIConversation
 	1,  // 6: memos.api.v1.CreateAIConversationRequest.parrot_id:type_name -> memos.api.v1.AgentType
 	13, // 7: memos.api.v1.ListMessagesResponse.messages:type_name -> memos.api.v1.AIMessage
-	25, // 8: memos.api.v1.ChatResponse.schedule_creation_intent:type_name -> memos.api.v1.ScheduleCreationIntent
-	26, // 9: memos.api.v1.ChatResponse.schedule_query_result:type_name -> memos.api.v1.ScheduleQueryResult
-	27, // 10: memos.api.v1.ScheduleQueryResult.schedules:type_name -> memos.api.v1.ScheduleSummary
-	8,  // 11: memos.api.v1.GetRelatedMemosResponse.memos:type_name -> memos.api.v1.SearchResult
-	1,  // 12: memos.api.v1.GetParrotSelfCognitionRequest.agent_type:type_name -> memos.api.v1.AgentType
-	30, // 13: memos.api.v1.GetParrotSelfCognitionResponse.self_cognition:type_name -> memos.api.v1.ParrotSelfCognition
-	35, // 14: memos.api.v1.ListParrotsResponse.parrots:type_name -> memos.api.v1.ParrotInfo
-	1,  // 15: memos.api.v1.ParrotInfo.agent_type:type_name -> memos.api.v1.AgentType
-	30, // 16: memos.api.v1.ParrotInfo.self_cognition:type_name -> memos.api.v1.ParrotSelfCognition
-	38, // 17: memos.api.v1.DetectDuplicatesResponse.duplicates:type_name -> memos.api.v1.SimilarMemo
-	38, // 18: memos.api.v1.DetectDuplicatesResponse.related:type_name -> memos.api.v1.SimilarMemo
-	39, // 19: memos.api.v1.SimilarMemo.breakdown:type_name -> memos.api.v1.SimilarityBreakdown
-	46, // 20: memos.api.v1.GetKnowledgeGraphResponse.nodes:type_name -> memos.api.v1.GraphNode
-	47, // 21: memos.api.v1.GetKnowledgeGraphResponse.edges:type_name -> memos.api.v1.GraphEdge
-	48, // 22: memos.api.v1.GetKnowledgeGraphResponse.stats:type_name -> memos.api.v1.GraphStats
-	51, // 23: memos.api.v1.GetDueReviewsResponse.items:type_name -> memos.api.v1.ReviewItem
-	2,  // 24: memos.api.v1.RecordReviewRequest.quality:type_name -> memos.api.v1.ReviewQuality
-	6,  // 25: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
-	9,  // 26: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
-	11, // 27: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
-	28, // 28: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
-	31, // 29: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
-	33, // 30: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
-	36, // 31: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
-	40, // 32: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
-	42, // 33: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
-	44, // 34: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
-	49, // 35: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
-	52, // 36: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
-	53, // 37: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
-	14, // 38: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
-	16, // 39: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
-	17, // 40: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
-	18, // 41: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
-	19, // 42: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
-	20, // 43: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
-	21, // 44: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
-	23, // 45: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
-	3,  // 46: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	3,  // 47: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	7,  // 48: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
-	10, // 49: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
-	24, // 50: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
-	29, // 51: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
-	32, // 52: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
-	34, // 53: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
-	37, // 54: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
-	41, // 55: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
-	43, // 56: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
-	45, // 57: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
-	50, // 58: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
-	55, // 59: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
-	54, // 60: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
-	15, // 61: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
-	12, // 62: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
-	12, // 63: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
-	12, // 64: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
-	55, // 65: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
-	55, // 66: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
-	22, // 67: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
-	55, // 68: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
-	4,  // 69: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
-	5,  // 70: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
-	48, // [48:71] is the sub-list for method output_type
-	25, // [25:48] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	27, // 8: memos.api.v1.ChatResponse.schedule_creation_intent:type_name -> memos.api.v1.ScheduleCreationIntent
+	28, // 9: memos.api.v1.ChatResponse.schedule_query_result:type_name -> memos.api.v1.ScheduleQueryResult
+	57, // 10: memos.api.v1.ChatResponse.event_meta:type_name -> memos.api.v1.EventMetadata
+	58, // 11: memos.api.v1.ChatResponse.session_summary:type_name -> memos.api.v1.SessionSummary
+	29, // 12: memos.api.v1.ScheduleQueryResult.schedules:type_name -> memos.api.v1.ScheduleSummary
+	8,  // 13: memos.api.v1.GetRelatedMemosResponse.memos:type_name -> memos.api.v1.SearchResult
+	1,  // 14: memos.api.v1.GetParrotSelfCognitionRequest.agent_type:type_name -> memos.api.v1.AgentType
+	32, // 15: memos.api.v1.GetParrotSelfCognitionResponse.self_cognition:type_name -> memos.api.v1.ParrotSelfCognition
+	37, // 16: memos.api.v1.ListParrotsResponse.parrots:type_name -> memos.api.v1.ParrotInfo
+	1,  // 17: memos.api.v1.ParrotInfo.agent_type:type_name -> memos.api.v1.AgentType
+	32, // 18: memos.api.v1.ParrotInfo.self_cognition:type_name -> memos.api.v1.ParrotSelfCognition
+	40, // 19: memos.api.v1.DetectDuplicatesResponse.duplicates:type_name -> memos.api.v1.SimilarMemo
+	40, // 20: memos.api.v1.DetectDuplicatesResponse.related:type_name -> memos.api.v1.SimilarMemo
+	41, // 21: memos.api.v1.SimilarMemo.breakdown:type_name -> memos.api.v1.SimilarityBreakdown
+	48, // 22: memos.api.v1.GetKnowledgeGraphResponse.nodes:type_name -> memos.api.v1.GraphNode
+	49, // 23: memos.api.v1.GetKnowledgeGraphResponse.edges:type_name -> memos.api.v1.GraphEdge
+	50, // 24: memos.api.v1.GetKnowledgeGraphResponse.stats:type_name -> memos.api.v1.GraphStats
+	53, // 25: memos.api.v1.GetDueReviewsResponse.items:type_name -> memos.api.v1.ReviewItem
+	2,  // 26: memos.api.v1.RecordReviewRequest.quality:type_name -> memos.api.v1.ReviewQuality
+	6,  // 27: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
+	9,  // 28: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
+	11, // 29: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
+	30, // 30: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
+	33, // 31: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
+	35, // 32: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
+	38, // 33: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
+	42, // 34: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
+	44, // 35: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
+	46, // 36: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
+	51, // 37: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
+	54, // 38: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
+	55, // 39: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
+	14, // 40: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
+	16, // 41: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
+	17, // 42: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
+	18, // 43: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
+	19, // 44: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
+	20, // 45: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
+	21, // 46: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
+	23, // 47: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
+	24, // 48: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
+	3,  // 49: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	3,  // 50: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	7,  // 51: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
+	10, // 52: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
+	26, // 53: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
+	31, // 54: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
+	34, // 55: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
+	36, // 56: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
+	39, // 57: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
+	43, // 58: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
+	45, // 59: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
+	47, // 60: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
+	52, // 61: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
+	59, // 62: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
+	56, // 63: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
+	15, // 64: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
+	12, // 65: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
+	12, // 66: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
+	12, // 67: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
+	59, // 68: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
+	59, // 69: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
+	22, // 70: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
+	59, // 71: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
+	59, // 72: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
+	4,  // 73: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
+	5,  // 74: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
+	51, // [51:75] is the sub-list for method output_type
+	27, // [27:51] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_ai_service_proto_init() }
@@ -3988,7 +4506,7 @@ func file_api_v1_ai_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_ai_service_proto_rawDesc), len(file_api_v1_ai_service_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   52,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

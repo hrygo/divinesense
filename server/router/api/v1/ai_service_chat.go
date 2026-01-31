@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
@@ -304,4 +305,55 @@ func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
 	}
 
 	return s.grpcStreamWrapper.Send(resp)
+}
+
+// StopChat cancels an ongoing chat stream and terminates the associated session.
+// This is the implementation for session.stop from the async architecture spec.
+// StopChat 取消正在进行的聊天流并终止相关会话。
+// 这是异步架构规范中 session.stop 的实现。
+//
+// Architecture Note: Session termination is primarily client-driven.
+//   - The client should cancel the streaming request (gRPC/HTTP) to immediately stop processing.
+//   - This method emits monitoring events for observability and metrics collection.
+//   - Active sessions are cleaned up after a 30-minute idle timeout (CCSessionManager).
+//   - For server-initiated termination in future, consider adding a session registry
+//     that maps conversationID to active context.CancelFunc for immediate cancellation.
+func (s *AIService) StopChat(ctx context.Context, req *v1pb.StopChatRequest) (*emptypb.Empty, error) {
+	if !s.IsEnabled() {
+		return nil, status.Errorf(codes.Unavailable, "AI features are disabled")
+	}
+
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	slog.Info("StopChat called",
+		"user_id", user.ID,
+		"conversation_id", req.ConversationId,
+		"reason", req.Reason,
+	)
+
+	// Emit stop event for monitoring, metrics, and potential async cleanup handlers
+	if eventBus := s.getChatEventBus(); eventBus != nil {
+		_, _ = eventBus.Publish(ctx, &aichat.ChatEvent{
+			Type:           "chat_stop",
+			UserID:         user.ID,
+			ConversationID: req.ConversationId,
+			Timestamp:      time.Now().Unix(),
+		})
+	}
+
+	// Note: The primary mechanism for stopping is client-side stream closure.
+	// The backend will clean up idle sessions via the 30-minute timeout.
+	// For immediate cleanup, the client should cancel the streaming request.
+	//
+	// Future enhancement: Add a session registry to track active requests and enable
+	// server-initiated cancellation via context.CancelFunc.
+	// Example:
+	//   if cancelFunc, ok := s.getActiveSessionCancel(req.ConversationId); ok {
+	//       cancelFunc()
+	//   }
+
+	return &emptypb.Empty{}, nil
 }

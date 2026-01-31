@@ -94,6 +94,28 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/chat/stop:
+        post:
+            tags:
+                - AIService
+            description: StopChat cancels an ongoing chat stream and terminates the associated session.
+            operationId: AIService_StopChat
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/StopChatRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/conversations:
         get:
             tags:
@@ -3206,6 +3228,14 @@ components:
                     description: Agent event signaling (for schedule agent integration)
                 eventData:
                     type: string
+                eventMeta:
+                    allOf:
+                        - $ref: '#/components/schemas/EventMetadata'
+                    description: Event metadata for Geek Mode and Evolution Mode observability
+                sessionSummary:
+                    allOf:
+                        - $ref: '#/components/schemas/SessionSummary'
+                    description: Session summary sent when done=true
             description: ChatResponse is the response for Chat.
         CheckConflictRequest:
             required:
@@ -3315,6 +3345,51 @@ components:
                 latencyMs:
                     type: string
             description: DetectDuplicatesResponse is the response for DetectDuplicates.
+        EventMetadata:
+            type: object
+            properties:
+                durationMs:
+                    type: string
+                    description: Timing information
+                totalDurationMs:
+                    type: string
+                toolName:
+                    type: string
+                    description: Tool call information (for tool_use and tool_result events)
+                toolId:
+                    type: string
+                inputTokens:
+                    type: integer
+                    description: Token usage (when available from Claude Code CLI)
+                    format: int32
+                outputTokens:
+                    type: integer
+                    format: int32
+                cacheWriteTokens:
+                    type: integer
+                    format: int32
+                cacheReadTokens:
+                    type: integer
+                    format: int32
+                status:
+                    type: string
+                    description: Event status
+                errorMsg:
+                    type: string
+                inputSummary:
+                    type: string
+                    description: Input/Output summaries for UI display (truncated for performance)
+                outputSummary:
+                    type: string
+                filePath:
+                    type: string
+                    description: File operations (for tools that operate on files)
+                lineCount:
+                    type: integer
+                    format: int32
+            description: |-
+                EventMetadata provides enhanced metadata for streaming events.
+                 This enables better observability for Geek Mode and Evolution Mode sessions.
         FieldMapping:
             type: object
             properties:
@@ -4528,6 +4603,58 @@ components:
                     items:
                         $ref: '#/components/schemas/SearchResult'
             description: SemanticSearchResponse is the response for SemanticSearch.
+        SessionSummary:
+            type: object
+            properties:
+                sessionId:
+                    type: string
+                    description: Session identification
+                totalDurationMs:
+                    type: string
+                    description: Overall timing
+                thinkingDurationMs:
+                    type: string
+                toolDurationMs:
+                    type: string
+                generationDurationMs:
+                    type: string
+                totalInputTokens:
+                    type: integer
+                    description: Token usage
+                    format: int32
+                totalOutputTokens:
+                    type: integer
+                    format: int32
+                totalCacheWriteTokens:
+                    type: integer
+                    format: int32
+                totalCacheReadTokens:
+                    type: integer
+                    format: int32
+                toolCallCount:
+                    type: integer
+                    description: Tool call statistics
+                    format: int32
+                toolsUsed:
+                    type: array
+                    items:
+                        type: string
+                filesModified:
+                    type: integer
+                    description: File operations (for Evolution Mode)
+                    format: int32
+                filePaths:
+                    type: array
+                    items:
+                        type: string
+                status:
+                    type: string
+                    description: Status
+                errorMsg:
+                    type: string
+            description: |-
+                SessionSummary provides end-of-session statistics for Geek/Evolution modes.
+                 Sent in the final ChatResponse when done=true.
         SetMemoAttachmentsRequest:
             required:
                 - name
@@ -4693,6 +4820,17 @@ components:
                         $ref: '#/components/schemas/GoogleProtobufAny'
                     description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
             description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
+        StopChatRequest:
+            required:
+                - conversationId
+            type: object
+            properties:
+                conversationId:
+                    type: integer
+                    format: int32
+                reason:
+                    type: string
+            description: StopChatRequest is the request for stopping an ongoing chat stream.
         StorageSetting_S3Config:
             type: object
             properties:

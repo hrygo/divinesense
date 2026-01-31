@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { useQueryClient } from "@tanstack/react-query";
 import { aiServiceClient } from "@/connect";
 import {
+  DangerBlockEvent,
   MemoQueryResultData,
   ParrotAgentType,
   ParrotChatCallbacks,
@@ -129,13 +130,27 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
         callbacks?.onToolResult?.(eventData);
         break;
 
+      case ParrotEventType.DANGER_BLOCK:
+        try {
+          const result = JSON.parse(eventData) as DangerBlockEvent;
+          callbacks?.onDangerBlock?.(result);
+        } catch (parseError) {
+          const err = parseError instanceof Error ? parseError : new Error(String(parseError));
+          console.error("Failed to parse danger block event:", err);
+          console.error("Event data:", eventData);
+          callbacks?.onError?.(new Error(`Failed to parse danger block event: ${err.message}`));
+        }
+        break;
+
       case ParrotEventType.MEMO_QUERY_RESULT:
         try {
           const result = JSON.parse(eventData) as MemoQueryResultData;
           callbacks?.onMemoQueryResult?.(result);
         } catch (parseError) {
-          console.error("Failed to parse memo query result:", parseError);
+          const err = parseError instanceof Error ? parseError : new Error(String(parseError));
+          console.error("Failed to parse memo query result:", err);
           console.error("Event data:", eventData);
+          callbacks?.onError?.(new Error(`Failed to parse memo query result: ${err.message}`));
         }
         break;
 
@@ -144,8 +159,10 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
           const result = JSON.parse(eventData) as ScheduleQueryResultData;
           callbacks?.onScheduleQueryResult?.(result);
         } catch (parseError) {
-          console.error("Failed to parse schedule query result:", parseError);
+          const err = parseError instanceof Error ? parseError : new Error(String(parseError));
+          console.error("Failed to parse schedule query result:", err);
           console.error("Event data:", eventData);
+          callbacks?.onError?.(new Error(`Failed to parse schedule query result: ${err.message}`));
         }
         break;
 

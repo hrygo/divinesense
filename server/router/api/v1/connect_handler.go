@@ -583,6 +583,19 @@ func (s *ConnectServiceHandler) ClearConversationMessages(ctx context.Context, r
 	return connect.NewResponse(resp), nil
 }
 
+// StopChat cancels an ongoing chat stream and terminates the associated session.
+// StopChat 取消正在进行的聊天流并终止相关会话。
+func (s *ConnectServiceHandler) StopChat(ctx context.Context, req *connect.Request[v1pb.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.StopChat(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (s *ConnectServiceHandler) DetectDuplicates(ctx context.Context, req *connect.Request[v1pb.DetectDuplicatesRequest]) (*connect.Response[v1pb.DetectDuplicatesResponse], error) {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))

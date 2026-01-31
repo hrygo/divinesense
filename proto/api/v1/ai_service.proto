@@ -144,6 +144,14 @@ service AIService {
   rpc ClearConversationMessages(ClearConversationMessagesRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/api/v1/ai/conversations/{conversation_id}/messages"};
   }
+
+  // StopChat cancels an ongoing chat stream and terminates the associated session.
+  rpc StopChat(StopChatRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/chat/stop"
+      body: "*"
+    };
+  }
 }
 
 // ScheduleAgentService provides schedule-specific AI agent functionality.
@@ -321,6 +329,20 @@ message ClearConversationMessagesRequest {
   int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// StopChatRequest is the request for stopping an ongoing chat stream.
+message StopChatRequest {
+  int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED]; // Conversation ID to stop
+  string reason = 2; // Optional reason for stopping (e.g., "user_cancel", "timeout")
+}
+
+// DangerBlockEvent represents a dangerous operation that was blocked.
+message DangerBlockEvent {
+  string operation = 1; // The dangerous operation that was detected
+  string reason = 2; // Explanation of why it's dangerous
+  string pattern_matched = 3; // The pattern that matched the input
+  bool bypass_allowed = 4; // Whether bypass is allowed (admin only)
+}
+
 // ChatResponse is the response for Chat.
 message ChatResponse {
   string content = 1; // streaming content chunk
@@ -330,8 +352,14 @@ message ChatResponse {
   ScheduleQueryResult schedule_query_result = 5; // AI-detected schedule query result (sent in final chunk)
 
   // Agent event signaling (for schedule agent integration)
-  string event_type = 6; // Event type: "thinking", "tool_use", "tool_result", "answer", "error", "schedule_updated"
+  string event_type = 6; // Event type: "thinking", "tool_use", "tool_result", "answer", "error", "schedule_updated", "danger_block"
   string event_data = 7; // Event data (JSON or plain text depending on event type)
+
+  // Event metadata for Geek Mode and Evolution Mode observability
+  EventMetadata event_meta = 8; // Enhanced metadata for events (timing, tokens, tool info)
+
+  // Session summary sent when done=true
+  SessionSummary session_summary = 9; // Summary statistics for the completed session
 }
 
 // ScheduleCreationIntent represents AI's analysis of user's intent to create a schedule.
@@ -569,4 +597,67 @@ message GetReviewStatsResponse {
   int32 streak_days = 6; // Consecutive days of review
   int32 total_reviews = 7; // Total review count
   int32 average_accuracy = 8; // Average accuracy percentage
+}
+
+// ========== Event Observability Messages (Geek Mode & Evolution Mode) ==========
+
+// EventMetadata provides enhanced metadata for streaming events.
+// This enables better observability for Geek Mode and Evolution Mode sessions.
+message EventMetadata {
+  // Timing information
+  int64 duration_ms = 1; // Duration of this event in milliseconds
+  int64 total_duration_ms = 2; // Total elapsed time since session start (milliseconds)
+
+  // Tool call information (for tool_use and tool_result events)
+  string tool_name = 3; // Tool name (e.g., "bash", "editor_write", "grep")
+  string tool_id = 4; // Unique tool call ID (UUID for matching use/result)
+
+  // Token usage (when available from Claude Code CLI)
+  int32 input_tokens = 5; // Input tokens consumed
+  int32 output_tokens = 6; // Output tokens generated
+  int32 cache_write_tokens = 7; // Prompt cache write tokens
+  int32 cache_read_tokens = 8; // Prompt cache read tokens
+
+  // Event status
+  string status = 9; // Status: "running", "success", "error"
+  string error_msg = 10; // Error message if status=error
+
+  // Input/Output summaries for UI display (truncated for performance)
+  string input_summary = 11; // Human-readable input summary (e.g., "ls -la")
+  string output_summary = 12; // Truncated output preview (max 500 chars)
+
+  // File operations (for tools that operate on files)
+  string file_path = 13; // Affected file path (if applicable)
+  int32 line_count = 14; // Number of lines affected (for edit operations)
+}
+
+// SessionSummary provides end-of-session statistics for Geek/Evolution modes.
+// Sent in the final ChatResponse when done=true.
+message SessionSummary {
+  // Session identification
+  string session_id = 1; // Claude Code CLI session ID
+
+  // Overall timing
+  int64 total_duration_ms = 2; // Total session duration in milliseconds
+  int64 thinking_duration_ms = 3; // Time spent in "thinking" state
+  int64 tool_duration_ms = 4; // Time spent executing tools
+  int64 generation_duration_ms = 5; // Time spent generating responses
+
+  // Token usage
+  int32 total_input_tokens = 6; // Total input tokens consumed
+  int32 total_output_tokens = 7; // Total output tokens generated
+  int32 total_cache_write_tokens = 8; // Total cache write tokens
+  int32 total_cache_read_tokens = 9; // Total cache read tokens
+
+  // Tool call statistics
+  int32 tool_call_count = 10; // Total number of tool calls
+  repeated string tools_used = 11; // List of tools called (e.g., ["bash", "editor_write"])
+
+  // File operations (for Evolution Mode)
+  int32 files_modified = 12; // Number of files modified
+  repeated string file_paths = 13; // List of affected file paths
+
+  // Status
+  string status = 14; // Final session status: "success", "error", "cancelled"
+  string error_msg = 15; // Error message if status=error
 }

@@ -250,6 +250,49 @@ export interface ScheduleSummary {
 }
 
 /**
+ * Session summary for Geek/Evolution modes
+ * 会话摘要 - 用于极客模式和进化模式
+ */
+export interface SessionSummary {
+  sessionId?: string;
+  totalDurationMs?: number;
+  thinkingDurationMs?: number;
+  toolDurationMs?: number;
+  generationDurationMs?: number;
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
+  totalCacheWriteTokens?: number;
+  totalCacheReadTokens?: number;
+  toolCallCount?: number;
+  toolsUsed?: string[];
+  filesModified?: number;
+  filePaths?: string[];
+  status?: string;
+  errorMsg?: string;
+}
+
+/**
+ * Event metadata for Geek/Evolution mode tool calls
+ * 事件元数据 - 用于极客模式和进化模式的工具调用
+ */
+export interface EventMetadata {
+  durationMs?: number;
+  totalDurationMs?: number;
+  toolName?: string;
+  toolId?: string;
+  status?: string;
+  errorMsg?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
+  inputSummary?: string;
+  outputSummary?: string;
+  filePath?: string;
+  lineCount?: number;
+}
+
+/**
  * Parrot chat callbacks
  * 鹦鹉聊天回调函数
  */
@@ -260,8 +303,41 @@ export interface ParrotChatCallbacks {
   onThinking?: (message: string) => void;
   onToolUse?: (toolName: string) => void;
   onToolResult?: (result: string) => void;
+  onDangerBlock?: (event: DangerBlockEvent) => void;
   onDone?: () => void;
   onError?: (error: Error) => void;
+}
+
+/**
+ * Danger category types for blocked operations
+ * 危险操作类别类型
+ */
+export type DangerCategory =
+  | "file_delete" // File deletion operations
+  | "system" // System-level operations
+  | "network" // Network/download operations
+  | "database" // Database operations
+  | "git" // Git operations
+  | "permission"; // Permission changes
+
+/**
+ * Danger level severity
+ * 危险级别严重程度
+ */
+export type DangerLevel = "critical" | "high" | "moderate";
+
+/**
+ * Danger block event - when a dangerous operation is blocked
+ * 危险操作拦截事件
+ */
+export interface DangerBlockEvent {
+  operation: string; // The dangerous operation that was detected
+  reason: string; // Explanation of why it's dangerous
+  patternMatched: string; // The pattern that matched
+  level: DangerLevel; // Danger level with type constraint
+  category: DangerCategory; // Category with type constraint
+  bypassAllowed: boolean; // Whether bypass is allowed (admin only)
+  suggestions?: string[]; // Safe alternatives
 }
 
 /**
@@ -286,6 +362,7 @@ export enum ParrotEventType {
   TOOL_RESULT = "tool_result",
   ANSWER = "answer",
   ERROR = "error",
+  DANGER_BLOCK = "danger_block",
   MEMO_QUERY_RESULT = "memo_query_result",
   SCHEDULE_QUERY_RESULT = "schedule_query_result",
   SCHEDULE_UPDATED = "schedule_updated",

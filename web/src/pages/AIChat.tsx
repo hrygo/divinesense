@@ -18,7 +18,7 @@ import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import type { AIMode, ChatItem } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
-import type { MemoQueryResultData, ScheduleQueryResultData } from "@/types/parrot";
+import type { MemoQueryResultData, ScheduleQueryResultData, SessionSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
 
 // ============================================================
@@ -28,6 +28,7 @@ interface UnifiedChatViewProps {
   input: string;
   setInput: (value: string) => void;
   onSend: (messageContent?: string) => void;
+  onStop: () => void;
   onNewChat: () => void;
   isTyping: boolean;
   isThinking: boolean;
@@ -37,6 +38,7 @@ interface UnifiedChatViewProps {
   onClearContext: () => void;
   memoQueryResults: MemoQueryResultData[];
   scheduleQueryResults: ScheduleQueryResultData[];
+  sessionSummary?: SessionSummary;
   items: ChatItem[];
   currentCapability: CapabilityType;
   capabilityStatus: CapabilityStatus;
@@ -54,6 +56,7 @@ function UnifiedChatView({
   input,
   setInput,
   onSend,
+  onStop,
   onNewChat,
   isTyping,
   isThinking,
@@ -63,6 +66,7 @@ function UnifiedChatView({
   onClearContext,
   memoQueryResults,
   scheduleQueryResults,
+  sessionSummary,
   items,
   currentCapability,
   capabilityStatus,
@@ -133,6 +137,7 @@ function UnifiedChatView({
         uiTools={uiTools.tools}
         onUIAction={uiTools.handleAction}
         onUIDismiss={uiTools.dismissTool}
+        sessionSummary={sessionSummary}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
         {items.length === 0 && (
@@ -150,11 +155,11 @@ function UnifiedChatView({
         value={input}
         onChange={handleInputChange}
         onSend={onSend}
+        onStop={onStop}
         onNewChat={onNewChat}
         onClearContext={onClearContext}
         onClearChat={() => setClearDialogOpen(true)}
         onModeChange={onModeChange}
-        disabled={isTyping}
         isTyping={isTyping}
         currentMode={currentMode}
       />
@@ -228,6 +233,7 @@ const AIChat = () => {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [memoQueryResults, setMemoQueryResults] = useState<MemoQueryResultData[]>([]);
   const [scheduleQueryResults, setScheduleQueryResults] = useState<ScheduleQueryResultData[]>([]);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | undefined>();
   const [showCapabilityPanel, setShowCapabilityPanel] = useState(false);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -316,8 +322,8 @@ const AIChat = () => {
               });
             }
           },
-          onToolUse: (toolName) => {
-            console.debug("[Geek Mode] Tool use event:", toolName);
+          onToolUse: (toolName, meta) => {
+            console.debug("[Geek/Evolution Mode] Tool use event:", toolName, meta);
             setCapabilityStatus("processing");
             // Accumulate tool calls for this message
             toolCallsRef.current.push(toolName);
@@ -329,8 +335,13 @@ const AIChat = () => {
               });
             }
           },
-          onToolResult: (_result) => {
-            // Tool result received, no action needed
+          onToolResult: (_result, _meta) => {
+            // Tool result received, metadata can be used for debugging
+            console.debug("[Geek/Evolution Mode] Tool result:", _result, _meta);
+          },
+          onSessionSummary: (summary) => {
+            console.debug("[Geek/Evolution Mode] Session summary:", summary);
+            setSessionSummary(summary);
           },
           onMemoQueryResult: (result) => {
             if (_messageId === messageIdRef.current) {
@@ -519,6 +530,11 @@ const AIChat = () => {
     ],
   );
 
+  const handleStop = useCallback(() => {
+    chatHook.stop();
+    resetTypingState();
+  }, [chatHook, resetTypingState]);
+
   const handleClearChat = useCallback(() => {
     if (currentConversation) {
       clearMessages(currentConversation.id);
@@ -609,6 +625,7 @@ const AIChat = () => {
       input={input}
       setInput={setInput}
       onSend={handleSend}
+      onStop={handleStop}
       onNewChat={handleNewChat}
       isTyping={isTyping}
       isThinking={isThinking}
@@ -618,6 +635,7 @@ const AIChat = () => {
       onClearContext={handleClearContext}
       memoQueryResults={memoQueryResults}
       scheduleQueryResults={scheduleQueryResults}
+      sessionSummary={sessionSummary}
       items={items}
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}

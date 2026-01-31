@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -299,6 +300,14 @@ func (h *ParrotHandler) executeAgent(
 	var totalChunks int
 	var streamMu sync.Mutex
 
+	// Track session start time for summary
+	sessionStartTime := time.Now()
+	var sessionTotalDuration int64
+
+	// Track tool calls for session summary
+	var toolsUsed []string
+	var toolMu sync.Mutex
+
 	// Create stream adapter
 	streamAdapter := agentpkg.NewParrotStreamAdapter(func(eventType string, eventData any) error {
 		// Track events using sync.Map for concurrent safety
@@ -326,14 +335,44 @@ func (h *ParrotHandler) executeAgent(
 
 		// Convert event data to string for streaming
 		var dataStr string
-		switch v := eventData.(type) {
-		case string:
-			dataStr = v
-		case error:
-			dataStr = v.Error()
-		default:
-			// Use fmt.Sprintf for other types
-			dataStr = fmt.Sprintf("%v", v)
+		var eventMeta *v1pb.EventMetadata
+
+		// Check if eventData is EventWithMeta (from CCRunner)
+		if eventWithMeta, ok := eventData.(*agentpkg.EventWithMeta); ok {
+			dataStr = eventWithMeta.EventData
+			if eventWithMeta.Meta != nil {
+				eventMeta = &v1pb.EventMetadata{
+					DurationMs:      eventWithMeta.Meta.DurationMs,
+					TotalDurationMs: eventWithMeta.Meta.TotalDurationMs,
+					ToolName:        eventWithMeta.Meta.ToolName,
+					ToolId:          eventWithMeta.Meta.ToolID,
+					Status:          eventWithMeta.Meta.Status,
+					ErrorMsg:        eventWithMeta.Meta.ErrorMsg,
+					InputTokens:     eventWithMeta.Meta.InputTokens,
+					OutputTokens:    eventWithMeta.Meta.OutputTokens,
+					InputSummary:    eventWithMeta.Meta.InputSummary,
+					OutputSummary:   eventWithMeta.Meta.OutputSummary,
+					FilePath:        eventWithMeta.Meta.FilePath,
+					LineCount:       eventWithMeta.Meta.LineCount,
+				}
+
+				// Track tools for session summary
+				if eventType == "tool_use" && eventWithMeta.Meta.ToolName != "" {
+					toolMu.Lock()
+					toolsUsed = append(toolsUsed, eventWithMeta.Meta.ToolName)
+					toolMu.Unlock()
+				}
+			}
+		} else {
+			// Handle legacy event types (string, error)
+			switch v := eventData.(type) {
+			case string:
+				dataStr = v
+			case error:
+				dataStr = v.Error()
+			default:
+				dataStr = fmt.Sprintf("%v", v)
+			}
 		}
 
 		// Thread-safe send
@@ -343,6 +382,7 @@ func (h *ParrotHandler) executeAgent(
 		return stream.Send(&v1pb.ChatResponse{
 			EventType: eventType,
 			EventData: dataStr,
+			EventMeta: eventMeta,
 		})
 	})
 
@@ -359,16 +399,31 @@ func (h *ParrotHandler) executeAgent(
 	// Send done marker
 	streamMu.Lock()
 	defer streamMu.Unlock()
+
+	// Calculate session summary
+	sessionTotalDuration = time.Since(sessionStartTime).Milliseconds()
+
+	// Build session summary
+	sessionSummary := &v1pb.SessionSummary{
+		SessionId:       fmt.Sprintf("conv_%d", req.ConversationID),
+		TotalDurationMs: sessionTotalDuration,
+		Status:          "success",
+		ToolCallCount:   int32(len(toolsUsed)),
+		ToolsUsed:       toolsUsed,
+	}
+
 	if err := stream.Send(&v1pb.ChatResponse{
-		Done: true,
+		Done:           true,
+		SessionSummary: sessionSummary,
 	}); err != nil {
 		return err
-
 	}
 
 	logger.Debug("Agent execution completed",
 		slog.Int("total_chunks", totalChunks),
 		slog.Int("unique_events", countUniqueEvents(eventCount)),
+		slog.Int64("duration_ms", sessionTotalDuration),
+		slog.Int("tool_calls", len(toolsUsed)),
 	)
 
 	return nil

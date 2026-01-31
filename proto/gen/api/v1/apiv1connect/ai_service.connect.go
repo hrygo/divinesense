@@ -91,6 +91,8 @@ const (
 	// AIServiceClearConversationMessagesProcedure is the fully-qualified name of the AIService's
 	// ClearConversationMessages RPC.
 	AIServiceClearConversationMessagesProcedure = "/memos.api.v1.AIService/ClearConversationMessages"
+	// AIServiceStopChatProcedure is the fully-qualified name of the AIService's StopChat RPC.
+	AIServiceStopChatProcedure = "/memos.api.v1.AIService/StopChat"
 	// ScheduleAgentServiceChatProcedure is the fully-qualified name of the ScheduleAgentService's Chat
 	// RPC.
 	ScheduleAgentServiceChatProcedure = "/memos.api.v1.ScheduleAgentService/Chat"
@@ -143,6 +145,8 @@ type AIServiceClient interface {
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
+	// StopChat cancels an ongoing chat stream and terminates the associated session.
+	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceClient constructs a client for the memos.api.v1.AIService service. By default, it
@@ -282,6 +286,12 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("ClearConversationMessages")),
 			connect.WithClientOptions(opts...),
 		),
+		stopChat: connect.NewClient[v1.StopChatRequest, emptypb.Empty](
+			httpClient,
+			baseURL+AIServiceStopChatProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("StopChat")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -308,6 +318,7 @@ type aIServiceClient struct {
 	addContextSeparator       *connect.Client[v1.AddContextSeparatorRequest, emptypb.Empty]
 	listMessages              *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
 	clearConversationMessages *connect.Client[v1.ClearConversationMessagesRequest, emptypb.Empty]
+	stopChat                  *connect.Client[v1.StopChatRequest, emptypb.Empty]
 }
 
 // SemanticSearch calls memos.api.v1.AIService.SemanticSearch.
@@ -415,6 +426,11 @@ func (c *aIServiceClient) ClearConversationMessages(ctx context.Context, req *co
 	return c.clearConversationMessages.CallUnary(ctx, req)
 }
 
+// StopChat calls memos.api.v1.AIService.StopChat.
+func (c *aIServiceClient) StopChat(ctx context.Context, req *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.stopChat.CallUnary(ctx, req)
+}
+
 // AIServiceHandler is an implementation of the memos.api.v1.AIService service.
 type AIServiceHandler interface {
 	// SemanticSearch performs semantic search on memos.
@@ -459,6 +475,8 @@ type AIServiceHandler interface {
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
+	// StopChat cancels an ongoing chat stream and terminates the associated session.
+	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -594,6 +612,12 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("ClearConversationMessages")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIServiceStopChatHandler := connect.NewUnaryHandler(
+		AIServiceStopChatProcedure,
+		svc.StopChat,
+		connect.WithSchema(aIServiceMethods.ByName("StopChat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/memos.api.v1.AIService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIServiceSemanticSearchProcedure:
@@ -638,6 +662,8 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceListMessagesHandler.ServeHTTP(w, r)
 		case AIServiceClearConversationMessagesProcedure:
 			aIServiceClearConversationMessagesHandler.ServeHTTP(w, r)
+		case AIServiceStopChatProcedure:
+			aIServiceStopChatHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -729,6 +755,10 @@ func (UnimplementedAIServiceHandler) ListMessages(context.Context, *connect.Requ
 
 func (UnimplementedAIServiceHandler) ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ClearConversationMessages is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.StopChat is not implemented"))
 }
 
 // ScheduleAgentServiceClient is a client for the memos.api.v1.ScheduleAgentService service.

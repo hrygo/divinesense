@@ -71,11 +71,12 @@ type EventCallback func(eventType string, eventData interface{}) error
 
 // 常用事件类型.
 const (
-	EventTypeThinking   = "thinking"    // Agent is thinking
-	EventTypeToolUse    = "tool_use"    // Agent is using a tool
-	EventTypeToolResult = "tool_result" // Tool execution result
-	EventTypeAnswer     = "answer"      // Final answer from agent
-	EventTypeError      = "error"       // Error occurred
+	EventTypeThinking    = "thinking"     // Agent is thinking
+	EventTypeToolUse     = "tool_use"     // Agent is using a tool
+	EventTypeToolResult  = "tool_result"  // Tool execution result
+	EventTypeAnswer      = "answer"       // Final answer from agent
+	EventTypeError       = "error"        // Error occurred
+	EventTypeDangerBlock = "danger_block" // Dangerous operation was blocked
 
 	// Memo-specific events.
 	EventTypeMemoQueryResult = "memo_query_result" // Memo search results
