@@ -91,3 +91,5 @@ docs/plans/
 
 # Qoder
 .qoder/
+
+*.log
