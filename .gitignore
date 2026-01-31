@@ -1,59 +1,93 @@
-# temp folder
-tmp
-
-# Frontend asset
-web/dist
-
-# Build artifacts
-build/
-bin/
-memos
-
-# Plan/design documents
-docs/plans/
-
+# =============================================================================
+# OS Generated Files
+# =============================================================================
 .DS_Store
+**/.DS_Store
+Thumbs.db
 
+# =============================================================================
+# IDE & Editor Settings
+# =============================================================================
 # Jetbrains
-.idea
+.idea/
 
+# VSCode settings
+.vscode/
+
+# =============================================================================
+# Environment & Config
+# =============================================================================
 # Docker Compose Environment File
 .env
 
 # direnv
 .envrc
 
-# Dev script runtime files
-.pids/
-.logs/
+# =============================================================================
+# Build Artifacts & Binaries
+# =============================================================================
+build/
+bin/
+dist/
+memos
 
-dist
+# Debug binaries
+__debug_bin*
 
-# VSCode settings
-.vscode
+# =============================================================================
+# Frontend
+# =============================================================================
+web/dist/
+node_modules/
 
-# Git worktrees
-.worktrees/
-
-# Claude
-.claude/sessions/
-.claude/settings.local.json
-
-# Loki logs
-.loki
-
+# =============================================================================
+# Go Development
+# =============================================================================
 # Go test & coverage
 coverage.out
 coverage.html
 *.test
 *.prof
 
-# Debug binaries
-__debug_bin*
-
 # Air live reload
 .air.toml
+
+# =============================================================================
+# Python Development
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+.eggs/
+
+# =============================================================================
+# Temp & Runtime Files
+# =============================================================================
 tmp/
+
+# Dev script runtime files
+.pids/
+.logs/
+
+# =============================================================================
+# Git Worktrees
+# =============================================================================
+.worktrees/
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+# Plan/design documents
+docs/plans/
+
+# Claude Code
+.claude/sessions/
+.claude/settings.local.json
+
+# Loki logs
+.loki/
 
 # Qoder
 .qoder/
