@@ -24,7 +24,10 @@ func main() {
 	// Generate a new UUID for each test run to avoid session conflicts
 	// 每次测试运行生成新的 UUID 以避免会话冲突
 	sessionID := uuid.New().String()
-	workDir, _ := os.Getwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get working directory: %v", err))
+	}
 
 	cfg := &agent.CCRunnerConfig{
 		Mode:           "geek",
@@ -40,7 +43,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer runner.GetSessionManager().TerminateSession(sessionID)
+	defer func() {
+		if err := runner.GetSessionManager().TerminateSession(sessionID); err != nil {
+			logger.Warn("Failed to terminate session", "error", err)
+		}
+	}()
 
 	streamer := agent.NewBiDirectionalStreamer(logger)
 	eventChan := make(chan agent.StreamEvent, 100)
@@ -70,7 +77,11 @@ func main() {
 	go func() {
 		for evt := range eventChan {
 			// Print nicely formatted JSON for inspection
-			data, _ := json.MarshalIndent(evt, "", "  ")
+			data, err := json.MarshalIndent(evt, "", "  ")
+			if err != nil {
+				logger.Error("Failed to marshal event", "error", err)
+				continue
+			}
 			fmt.Printf("\n[CAPTURED EVENT] Type: %s\n%s\n", evt.Type, string(data))
 		}
 	}()
