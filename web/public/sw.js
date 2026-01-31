@@ -12,17 +12,14 @@ const STATIC_CACHE = "memos-static-v1";
 const API_CACHE = "memos-api-v1";
 
 // Assets to cache on install
-const PRECACHE_URLS = [
-  "/",
-  "/offline",
-];
+const PRECACHE_URLS = ["/", "/offline"];
 
 // Install event - cache static assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_URLS);
-    })
+    }),
   );
   // Force activation
   self.skipWaiting();
@@ -39,9 +36,9 @@ self.addEventListener("activate", (event) => {
           })
           .map((cacheName) => {
             return caches.delete(cacheName);
-          })
+          }),
       );
-    })
+    }),
   );
   // Take control immediately
   self.clients.claim();
@@ -74,7 +71,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => {
           return caches.match(request);
-        })
+        }),
     );
     return;
   }
@@ -97,7 +94,7 @@ self.addEventListener("fetch", (event) => {
           });
           return response;
         });
-      })
+      }),
     );
     return;
   }
@@ -122,7 +119,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         });
-      })
+      }),
   );
 });
 
@@ -137,9 +134,9 @@ self.addEventListener("message", (event) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             return caches.delete(cacheName);
-          })
+          }),
         );
-      })
+      }),
     );
   }
 });

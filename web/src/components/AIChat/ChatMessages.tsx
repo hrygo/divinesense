@@ -5,7 +5,9 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
+import { EventBadge, InlineToolCall } from "@/components/AIChat/EventBadge";
 import MessageActions from "@/components/AIChat/MessageActions";
+import { ToolCallCard } from "@/components/AIChat/ToolCallCard";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIContainer";
@@ -367,6 +369,13 @@ const MessageBubble = memo(function MessageBubble({
         {role === "assistant" && isLastAssistant && onRegenerate && onDelete && (
           <div className="flex items-center gap-2 mb-0.5 opacity-0 group-row:opacity-100 transition-opacity">
             <MessageActions onRegenerate={onRegenerate} onDelete={onDelete} />
+          </div>
+        )}
+
+        {/* Event Badge for tool calls */}
+        {role === "assistant" && message.metadata?.toolName && (
+          <div className="mb-2">
+            <InlineToolCall toolName={message.metadata.toolName} isError={message.error} />
           </div>
         )}
 

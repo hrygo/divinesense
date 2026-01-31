@@ -1,7 +1,7 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
 
 let devProxyServer = "http://localhost:28081";
 if (process.env.DEV_PROXY_SERVER && process.env.DEV_PROXY_SERVER.length > 0) {
@@ -50,14 +50,7 @@ export default defineConfig({
             "@radix-ui/react-switch",
             "lucide-react",
           ],
-          "markdown-vendor": [
-            "react-markdown",
-            "remark-gfm",
-            "remark-breaks",
-            "rehype-raw",
-            "rehype-sanitize",
-            "highlight.js",
-          ],
+          "markdown-vendor": ["react-markdown", "remark-gfm", "remark-breaks", "rehype-raw", "rehype-sanitize", "highlight.js"],
           "math-vendor": ["katex", "rehype-katex", "remark-math"],
           "query-vendor": ["@tanstack/react-query"],
           "i18n-vendor": ["i18next", "react-i18next"],

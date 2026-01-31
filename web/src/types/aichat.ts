@@ -234,3 +234,35 @@ export const AI_STORAGE_KEYS = {
   CURRENT_CONVERSATION: "aichat_current_conversation",
   SIDEBAR_TAB: "aichat_sidebar_tab",
 } as const;
+
+/**
+ * CC Runner Stream Event types (async mode)
+ * CC Runner 流式事件类型（异步模式）
+ */
+export type CcEventType = "thinking" | "tool_use" | "tool_result" | "answer" | "error";
+
+/**
+ * CC Runner Stream Event metadata
+ * CC Runner 流式事件元数据
+ */
+export interface CcEventMeta {
+  tool_name?: string;
+  tool_id?: string;
+  is_error?: boolean;
+  file_path?: string;
+  session_id?: string;
+  exit_code?: number;
+  duration_ms?: number;
+  input?: Record<string, unknown>;
+}
+
+/**
+ * CC Runner Stream Event
+ * CC Runner 流式事件
+ */
+export interface CcStreamEvent {
+  type: CcEventType;
+  content: string;
+  meta?: CcEventMeta;
+  timestamp: number;
+}

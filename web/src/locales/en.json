@@ -346,6 +346,19 @@
       "thinking": "Thinking...",
       "processing": "Processing...",
       "error": "Something went wrong"
+    },
+    "events": {
+      "thinking": "Thinking",
+      "tool_use": "Tool",
+      "tool_result": "Result",
+      "answer": "Response",
+      "error": "Error",
+      "input": "Input",
+      "output": "Output",
+      "no_output": "No output yet...",
+      "running": "Running...",
+      "success": "Success",
+      "failed": "Failed"
     }
   },
   "auth": {
