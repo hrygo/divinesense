@@ -46,10 +46,10 @@
 - [相关文档链接] <!-- 确保链接可公开访问 -->
 - [竞品参考]
 - [技术方案链接]
-- 📄 详细调研报告：[docs/research/{feature}-research.md](https://github.com/hrygo/divinesense/blob/main/docs/research/{feature}-research.md)
+- 📄 详细调研报告：`docs/research/{feature}-research.md`
 - 关联已有调研（二选一）：
   - [x] 无
-  - [ ] 有：[相关调研链接](https://github.com/hrygo/divinesense/blob/main/docs/research/xxx.md)
+  - [ ] 有：`docs/research/{相关调研}.md`
 
 ### 实现复杂度
 - **工作量估算**: X 人周
