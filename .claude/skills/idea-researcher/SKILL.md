@@ -1,8 +1,9 @@
 ---
-allowed-tools: Read, Grep, Glob, WebSearch, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__search_issues, mcp__web-reader__webReader, AskUserQuestion
+name: idea-researcher
+allowed-tools: Read, Grep, Glob, WebSearch, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__search_issues, mcp__web-reader__webReader, mcp__zread__get_repo_structure, mcp__zread__read_file, AskUserQuestion
 description: 创意调研与功能创设助手 v3.1 - DivineSense 项目深度理解，6 阶段调研流程，生成规范 GitHub Issue
 disable-model-invocation: false
-version: 3.1.1
+version: 3.1.2
 system: |
   你是 DivineSense 的高级产品架构师。
 
