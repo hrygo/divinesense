@@ -1,7 +1,7 @@
 # CC Runner 异步架构规格说明书 (Async Architecture Spec)
 
-**Status**: Draft
-**Version**: 1.1
+**Status**: Published
+**Version**: 1.2
 **Context**: [Research: CC Runner Async Upgrade](../research/cc-runner-async-upgrade.md)
 
 ## 1. 概述 (Overview)
@@ -117,7 +117,7 @@ flowchart TB
     - 前端使用数据库 ID (`ConversationID`) 标识聊天窗口。
     - 后端通过 `UUID v5` 定向哈希算法（以 `ConversationID` 为 Seed）生成符合 Claude Code CLI 要求的 `sessionID` (UUID)。
 - **确定性映射 (Deterministic Mapping)**:
-    - `Map(ConversationID) -> UUID`
+    - `Map(ConversationID) -> UUID v5(Namespace, "divinesense:conversation:{ID}")`
     - 这种设计确保了即便后端重启或内存缓存失效，只要 `ConversationID` 不变，生成的 `sessionID` 保持恒定。
 - **状态恢复 (Resume)**:
     - Claude Code CLI 内部会将对话历史持久化于磁盘。
@@ -185,10 +185,18 @@ type Session struct {
 
 ```go
 type StreamEvent struct {
-    Type      string // "thinking", "tool_use", "tool_result", "answer", "error"
-    Content   string
-    Meta      map[string]any // 额外元数据 (如 tool name, file path)
-    Timestamp int64
+    Type      string           `json:"type"`      // thinking, tool_use, tool_result, answer, error
+    Content   string           `json:"content"`   // 文本内容
+    Meta      *StreamEventMeta `json:"meta"`      // 强类型元数据
+    Timestamp int64            `json:"timestamp"`
+}
+
+type StreamEventMeta struct {
+    ToolName  string `json:"tool_name,omitempty"`
+    ToolID    string `json:"tool_id,omitempty"`
+    IsError   bool   `json:"is_error,omitempty"`
+    FilePath  string `json:"file_path,omitempty"`
+    SessionID string `json:"session_id,omitempty"`
 }
 ```
 
