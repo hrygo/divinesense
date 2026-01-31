@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hrygo/divinesense/plugin/ai/agent"
 )
 
@@ -20,8 +21,9 @@ func main() {
 		panic(err)
 	}
 
-	// Use a new UUID for this exhaustive test
-	sessionID := "a4dfe4b5-451b-4b9f-9c95-af8ed85f6396"
+	// Generate a new UUID for each test run to avoid session conflicts
+	// 每次测试运行生成新的 UUID 以避免会话冲突
+	sessionID := uuid.New().String()
 	workDir, _ := os.Getwd()
 
 	cfg := &agent.CCRunnerConfig{

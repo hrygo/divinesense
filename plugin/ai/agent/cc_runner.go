@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -25,6 +27,23 @@ const (
 	// 非 JSON 输出的最大日志长度。
 	maxNonJSONOutputLength = 100
 )
+
+// UUID v5 namespace for DivineSense session mapping.
+// Using a custom namespace ensures deterministic UUID generation from ConversationID.
+// DivineSense 专用的 UUID v5 命名空间，用于会话映射。
+var divineSenseNamespace = uuid.MustParse("6ba7b811-9dad-11d1-80b4-00c04fd430c8") // TODO: register proper namespace
+
+// ConversationIDToSessionID converts a database ConversationID to a deterministic UUID v5.
+// This ensures the same ConversationID always maps to the same SessionID,
+// enabling reliable session resume across backend restarts.
+// 将数据库 ConversationID 转换为确定性的 UUID v5。
+// 确保相同的 ConversationID 始终映射到相同的 SessionID，实现跨重启的可靠会话恢复。
+func ConversationIDToSessionID(conversationID int64) string {
+	// UUID v5 uses SHA-1 hash of namespace + name
+	// Use conversation ID as string bytes for deterministic mapping
+	name := fmt.Sprintf("divinesense:conversation:%d", conversationID)
+	return uuid.NewSHA1(divineSenseNamespace, []byte(name)).String()
+}
 
 // buildSystemPrompt provides minimal, high-signal context for Claude Code CLI.
 // buildSystemPrompt 为 Claude Code CLI 提供最小化、高信噪比的上下文。
@@ -151,12 +170,13 @@ type CCRunner struct {
 // CCRunnerConfig defines mode-specific configuration for CCRunner execution.
 // CCRunnerConfig 定义 CCRunner 执行的模式特定配置。
 type CCRunnerConfig struct {
-	Mode          string // "geek" | "evolution"
-	WorkDir       string // Working directory for CLI
-	SessionID     string // Session identifier for persistence
-	UserID        int32  // User ID for logging/context
-	SystemPrompt  string // Mode-specific system prompt
-	DeviceContext string // Device/browser context JSON
+	Mode           string // "geek" | "evolution"
+	WorkDir        string // Working directory for CLI
+	ConversationID int64  // Database conversation ID for deterministic UUID v5 mapping
+	SessionID      string // Session identifier (derived from ConversationID if empty)
+	UserID         int32  // User ID for logging/context
+	SystemPrompt   string // Mode-specific system prompt
+	DeviceContext  string // Device/browser context JSON
 
 	// Security / Permission Control
 	// 安全/权限控制
@@ -193,6 +213,18 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Derive SessionID from ConversationID using UUID v5 for deterministic mapping.
+	// This ensures the same conversation always maps to the same session,
+	// enabling reliable resume across backend restarts (per spec 2.2).
+	// 使用 UUID v5 从 ConversationID 派生 SessionID，实现确定性映射。
+	// 确保同一对话始终映射到同一会话，实现跨重启的可靠恢复（规格 2.2）。
+	if cfg.SessionID == "" && cfg.ConversationID > 0 {
+		cfg.SessionID = ConversationIDToSessionID(cfg.ConversationID)
+		r.logger.Debug("CCRunner: derived SessionID from ConversationID",
+			"conversation_id", cfg.ConversationID,
+			"session_id", cfg.SessionID)
+	}
 
 	// Validate configuration
 	// 验证配置
@@ -254,6 +286,15 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 func (r *CCRunner) StartAsyncSession(ctx context.Context, cfg *CCRunnerConfig) (*Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Derive SessionID from ConversationID using UUID v5 for deterministic mapping.
+	// 使用 UUID v5 从 ConversationID 派生 SessionID，实现确定性映射。
+	if cfg.SessionID == "" && cfg.ConversationID > 0 {
+		cfg.SessionID = ConversationIDToSessionID(cfg.ConversationID)
+		r.logger.Debug("CCRunner: derived SessionID from ConversationID",
+			"conversation_id", cfg.ConversationID,
+			"session_id", cfg.SessionID)
+	}
 
 	if err := r.validateConfig(cfg); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
