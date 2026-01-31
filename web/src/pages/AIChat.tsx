@@ -235,6 +235,7 @@ const AIChat = () => {
   const lastAssistantMessageIdRef = useRef<string | null>(null);
   const streamingContentRef = useRef<string>("");
   const isCreatingConversationRef = useRef(false);
+  const toolCallsRef = useRef<string[]>([]);
 
   // Get current conversation and capability from context
   const {
@@ -289,6 +290,7 @@ const AIChat = () => {
       setCapabilityStatus("thinking");
       setMemoQueryResults([]);
       setScheduleQueryResults([]);
+      toolCallsRef.current = []; // Reset tool calls for new message
       const _messageId = ++messageIdRef.current;
 
       const explicitMessage = userMessage;
@@ -316,10 +318,12 @@ const AIChat = () => {
           },
           onToolUse: (toolName) => {
             setCapabilityStatus("processing");
+            // Accumulate tool calls for this message
+            toolCallsRef.current.push(toolName);
             if (lastAssistantMessageIdRef.current) {
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
                 metadata: {
-                  toolName,
+                  toolCalls: [...toolCallsRef.current], // Copy to avoid reference issues
                 },
               });
             }

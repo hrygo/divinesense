@@ -135,6 +135,7 @@ export function ChatInput({
         {/* Toolbar - 工具栏 */}
         {(onNewChat || onClearContext || onClearChat || onModeChange) && (
           <div className="flex items-center gap-1 mb-2">
+            {/* Left side buttons */}
             {onNewChat && (
               <Button
                 variant="ghost"
@@ -185,10 +186,24 @@ export function ChatInput({
             )}
             {/* Spacer to push mode cycle button to the right */}
             <div className="flex-1" />
+            {/* Shortcut hint */}
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">Ctrl+Enter</kbd> 发送
+            </span>
             {/* Mode Cycle Button - mobile only, shows mode selector */}
             {onModeChange && currentMode !== "normal" && (
               <div className="hidden md:block">{/* Could add compact mode indicator here for mobile */}</div>
             )}
+          </div>
+        )}
+        {/* Shortcut hint for when no toolbar buttons - always visible on sm+ screens */}
+        {!onNewChat && !onClearContext && !onClearChat && !onModeChange && (
+          <div className="flex items-center justify-end mb-2">
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">Ctrl+Enter</kbd> 发送
+            </span>
           </div>
         )}
 

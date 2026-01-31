@@ -372,10 +372,14 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {/* Event Badge for tool calls */}
-        {role === "assistant" && message.metadata?.toolName && (
-          <div className="mb-2">
-            <InlineToolCall toolName={message.metadata.toolName} isError={message.error} />
+        {/* Event Badge for tool calls - support both single toolName and multiple toolCalls */}
+        {role === "assistant" && (message.metadata?.toolName || message.metadata?.toolCalls) && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {message.metadata.toolCalls
+              ? message.metadata.toolCalls.map((toolName: string, i: number) => (
+                  <InlineToolCall key={i} toolName={toolName} isError={message.error} />
+                ))
+              : message.metadata.toolName && <InlineToolCall toolName={message.metadata.toolName} isError={message.error} />}
           </div>
         )}
 
