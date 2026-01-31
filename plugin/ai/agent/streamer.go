@@ -8,12 +8,28 @@ import (
 	"time"
 )
 
+// StreamEventMeta provides strongly-typed metadata for StreamEvent.
+// StreamEventMeta 为 StreamEvent 提供强类型的元数据。
+type StreamEventMeta struct {
+	ToolName  string `json:"tool_name,omitempty"`   // Tool name for tool_use events
+	ToolID    string `json:"tool_id,omitempty"`     // Tool ID for tool_use events
+	IsError   bool   `json:"is_error,omitempty"`    // Error flag for tool_result events
+	FilePath  string `json:"file_path,omitempty"`   // File path for file operations
+	ExitCode  int    `json:"exit_code,omitempty"`   // Process exit code for run events
+	Duration  int    `json:"duration_ms,omitempty"` // Operation duration in milliseconds
+	SessionID string `json:"session_id,omitempty"`  // Associated session ID
+
+	// Raw allows access to any additional fields not in the typed struct.
+	// Raw 允许访问类型化结构之外的任何其他字段。
+	Raw map[string]any `json:"-"`
+}
+
 // StreamEvent represents a standardized event for the Web UI.
 type StreamEvent struct {
-	Type      string         `json:"type"`           // thinking, tool_use, tool_result, answer, error
-	Content   string         `json:"content"`        // The actual text content
-	Meta      map[string]any `json:"meta,omitempty"` // Extra metadata (tool name, file path, etc)
-	Timestamp int64          `json:"timestamp"`
+	Type      string           `json:"type"`           // thinking, tool_use, tool_result, answer, error
+	Content   string           `json:"content"`        // The actual text content
+	Meta      *StreamEventMeta `json:"meta,omitempty"` // Strongly-typed metadata
+	Timestamp int64            `json:"timestamp"`
 }
 
 // BiDirectionalStreamer handles the IO loop for a session.
@@ -73,6 +89,7 @@ func (s *BiDirectionalStreamer) StreamOutput(stdout io.Reader, eventChan chan<- 
 }
 
 // transformMessageToEvents converts internal CLI message to UI events.
+// Uses frontend-compatible event types (ParrotEventType).
 func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []StreamEvent {
 	var events []StreamEvent
 	ts := time.Now().UnixMilli()
@@ -82,7 +99,7 @@ func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []St
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				events = append(events, StreamEvent{
-					Type:      "ai.thinking",
+					Type:      "thinking", // Frontend: ParrotEventType.THINKING
 					Content:   block.Text,
 					Timestamp: ts,
 				})
@@ -90,19 +107,24 @@ func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []St
 		}
 
 	case "tool_use":
+		meta := &StreamEventMeta{
+			ToolName: msg.Name,
+			ToolID:   "", // May be available in block.ID
+		}
+		// Store input in Raw for flexibility
+		if msg.Input != nil {
+			meta.Raw = map[string]any{"input": msg.Input}
+		}
 		events = append(events, StreamEvent{
-			Type:      "ai.tool.call",
-			Content:   msg.Name, // Using content for Name for simplicity, or empty
-			Meta:      map[string]any{"name": msg.Name, "input": msg.Input},
+			Type:      "tool_use", // Frontend: ParrotEventType.TOOL_USE
+			Content:   msg.Name,
+			Meta:      meta,
 			Timestamp: ts,
 		})
 
 	case "tool_result":
-		// Tool result usually contains output.
-		// msg.Output or msg.Content?
 		content := msg.Output
 		if content == "" {
-			// fallback
 			if len(msg.Content) > 0 {
 				content = "Has content blocks"
 			}
@@ -117,26 +139,32 @@ func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []St
 		}
 
 		events = append(events, StreamEvent{
-			Type:      "ai.tool.result",
+			Type:      "tool_result", // Frontend: ParrotEventType.TOOL_RESULT
 			Content:   content,
-			Meta:      map[string]any{"is_error": isError},
+			Meta:      &StreamEventMeta{IsError: isError},
 			Timestamp: ts,
 		})
 
 	case "message", "assistant", "text":
-		// Standard text response
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				events = append(events, StreamEvent{
-					Type:      "ai.answer",
+					Type:      "answer", // Frontend: ParrotEventType.ANSWER
 					Content:   block.Text,
 					Timestamp: ts,
 				})
 			} else if block.Type == "tool_use" {
+				meta := &StreamEventMeta{
+					ToolName: block.Name,
+					ToolID:   block.ID,
+				}
+				if block.Input != nil {
+					meta.Raw = map[string]any{"input": block.Input}
+				}
 				events = append(events, StreamEvent{
-					Type:      "ai.tool.call",
+					Type:      "tool_use", // Frontend: ParrotEventType.TOOL_USE
 					Content:   block.Name,
-					Meta:      map[string]any{"name": block.Name, "input": block.Input, "id": block.ID},
+					Meta:      meta,
 					Timestamp: ts,
 				})
 			}
@@ -146,9 +174,9 @@ func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []St
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "tool_result" {
 				events = append(events, StreamEvent{
-					Type:      "ai.tool.result",
+					Type:      "tool_result", // Frontend: ParrotEventType.TOOL_RESULT
 					Content:   block.Content,
-					Meta:      map[string]any{"is_error": block.IsError},
+					Meta:      &StreamEventMeta{IsError: block.IsError},
 					Timestamp: ts,
 				})
 			}
@@ -156,17 +184,16 @@ func (s *BiDirectionalStreamer) transformMessageToEvents(msg StreamMessage) []St
 
 	case "error":
 		events = append(events, StreamEvent{
-			Type:      "sys.error",
+			Type:      "error", // Frontend: ParrotEventType.ERROR
 			Content:   msg.Error,
 			Timestamp: ts,
 		})
 
 	default:
-		// Fallback for untyped text
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				events = append(events, StreamEvent{
-					Type:      "ai.answer",
+					Type:      "answer", // Frontend: ParrotEventType.ANSWER
 					Content:   block.Text,
 					Timestamp: ts,
 				})
