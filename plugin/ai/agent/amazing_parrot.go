@@ -37,6 +37,7 @@ type retrievalPlan struct {
 	scheduleStartTime   string
 	scheduleEndTime     string
 	freeTimeDate        string
+	scheduleAddParams   string
 	needsMemoSearch     bool
 	needsScheduleQuery  bool
 	needsScheduleAdd    bool
@@ -435,6 +436,35 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 		}()
 	}
 
+	// Execute schedule add
+	if plan.needsScheduleAdd {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			safeCallback(EventTypeToolUse, "正在创建日程...")
+
+			// The params are expected to be a JSON string from the planner
+			result, err := p.scheduleAddTool.Run(ctx, plan.scheduleAddParams)
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			if err != nil {
+				results["schedule_add_error"] = err.Error()
+				atomic.AddInt32(&errorCount, 1)
+				if callback != nil {
+					callback(EventTypeError, fmt.Sprintf("创建日程失败: %v", err))
+				}
+			} else {
+				results["schedule_add"] = result
+				if callback != nil {
+					callback(EventTypeToolResult, result)
+				}
+			}
+		}()
+	}
+
 	// Execute find free time
 	if plan.needsFreeTime {
 		wg.Add(1)
@@ -478,9 +508,9 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 		// Return partial results instead of waiting forever
 		slog.Warn("amazing_parrot: concurrent retrieval context cancelled",
 			"partial_results", len(results))
-	case <-time.After(30 * time.Second):
+	case <-time.After(45 * time.Second): // Increase timeout for write operations
 		// Hard timeout: something is stuck
-		return nil, fmt.Errorf("concurrent retrieval hard timeout after 30s")
+		return nil, fmt.Errorf("concurrent retrieval hard timeout after 45s")
 	}
 
 	// If all tools failed, return an error
@@ -492,6 +522,9 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			expectedResults++
 		}
 		if plan.needsScheduleQuery {
+			expectedResults++
+		}
+		if plan.needsScheduleAdd {
 			expectedResults++
 		}
 		if plan.needsFreeTime {
@@ -613,6 +646,15 @@ func (p *AmazingParrot) parseRetrievalPlan(response string, userInput string, no
 			plan.scheduleEndTime = todayEnd.Format(time.RFC3339)
 		}
 
+		// Parse schedule add
+		if strings.HasPrefix(line, "schedule_add:") || strings.HasPrefix(line, "SCHEDULE_ADD:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				plan.needsScheduleAdd = true
+				plan.scheduleAddParams = strings.TrimSpace(parts[1])
+			}
+		}
+
 		// Parse free time
 		if strings.HasPrefix(line, "find_free_time:") || strings.HasPrefix(line, "FIND_FREE_TIME:") {
 			plan.needsFreeTime = true
@@ -702,6 +744,13 @@ func (p *AmazingParrot) buildSynthesisPrompt(results map[string]string) string {
 		contextBuilder.WriteString(freeTimeResult)
 	}
 
+	if scheduleAddResult, ok := results["schedule_add"]; ok {
+		if contextBuilder.Len() > 0 {
+			contextBuilder.WriteString("\n")
+		}
+		contextBuilder.WriteString(scheduleAddResult)
+	}
+
 	return GetAmazingSynthesisPrompt(contextBuilder.String())
 }
 
@@ -716,7 +765,7 @@ func (p *AmazingParrot) SelfDescribe() *ParrotSelfCognition {
 	return &ParrotSelfCognition{
 		Name:  "amazing",
 		Emoji: "🦜",
-		Title: "折衷 (Echo) - 综合助手鹦鹉",
+		Title: "折衷 (Nexus) - 综合助手鹦鹉",
 		AvianIdentity: &AvianIdentity{
 			Species: "折衷鹦鹉 (Eclectus Parrot)",
 			Origin:  "新几内亚、澳大利亚北部",
