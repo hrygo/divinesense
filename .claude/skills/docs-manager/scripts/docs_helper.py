@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
-DivineSense 文档管理辅助脚本 v2.0
+DivineSense 文档管理辅助脚本 v3.0
 
-为 docs-manager skill 提供核心功能实现：
-1. Spec ID 自动生成
-2. 智能分类规则
-3. 重复内容检测 (优化版)
-4. 链接有效性检查
-5. 引用图构建
-6. JSON 输出模式 (AI 友好)
+⚠️ **已弃用** - 此脚本代表过度脚本化的反模式
 
-使用方式：
-  python docs_helper.py check        # 检查文档完整性
-  python docs_helper.py refs        # 构建引用图
-  python docs_helper.py refs --json # JSON 输出
-  python docs_helper.py next-spec   # 生成下一个 Spec ID
-  python docs_helper.py duplicates  # 检测重复内容
+**迁移路径**：
+- v3.0 (脚本驱动) → v4.0 (AI 驱动)
+- 所有逻辑已迁移到 SKILL.md 的 system prompt
+- AI 现在直接使用 Glob/Grep/Read 工具完成任务
+
+**保留原因**：
+- 作为参考实现展示"不推荐"的设计
+- 单元测试仍可用于验证 AI 的引用检测逻辑
+- 如需快速批量操作，可手动调用
+
+**推荐使用方式**：
+- 通过 Claude Code 使用 `/docs-check`、`docs-ref` 等命令
+- 让 AI 根据上下文动态决定执行策略
 """
 
 import argparse
@@ -37,9 +38,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# 引用检测关键词常量
+# 详见、参考、查看 - 常见中文引用关键词
+CHINESE_REF_KEYWORDS = "详见参考查看"
+ENGLISH_REF_KEYWORDS = "see refer to"
+
 
 def find_project_root() -> Path:
-    """通过 .git 目录或 go.mod 定位项目根目录"""
+    """通过标记文件定位项目根目录
+
+    按优先级查找以下标记文件:
+    1. .git - Git 仓库根目录
+    2. go.mod - Go 项目根目录
+    3. CLAUDE.md - DivineSense 特有文件
+
+    Returns:
+        Path: 项目根目录的绝对路径
+
+    Raises:
+        无异常，最多向上查找 10 层，降级使用固定深度
+    """
     # 从当前脚本开始向上查找
     current = Path(__file__).resolve().parent
     max_iterations = 10  # 防止无限循环
@@ -92,19 +110,55 @@ class DocNode:
             self.referenced_by = []
 
 
+# 排除目录常量
+EXCLUDED_DIRS = {
+    "node_modules", ".git", ".github",
+    "dist", "build", "target", "bin", "obj",
+    ".vscode", ".idea", "vendor",
+}
+
+
 def glob_docs(pattern: str = "**/*.md") -> List[Path]:
-    """扫描文档文件，排除 node_modules"""
+    """扫描文档文件，排除不需要的目录
+
+    Args:
+        pattern: glob 匹配模式，默认 "**/*.md"
+
+    Returns:
+        List[Path]: 文档文件列表（排除 node_modules, .git 等目录）
+    """
     docs = []
     for doc in DOCS_DIR.rglob(pattern):
-        # 排除不需要的目录
-        if "node_modules" in str(doc):
+        # 转换为字符串进行路径检查
+        doc_str = str(doc)
+
+        # 排除特定目录
+        if any(excluded in doc_str for excluded in EXCLUDED_DIRS):
             continue
+
+        # 排除隐藏文件/目录 (以 . 开头)
+        if any(part.startswith('.') for part in doc.parts):
+            continue
+
         docs.append(doc)
     return docs
 
 
 def extract_references(file_path: Path) -> List[Reference]:
-    """从文件中提取所有引用"""
+    """从文件中提取所有文档引用
+
+    支持的引用格式:
+    - Markdown: [文字](docs/xxx.md)
+    - @ 语法: @docs/xxx.md
+    - 平铺: 详见 docs/xxx.md / see docs/xxx.md
+    - URL: https://github.com/.../docs/xxx.md
+
+    Args:
+        file_path: 要分析的文档文件路径
+
+    Returns:
+        List[Reference]: 引用对象列表，包含源文件、目标、行号、类型等信息
+    """
     references = []
 
     try:
@@ -122,6 +176,9 @@ def extract_references(file_path: Path) -> List[Reference]:
     lines = content.split("\n")
 
     # 改进的引用正则模式
+    # 构建中文+英文关键词模式，使用常量便于维护
+    ref_keywords = f"[{CHINESE_REF_KEYWORDS}]|{ENGLISH_REF_KEYWORDS.replace(' ', '|')}"
+
     patterns = [
         # Markdown 链接
         (r"\[([^\]]+)\]\((docs/[^)]+\.md)\)", "markdown"),
@@ -130,28 +187,36 @@ def extract_references(file_path: Path) -> List[Reference]:
         (r"@docs/[\w/-]+\.md", "at_syntax"),
         # 绝对 URL
         (r"https://github\.com/[^/]+/[^/]+/docs/[\w/-]+\.md", "absolute_url"),
-        # 代码注释 - 改进的正则
-        (r"(?:[\u8be6\u89c1\u53c2\u8003]+|see|refer to)\s+[`'\"()]?docs/[\w/-]+\.md", "plain"),
+        # 代码注释 - 中文(详见参考查看) + 英文(see/refer to)
+        (rf"(?:{ref_keywords})\s+[`'\"()]?docs/[\w/-]+\.md", "plain"),
     ]
 
     for line_no, line in enumerate(lines, 1):
         for pattern, ref_type in patterns:
             try:
                 for match in re.finditer(pattern, line, re.IGNORECASE):
-                    target = match.group(0)
-
-                    # 清理目标路径
-                    if ref_type == "at_syntax":
-                        target = target.replace("@", "")
+                    # 根据引用类型提取目标
+                    if ref_type == "markdown":
+                        # Markdown 链接: group(2) 是路径
+                        if match.lastindex >= 2:
+                            target = match.group(2)
+                        else:
+                            continue
+                    elif ref_type == "at_syntax":
+                        target = match.group(0).replace("@", "")
                     elif ref_type == "plain":
                         # 提取 docs/xxx.md 部分
-                        doc_match = re.search(r"docs/[\w/-]+\.md", target)
+                        full_match = match.group(0)
+                        doc_match = re.search(r"docs/[\w/-]+\.md", full_match)
                         if doc_match:
                             target = doc_match.group(0)
                         else:
                             continue
                     elif ref_type == "absolute_url":
-                        target = "/docs/" + target.split("/docs/")[-1]
+                        url = match.group(0)
+                        target = "/docs/" + url.split("/docs/")[-1]
+                    else:
+                        target = match.group(0)
 
                     references.append(Reference(
                         source=str(file_path.relative_to(PROJECT_ROOT)),
@@ -167,7 +232,15 @@ def extract_references(file_path: Path) -> List[Reference]:
 
 
 def build_reference_graph() -> Dict[str, DocNode]:
-    """构建文档引用图"""
+    """构建文档引用关系图
+
+    扫描所有文档，提取引用关系，构建双向引用图:
+    - references: 该文档引用的其他文档
+    - referenced_by: 哪些文档引用了该文档
+
+    Returns:
+        Dict[str, DocNode]: 以文档路径为键的引用图
+    """
     graph = {}
     docs = glob_docs()
 
@@ -211,7 +284,14 @@ def build_reference_graph() -> Dict[str, DocNode]:
 
 
 def check_links() -> Dict[str, List[str]]:
-    """检查链接有效性"""
+    """检查文档链接有效性
+
+    构建引用图并验证每个引用的目标是否存在。
+
+    Returns:
+        Dict[str, List[str]]: 断链信息字典
+            - broken_links: 断链列表，每项包含 source, line, target, type
+    """
     issues = defaultdict(list)
     graph = build_reference_graph()
     existing_docs = set(graph.keys())
@@ -239,7 +319,17 @@ def check_links() -> Dict[str, List[str]]:
 
 
 def get_next_spec_id(phase: int, team: str) -> str:
-    """生成下一个 Spec ID"""
+    """生成下一个 Spec ID
+
+    扫描指定 phase 和 team 目录，找出最大的 ID 号并加一。
+
+    Args:
+        phase: Sprint 阶段 (1, 2, 3)
+        team: 团队标识 ("a", "b", "c")
+
+    Returns:
+        str: 格式为 P{phase}-{team}{序号:03d} 的 Spec ID
+    """
     pattern = f"P{phase}-{team}*.md"
     team_dir = DOCS_DIR / "specs" / f"phase-{phase}" / f"team-{team}"
 
@@ -260,8 +350,12 @@ def get_next_spec_id(phase: int, team: str) -> str:
     return f"P{phase}-{team}{max_id + 1:03d}"
 
 
-def detect_duplicates_fast(threshold: float = 0.7) -> List[Tuple[str, str, float]]:
-    """快速检测重复内容 - 仅检查前 1000 个字符"""
+def detect_duplicates_fast(threshold: float = 0.85) -> List[Tuple[str, str, float]]:
+    """快速检测重复内容 - 仅检查前 1000 个字符
+
+    Args:
+        threshold: 相似度阈值，默认 0.85 (85%)，降低会产生更多误报
+    """
     duplicates = []
     docs = glob_docs()
     contents = {}
@@ -299,7 +393,21 @@ def detect_duplicates_fast(threshold: float = 0.7) -> List[Tuple[str, str, float
 
 
 def classify_document(file_path: Path) -> Tuple[str, str]:
-    """智能分类文档"""
+    """智能分类文档
+
+    根据文件名和路径判断文档类型:
+    - core: 00- 开头的核心路线图
+    - reports: *-research.md 研究报告
+    - roadmaps: *-roadmap.md 路线图
+    - practices: PRACTICE* 最佳实践
+    - Phase X: specs/phase-X/team-Y/ 规格
+
+    Args:
+        file_path: 文档路径（相对于 DOCS_DIR）
+
+    Returns:
+        Tuple[str, str]: (分类, 描述)
+    """
     name = file_path.name
     rel_path = str(file_path.relative_to(DOCS_DIR))
 
