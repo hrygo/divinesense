@@ -214,14 +214,15 @@ type StreamEventMeta struct {
 
 **Server -> Client:**
 
-| Event Type       | Payload                                      | Desc                   |
-| :--------------- | :------------------------------------------- | :--------------------- |
-| `ai.thinking`    | `{content: "..."}`                           | 思考过程 (增量)        |
-| `ai.tool.call`   | `{content: "Name", meta: {name, input, id}}` | 工具调用               |
-| `ai.tool.result` | `{content: "...", meta: {is_error}}`         | 工具结果               |
-| `ai.answer`      | `{content: "..."}`                           | 最终回答 (增量)        |
-| `sys.log`        | `{content: "..."}`                           | 原始系统日志 (非 JSON) |
-| `sys.error`      | `{content: "..."}`                           | 系统级错误             |
+| Event Type    | Payload                                      | Desc                   |
+| :------------ | :------------------------------------------- | :--------------------- |
+| `thinking`    | `{content: "..."}`                           | 思考过程 (增量)        |
+| `tool_use`    | `{content: "Name", meta: {name, input, id}}` | 工具调用               |
+| `tool_result` | `{content: "...", meta: {is_error}}`         | 工具结果               |
+| `answer`      | `{content: "..."}`                           | 最终回答 (增量)        |
+| `error`       | `{content: "..."}`                           | 系统级错误             |
+
+> **Note**: Event types align with frontend `ParrotEventType` enum for compatibility.
 
 ## 5. 关键流程 (Key Workflows)
 
