@@ -317,6 +317,7 @@ const AIChat = () => {
             }
           },
           onToolUse: (toolName) => {
+            console.debug("[Geek Mode] Tool use event:", toolName);
             setCapabilityStatus("processing");
             // Accumulate tool calls for this message
             toolCallsRef.current.push(toolName);

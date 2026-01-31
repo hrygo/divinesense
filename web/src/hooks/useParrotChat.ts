@@ -111,6 +111,10 @@ export function useParrotChat() {
  * @param callbacks - Optional callbacks to handle events
  */
 function handleParrotEvent(eventType: string, eventData: string, callbacks?: ParrotChatCallbacks) {
+  // Debug log for tool_use events
+  if (eventType === "tool_use" || eventType === "tool_result") {
+    console.debug("[useParrotChat] Event:", eventType, "Data:", eventData);
+  }
   try {
     switch (eventType) {
       case ParrotEventType.THINKING:

@@ -43,6 +43,10 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Detect macOS for correct shortcut display
+  const isMac = typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
+  const sendShortcut = isMac ? "⌘+Enter" : "Ctrl+Enter";
+
   // Handle mobile keyboard visibility
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
@@ -189,7 +193,7 @@ export function ChatInput({
             {/* Shortcut hint */}
             <span className="hidden sm:inline text-xs text-muted-foreground">
               <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">Ctrl+Enter</kbd> 发送
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 发送
             </span>
             {/* Mode Cycle Button - mobile only, shows mode selector */}
             {onModeChange && currentMode !== "normal" && (
@@ -202,7 +206,7 @@ export function ChatInput({
           <div className="flex items-center justify-end mb-2">
             <span className="hidden sm:inline text-xs text-muted-foreground">
               <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">Ctrl+Enter</kbd> 发送
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 发送
             </span>
           </div>
         )}
@@ -244,7 +248,7 @@ export function ChatInput({
             )}
             onClick={() => onSend()}
             disabled={!value.trim() || isTyping || disabled}
-            aria-label="Ctrl+Enter 发送"
+            aria-label={`${sendShortcut} 发送`}
           >
             {currentMode === "geek" && value.trim() ? (
               <Terminal className="w-5 h-5" />
