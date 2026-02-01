@@ -1,99 +1,40 @@
 #!/bin/bash
 #
-# DivineSense 一键安装脚本 v4.0
+# DivineSense 一键安装脚本
 #
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# 获取脚本目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="${SCRIPT_DIR}/lib"
 
-# Config
+# 加载共享函数库
+if [ -f "${LIB_DIR}/common.sh" ]; then
+    source "${LIB_DIR}/common.sh"
+else
+    echo "错误: 找不到共享库 ${LIB_DIR}/common.sh"
+    exit 1
+fi
+
+# 配置变量（可通过环境变量覆盖）
 INTERACTIVE=false
 DEPLOY_MODE="${DEPLOY_MODE:-binary}"
 PORT="${PORT:-5230}"
 DB_TYPE="${DB_TYPE:-docker}"
+ENABLE_AI="${ENABLE_AI:-true}"
+ENABLE_GEEK="${ENABLE_GEEK:-true}"
+ENABLE_EVOLUTION="${ENABLE_EVOLUTION:-false}"
 
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${CYAN}[STEP]${NC} $1"; }
-
-print_banner() {
-    echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}  ${GREEN}DivineSense 安装向导 v4.0${NC}                                  ${CYAN}║${NC}"
-    echo -e "${CYAN}╠════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${CYAN}║${NC}  ${YELLOW}AI 驱动的个人第二大脑${NC}                                      ${CYAN}║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-}
-
-# Check root
-check_root() {
-    if [ "$EUID" -ne 0 ]; then
-        log_error "需要 root 权限"
-        exit 1
-    fi
-}
-
-# Detect OS
-detect_os() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        OS="$ID"
+# 获取项目版本（如果存在）
+get_project_version() {
+    if [ -f "${SCRIPT_DIR}/../internal/version/version.go" ]; then
+        grep -oP '(?<=Version = ")[^"]+' "${SCRIPT_DIR}/../internal/version/version.go" 2>/dev/null || echo "dev"
     else
-        log_error "无法检测操作系统"
-        exit 1
-    fi
-    
-    case "$OS" in
-        alpine|arch) PKG_MANAGER="apk" ;;
-        debian|ubuntu) PKG_MANAGER="apt" ;;
-        centos|rhel|fedora|rocky) PKG_MANAGER="yum" ;;
-        *) PKG_MANAGER="unknown" ;;
-    esac
-}
-
-# Install dependencies
-install_base_tools() {
-    log_step "安装依赖..."
-    case "$PKG_MANAGER" in
-        apt)
-            export DEBIAN_FRONTEND=noninteractive
-            apt-get update -qq
-            apt-get install -y -qq curl git 2>/dev/null
-            ;;
-        yum)
-            yum install -y -q curl git 2>/dev/null
-            ;;
-        apk)
-            apk add --no-cache curl git 2>/dev/null
-            ;;
-    esac
-    log_success "依赖已安装"
-}
-
-# Generate password
-generate_password() {
-    if command -v openssl &>/dev/null; then
-        openssl rand -hex 16 | head -c 20
-    else
-        tr -dc A-Za-z0-9 </dev/urandom 2>/dev/null | head -c 20
+        echo "dev"
     fi
 }
 
-# Get server IP
-get_server_ip() {
-    curl -s --connect-timeout 3 -4 ifconfig.me 2>/dev/null || \
-    curl -s --connect-timeout 3 -4 icanhazip.com 2>/dev/null || \
-    hostname -I | awk '{print $1}'
-}
+PROJECT_VERSION=$(get_project_version)
 
 # ============================================================================
 # Interactive Wizard
@@ -103,7 +44,7 @@ run_interactive_wizard() {
     echo ""
     echo -e "${GREEN}欢迎使用 DivineSense!${NC}"
     echo ""
-    
+
     # Deploy mode
     echo ""
     echo "选择部署模式:"
@@ -116,11 +57,11 @@ run_interactive_wizard() {
         2|"docker") DEPLOY_MODE="docker" ;;
         *) DEPLOY_MODE="binary" ;;
     esac
-    
+
     # Port
     echo ""
     PORT=$(prompt "服务端口" "5230")
-    
+
     # Database
     echo ""
     echo "数据库方式:"
@@ -135,43 +76,44 @@ run_interactive_wizard() {
         3|"remote") DB_TYPE="remote" ;;
         *) DB_TYPE="docker" ;;
     esac
-    
+
     # AI features
     echo ""
     echo -ne "启用 AI 功能? [Y/n]: "
     read -n 1 -r ai_confirm
     ENABLE_AI=true
     [[ ! "$ai_confirm" =~ ^[Yy]$ ]] && [[ -n "$ai_confirm" ]] && ENABLE_AI=false
-    
+
     # Geek Mode
     echo ""
     echo -ne "启用 Geek Mode? [Y/n]: "
     read -n 1 -r geek_confirm
     ENABLE_GEEK=true
     [[ ! "$geek_confirm" =~ ^[Yy]$ ]] && [[ -n "$geek_confirm" ]] && ENABLE_GEEK=false
-    
+
     # Evolution Mode
     echo ""
     echo -ne "启用 Evolution Mode (仅管理员)? [y/N]: "
     read -n 1 -r evo_confirm
     ENABLE_EVOLUTION=false
     [[ "$evo_confirm" =~ ^[Yy]$ ]] && ENABLE_EVOLUTION=true
-    
+
     # Admin account
     echo ""
     ADMIN_USERNAME=$(prompt "管理员用户名" "admin")
     ADMIN_PASSWORD=$(prompt "管理员密码 (留空自动生成)" "")
     [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD=$(generate_password)
-    
+
     # Confirm
     echo ""
     print_box "配置确认"
     echo ""
-    echo "  模式:   $DEPLOY_MODE"
-    echo "  端口:   $PORT"
-    echo "  数据库: $DB_TYPE"
-    echo "  AI:     $ENABLE_AI"
-    echo "  Geek:   $ENABLE_GEEK"
+    echo "  模式:    $DEPLOY_MODE"
+    echo "  端口:    $PORT"
+    echo "  数据库:  $DB_TYPE"
+    echo "  AI:      $ENABLE_AI"
+    echo "  Geek:    $ENABLE_GEEK"
+    echo "  Evolution: $ENABLE_EVOLUTION"
     echo ""
     echo -ne "确认开始安装? [Y/n]: "
     read -n 1 -r confirm
@@ -179,20 +121,6 @@ run_interactive_wizard() {
         log_info "已取消"
         exit 0
     fi
-}
-
-prompt() {
-    local default="$2"
-    echo -ne "${CYAN}▸${NC} $1 [${GREEN}${default}${NC}]: "
-    read -r result
-    echo "${result:-$default}"
-}
-
-print_box() {
-    local text="$1"
-    echo -e "${CYAN}┌$(printf '─%.0s' "$((40))")┐${NC}"
-    echo -e "${CYAN}│${NC} ${text}$(printf ' %.0s' "$((39 - ${#text}))")${CYAN}│${NC}"
-    echo -e "${CYAN}└$(printf '─%.0s' "$((40))")┘${NC}"
 }
 
 # ============================================================================
@@ -210,11 +138,11 @@ install_docker_mode() {
     log_success "Docker 已就绪"
 
     log_step "下载 DivineSense..."
-    mkdir -p /opt/divinesense
-    cd /opt/divinesense
+    mkdir -p "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
 
     if [ ! -d .git ]; then
-        rm -rf /opt/divinesense/* 2>/dev/null || true
+        rm -rf "${INSTALL_DIR:?}"/* 2>/dev/null || true
         if ! git clone --depth 1 https://github.com/hrygo/divinesense.git . 2>/dev/null; then
             log_error "Git clone 失败"
             exit 1
@@ -246,69 +174,45 @@ EOF
 install_binary_mode() {
     log_step "下载 DivineSense..."
 
-    local arch=$(uname -m)
-    case "$arch" in
-        x86_64) BINARY_ARCH="amd64" ;;
-        aarch64) BINARY_ARCH="arm64" ;;
-        *) log_error "不支持的架构: $arch"; exit 1 ;;
-    esac
+    local BINARY_ARCH=$(detect_arch)
 
-    mkdir -p /opt/divinesense/{bin,data,logs,backups,docker}
-    mkdir -p /etc/divinesense
+    mkdir -p "$INSTALL_DIR"/{bin,data,logs,backups,docker}
+    mkdir -p "$CONFIG_DIR"
 
     if ! id divinesense &>/dev/null; then
-        useradd -r -s /bin/false -d /opt/divinesense divinesense
+        useradd -r -s /bin/false -d "$INSTALL_DIR" divinesense
     fi
 
+    # 使用共享下载函数
     local download_url="https://github.com/hrygo/divinesense/releases/latest/download/divinesense-linux-${BINARY_ARCH}"
-    local checksum_url="${download_url}.sha256"
-    local tmp_binary="/tmp/divinesense-${BINARY_ARCH}"
-    local tmp_checksum="/tmp/divinesense-${BINARY_ARCH}.sha256"
-
-    # 下载二进制和校验和
-    log_info "从 $download_url 下载..."
-    if ! curl -fsSL "$download_url" -o "$tmp_binary"; then
-        log_error "下载失败"
+    if ! download_binary "$download_url" "$INSTALL_DIR/bin/divinesense" "$BINARY_ARCH"; then
+        log_error "下载二进制文件失败"
         exit 1
     fi
 
-    # 下载校验和（可选）
-    if curl -fsSL "$checksum_url" -o "$tmp_checksum" 2>/dev/null; then
-        cd /tmp
-        if sha256sum -c "$tmp_checksum" 2>/dev/null; then
-            log_success "校验和验证通过"
-        else
-            log_warn "校验和验证失败，继续安装..."
-        fi
-    fi
-
-    # 移动到目标位置
-    mv "$tmp_binary" /opt/divinesense/bin/divinesense
-    rm -f "$tmp_checksum"
-    chmod +x /opt/divinesense/bin/divinesense
-    
     local db_password=$(generate_password)
     local server_ip=$(get_server_ip)
-    
-    cat > /etc/divinesense/config << EOF
+
+    # 使用交互式配置的值
+    cat > "$CONFIG_DIR/config" << EOF
 DIVINESENSE_INSTANCE_URL=http://${server_ip}:${PORT}
 DIVINESENSE_PORT=${PORT}
 DIVINESENSE_MODE=prod
-DIVINESENSE_DATA=/opt/divinesense/data
+DIVINESENSE_DATA=${INSTALL_DIR}/data
 DIVINESENSE_DRIVER=postgres
 DIVINESENSE_DSN=postgres://divinesense:${db_password}@localhost:25432/divinesense?sslmode=disable
 DIVINESENSE_AI_ENABLED=${ENABLE_AI}
 DIVINESENSE_CLAUDE_CODE_ENABLED=${ENABLE_GEEK}
-DIVINESENSE_CLAUDE_CODE_WORKDIR=/opt/divinesense/data
+DIVINESENSE_CLAUDE_CODE_WORKDIR=${INSTALL_DIR}/data
 DIVINESENSE_EVOLUTION_ENABLED=${ENABLE_EVOLUTION}
 DIVINESENSE_EVOLUTION_ADMIN_ONLY=true
 EOF
-    
-    echo "$db_password" > /etc/divinesense/.db_password
-    chmod 600 /etc/divinesense/.db_password
-    
+
+    echo "$db_password" > "$CONFIG_DIR/.db_password"
+    chmod 600 "$CONFIG_DIR/.db_password"
+
     # PostgreSQL in Docker
-    cat > /opt/divinesense/docker/postgres.yml << EOF
+    cat > "$INSTALL_DIR/docker/postgres.yml" << EOF
 version: '3.8'
 services:
   postgres:
@@ -326,19 +230,19 @@ services:
 volumes:
   postgres_data:
 EOF
-    
-    cat > /opt/divinesense/docker/.env << EOF
+
+    cat > "$INSTALL_DIR/docker/.env" << EOF
 POSTGRES_PASSWORD=${db_password}
 EOF
-    
+
     if command -v docker &>/dev/null; then
-        cd /opt/divinesense/docker
+        cd "$INSTALL_DIR/docker"
         docker compose -f postgres.yml up -d
         sleep 5
     fi
-    
+
     # Systemd service
-    cat > /etc/systemd/system/divinesense.service << EOF
+    cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
 Description=DivineSense AI-Powered Personal Second Brain
 After=network-online.target
@@ -347,21 +251,21 @@ Wants=network-online.target
 [Service]
 Type=exec
 User=divinesense
-EnvironmentFile=-/etc/divinesense/config
-ExecStart=/opt/divinesense/bin/divinesense
+EnvironmentFile=-${CONFIG_DIR}/config
+ExecStart=${INSTALL_DIR}/bin/divinesense
 Restart=always
 RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target
 EOF
-    
+
     systemctl daemon-reload
-    systemctl enable divinesense
-    systemctl start divinesense
-    
-    chown -R divinesense:divinesense /opt/divinesense
-    
+    systemctl enable "$SERVICE_NAME"
+    systemctl start "$SERVICE_NAME"
+
+    chown -R divinesense:divinesense "$INSTALL_DIR"
+
     log_success "安装完成"
 }
 
@@ -375,44 +279,47 @@ main() {
         case "$1" in
             --interactive|-i) INTERACTIVE="true" ;;
             --mode=*) DEPLOY_MODE="${1#*=}" ;;
+            --port=*) PORT="${1#*=}" ;;
             --help|-h)
-                echo "用法: $0 [--interactive] [--mode=binary|docker]"
+                echo "用法: $0 [选项]"
                 echo ""
-                echo "  --interactive, -i  交互式配置向导"
-                echo "  --mode=MODE       部署模式"
+                echo "选项:"
+                echo "  --interactive, -i     交互式配置向导"
+                echo "  --mode=MODE          部署模式 (binary|docker)"
+                echo "  --port=PORT          服务端口 (默认: 5230)"
+                echo "  --help, -h            显示此帮助"
+                echo ""
+                echo "环境变量:"
+                echo "  DEPLOY_MODE           部署模式 (binary|docker)"
+                echo "  PORT                  服务端口"
+                echo "  ENABLE_AI            启用 AI 功能 (true|false)"
+                echo "  ENABLE_GEEK          启用 Geek Mode (true|false)"
+                echo "  ENABLE_EVOLUTION     启用 Evolution Mode (true|false)"
+                echo "  DIVINE_INSTALL_DIR    安装目录 (默认: /opt/divinesense)"
+                echo "  DIVINE_CONFIG_DIR     配置目录 (默认: /etc/divinesense)"
                 exit 0
                 ;;
         esac
         shift
     done
-    
-    print_banner
+
+    print_banner "$PROJECT_VERSION"
     check_root
     detect_os
     install_base_tools
-    
+
     if [ "$INTERACTIVE" = "true" ]; then
         run_interactive_wizard
     fi
-    
+
     if [ "$DEPLOY_MODE" = "docker" ]; then
         install_docker_mode
     else
         install_binary_mode
     fi
-    
+
     # Show result
-    echo ""
-    print_box "安装完成"
-    echo ""
-    local server_ip=$(get_server_ip)
-    echo -e "  访问: ${YELLOW}http://${server_ip}:${PORT}${NC}"
-    echo ""
-    echo -e "  管理:"
-    echo -e "    状态: ${CYAN}systemctl status divinesense${NC}"
-    echo -e "    日志: ${CYAN}journalctl -u divinesense -f${NC}"
-    echo -e "    重启: ${CYAN}systemctl restart divinesense${NC}"
-    echo ""
+    show_complete "$PORT"
 }
 
 main "$@"

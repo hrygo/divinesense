@@ -20,51 +20,44 @@
 
 set -e
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# 获取脚本目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="${SCRIPT_DIR}/../lib"
 
-# 配置
-INSTALL_DIR="/opt/divinesense"
-CONFIG_DIR="/etc/divinesense"
-BACKUP_DIR="${INSTALL_DIR}/backups"
-SERVICE_NAME="divinesense"
+# 加载共享函数库
+if [ -f "${LIB_DIR}/common.sh" ]; then
+    source "${LIB_DIR}/common.sh"
+else
+    echo "错误: 找不到共享库 ${LIB_DIR}/common.sh"
+    # 降级：内联最小必需函数
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+    INSTALL_DIR="${DIVINE_INSTALL_DIR:-/opt/divinesense}"
+    CONFIG_DIR="${DIVINE_CONFIG_DIR:-/etc/divinesense}"
+    BACKUP_DIR="${INSTALL_DIR}/backups"
+    SERVICE_NAME="divinesense"
+    CURL_CONNECT_TIMEOUT=30
+    CURL_MAX_TIME=300
+    log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+    log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
+    log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+    log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+fi
+
+# GitHub 配置
 DOWNLOAD_URL="${DOWNLOAD_URL:-https://github.com/hrygo/divinesense/releases}"
 GITHUB_API_URL="${GITHUB_API_URL:-https://api.github.com/repos/hrygo/divinesense}"
-
-# 网络超时设置
-CURL_CONNECT_TIMEOUT=30
-CURL_MAX_TIME=300
-
-# 日志函数
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # 检查是否已安装
 check_installed() {
     if [ ! -f "${INSTALL_DIR}/bin/divinesense" ]; then
         log_error "DivineSense 未安装"
-        log_info "请先运行: curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --mode=binary"
+        log_info "请先运行: curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=binary"
         exit 1
     fi
-}
-
-# 检测架构
-detect_arch() {
-    ARCH=$(uname -m)
-    case "$ARCH" in
-        x86_64) BINARY_ARCH="amd64" ;;
-        aarch64|arm64) BINARY_ARCH="arm64" ;;
-        *)
-            log_error "不支持的架构: $ARCH"
-            exit 1
-            ;;
-    esac
 }
 
 # 获取当前版本
@@ -78,37 +71,11 @@ get_latest_version() {
         "${GITHUB_API_URL}/releases/latest" | grep -oP '"tag_name":\s*"v?\K[^"]+' | head -1
 }
 
-# 验证下载文件
-verify_checksum() {
-    local binary_file="$1"
-    local checksum_file="$2"
-
-    if [ ! -f "$checksum_file" ]; then
-        log_warn "校验文件不存在，跳过验证"
-        return 0
-    fi
-
-    cd "$(dirname "$binary_file")"
-    local expected_checksum=$(cat "$checksum_file" | cut -d' ' -f1)
-    local actual_checksum=$(sha256sum "$(basename "$binary_file")" | cut -d' ' -f1)
-
-    if [ "$expected_checksum" != "$actual_checksum" ]; then
-        log_error "校验和不匹配!"
-        log_error "预期: $expected_checksum"
-        log_error "实际: $actual_checksum"
-        return 1
-    fi
-
-    log_success "校验和验证通过"
-    return 0
-}
-
 # 升级服务
 upgrade() {
     log_info "升级 DivineSense..."
 
     check_installed
-    detect_arch
 
     local current_version=$(get_current_version)
     local latest_version=$(get_latest_version)
@@ -126,42 +93,20 @@ upgrade() {
     backup_auto
 
     # 下载新二进制
+    local BINARY_ARCH=$(detect_arch)
     local binary_name="divinesense-${latest_version}-linux-${BINARY_ARCH}"
     local download_url="${DOWNLOAD_URL}/download/${latest_version}/${binary_name}"
-    local tmp_file="/tmp/divinesense-upgrade"
-    local checksum_file="/tmp/divinesense-upgrade.sha256"
 
     log_info "下载 ${latest_version}..."
 
-    # 下载二进制
-    if ! curl -fsSL \
-        --connect-timeout $CURL_CONNECT_TIMEOUT \
-        --max-time $CURL_MAX_TIME \
-        "$download_url" -o "$tmp_file"; then
+    if ! download_binary "$download_url" "${INSTALL_DIR}/bin/divinesense" "$BINARY_ARCH"; then
         log_error "下载失败"
         exit 1
     fi
 
-    # 下载校验和
-    curl -fsSL \
-        --connect-timeout $CURL_CONNECT_TIMEOUT \
-        --max-time $CURL_MAX_TIME \
-        "${download_url}.sha256" -o "$checksum_file" 2>/dev/null || true
-
-    # 验证校验和
-    if ! verify_checksum "$tmp_file" "$checksum_file"; then
-        rm -f "$tmp_file" "$checksum_file"
-        exit 1
-    fi
-    rm -f "$checksum_file"
-
     # 停止服务
     log_info "停止服务..."
     systemctl stop "$SERVICE_NAME"
-
-    # 替换二进制
-    mv "$tmp_file" "${INSTALL_DIR}/bin/divinesense"
-    chmod +x "${INSTALL_DIR}/bin/divinesense"
 
     # 启动服务
     log_info "启动服务..."
@@ -443,6 +388,10 @@ show_help() {
     echo "  backup    - 备份数据库"
     echo "  restore   - 恢复数据库 <文件>"
     echo "  uninstall - 卸载 DivineSense"
+    echo ""
+    echo "环境变量:"
+    echo "  DIVINE_INSTALL_DIR  安装目录 (默认: /opt/divinesense)"
+    echo "  DIVINE_CONFIG_DIR   配置目录 (默认: /etc/divinesense)"
     echo ""
     echo "示例:"
     echo "  $0 status              # 查看状态"

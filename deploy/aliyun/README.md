@@ -42,15 +42,15 @@ cd /opt/divinesense && ./deploy.sh restart
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              2C2G 服务器                         │
+│              服务器                               │
 │                                                 │
 │  ┌──────────────────────────────────────────┐  │
 │  │           Docker Network                 │  │
 │  │                                          │  │
 │  │  ┌──────────────┐  ┌─────────────────┐  │  │
 │  │  │  PostgreSQL  │  │   DivineSense   │  │  │
-│  │  │  pg16+vector │  │   0.75核/800M  │  │  │
-│  │  │ 0.75核/400M  │──│  :5230 ────────►│───┼──► 公网
+│  │  │  pg16+vector │  │   自定义资源    │  │  │
+│  │  │              │──│  :5230 ────────►│───┼──► 公网
 │  │  │  :5432       │  │                 │  │  │
 │  │  └──────────────┘  └─────────────────┘  │  │
 │  └──────────────────────────────────────────┘  │
@@ -59,13 +59,15 @@ cd /opt/divinesense && ./deploy.sh restart
 └─────────────────────────────────────────────────┘
 ```
 
-**资源分配 (2C2G 优化)**
+**资源分配建议**
 
-| 服务        | CPU    | 内存 | 说明        |
-| ----------- | ------ | ---- | ----------- |
-| PostgreSQL  | 0.75核 | 400M | 数据库      |
-| DivineSense | 0.75核 | 800M | 应用服务    |
-| 系统预留    | 0.5核  | 512M | OS + Docker |
+| 服务        | CPU    | 内存    | 说明        |
+| ----------- | ------ | ------- | ----------- |
+| PostgreSQL  | 可配置 | 可配置   | 数据库      |
+| DivineSense | 可配置 | 可配置   | 应用服务    |
+| 系统预留    | >=0.5核 | >=512M  | OS + Docker |
+
+> 💡 **提示**：根据服务器配置调整资源分配，建议预留至少 512MB 给系统。
 
 ---
 
@@ -195,24 +197,33 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/insta
 
 ## 文件位置
 
+**默认路径** (可通过环境变量 `DIVINE_INSTALL_DIR` 和 `DIVINE_CONFIG_DIR` 自定义)
+
 ### Docker 模式
 ```
-/opt/divinesense/
-├── .env.prod          # 环境配置
-├── .db_password       # 数据库密码
-├── deploy.sh          # 运维脚本
-└── backups/           # 备份目录
+/opt/divinesense/         # DIVINE_INSTALL_DIR
+├── .env.prod             # 环境配置
+├── .db_password          # 数据库密码
+├── deploy.sh             # 运维脚本
+└── backups/              # 备份目录
 ```
 
 ### 二进制模式
 ```
-/opt/divinesense/      # 安装目录
-├── bin/               # 二进制文件
-├── data/              # 数据目录
-├── logs/              # 日志目录
-└── deploy-binary.sh   # 运维脚本
+/opt/divinesense/         # DIVINE_INSTALL_DIR (默认)
+├── bin/                  # 二进制文件
+│   └── divinesense
+├── data/                 # 数据目录
+├── logs/                 # 日志目录
+├── backups/              # 数据库备份
+└── docker/               # PostgreSQL Docker 配置 (可选)
+    ├── postgres.yml
+    └── .env
 
-/etc/divinesense/
-├── config             # 配置文件
-└── .db_password       # 数据库密码
+/etc/divinesense/         # DIVINE_CONFIG_DIR (默认)
+├── config                # 配置文件
+└── .db_password          # 数据库密码 (600 权限)
+
+/etc/systemd/system/      # systemd 服务
+└── divinesense.service
 ```
