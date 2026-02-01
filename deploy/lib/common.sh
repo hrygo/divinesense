@@ -124,9 +124,10 @@ print_banner() {
 print_box() {
     local text="$1"
     local width="${2:-40}"
-    echo -e "${CYAN}┌$(printf '─%.0s' "$(seq 1 $width)")┐${NC}"
-    echo -e "${CYAN}│${NC} ${text}$(printf ' %.0s' "$(seq 1 $((width - ${#text} - 1))"))${CYAN}│${NC}"
-    echo -e "${CYAN}└$(printf '─%.0s' "$(seq 1 $width)")┘${NC}"
+    local padding=$((width - ${#text} - 1))
+    echo -e "${CYAN}┌$(printf '─%.0s' $(seq 1 $width))┐${NC}"
+    echo -e "${CYAN}│${NC} ${text}$(printf ' %.0s' $(seq 1 $padding))${CYAN}│${NC}"
+    echo -e "${CYAN}└$(printf '─%.0s' $(seq 1 $width))┘${NC}"
 }
 
 # 交互式提示
