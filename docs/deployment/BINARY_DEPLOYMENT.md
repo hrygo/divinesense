@@ -1,25 +1,42 @@
 # DivineSense 部署指南
 
-本指南介绍 DivineSense 在阿里云 2C2G 服务器的两种部署方式。
+本指南介绍 DivineSense 的多种部署方式。
 
 ---
 
-## 部署模式对比
+## 部署方式概览
 
-| 特性           | Docker 模式    | 二进制模式          |
-| :------------- | :------------- | :------------------ |
-| Geek Mode 支持 | ⚠️ 需额外配置   | ✅ 原生支持          |
-| 资源占用       | 高 (容器开销)  | 低                  |
-| 启动速度       | 慢             | 快                  |
-| 更新方式       | 重建镜像       | 替换二进制          |
-| 数据隔离       | 容器隔离       | 需手动配置          |
-| 适用场景       | 快速部署、测试 | Geek Mode、生产环境 |
+| 部署方式 | 说明 | Geek Mode | Evolution Mode |
+|:--------|:-----|:-----------|:--------------|
+| **交互式向导** | TUI 引导式配置，推荐新手 | ✅ 支持 | ✅ 支持 |
+| **Docker 模式** | 容器化一键部署 | ⚠️ 需配置 | ❌ 不支持 |
+| **二进制模式** | 原生部署，性能最优 | ✅ 原生支持 | ✅ 原生支持 |
 
 ---
 
-## 快速安装
+## 快速开始
 
-### 统一安装脚本
+### 方式 1: 交互式向导（推荐）
+
+```bash
+# 下载并运行交互式向导
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/interactive/wizard.sh | sudo bash
+```
+
+向导将引导您完成：
+- 系统检查与依赖检测
+- 部署模式选择
+- 数据库配置
+- AI 功能配置
+- Geek Mode 配置
+- Evolution Mode 配置（可选）
+- 管理员账户设置
+- 配置摘要确认
+- 自动安装
+
+详细说明：[交互式部署向导文档](INTERACTIVE_WIZARD.md)
+
+### 方式 2: 一键脚本
 
 ```bash
 # Docker 模式 (默认)
@@ -35,8 +52,22 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyu
 ### 查看帮助
 
 ```bash
-./deploy/aliyun/install.sh --help
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --help
 ```
+
+---
+
+## 部署模式对比
+
+| 特性           | Docker 模式    | 二进制模式          |
+| :------------- | :------------- | :------------------ |
+| Geek Mode 支持 | ⚠️ 需额外配置   | ✅ 原生支持          |
+| Evolution Mode 支持 | ❌ 不支持 | ✅ 原生支持 |
+| 资源占用       | 高 (容器开销)  | 低                  |
+| 启动速度       | 慢             | 快                  |
+| 更新方式       | 重建镜像       | 替换二进制          |
+| 数据隔离       | 容器隔离       | 需手动配置          |
+| 适用场景       | 快速部署、测试 | Geek Mode、生产环境 |
 
 ---
 
