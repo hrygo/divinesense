@@ -27,11 +27,6 @@ const (
 	// Maximum length of non-JSON output to log.
 	// 非 JSON 输出的最大日志长度。
 	maxNonJSONOutputLength = 100
-
-	// Maximum time to wait for callback to complete.
-	// If callback takes longer, it will be cancelled to prevent deadlock.
-	// 回调最大执行时间。超过此时间将被取消以防止死锁。
-	callbackTimeout = 5 * time.Second
 )
 
 // UUID v5 namespace for DivineSense session mapping.
