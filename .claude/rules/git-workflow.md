@@ -85,14 +85,54 @@ git checkout -b refactor/789-remove-dead-code
 
 ## 3. 开发与提交
 
-### 3.1 提交前检查
+### 3.1 定期同步 main (重要)
+
+**功能分支开发期间，定期 rebase main 以避免冲突累积**：
+
+```bash
+# 在功能分支上，每天或每次 main 有新提交时执行
+git fetch origin
+git rebase origin/main
+```
+
+**为什么需要定期 rebase？**
+
+```
+时间线 (不 rebase):
+────────────────────────────────────────────────────────────→
+main:     A ── B ── C ── D ── E
+feature:          └─ X ── Y ── Z (偏离越来越远)
+                              ↓
+                         合并时大量冲突!
+
+时间线 (定期 rebase):
+────────────────────────────────────────────────────────────→
+main:     A ── B ── C ── D ── E
+feature:          └─ X ── Y' ── Z' (保持最新，冲突少)
+```
+
+**何时 rebase？**
+- 每天开始工作前
+- 创建 PR 之前
+- 看到有新的 PR 合并到 main 后
+
+**Rebase vs Merge**：
+
+| 操作 | 命令 | 结果 |
+|:-----|:-----|:-----|
+| **Rebase** | `git rebase origin/main` | 线性历史，冲突少 |
+| Merge | `git merge origin/main` | 保留历史，会有 merge commit |
+
+**使用 rebase，不要 merge**。
+
+### 3.2 提交前检查
 
 ```bash
 make check-all      # 格式、vet、测试、i18n 检查
 golangci-lint run   # 后端 lint (如果需要)
 ```
 
-### 3.2 约定式提交
+### 3.3 约定式提交
 
 | 类型     | 范围    | 示例                                |
 | :------- | :------ | :---------------------------------- |
@@ -127,7 +167,7 @@ EOF
 - `Refs #<issue-id>` - 关联 Issue
 - `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`
 
-### 3.3 推送分支
+### 3.4 推送分支
 
 ```bash
 git push -u origin feat/123-add-ai-router
@@ -291,6 +331,11 @@ gh issue create --title "Fix bug" --body "Description"
 git checkout -b fix/123-bug
 # ... 开发 ...
 git commit -m "fix: resolve bug (Refs #123)"
+
+# 定期同步 main (开发期间每天执行)
+git fetch origin
+git rebase origin/main
+
 git push -u origin fix/123-bug
 gh pr create --title "fix: resolve bug" --body "Resolves #123"
 ```
