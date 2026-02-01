@@ -7,7 +7,7 @@
 ## 一键安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=docker
 ```
 
 **自动完成：**
@@ -162,9 +162,8 @@ journalctl -u divinesense -f    # 查看日志
 systemctl restart divinesense   # 重启服务
 systemctl stop divinesense      # 停止服务
 
-# 备份与升级 (使用辅助脚本)
-/opt/divinesense/deploy-binary.sh backup
-/opt/divinesense/deploy-binary.sh upgrade
+# 备份与升级
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=binary
 ```
 
 ---
@@ -175,11 +174,11 @@ systemctl stop divinesense      # 停止服务
 
 **手动备份：**
 - Docker: `cd /opt/divinesense && ./deploy.sh backup`
-- Binary: `/opt/divinesense/deploy-binary.sh backup`
+- Binary: 使用 systemd 服务备份脚本
 
 **恢复备份：**
 - Docker: `./deploy.sh restore backups/backup-file.gz`
-- Binary: `./deploy-binary.sh restore backups/backup-file.gz`
+- Binary: 使用 pg_restore 或 sqlite 恢复
 
 ---
 

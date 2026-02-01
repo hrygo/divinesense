@@ -201,60 +201,90 @@ print_box() {
 
 install_docker_mode() {
     log_step "安装 Docker..."
-    
+
     if ! command -v docker &>/dev/null; then
         curl -fsSL https://get.docker.com | sh
         systemctl enable docker 2>/dev/null || true
         systemctl start docker
     fi
     log_success "Docker 已就绪"
-    
+
     log_step "下载 DivineSense..."
     mkdir -p /opt/divinesense
     cd /opt/divinesense
-    
+
     if [ ! -d .git ]; then
         rm -rf /opt/divinesense/* 2>/dev/null || true
-        git clone --depth 1 https://github.com/hrygo/divinesense.git . 2>/dev/null || true
+        if ! git clone --depth 1 https://github.com/hrygo/divinesense.git . 2>/dev/null; then
+            log_error "Git clone 失败"
+            exit 1
+        fi
     fi
-    
+
     local db_password=$(generate_password)
     local server_ip=$(get_server_ip)
-    
+
     cat > .env.prod << EOF
 DIVINESENSE_INSTANCE_URL=http://${server_ip}:${PORT}
 DIVINESENSE_PORT=${PORT}
 POSTGRES_PASSWORD=${db_password}
 EOF
-    
+
     echo "$db_password" > .db_password
     chmod 600 .db_password
-    
+
     log_step "启动服务..."
-    docker compose -f docker/compose/prod.yml --env-file .env.prod up -d 2>/dev/null || true
-    
+    if ! docker compose -f docker/compose/prod.yml --env-file .env.prod up -d; then
+        log_error "Docker compose 启动失败"
+        log_info "检查日志: docker compose -f docker/compose/prod.yml logs"
+        exit 1
+    fi
+
     log_success "安装完成"
 }
 
 install_binary_mode() {
     log_step "下载 DivineSense..."
-    
+
     local arch=$(uname -m)
     case "$arch" in
         x86_64) BINARY_ARCH="amd64" ;;
         aarch64) BINARY_ARCH="arm64" ;;
         *) log_error "不支持的架构: $arch"; exit 1 ;;
     esac
-    
+
     mkdir -p /opt/divinesense/{bin,data,logs,backups,docker}
     mkdir -p /etc/divinesense
-    
+
     if ! id divinesense &>/dev/null; then
         useradd -r -s /bin/false -d /opt/divinesense divinesense
     fi
-    
+
     local download_url="https://github.com/hrygo/divinesense/releases/latest/download/divinesense-linux-${BINARY_ARCH}"
-    curl -fsSL "$download_url" -o /opt/divinesense/bin/divinesense
+    local checksum_url="${download_url}.sha256"
+    local tmp_binary="/tmp/divinesense-${BINARY_ARCH}"
+    local tmp_checksum="/tmp/divinesense-${BINARY_ARCH}.sha256"
+
+    # 下载二进制和校验和
+    log_info "从 $download_url 下载..."
+    if ! curl -fsSL "$download_url" -o "$tmp_binary"; then
+        log_error "下载失败"
+        exit 1
+    fi
+
+    # 下载校验和（可选）
+    if curl -fsSL "$checksum_url" -o "$tmp_checksum" 2>/dev/null; then
+        cd /tmp
+        if sha256sum -c "$tmp_checksum" 2>/dev/null; then
+            log_success "校验和验证通过"
+        else
+            log_warn "校验和验证失败，继续安装..."
+        fi
+    fi
+
+    # 移动到目标位置
+    mv "$tmp_binary" /opt/divinesense/bin/divinesense
+    rm -f "$tmp_checksum"
     chmod +x /opt/divinesense/bin/divinesense
     
     local db_password=$(generate_password)
