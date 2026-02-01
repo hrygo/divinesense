@@ -97,6 +97,37 @@ DivineSense 使用 **pre-commit + pre-push** hooks 确保代码质量。
 
 **规则**：Grid 使用 `gap` 而非 `max-w-*`。如果 `max-width / column_count < 200px`，不要使用 `max-w-*`。
 
+### Go embed 兼容性
+
+**关键**：Go 的 `//go:embed` 会忽略以下划线 `_` 开头的文件。
+
+对于单二进制部署，前端构建产物必须避免生成以下划线开头的文件名。
+
+**问题示例**：
+```
+lodash-es 内部模块被拆分为：
+- _baseFlatten-xxx.js  ❌ 被 Go embed 忽略
+- _baseMap-xxx.js       ❌ 被 Go embed 忽略
+```
+
+**解决方案**：在 `vite.config.mts` 中配置 `manualChunks` 将 lodash-es 打包为单个 chunk：
+
+```typescript
+manualChunks(id) {
+  if (id.includes("lodash-es") || id.includes("/_base")) {
+    return "lodash-vendor";  // 生成 lodash-vendor-xxx.js
+  }
+  // ...
+}
+```
+
+**构建验证**：
+```bash
+ls web/dist/assets/ | grep "^_"  # 应该为空
+```
+
+详见：@docs/research/DEBUG_LESSONS.md → "Go embed 忽略以下划线开头的文件"
+
 ---
 
 ## 布局架构

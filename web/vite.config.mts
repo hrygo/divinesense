@@ -40,28 +40,43 @@ export default defineConfig({
     target: "es2020", // Modern browsers: Chrome 80+, Safari 13.1+, Firefox 72+
     rollupOptions: {
       output: {
-        manualChunks: {
+        // Sanitize chunk names to avoid leading underscores (Go embed ignores them)
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+        manualChunks(id) {
+          // lodash-es internal modules - bundle into a single chunk
+          if (id.includes("lodash-es") || id.includes("/_base")) {
+            return "lodash-vendor";
+          }
           // Merge core-js dependent packages into main entry to avoid polyfill issues
-          "polyfills": ["core-js/actual"],
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "ui-vendor": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-select",
-            "@radix-ui/react-tooltip",
-            "@radix-ui/react-checkbox",
-            "@radix-ui/react-switch",
-            "lucide-react",
-          ],
-          "markdown-vendor": ["react-markdown", "remark-gfm", "remark-breaks", "rehype-raw", "rehype-sanitize", "highlight.js"],
-          "math-vendor": ["katex", "rehype-katex", "remark-math"],
-          "query-vendor": ["@tanstack/react-query"],
-          "i18n-vendor": ["i18next", "react-i18next"],
-          // graph-vendor and utils-vendor removed to avoid core-js polyfill issues
-          // These will be bundled with the main entry
-          "mermaid-vendor": ["mermaid"],
-          "leaflet-vendor": ["leaflet", "react-leaflet"],
+          if (id.includes("core-js/actual")) {
+            return "polyfills";
+          }
+          if (id.includes("react") || id.includes("react-dom") || id.includes("react-router")) {
+            return "react-vendor";
+          }
+          if (id.includes("@radix-ui") || id.includes("lucide-react")) {
+            return "ui-vendor";
+          }
+          if (id.includes("react-markdown") || id.includes("remark-") || id.includes("rehype-") || id.includes("highlight.js")) {
+            return "markdown-vendor";
+          }
+          if (id.includes("katex")) {
+            return "math-vendor";
+          }
+          if (id.includes("@tanstack/react-query")) {
+            return "query-vendor";
+          }
+          if (id.includes("i18next")) {
+            return "i18n-vendor";
+          }
+          if (id.includes("mermaid")) {
+            return "mermaid-vendor";
+          }
+          if (id.includes("leaflet")) {
+            return "leaflet-vendor";
+          }
         },
       },
     },

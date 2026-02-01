@@ -145,6 +145,108 @@ slog.Debug("Every single step", ...)  // 应使用条件日志级别
 
 ---
 
+## Go embed 忽略以下划线开头的文件
+
+### 问题描述
+部署到生产环境后，部分 JavaScript 文件无法加载，返回 404（实际上是 index.html fallback）。
+
+**错误表现**：
+```
+Failed to fetch dynamically imported module: http://39.105.209.49/assets/Inboxes-3qwxzD_s.js
+```
+
+浏览器控制台显示：
+```
+_baseFlatten-CWeGY8aD.js:1 Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"
+```
+
+### 根本原因
+
+**Go embed 文件过滤规则**：
+
+Go 的 `//go:embed` 指令会忽略**以下划线 `_` 开头的文件**。这是一个设计决策，与 Unix 忽略以 `.` 开头的隐藏文件类似。
+
+```
+lodash-es 内部模块被 Vite/Rollup 拆分为独立 chunk：
+- _baseFlatten-xxx.js   (331 bytes)  ❌ 被 Go embed 忽略
+- _baseMap-xxx.js        (199 bytes)  ❌ 被 Go embed 忽略
+- sortBy-xxx.js         (1181 bytes)  ✅ 正常嵌入
+- uniq-xxx.js            (98 bytes)   ✅ 正常嵌入
+```
+
+**问题链条**：
+1. `lodash-es` 是一个模块化的 lodash 库，包含大量内部模块（`_baseFlatten`、`_baseMap` 等）
+2. Vite/Rollup 默认将这些模块拆分为独立的 chunk 文件
+3. 这些内部模块以 `_` 开头，被 Go embed 忽略
+4. 浏览器请求这些文件时，收到的是 index.html（404 fallback）
+5. HTML 作为 JavaScript 解析失败，导致整个应用崩溃
+
+### 解决方案
+
+**修改 Vite 配置，将 lodash-es 模块打包到单个 chunk**：
+
+```typescript
+// vite.config.mts
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks(id) {
+        // lodash-es internal modules - bundle into a single chunk
+        if (id.includes("lodash-es") || id.includes("/_base")) {
+          return "lodash-vendor";  // 生成 lodash-vendor-xxx.js
+        }
+        // ... 其他 vendor chunks
+      },
+    },
+  },
+}
+```
+
+**构建验证**：
+```bash
+# 检查是否有以下划线开头的文件
+ls web/dist/assets/ | grep "^_"  # 应该为空
+
+# 验证 lodash 被打包
+ls web/dist/assets/ | grep lodash  # 应该看到 lodash-vendor-xxx.js
+```
+
+### 经验教训
+
+| 问题 | 教练 |
+|:-----|:-----|
+| **Go embed 文件过滤规则** | `//go:embed` 忽略 `_` 开头文件，类似 Unix 的 `.` 隐藏文件 |
+| **第三方库内部模块命名** | lodash-es 等库使用 `_` 前缀表示内部模块，与 Go embed 冲突 |
+| **Vite/Rollup 默认行为** | 默认会拆分模块为独立 chunk，需为 Go embed 特殊配置 |
+| **错误消息误导性** | "Failed to fetch module" 实际是 404，而非网络问题 |
+| **SPA fallback 行为** | http.FileServer 的 HTML5 fallback 会返回 index.html，掩盖真实问题 |
+
+### 预防措施
+
+1. **构建时检查**：在 CI/CD 中添加检查脚本
+   ```bash
+   # 检查嵌入目录中是否有以下划线开头的文件
+   if find server/router/frontend/dist/assets -name "_*" | grep -q .; then
+     echo "ERROR: Found files starting with '_' which will be ignored by Go embed"
+     exit 1
+   fi
+   ```
+
+2. **Vite 配置规范**：为单二进制 Go 项目添加特定配置
+   ```typescript
+   // 避免生成 Go embed 不支持的文件名
+   chunkFileNames: "assets/[name]-[hash].js",
+   entryFileNames: "assets/[name]-[hash].js",
+   assetFileNames: "assets/[name]-[hash].[ext]",
+   ```
+
+3. **测试清单**：
+   - [ ] 验证所有 vendor chunks 都能正确加载
+   - [ ] 检查浏览器控制台无 404 错误
+   - [ ] 测试懒加载路由（如 Inboxes 页面）
+
+---
+
 ## 贡献指南
 
 当你遇到一个新的调试问题时：

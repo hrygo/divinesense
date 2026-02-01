@@ -47,6 +47,10 @@ func (*FrontendService) Serve(_ context.Context, e *echo.Echo) {
 		// Security: Prevent MIME type sniffing
 		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
 
+		// CORS support for ES modules loaded with crossorigin attribute
+		// Vite uses <link rel="modulepreload" crossorigin> which requires CORS headers
+		c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+
 		ext := filepath.Ext(c.Path())
 		// For index.html, root path, and SPA routes (no extension),
 		// set no-cache headers to prevent browser caching.
