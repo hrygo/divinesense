@@ -333,7 +333,8 @@ func TestConflictResolver_AdjacentDayPreference(t *testing.T) {
 
 	// Should prefer adjacent days (tomorrow or yesterday)
 	autoResolved := resolution.AutoResolved
-	dayDiff := autoResolved.Start.Day() - now.Day()
+	// Use actual day difference instead of Day() to handle month boundaries correctly
+	dayDiff := int(autoResolved.Start.Sub(now).Hours() / 24)
 	assert.LessOrEqual(t, abs(dayDiff), 3, "Should find a slot within 3 days")
 }
 
