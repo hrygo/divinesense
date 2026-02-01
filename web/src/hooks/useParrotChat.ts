@@ -138,7 +138,9 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
           const err = parseError instanceof Error ? parseError : new Error(String(parseError));
           console.error("Failed to parse danger block event:", err);
           console.error("Event data:", eventData);
-          callbacks?.onError?.(new Error(`Failed to parse danger block event: ${err.message}`));
+          // Include truncated raw data in error message for debugging
+          const rawDataPreview = eventData.length > 100 ? eventData.substring(0, 100) + "..." : eventData;
+          callbacks?.onError?.(new Error(`Failed to parse danger block event: ${err.message}. Raw data: ${rawDataPreview}`));
         }
         break;
 
@@ -150,7 +152,8 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
           const err = parseError instanceof Error ? parseError : new Error(String(parseError));
           console.error("Failed to parse memo query result:", err);
           console.error("Event data:", eventData);
-          callbacks?.onError?.(new Error(`Failed to parse memo query result: ${err.message}`));
+          const rawDataPreview = eventData.length > 100 ? eventData.substring(0, 100) + "..." : eventData;
+          callbacks?.onError?.(new Error(`Failed to parse memo query result: ${err.message}. Raw data: ${rawDataPreview}`));
         }
         break;
 
@@ -162,7 +165,8 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
           const err = parseError instanceof Error ? parseError : new Error(String(parseError));
           console.error("Failed to parse schedule query result:", err);
           console.error("Event data:", eventData);
-          callbacks?.onError?.(new Error(`Failed to parse schedule query result: ${err.message}`));
+          const rawDataPreview = eventData.length > 100 ? eventData.substring(0, 100) + "..." : eventData;
+          callbacks?.onError?.(new Error(`Failed to parse schedule query result: ${err.message}. Raw data: ${rawDataPreview}`));
         }
         break;
 

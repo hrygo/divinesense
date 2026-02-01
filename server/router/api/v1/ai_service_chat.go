@@ -284,16 +284,20 @@ func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
 		// Check if summarization is needed (async, don't block response)
 		// Only summarize for non-temporary conversations
 		if !s.isTemp && s.conversationID != 0 {
+			// Use WithoutCancel to detach from request context while preserving service shutdown
+			// TODO: Move to a proper background worker pool with lifecycle management
+			bgCtx := context.WithoutCancel(s.Context())
 			go func() {
 				summarizer := s.service.getConversationSummarizer()
-				if shouldSummarize, count := summarizer.ShouldSummarize(context.Background(), s.conversationID); shouldSummarize {
+				if shouldSummarize, count := summarizer.ShouldSummarize(bgCtx, s.conversationID); shouldSummarize {
 					slog.Default().Info("Conversation threshold reached, triggering summarization",
 						"conversation_id", s.conversationID,
 						"message_count", count,
 					)
-					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					// Use independent timeout for summarization (not tied to request)
+					summarizeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 					defer cancel()
-					if err := summarizer.Summarize(ctx, s.conversationID); err != nil {
+					if err := summarizer.Summarize(summarizeCtx, s.conversationID); err != nil {
 						slog.Default().Warn("Failed to summarize conversation",
 							"conversation_id", s.conversationID,
 							"error", err,

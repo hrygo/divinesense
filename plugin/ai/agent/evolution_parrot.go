@@ -211,3 +211,9 @@ func (p *EvolutionParrot) GetUserID() int32 {
 func (p *EvolutionParrot) Cancel() {
 	p.ResetSession()
 }
+
+// GetSessionStats returns the session statistics from the last execution.
+// GetSessionStats 返回上次执行的会话统计数据。
+func (p *EvolutionParrot) GetSessionStats() *SessionStats {
+	return p.runner.GetSessionStats()
+}

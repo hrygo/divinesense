@@ -61,7 +61,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
   const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.success;
 
   // Don't render if no meaningful data
-  if (!summary.totalDurationMs && !summary.toolCallCount && !totalTokens) {
+  if (!summary.totalDurationMs && !summary.toolCallCount && !totalTokens && !summary.thinkingDurationMs) {
     return null;
   }
 
@@ -82,31 +82,35 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
       {/* Content */}
       <div className="p-4 space-y-4">
         {/* Timing Section */}
-        {((summary.totalDurationMs && summary.totalDurationMs > 0) ||
-          (summary.toolDurationMs && summary.toolDurationMs > 0) ||
-          (summary.generationDurationMs && summary.generationDurationMs > 0)) && (
+        {(summary.totalDurationMs || summary.thinkingDurationMs || summary.toolDurationMs || summary.generationDurationMs) && (
           <div>
             <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
               Timing
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              {summary.totalDurationMs && summary.totalDurationMs > 0 && (
+              {summary.thinkingDurationMs !== undefined && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total</span>
-                  <span className="font-mono">{formatDuration(summary.totalDurationMs)}</span>
+                  <span className="text-muted-foreground">Thinking</span>
+                  <span className="font-mono">{summary.thinkingDurationMs > 0 ? formatDuration(summary.thinkingDurationMs) : "-"}</span>
                 </div>
               )}
-              {summary.toolDurationMs && summary.toolDurationMs > 0 && (
+              {summary.toolDurationMs !== undefined && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tools</span>
-                  <span className="font-mono">{formatDuration(summary.toolDurationMs)}</span>
+                  <span className="font-mono">{summary.toolDurationMs > 0 ? formatDuration(summary.toolDurationMs) : "-"}</span>
                 </div>
               )}
-              {summary.generationDurationMs && summary.generationDurationMs > 0 && (
+              {summary.generationDurationMs !== undefined && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Generation</span>
-                  <span className="font-mono">{formatDuration(summary.generationDurationMs)}</span>
+                  <span className="font-mono">{summary.generationDurationMs > 0 ? formatDuration(summary.generationDurationMs) : "-"}</span>
+                </div>
+              )}
+              {summary.totalDurationMs !== undefined && (
+                <div className="flex justify-between col-span-2 border-t border-border/30 pt-2 mt-1">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-mono">{formatDuration(summary.totalDurationMs)}</span>
                 </div>
               )}
             </div>

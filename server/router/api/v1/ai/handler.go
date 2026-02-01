@@ -312,7 +312,12 @@ func (h *ParrotHandler) executeAgent(
 	streamAdapter := agentpkg.NewParrotStreamAdapter(func(eventType string, eventData any) error {
 		// Track events using sync.Map for concurrent safety
 		actual, _ := eventCount.LoadOrStore(eventType, int(0))
-		currentCount := actual.(int) + 1
+		count, ok := actual.(int)
+		if !ok {
+			// Should never happen since we store int(0), but handle defensively
+			count = 0
+		}
+		currentCount := count + 1
 		eventCount.Store(eventType, currentCount)
 
 		if eventType == "answer" || eventType == "content" {
@@ -403,13 +408,44 @@ func (h *ParrotHandler) executeAgent(
 	// Calculate session summary
 	sessionTotalDuration = time.Since(sessionStartTime).Milliseconds()
 
-	// Build session summary
+	// Try to get detailed stats from agent if available (GeekParrot/EvolutionParrot)
+	// 尝试从 agent 获取详细统计数据（如果可用，如 GeekParrot/EvolutionParrot）
+	var detailedStats *agentpkg.SessionStats
+	if statsProvider, ok := agent.(agentpkg.SessionStatsProvider); ok {
+		detailedStats = statsProvider.GetSessionStats()
+	}
+
+	// Build session summary with available data
+	// 使用可用数据构建会话摘要
 	sessionSummary := &v1pb.SessionSummary{
 		SessionId:       fmt.Sprintf("conv_%d", req.ConversationID),
 		TotalDurationMs: sessionTotalDuration,
 		Status:          "success",
 		ToolCallCount:   int32(len(toolsUsed)),
 		ToolsUsed:       toolsUsed,
+	}
+
+	// Add detailed stats if available (from GeekParrot/EvolutionParrot)
+	// 添加详细统计数据（如果可用，来自 GeekParrot/EvolutionParrot）
+	if detailedStats != nil {
+		sessionSummary.TotalDurationMs = detailedStats.TotalDurationMs
+		sessionSummary.ThinkingDurationMs = detailedStats.ThinkingDurationMs
+		sessionSummary.ToolDurationMs = detailedStats.ToolDurationMs
+		sessionSummary.GenerationDurationMs = detailedStats.GenerationDurationMs
+		sessionSummary.TotalInputTokens = detailedStats.InputTokens
+		sessionSummary.TotalOutputTokens = detailedStats.OutputTokens
+		sessionSummary.TotalCacheWriteTokens = detailedStats.CacheWriteTokens
+		sessionSummary.TotalCacheReadTokens = detailedStats.CacheReadTokens
+		sessionSummary.ToolCallCount = detailedStats.ToolCallCount
+		if len(detailedStats.ToolsUsed) > 0 {
+			tools := make([]string, 0, len(detailedStats.ToolsUsed))
+			for tool := range detailedStats.ToolsUsed {
+				tools = append(tools, tool)
+			}
+			sessionSummary.ToolsUsed = tools
+		}
+		sessionSummary.FilesModified = detailedStats.FilesModified
+		sessionSummary.FilePaths = detailedStats.FilePaths
 	}
 
 	if err := stream.Send(&v1pb.ChatResponse{

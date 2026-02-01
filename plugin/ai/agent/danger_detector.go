@@ -200,7 +200,7 @@ func (dd *DangerDetector) CheckInput(input string) *DangerBlockEvent {
 			)
 
 			return &DangerBlockEvent{
-				Operation:      extractCommand(input, pat.Pattern.String()),
+				Operation:      extractCommand(input, pat.Pattern),
 				Reason:         pat.Description,
 				PatternMatched: pat.Pattern.String(),
 				Level:          pat.Level,
@@ -214,18 +214,15 @@ func (dd *DangerDetector) CheckInput(input string) *DangerBlockEvent {
 	return nil
 }
 
-// extractCommand extracts the relevant command portion from the input.
-func extractCommand(input, pattern string) string {
+// extractCommand extracts the relevant command portion from the input using pre-compiled regex.
+func extractCommand(input string, pattern *regexp.Regexp) string {
 	// Find the command line containing the dangerous pattern
 	scanner := bufio.NewScanner(strings.NewReader(input))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if regexp.MustCompile(`(?i)` + pattern).MatchString(line) {
-			// Truncate to reasonable length
-			if len(line) > MaxDisplayLength {
-				return line[:MaxDisplayLength] + "..."
-			}
-			return line
+		if pattern.MatchString(line) {
+			// Truncate to reasonable length (use rune-aware truncateString for UTF-8 safety)
+			return truncateString(line, MaxDisplayLength)
 		}
 	}
 	// Fallback to truncated input (use existing truncateString from util.go)

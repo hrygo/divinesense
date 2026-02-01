@@ -63,29 +63,36 @@ func buildSystemPrompt(workDir, sessionID string, userID int32, deviceContext st
 	userAgent := "Unknown"
 	deviceInfo := "Unknown"
 	if deviceContext != "" {
-		if err := json.Unmarshal([]byte(deviceContext), &contextMap); err == nil {
-			if ua, ok := contextMap["userAgent"].(string); ok {
-				userAgent = ua
-			}
-			if mobile, ok := contextMap["isMobile"].(bool); ok {
-				if mobile {
-					deviceInfo = "Mobile"
-				} else {
-					deviceInfo = "Desktop"
+		// Optimization: only attempt JSON parse if it looks like JSON
+		// 优化：只在看起来像 JSON 时才尝试解析
+		if strings.HasPrefix(strings.TrimSpace(deviceContext), "{") {
+			if err := json.Unmarshal([]byte(deviceContext), &contextMap); err == nil {
+				if ua, ok := contextMap["userAgent"].(string); ok {
+					userAgent = ua
 				}
-			}
-			// Add more fields if available (screen, language, etc.)
-			// 如果有更多字段则添加（屏幕、语言等）
-			if w, ok := contextMap["screenWidth"].(float64); ok {
-				if h, ok := contextMap["screenHeight"].(float64); ok {
-					deviceInfo = fmt.Sprintf("%s (%dx%d)", deviceInfo, int(w), int(h))
+				if mobile, ok := contextMap["isMobile"].(bool); ok {
+					if mobile {
+						deviceInfo = "Mobile"
+					} else {
+						deviceInfo = "Desktop"
+					}
 				}
-			}
-			if lang, ok := contextMap["language"].(string); ok {
-				deviceInfo = fmt.Sprintf("%s, Language: %s", deviceInfo, lang)
+				// Add more fields if available (screen, language, etc.)
+				// 如果有更多字段则添加（屏幕、语言等）
+				if w, ok := contextMap["screenWidth"].(float64); ok {
+					if h, ok := contextMap["screenHeight"].(float64); ok {
+						deviceInfo = fmt.Sprintf("%s (%dx%d)", deviceInfo, int(w), int(h))
+					}
+				}
+				if lang, ok := contextMap["language"].(string); ok {
+					deviceInfo = fmt.Sprintf("%s, Language: %s", deviceInfo, lang)
+				}
+			} else {
+				// Fallback: use raw string if JSON parse failed
+				userAgent = deviceContext
 			}
 		} else {
-			// Fallback: use raw string if not JSON
+			// Not JSON - use raw string
 			userAgent = deviceContext
 		}
 	}
@@ -168,8 +175,8 @@ type CCRunner struct {
 	manager        *CCSessionManager
 	dangerDetector *DangerDetector
 	// Session stats for the last execution (thread-safe)
-	statsMu        sync.RWMutex
-	currentStats   *SessionStats
+	statsMu      sync.RWMutex
+	currentStats *SessionStats
 }
 
 // EventWithMeta extends the basic event with metadata for observability.
@@ -231,6 +238,11 @@ type SessionStats struct {
 	currentToolStart time.Time
 	currentToolName  string
 	currentToolID    string
+
+	// Phase tracking for duration breakdown
+	thinkingStart time.Time
+	generationStart time.Time
+	hasGeneration bool // Tracks if any content was generated
 }
 
 // RecordToolUse records the start of a tool call.
@@ -276,6 +288,49 @@ func (s *SessionStats) RecordTokens(input, output, cacheWrite, cacheRead int32) 
 	s.OutputTokens += output
 	s.CacheWriteTokens += cacheWrite
 	s.CacheReadTokens += cacheRead
+}
+
+// StartThinking marks the start of the thinking phase.
+// StartThinking 标记思考阶段的开始。
+func (s *SessionStats) StartThinking() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.thinkingStart.IsZero() {
+		s.thinkingStart = time.Now()
+	}
+}
+
+// EndThinking marks the end of the thinking phase and records its duration.
+// EndThinking 标记思考阶段的结束并记录其持续时间。
+func (s *SessionStats) EndThinking() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.thinkingStart.IsZero() {
+		s.ThinkingDurationMs += time.Since(s.thinkingStart).Milliseconds()
+		s.thinkingStart = time.Time{} // Reset for next thinking phase
+	}
+}
+
+// StartGeneration marks the start of the generation phase.
+// StartGeneration 标记生成阶段的开始。
+func (s *SessionStats) StartGeneration() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.generationStart.IsZero() {
+		s.generationStart = time.Now()
+		s.hasGeneration = true
+	}
+}
+
+// EndGeneration marks the end of the generation phase and records its duration.
+// EndGeneration 标记生成阶段的结束并记录其持续时间。
+func (s *SessionStats) EndGeneration() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.generationStart.IsZero() {
+		s.GenerationDurationMs += time.Since(s.generationStart).Milliseconds()
+		s.generationStart = time.Time{} // Reset for next generation phase
+	}
 }
 
 // ToSummary converts stats to a summary map for JSON serialization.
@@ -501,30 +556,46 @@ func (r *CCRunner) GetSessionManager() *CCSessionManager {
 // GetSessionStats returns a copy of the current session stats.
 // GetSessionStats 返回当前会话统计数据的副本。
 func (r *CCRunner) GetSessionStats() *SessionStats {
-	r.statsMu.RLock()
-	defer r.statsMu.RUnlock()
+	r.statsMu.Lock()
+	defer r.statsMu.Unlock()
 
 	if r.currentStats == nil {
 		return nil
 	}
 
-	// Return a copy to avoid concurrent modification
-	// 返回副本以避免并发修改
+	// Finalize any ongoing phases before copying
+	// 完成任何正在进行的阶段，然后再复制
+	stats := r.currentStats
+
+	// Close any open phase tracking (calculate remaining duration)
+	// 关闭任何打开的阶段追踪（计算剩余时长）
+	totalThinking := stats.ThinkingDurationMs
+	totalGeneration := stats.GenerationDurationMs
+
+	if !stats.thinkingStart.IsZero() {
+		totalThinking += time.Since(stats.thinkingStart).Milliseconds()
+	}
+	if !stats.generationStart.IsZero() {
+		totalGeneration += time.Since(stats.generationStart).Milliseconds()
+	}
+
+	// Return a copy with finalized durations
+	// 返回包含已完成时长的副本
 	return &SessionStats{
-		SessionID:            r.currentStats.SessionID,
-		StartTime:            r.currentStats.StartTime,
-		TotalDurationMs:      r.currentStats.TotalDurationMs,
-		ThinkingDurationMs:   r.currentStats.ThinkingDurationMs,
-		ToolDurationMs:       r.currentStats.ToolDurationMs,
-		GenerationDurationMs: r.currentStats.GenerationDurationMs,
-		InputTokens:          r.currentStats.InputTokens,
-		OutputTokens:         r.currentStats.OutputTokens,
-		CacheWriteTokens:     r.currentStats.CacheWriteTokens,
-		CacheReadTokens:      r.currentStats.CacheReadTokens,
-		ToolCallCount:        r.currentStats.ToolCallCount,
-		ToolsUsed:            r.currentStats.ToolsUsed,
-		FilesModified:        r.currentStats.FilesModified,
-		FilePaths:            r.currentStats.FilePaths,
+		SessionID:            stats.SessionID,
+		StartTime:            stats.StartTime,
+		TotalDurationMs:      stats.TotalDurationMs,
+		ThinkingDurationMs:   totalThinking,
+		ToolDurationMs:       stats.ToolDurationMs,
+		GenerationDurationMs: totalGeneration,
+		InputTokens:          stats.InputTokens,
+		OutputTokens:         stats.OutputTokens,
+		CacheWriteTokens:     stats.CacheWriteTokens,
+		CacheReadTokens:      stats.CacheReadTokens,
+		ToolCallCount:        stats.ToolCallCount,
+		ToolsUsed:            stats.ToolsUsed,
+		FilesModified:        stats.FilesModified,
+		FilePaths:            stats.FilePaths,
 	}
 }
 
@@ -707,8 +778,8 @@ func (r *CCRunner) streamOutput(
 				continue
 			}
 
-			// Log message type for debugging
-			r.logger.Info("CCRunner: received message",
+			// Log message type for debugging (Debug level to avoid log flooding)
+			r.logger.Debug("CCRunner: received message",
 				"mode", cfg.Mode,
 				"type", msg.Type,
 				"name", msg.Name,
@@ -774,7 +845,7 @@ func (r *CCRunner) streamOutput(
 		}
 		return nil
 	case <-ctx.Done():
-		timer.Stop()
+		// timer.Stop() is already deferred - no need to call here
 		return ctx.Err()
 	case <-timer.C:
 		return fmt.Errorf("execution timeout after %v", r.timeout)
@@ -793,6 +864,14 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			return callback(EventTypeError, msg.Error)
 		}
 	case "thinking", "status":
+		// Start thinking phase tracking (ended in other cases or by defer)
+		stats.StartThinking()
+		// Ensure thinking is ended even if we return early from this case
+		// Note: if control flows to another case (tool_use, assistant), they will end thinking explicitly
+		defer func() {
+			stats.EndThinking()
+		}()
+
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				meta := &EventMeta{
@@ -805,6 +884,9 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			}
 		}
 	case "tool_use":
+		// Tool use ends thinking, starts tool execution
+		stats.EndThinking()
+
 		if msg.Name != "" {
 			// Extract tool ID and input from content blocks
 			var toolID string
@@ -848,6 +930,10 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			}
 		}
 	case "message", "content", "text", "delta", "assistant":
+		// Assistant message starts generation phase
+		stats.EndThinking()
+		stats.StartGeneration()
+
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				if err := callback(EventTypeAnswer, &EventWithMeta{EventType: EventTypeAnswer, EventData: block.Text, Meta: &EventMeta{TotalDurationMs: totalDuration}}); err != nil {
@@ -855,6 +941,9 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 				}
 			} else if block.Type == "tool_use" && block.Name != "" {
 				// Tool use is nested inside assistant message content
+				// End generation when tool is about to be used
+				stats.EndGeneration()
+
 				stats.RecordToolUse(block.Name, block.ID)
 
 				meta := &EventMeta{

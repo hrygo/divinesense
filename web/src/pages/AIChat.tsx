@@ -1,6 +1,6 @@
 import copy from "copy-to-clipboard";
 import { X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { AmazingInsightCard } from "@/components/AIChat/AmazingInsightCard";
@@ -241,7 +241,15 @@ const AIChat = () => {
   const lastAssistantMessageIdRef = useRef<string | null>(null);
   const streamingContentRef = useRef<string>("");
   const isCreatingConversationRef = useRef(false);
-  const toolCallsRef = useRef<string[]>([]);
+  const toolCallsRef = useRef<
+    Array<{
+      name: string;
+      toolId?: string;
+      inputSummary?: string;
+      outputSummary?: string;
+      filePath?: string;
+    }>
+  >([]);
 
   // Get current conversation and capability from context
   const {
@@ -266,8 +274,8 @@ const AIChat = () => {
   const currentMode = state.currentMode || "normal";
   const immersiveMode = state.immersiveMode || false;
 
-  // Get messages from current conversation
-  const items = currentConversation?.messages || [];
+  // Get messages from current conversation (memoized to prevent unnecessary re-renders)
+  const items = useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
 
   const { t } = useTranslation();
 
@@ -326,7 +334,13 @@ const AIChat = () => {
             console.debug("[Geek/Evolution Mode] Tool use event:", toolName, meta);
             setCapabilityStatus("processing");
             // Accumulate tool calls for this message
-            toolCallsRef.current.push(toolName);
+            toolCallsRef.current.push({
+              name: toolName,
+              toolId: meta?.toolId,
+              inputSummary: meta?.inputSummary,
+              outputSummary: meta?.outputSummary,
+              filePath: meta?.filePath,
+            });
             if (lastAssistantMessageIdRef.current) {
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
                 metadata: {

@@ -23,7 +23,13 @@ export interface ConversationMessage {
     referencedMemos?: string[];
     referencedSchedules?: string[];
     toolName?: string;
-    toolCalls?: string[]; // List of tools called by the agent
+    toolCalls?: Array<{
+      name: string;
+      toolId?: string;
+      inputSummary?: string;
+      outputSummary?: string;
+      filePath?: string;
+    }>; // List of tools called by the agent
     thinking?: string;
   };
 }

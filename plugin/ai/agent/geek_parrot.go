@@ -178,3 +178,9 @@ func (p *GeekParrot) Cancel() {
 	// No-op - session continues
 	// Use ResetSession() to explicitly clear the session
 }
+
+// GetSessionStats returns the session statistics from the last execution.
+// GetSessionStats 返回上次执行的会话统计数据。
+func (p *GeekParrot) GetSessionStats() *SessionStats {
+	return p.runner.GetSessionStats()
+}

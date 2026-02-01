@@ -184,6 +184,31 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// 使用 context.Background() 而非请求 ctx，因为会话的生命周期应超出创建它的 HTTP 请求。
 	sessCtx, cancel := context.WithCancel(context.Background())
 
+	// Use a startup timeout to prevent indefinite hangs during process start
+	// We monitor startup in a goroutine and cancel if it takes too long
+	// 使用启动超时来防止进程启动期间的无限挂起
+	startupCtx, startupCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer startupCancel()
+
+	// Channel to signal successful startup or failure
+	startedCh := make(chan error, 1)
+
+	// Goroutine to monitor startup timeout
+	// If startup takes longer than the timeout, cancel the session
+	go func() {
+		select {
+		case <-startupCtx.Done():
+			// Startup timeout or request cancelled - kill the session
+			cancel()
+			startedCh <- fmt.Errorf("startup timeout after 30s or request cancelled")
+		case err := <-startedCh:
+			// Startup completed (success or failure)
+			if err != nil {
+				cancel()
+			}
+		}
+	}()
+
 	// Build arguments
 	// NOTE: Logic duplicate from CCRunner.executeWithSession slightly, refactor later if needed.
 	// We always force --output-format stream-json and --print
@@ -247,9 +272,12 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	}
 
 	if err := cmd.Start(); err != nil {
-		cancel()
+		startedCh <- err // Signal startup failed
 		return nil, fmt.Errorf("cmd start: %w", err)
 	}
+
+	// Signal that startup succeeded
+	startedCh <- nil
 
 	sm.logger.Info("Session started", "session_id", sessionID, "pid", cmd.Process.Pid)
 
@@ -268,7 +296,8 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 
 	// Start status transition monitor: Starting -> Ready
 	// 启动状态转换监控：Starting -> Ready
-	sess.waitForReady(defaultReadyTimeout)
+	// Pass the startup context so waitForReady can be cancelled if startup times out
+	sess.waitForReady(startupCtx, defaultReadyTimeout)
 
 	return sess, nil
 }
@@ -320,25 +349,31 @@ func (s *Session) GetStatus() SessionStatus {
 // waitForReady monitors the session and transitions from Starting to Ready
 // when the process is confirmed alive and responsive.
 // waitForReady 监控会话，当进程确认存活且响应时从 Starting 转换为 Ready。
-func (s *Session) waitForReady(timeout time.Duration) {
+// The context parameter allows cancellation if the session is terminated early.
+func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 	go func() {
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 
 		deadline := time.Now().Add(timeout)
 		for time.Now().Before(deadline) {
-			<-ticker.C
-			s.mu.Lock()
-			if s.Status == SessionStatusDead {
-				s.mu.Unlock()
+			select {
+			case <-ctx.Done():
+				// Context cancelled - session terminated or request cancelled
 				return
-			}
-			if s.IsAlive() {
-				s.Status = SessionStatusReady
+			case <-ticker.C:
+				s.mu.Lock()
+				if s.Status == SessionStatusDead {
+					s.mu.Unlock()
+					return
+				}
+				if s.IsAlive() {
+					s.Status = SessionStatusReady
+					s.mu.Unlock()
+					return
+				}
 				s.mu.Unlock()
-				return
 			}
-			s.mu.Unlock()
 		}
 		// Timeout - mark as dead if still not alive
 		s.mu.Lock()
