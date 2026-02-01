@@ -1,6 +1,6 @@
 import copy from "copy-to-clipboard";
 import { X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { AmazingInsightCard } from "@/components/AIChat/AmazingInsightCard";
@@ -82,6 +82,11 @@ function UnifiedChatView({
   const { t } = useTranslation();
   const md = useMediaQuery("md");
 
+  // P1-5: Concurrent rendering optimizations
+  // Defer non-critical UI updates (query results) to improve input responsiveness
+  const deferredMemoResults = useDeferredValue(memoQueryResults);
+  const deferredScheduleResults = useDeferredValue(scheduleQueryResults);
+
   const handleInputChange = (value: string) => {
     setInput(value);
   };
@@ -130,8 +135,8 @@ function UnifiedChatView({
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
         amazingInsightCard={
-          currentCapability === CapabilityType.AMAZING && (memoQueryResults.length > 0 || scheduleQueryResults.length > 0) ? (
-            <AmazingInsightCard memos={memoQueryResults[0]?.memos ?? []} schedules={scheduleQueryResults[0]?.schedules ?? []} />
+          currentCapability === CapabilityType.AMAZING && (deferredMemoResults.length > 0 || deferredScheduleResults.length > 0) ? (
+            <AmazingInsightCard memos={deferredMemoResults[0]?.memos ?? []} schedules={deferredScheduleResults[0]?.schedules ?? []} />
           ) : undefined
         }
         uiTools={uiTools.tools}

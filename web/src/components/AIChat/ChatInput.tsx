@@ -44,6 +44,9 @@ export function ChatInput({
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // Track height to avoid unnecessary auto-reset causing jitter
+  const lastHeightRef = useRef(0);
+  const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
 
   // Detect macOS for correct shortcut display - memoized
   const sendShortcut = useMemo(() => {
@@ -99,11 +102,29 @@ export function ChatInput({
 
   const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement;
-    // Standard auto-resize logic: reset height to auto to get correct scrollHeight,
-    // then set to scrollHeight (capped by max-height)
-    target.style.height = "auto";
-    const newHeight = Math.min(target.scrollHeight, 120);
-    target.style.height = `${newHeight}px`;
+
+    // Cancel pending RAF if any
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+
+    // Schedule height update in next animation frame
+    rafIdRef.current = requestAnimationFrame(() => {
+      // Ensure component is still mounted and target is valid
+      if (!target || !textareaRef.current) return;
+
+      const currentScrollHeight = target.scrollHeight;
+      const maxHeight = 120;
+      const newHeight = Math.min(currentScrollHeight, maxHeight);
+
+      // Only update if height actually changed (avoid jitter)
+      if (newHeight !== lastHeightRef.current) {
+        lastHeightRef.current = newHeight;
+        target.style.height = `${newHeight}px`;
+      }
+
+      rafIdRef.current = null;
+    });
   }, []);
 
   // Reset height when value changes externally
@@ -240,6 +261,7 @@ export function ChatInput({
             "bg-card border-border focus-within:ring-ring",
             modeStyles.border,
           )}
+          style={{ contain: "layout" }}
         >
           <Textarea
             ref={textareaRef}

@@ -158,18 +158,20 @@ const AIChatLayoutContent = () => {
         </div>
       </div>
 
-      {/* Desktop Sidebar - Hidden in immersive mode */}
-      {lg && !immersiveMode && (
-        <div
-          className={cn(
-            "fixed top-0 left-16 shrink-0 h-svh border-r backdrop-blur-sm w-72 overflow-hidden pt-2 transition-colors",
-            !isSpecialMode && [modeStyles.sidebarBorder, modeStyles.sidebarBg],
-            isSpecialMode && [modeStyles.sidebarBorder, modeStyles.sidebarBg],
-          )}
-        >
-          <AIChatSidebar className="h-full" />
-        </div>
-      )}
+      {/* Desktop Sidebar - Always rendered to maintain layout, hidden via class */}
+      <div
+        className={cn(
+          // Fixed positioning
+          "fixed top-0 left-16 shrink-0 h-svh border-r backdrop-blur-sm w-72 overflow-hidden pt-2 transition-colors",
+          // Visibility: hide on mobile or in immersive mode, always keep DOM for layout stability
+          !lg || immersiveMode ? "hidden" : "",
+          // Mode-specific styles (applied based on current mode)
+          modeStyles.sidebarBorder,
+          modeStyles.sidebarBg,
+        )}
+      >
+        <AIChatSidebar className="h-full" />
+      </div>
 
       {/* Main Content */}
       <div

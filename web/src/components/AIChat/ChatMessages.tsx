@@ -206,7 +206,7 @@ const ChatMessages = memo(function ChatMessages({
       ref={scrollRef}
       onScroll={handleScrollThrottled}
       className={cn("flex-1 overflow-y-auto px-3 md:px-6 py-4 overscroll-contain", className)}
-      style={{ overflowAnchor: "auto", scrollbarGutter: "stable" }}
+      style={{ overflowAnchor: "auto", scrollbarGutter: "stable", contain: "layout style paint" }}
     >
       {children}
 
@@ -385,6 +385,7 @@ const MessageBubble = memo(function MessageBubble({
         role === "user" ? "flex-row-reverse" : "flex-row",
         isNew && "animate-in fade-in duration-300",
       )}
+      style={{ contain: "layout style" }}
     >
       {/* Avatar */}
       {role === "user" ? (
