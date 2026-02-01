@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -166,6 +167,9 @@ type CCRunner struct {
 	mu             sync.Mutex
 	manager        *CCSessionManager
 	dangerDetector *DangerDetector
+	// Session stats for the last execution (thread-safe)
+	statsMu        sync.RWMutex
+	currentStats   *SessionStats
 }
 
 // EventWithMeta extends the basic event with metadata for observability.
@@ -236,6 +240,10 @@ func (s *SessionStats) RecordToolUse(toolName, toolID string) {
 	s.currentToolStart = time.Now()
 	s.currentToolName = toolName
 	s.currentToolID = toolID
+	// Ensure ToolsUsed map is initialized (concurrency safety)
+	if s.ToolsUsed == nil {
+		s.ToolsUsed = make(map[string]bool)
+	}
 }
 
 // RecordToolResult records the end of a tool call.
@@ -441,6 +449,20 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 		return err
 	}
 
+	// Finalize and save session stats
+	// 完成并保存会话统计数据
+	stats.TotalDurationMs = time.Since(stats.StartTime).Milliseconds()
+	r.statsMu.Lock()
+	r.currentStats = stats
+	r.statsMu.Unlock()
+
+	r.logger.Debug("CCRunner: Session completed",
+		"session_id", stats.SessionID,
+		"total_duration_ms", stats.TotalDurationMs,
+		"tool_duration_ms", stats.ToolDurationMs,
+		"tool_calls", stats.ToolCallCount,
+		"tools_used", len(stats.ToolsUsed))
+
 	return nil
 }
 
@@ -474,6 +496,36 @@ func (r *CCRunner) StartAsyncSession(ctx context.Context, cfg *CCRunnerConfig) (
 // GetSessionManager returns the improved session manager.
 func (r *CCRunner) GetSessionManager() *CCSessionManager {
 	return r.manager
+}
+
+// GetSessionStats returns a copy of the current session stats.
+// GetSessionStats 返回当前会话统计数据的副本。
+func (r *CCRunner) GetSessionStats() *SessionStats {
+	r.statsMu.RLock()
+	defer r.statsMu.RUnlock()
+
+	if r.currentStats == nil {
+		return nil
+	}
+
+	// Return a copy to avoid concurrent modification
+	// 返回副本以避免并发修改
+	return &SessionStats{
+		SessionID:            r.currentStats.SessionID,
+		StartTime:            r.currentStats.StartTime,
+		TotalDurationMs:      r.currentStats.TotalDurationMs,
+		ThinkingDurationMs:   r.currentStats.ThinkingDurationMs,
+		ToolDurationMs:       r.currentStats.ToolDurationMs,
+		GenerationDurationMs: r.currentStats.GenerationDurationMs,
+		InputTokens:          r.currentStats.InputTokens,
+		OutputTokens:         r.currentStats.OutputTokens,
+		CacheWriteTokens:     r.currentStats.CacheWriteTokens,
+		CacheReadTokens:      r.currentStats.CacheReadTokens,
+		ToolCallCount:        r.currentStats.ToolCallCount,
+		ToolsUsed:            r.currentStats.ToolsUsed,
+		FilesModified:        r.currentStats.FilesModified,
+		FilePaths:            r.currentStats.FilePaths,
+	}
 }
 
 // validateConfig validates the CCRunnerConfig.
@@ -847,31 +899,43 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 	return nil
 }
 
+// sanitizeUTF8 ensures a string contains only valid UTF-8 characters.
+// Invalid UTF-8 sequences are replaced with the Unicode replacement character.
+func sanitizeUTF8(s string) string {
+	// Go's string type already handles UTF-8, but when data comes from
+	// external sources (like file content or CLI output), it may contain
+	// invalid sequences. We use utf8.ValidString to check and strings.ToValidUTF8 to fix.
+	if s == "" {
+		return ""
+	}
+	// Convert to valid UTF-8, replacing invalid sequences with �
+	// Note: strings.ToValidUTF8 was added in Go 1.15
+	return strings.ToValidUTF8(s, "�")
+}
+
 // summarizeInput creates a human-readable summary of tool input.
+// Uses rune-level truncation to avoid creating invalid UTF-8.
 func summarizeInput(input map[string]any) string {
 	if input == nil {
 		return ""
 	}
-	// Extract common fields for summary
+	// Extract common fields for summary (sanitize first)
 	if command, ok := input["command"].(string); ok && command != "" {
-		return command
+		return truncateString(sanitizeUTF8(command), 50)
 	}
 	if query, ok := input["query"].(string); ok && query != "" {
-		if len(query) > 50 {
-			return query[:50] + "..."
-		}
-		return query
+		return truncateString(sanitizeUTF8(query), 50)
 	}
 	if path, ok := input["path"].(string); ok && path != "" {
-		return "file: " + path
+		return "file: " + sanitizeUTF8(path)
 	}
-	// Fallback to JSON representation
-	jsonBytes, _ := json.Marshal(input)
-	str := string(jsonBytes)
-	if len(str) > 100 {
-		return str[:100] + "..."
+	// Fallback to JSON representation (with sanitization)
+	jsonBytes, err := json.Marshal(input)
+	if err != nil {
+		return "(invalid input)"
 	}
-	return str
+	str := sanitizeUTF8(string(jsonBytes))
+	return truncateString(str, 100)
 }
 
 // GetCLIVersion returns the Claude Code CLI version.

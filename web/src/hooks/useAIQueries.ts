@@ -51,8 +51,29 @@ interface SessionSummary {
   errorMsg?: string;
 }
 
-// Default timeout for streaming AI requests (5 minutes)
-const STREAM_TIMEOUT_MS = 5 * 60 * 1000;
+// Safe conversion from protobuf bigint to JavaScript number
+// Protobuf int64 becomes bigint in TypeScript, which needs safe conversion
+const safeBigintToNumber = (value: bigint | undefined): number | undefined => {
+  if (value === undefined) return undefined;
+  // Check if value is within safe integer range
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  const minSafe = BigInt(Number.MIN_SAFE_INTEGER);
+  if (value > maxSafe || value < minSafe) {
+    if (import.meta.env.DEV) {
+      console.warn("[AI Chat] Duration value exceeds safe integer range", { value: value.toString() });
+    }
+    // Return max safe value as fallback
+    return value > maxSafe ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER;
+  }
+  return Number(value);
+};
+
+// Constants for AI chat
+const STREAM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const SEMANTIC_SEARCH_LIMIT = 10; // Default search results limit
+const STALE_TIME_SHORT_MS = 60 * 1000; // 1 minute
+const STALE_TIME_LONG_MS = 5 * 60 * 1000; // 5 minutes
+const EVENT_DATA_PREVIEW_LENGTH = 100; // Preview length for event data
 
 // Query keys factory for consistent cache management
 export const aiKeys = {
@@ -75,12 +96,12 @@ export function useSemanticSearch(query: string, options: { enabled?: boolean } 
     queryFn: async () => {
       const request = create(SemanticSearchRequestSchema, {
         query,
-        limit: 10,
+        limit: SEMANTIC_SEARCH_LIMIT,
       });
       return await aiServiceClient.semanticSearch(request);
     },
     enabled: (options.enabled ?? true) && query.length > 2,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: STALE_TIME_SHORT_MS, // 1 minute
   });
 }
 
@@ -117,7 +138,7 @@ export function useRelatedMemos(name: string, options: { enabled?: boolean; limi
       return await aiServiceClient.getRelatedMemos(request);
     },
     enabled: (options.enabled ?? true) && !!name && name.startsWith("memos/"),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_TIME_LONG_MS, // 5 minutes
   });
 }
 
@@ -130,6 +151,7 @@ export function useRelatedMemos(name: string, options: { enabled?: boolean; limi
 export function useChat() {
   const queryClient = useQueryClient();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   return {
     /**
@@ -226,10 +248,15 @@ export function useChat() {
       const signal = abortControllerRef.current.signal;
 
       // Set up timeout for the entire stream operation
-      const timeoutId = setTimeout(() => {
+      // Clear any existing timeout first
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+      }
+      timeoutIdRef.current = setTimeout(() => {
         if (abortControllerRef.current) {
           abortControllerRef.current.abort();
         }
+        timeoutIdRef.current = null;
         if (import.meta.env.DEV) {
           console.warn("[AI Chat] Stream timeout exceeded", { timeoutMs: STREAM_TIMEOUT_MS });
         }
@@ -293,7 +320,7 @@ export function useChat() {
               console.debug("[AI Chat] Parrot event", {
                 eventType: response.eventType,
                 eventDataLength: response.eventData.length,
-                eventDataPreview: response.eventData.slice(0, 100),
+                eventDataPreview: response.eventData.slice(0, EVENT_DATA_PREVIEW_LENGTH),
                 eventMeta: response.eventMeta,
               });
             }
@@ -305,8 +332,8 @@ export function useChat() {
                 // Convert proto EventMetadata (bigint fields) to local EventMetadata (number fields)
                 const toolMeta = response.eventMeta
                   ? {
-                      durationMs: response.eventMeta.durationMs ? Number(response.eventMeta.durationMs) : undefined,
-                      totalDurationMs: response.eventMeta.totalDurationMs ? Number(response.eventMeta.totalDurationMs) : undefined,
+                      durationMs: safeBigintToNumber(response.eventMeta.durationMs),
+                      totalDurationMs: safeBigintToNumber(response.eventMeta.totalDurationMs),
                       toolName: response.eventMeta.toolName,
                       toolId: response.eventMeta.toolId,
                       status: response.eventMeta.status,
@@ -328,8 +355,8 @@ export function useChat() {
                 // Convert proto EventMetadata (bigint fields) to local EventMetadata (number fields)
                 const resultMeta = response.eventMeta
                   ? {
-                      durationMs: response.eventMeta.durationMs ? Number(response.eventMeta.durationMs) : undefined,
-                      totalDurationMs: response.eventMeta.totalDurationMs ? Number(response.eventMeta.totalDurationMs) : undefined,
+                      durationMs: safeBigintToNumber(response.eventMeta.durationMs),
+                      totalDurationMs: safeBigintToNumber(response.eventMeta.totalDurationMs),
                       toolName: response.eventMeta.toolName,
                       toolId: response.eventMeta.toolId,
                       status: response.eventMeta.status,
@@ -457,7 +484,10 @@ export function useChat() {
         }
 
         // Clear timeout on successful completion
-        clearTimeout(timeoutId);
+        if (timeoutIdRef.current) {
+          clearTimeout(timeoutIdRef.current);
+          timeoutIdRef.current = null;
+        }
 
         const duration = Date.now() - startTime;
         if (import.meta.env.DEV) {
@@ -471,7 +501,10 @@ export function useChat() {
         return { content: fullContent, sources };
       } catch (error) {
         // Clear timeout on error
-        clearTimeout(timeoutId);
+        if (timeoutIdRef.current) {
+          clearTimeout(timeoutIdRef.current);
+          timeoutIdRef.current = null;
+        }
 
         const duration = Date.now() - startTime;
 
@@ -505,9 +538,13 @@ export function useChat() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
-        if (import.meta.env.DEV) {
-          console.debug("[AI Chat] Stream manually stopped");
-        }
+      }
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+      if (import.meta.env.DEV) {
+        console.debug("[AI Chat] Stream manually stopped");
       }
     },
     /**
@@ -600,7 +637,7 @@ export function useKnowledgeGraph(
       return await aiServiceClient.getKnowledgeGraph(request);
     },
     enabled: options.enabled ?? true,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_TIME_LONG_MS, // 5 minutes
   });
 }
 

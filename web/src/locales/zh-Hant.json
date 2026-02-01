@@ -475,6 +475,8 @@
     "welcome-description": "我可以幫您搜尋、總結和討論您的備忘內容，以及管理您的日程",
     "send-shortcut": "發送",
     "newline-shortcut": "換行",
+    "input-hint-newline": "換行",
+    "input-hint-send": "發送",
     "prompt-summarize": "總結最近的備忘",
     "prompt-ideas": "提供創意想法",
     "prompt-explain": "解釋某個概念",
