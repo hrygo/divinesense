@@ -668,7 +668,7 @@ func (p *AmazingParrot) parseRetrievalPlan(response string, userInput string, no
 	}
 
 	// Default: if no specific plan detected, check if this is casual chat before trying memo search
-	if !plan.needsMemoSearch && !plan.needsScheduleQuery && !plan.needsFreeTime {
+	if !plan.needsMemoSearch && !plan.needsScheduleQuery && !plan.needsFreeTime && !plan.needsScheduleAdd && !plan.needsScheduleUpdate {
 		// Check if the user input looks like casual chat (short, no search keywords)
 		if p.isCasualChatInput(userInput) {
 			// This is casual chat, answer directly without retrieval

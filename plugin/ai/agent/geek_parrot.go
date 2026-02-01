@@ -88,11 +88,12 @@ func (p *GeekParrot) ExecuteWithCallback(
 
 	// Build config for CCRunner
 	cfg := &CCRunnerConfig{
-		Mode:          p.mode.Name(),
-		WorkDir:       p.workDir,
-		SessionID:     p.sessionID,
-		UserID:        p.userID,
-		DeviceContext: p.deviceCtx,
+		Mode:           p.mode.Name(),
+		WorkDir:        p.workDir,
+		SessionID:      p.sessionID,
+		UserID:         p.userID,
+		DeviceContext:  p.deviceCtx,
+		PermissionMode: "bypassPermissions",
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 

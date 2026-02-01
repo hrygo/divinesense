@@ -441,9 +441,7 @@ func (h *ParrotHandler) executeAgent(
 		// Don't return here, continue to send session summary
 	}
 
-	// Send done marker
-	streamMu.Lock()
-	defer streamMu.Unlock()
+	// Prepare session summary
 
 	// Calculate session summary
 	sessionTotalDuration = time.Since(sessionStartTime).Milliseconds()
