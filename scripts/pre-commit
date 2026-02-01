@@ -4,8 +4,22 @@ set -e
 
 echo "🔍 Quick pre-commit checks..."
 
+# Check go.mod/go.sum are tidy
+echo "  → go.mod/go.sum tidy check..."
+if ! go mod tidy -diff > /dev/null 2>&1; then
+    echo ""
+    echo "    ✗ go.mod/go.sum not tidy"
+    echo "    Run: go mod tidy && git add go.mod go.sum"
+    echo ""
+    exit 1
+fi
+echo "    ✓ go.mod/go.sum tidy"
+
 # Only fmt and vet for speed
 go fmt ./...
+echo "  → go fmt..."
+
 go vet ./...
+echo "  → go vet..."
 
 echo "✅ Pre-commit checks passed!"
