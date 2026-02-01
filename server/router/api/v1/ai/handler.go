@@ -422,9 +422,9 @@ func (h *ParrotHandler) executeAgent(
 				if time.Since(lastTime) > 5*time.Second {
 					// Send heartbeat
 					streamMu.Lock()
-					// Just send a lightweight thinking chunk
+					// Just send a lightweight ping chunk
 					_ = stream.Send(&v1pb.ChatResponse{
-						EventType: "thinking",
+						EventType: "ping",
 						EventData: ".", // Minimal data
 					})
 					streamMu.Unlock()

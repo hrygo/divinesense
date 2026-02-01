@@ -69,7 +69,7 @@ const safeBigintToNumber = (value: bigint | undefined): number | undefined => {
 };
 
 // Constants for AI chat
-const STREAM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const STREAM_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const SEMANTIC_SEARCH_LIMIT = 10; // Default search results limit
 const STALE_TIME_SHORT_MS = 60 * 1000; // 1 minute
 const STALE_TIME_LONG_MS = 5 * 60 * 1000; // 5 minutes
