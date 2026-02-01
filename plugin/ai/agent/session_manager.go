@@ -146,10 +146,11 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 
 	sm.logger.Info("Terminating session", "session_id", sessionID)
 
-	// Stop the status reset timer if exists
-	if sess.statusResetTimer != nil {
-		sess.statusResetTimer.Stop()
-	}
+	// Stop the status reset timer and clean up session resources
+	// Hold session lock to prevent race with WriteInput
+	sess.mu.Lock()
+	sess.close()
+	sess.mu.Unlock()
 
 	// Cancel context to kill process if using CommandContext
 	if sess.Cancel != nil {
@@ -183,6 +184,9 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// because the session should outlive the HTTP request that created it.
 	// 使用 context.Background() 而非请求 ctx，因为会话的生命周期应超出创建它的 HTTP 请求。
 	sessCtx, cancel := context.WithCancel(context.Background())
+	// Ensure cancel is always called, even on error paths
+	// 确保在所有路径（包括错误路径）上都调用 cancel
+	defer cancel()
 
 	// Use a startup timeout to prevent indefinite hangs during process start
 	// We monitor startup in a goroutine and cancel if it takes too long
@@ -193,6 +197,10 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Channel to signal successful startup or failure
 	startedCh := make(chan error, 1)
 
+	// Ensure we signal completion even on early return
+	// This prevents goroutine leak if function returns before startup completes
+	defer close(startedCh)
+
 	// Goroutine to monitor startup timeout
 	// If startup takes longer than the timeout, cancel the session
 	go func() {
@@ -200,10 +208,11 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		case <-startupCtx.Done():
 			// Startup timeout or request cancelled - kill the session
 			cancel()
-			startedCh <- fmt.Errorf("startup timeout after 30s or request cancelled")
-		case err := <-startedCh:
+			// Channel will be closed by defer, no need to send
+		case err, ok := <-startedCh:
 			// Startup completed (success or failure)
-			if err != nil {
+			if ok && err != nil {
+				// Startup failed - cancel the session context
 				cancel()
 			}
 		}
@@ -253,20 +262,28 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	cmd.Dir = cfg.WorkDir
 	cmd.Env = append(os.Environ(), "CLAUDE_DISABLE_TELEMETRY=1")
 
-	stdin, err := cmd.StdinPipe()
+	// Create pipes with proper cleanup on error paths
+	// 创建管道并在错误路径上正确清理
+	var stdin io.WriteCloser
+	var stdout, stderr io.ReadCloser
+
+	stdin, err = cmd.StdinPipe()
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("stdin pipe: %w", err)
 	}
 
-	stdout, err := cmd.StdoutPipe()
+	stdout, err = cmd.StdoutPipe()
 	if err != nil {
+		stdin.Close()
 		cancel()
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
 
-	stderr, err := cmd.StderrPipe()
+	stderr, err = cmd.StderrPipe()
 	if err != nil {
+		stdout.Close()
+		stdin.Close()
 		cancel()
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
@@ -388,11 +405,12 @@ func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 // Transitions session to Busy during write, back to Ready after completion.
 // 注入 JSON 消息到 Stdin。写入时转换为 Busy，完成后恢复为 Ready。
 func (s *Session) WriteInput(msg map[string]any) error {
-	// Set status to Busy while processing input
-	s.SetStatus(SessionStatusBusy)
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Set status to Busy while processing input
+	// Must be done under lock to prevent race with cleanup
+	s.Status = SessionStatusBusy
 
 	// Reset existing timer if any (prevents goroutine accumulation)
 	// 重置现有定时器（防止 goroutine 累积）
@@ -424,6 +442,20 @@ func (s *Session) WriteInput(msg map[string]any) error {
 
 	s.LastActive = time.Now()
 	return nil
+}
+
+// close releases resources held by the session.
+// Must be called with session lock held.
+// close 释放会话持有的资源。必须在持有会话锁时调用。
+func (s *Session) close() {
+	// Stop the status reset timer if exists
+	// Use a local copy to avoid holding lock during Stop()
+	if s.statusResetTimer != nil {
+		timer := s.statusResetTimer
+		s.statusResetTimer = nil
+		// Timer.Stop is safe to call multiple times and from different goroutines
+		timer.Stop()
+	}
 }
 
 // cleanupLoop runs periodic cleanup of idle sessions.

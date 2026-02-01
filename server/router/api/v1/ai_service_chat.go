@@ -14,6 +14,7 @@ import (
 
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
+	"github.com/hrygo/divinesense/store"
 )
 
 // getChatEventBus returns the chat event bus, initializing it on first use.
@@ -295,7 +296,7 @@ func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
 						"message_count", count,
 					)
 					// Use independent timeout for summarization (not tied to request)
-					summarizeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					summarizeCtx, cancel := context.WithTimeout(bgCtx, 30*time.Second)
 					defer cancel()
 					if err := summarizer.Summarize(summarizeCtx, s.conversationID); err != nil {
 						slog.Default().Warn("Failed to summarize conversation",
@@ -330,6 +331,37 @@ func (s *AIService) StopChat(ctx context.Context, req *v1pb.StopChatRequest) (*e
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Authorization check: verify user owns the conversation
+	// 权限检查：验证用户是否拥有该会话
+	if req.ConversationId > 0 {
+		conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+			ID: &req.ConversationId,
+		})
+		if err != nil {
+			slog.Warn("StopChat: conversation lookup failed",
+				"user_id", user.ID,
+				"conversation_id", req.ConversationId,
+				"error", err,
+			)
+			// Don't fail on lookup error - may be a transient issue
+			// 查找失败时不返回错误（可能是临时问题）
+		} else if len(conversations) == 0 {
+			slog.Warn("StopChat: conversation not found",
+				"user_id", user.ID,
+				"conversation_id", req.ConversationId,
+			)
+			// Conversation may have been deleted - don't fail
+			// 会话可能已被删除 - 不返回错误
+		} else if conversations[0].CreatorID != user.ID {
+			slog.Warn("StopChat: user attempted to stop another user's conversation",
+				"user_id", user.ID,
+				"conversation_id", req.ConversationId,
+				"conversation_owner", conversations[0].CreatorID,
+			)
+			return nil, status.Errorf(codes.PermissionDenied, "you can only stop your own conversations")
+		}
 	}
 
 	slog.Info("StopChat called",

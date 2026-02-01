@@ -190,6 +190,9 @@ function handleParrotEvent(eventType: string, eventData: string, callbacks?: Par
     }
   } catch (error) {
     console.error("Error handling parrot event:", error);
+    // Propagate unexpected errors to the callback
+    const err = error instanceof Error ? error : new Error(String(error));
+    callbacks?.onError?.(err);
   }
 }
 

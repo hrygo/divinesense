@@ -162,24 +162,34 @@ interface InlineToolCallProps {
   toolName: string;
   isError?: boolean;
   className?: string;
+  inputSummary?: string;
+  filePath?: string;
 }
 
-export function InlineToolCall({ toolName, isError, className }: InlineToolCallProps) {
+export function InlineToolCall({ toolName, isError, className, inputSummary, filePath }: InlineToolCallProps) {
   const Icon = getToolIcon(toolName);
+
+  // Construct display text: "ToolName" or "ToolName: Summary"
+  let displayText = toolName;
+  const detail = inputSummary || filePath;
+  if (detail) {
+    displayText = `${toolName} ${detail}`;
+  }
 
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs",
+        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs max-w-[240px] md:max-w-[360px]",
         "bg-slate-100 dark:bg-slate-800",
         "border border-slate-200 dark:border-slate-700",
         isError ? "border-red-300 dark:border-red-700" : "border-blue-200 dark:border-blue-700",
         className,
       )}
+      title={detail ? `${toolName}: ${detail}` : toolName}
     >
-      <Icon className={cn("w-3.5 h-3.5", isError ? "text-red-500" : "text-blue-500")} />
-      <span className={cn("font-medium", isError ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-300")}>
-        {toolName}
+      <Icon className={cn("w-3.5 h-3.5 shrink-0", isError ? "text-red-500" : "text-blue-500")} />
+      <span className={cn("font-medium truncate", isError ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-300")}>
+        {displayText}
       </span>
     </div>
   );

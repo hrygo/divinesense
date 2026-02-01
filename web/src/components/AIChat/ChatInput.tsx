@@ -278,7 +278,8 @@ export function ChatInput({
                 onSend();
               }
             }}
-            disabled={(!value.trim() && !isTyping) || disabled}
+            // Stop button should always be clickable; Send button requires input
+            disabled={disabled || (!isTyping && !value.trim())}
             aria-label={isTyping ? "Stop generating" : `${sendShortcut} Send`}
           >
             {isTyping ? (

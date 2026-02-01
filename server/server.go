@@ -53,9 +53,13 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		return nil, errors.Wrap(err, "failed to get instance basic setting")
 	}
 
-	secret := "divinesense"
-	if profile.Mode == "prod" {
-		secret = instanceBasicSetting.SecretKey
+	// Determine secret key based on mode.
+	// Security: Default to database-persisted secret for safety.
+	// Only use fixed secret in explicit 'dev' mode to prevent session invalidation during development.
+	secret := instanceBasicSetting.SecretKey
+	if profile.Mode == "dev" {
+		slog.Warn("RUNNING IN DEV MODE WITH FIXED SECRET KEY - NOT SAFE FOR PRODUCTION")
+		secret = "divinesense"
 	}
 	s.Secret = secret
 

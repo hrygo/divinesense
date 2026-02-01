@@ -27,6 +27,11 @@ const (
 	// Maximum length of non-JSON output to log.
 	// 非 JSON 输出的最大日志长度。
 	maxNonJSONOutputLength = 100
+
+	// Maximum time to wait for callback to complete.
+	// If callback takes longer, it will be cancelled to prevent deadlock.
+	// 回调最大执行时间。超过此时间将被取消以防止死锁。
+	callbackTimeout = 5 * time.Second
 )
 
 // UUID v5 namespace for DivineSense session mapping.
@@ -240,9 +245,9 @@ type SessionStats struct {
 	currentToolID    string
 
 	// Phase tracking for duration breakdown
-	thinkingStart time.Time
+	thinkingStart   time.Time
 	generationStart time.Time
-	hasGeneration bool // Tracks if any content was generated
+	hasGeneration   bool // Tracks if any content was generated
 }
 
 // RecordToolUse records the start of a tool call.
@@ -738,6 +743,9 @@ func (r *CCRunner) streamOutput(
 	var wg sync.WaitGroup
 	errCh := make(chan error, 2)
 	done := make(chan struct{})
+	// Create a cancel context to signal goroutines to stop
+	streamCtx, stopStreams := context.WithCancel(context.Background())
+	defer stopStreams()
 
 	// Stream stdout
 	// 流式处理 stdout
@@ -748,58 +756,77 @@ func (r *CCRunner) streamOutput(
 		buf := make([]byte, 0, scannerInitialBufSize)
 		scanner.Buffer(buf, scannerMaxBufSize)
 
-		for scanner.Scan() {
-			line := scanner.Text()
-			if line == "" {
-				continue
-			}
-
-			// Log raw line for debugging (truncate if too long)
-			logLine := line
-			if len(logLine) > 200 {
-				logLine = logLine[:200] + "..."
-			}
-			r.logger.Debug("CCRunner: raw line",
-				"mode", cfg.Mode,
-				"line", logLine)
-
-			var msg StreamMessage
-			if err := json.Unmarshal([]byte(line), &msg); err != nil {
-				// Not JSON, treat as plain text
-				if len(line) > maxNonJSONOutputLength {
-					line = line[:maxNonJSONOutputLength]
+		scanDone := make(chan bool)
+		go func() {
+			for scanner.Scan() {
+				line := scanner.Text()
+				if line == "" {
+					continue
 				}
-				r.logger.Debug("CCRunner: non-JSON output",
+
+				// Log raw line for debugging (truncate if too long)
+				logLine := line
+				if len(logLine) > 200 {
+					logLine = logLine[:200] + "..."
+				}
+				r.logger.Debug("CCRunner: raw line",
 					"mode", cfg.Mode,
-					"line", line)
-				if callback != nil {
-					callback(EventTypeAnswer, line)
+					"line", logLine)
+
+				var msg StreamMessage
+				if err := json.Unmarshal([]byte(line), &msg); err != nil {
+					// Not JSON, treat as plain text
+					if len(line) > maxNonJSONOutputLength {
+						line = line[:maxNonJSONOutputLength]
+					}
+					r.logger.Debug("CCRunner: non-JSON output",
+						"mode", cfg.Mode,
+						"line", line)
+					if callback != nil {
+						callback(EventTypeAnswer, line)
+					}
+					continue
 				}
-				continue
-			}
 
-			// Log message type for debugging (Debug level to avoid log flooding)
-			r.logger.Debug("CCRunner: received message",
-				"mode", cfg.Mode,
-				"type", msg.Type,
-				"name", msg.Name,
-				"has_output", msg.Output != "",
-				"has_error", msg.Error != "")
+				// Log message type for debugging (Debug level to avoid log flooding)
+				r.logger.Debug("CCRunner: received message",
+					"mode", cfg.Mode,
+					"type", msg.Type,
+					"name", msg.Name,
+					"has_output", msg.Output != "",
+					"has_error", msg.Error != "")
 
-			// Dispatch event to callback
-			if callback != nil {
-				if err := r.dispatchCallback(msg, callback, stats); err != nil {
-					errCh <- err
+				// Dispatch event to callback
+				if callback != nil {
+					if err := r.dispatchCallback(msg, callback, stats); err != nil {
+						select {
+						case errCh <- err:
+						case <-streamCtx.Done():
+						}
+						return
+					}
+				}
+
+				// Check for completion
+				if msg.Type == "result" || msg.Type == "error" {
 					return
 				}
 			}
+			scanDone <- true
+		}()
 
-			// Check for completion
-			if msg.Type == "result" || msg.Type == "error" {
-				return
+		// Wait for scan to complete or context to be cancelled
+		select {
+		case <-scanDone:
+			if scanErr := scanner.Err(); scanErr != nil {
+				select {
+				case errCh <- scanErr:
+				case <-streamCtx.Done():
+				}
 			}
+		case <-streamCtx.Done():
+			// Scanner will be interrupted when stdout is closed externally
 		}
-		errCh <- scanner.Err()
 	}()
 
 	// Stream stderr to log
@@ -808,13 +835,28 @@ func (r *CCRunner) streamOutput(
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			r.logger.Warn("CCRunner: stderr from Claude Code CLI",
-				"user_id", cfg.UserID,
-				"mode", cfg.Mode,
-				"line", scanner.Text())
+
+		scanDone := make(chan bool)
+		go func() {
+			for scanner.Scan() {
+				r.logger.Warn("CCRunner: stderr from Claude Code CLI",
+					"user_id", cfg.UserID,
+					"mode", cfg.Mode,
+					"line", scanner.Text())
+			}
+			scanDone <- true
+		}()
+
+		select {
+		case <-scanDone:
+			if scanErr := scanner.Err(); scanErr != nil {
+				select {
+				case errCh <- scanErr:
+				case <-streamCtx.Done():
+				}
+			}
+		case <-streamCtx.Done():
 		}
-		errCh <- scanner.Err()
 	}()
 
 	// Wait for completion or timeout
@@ -845,15 +887,38 @@ func (r *CCRunner) streamOutput(
 		}
 		return nil
 	case <-ctx.Done():
-		// timer.Stop() is already deferred - no need to call here
+		stopStreams() // Signal goroutines to stop
+		// Drain errCh to prevent goroutines from blocking
+		for i := 0; i < 2; i++ {
+			select {
+			case <-errCh:
+			default:
+			}
+		}
 		return ctx.Err()
 	case <-timer.C:
+		stopStreams() // Signal goroutines to stop
+		// Drain errCh to prevent goroutines from blocking
+		for i := 0; i < 2; i++ {
+			select {
+			case <-errCh:
+			default:
+			}
+		}
 		return fmt.Errorf("execution timeout after %v", r.timeout)
 	}
 }
 
 // dispatchCallback dispatches stream events to the callback with metadata.
+// IMPORTANT: This function is called from stream goroutines. The callback MUST:
+// 1. Return quickly (< 5 seconds) to avoid blocking stream processing
+// 2. NOT call back into Session/CCRunner methods (risk of deadlock)
+// 3. Be safe for concurrent invocation from multiple goroutines
 // dispatchCallback 将流事件分发给回调，附带元数据。
+// 重要：此函数从 stream goroutine 中调用。回调必须：
+// 1. 快速返回（< 5 秒）以避免阻塞流处理
+// 2. 不回调 Session/CCRunner 方法（死锁风险）
+// 3. 支持多 goroutine 并发调用
 func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, stats *SessionStats) error {
 	// Calculate total duration
 	totalDuration := time.Since(stats.StartTime).Milliseconds()

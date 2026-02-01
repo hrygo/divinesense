@@ -19,6 +19,17 @@ import { PARROT_ICONS, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
+// Tool call type for legacy string format and new object format
+type ToolCall =
+  | string
+  | {
+      name: string;
+      toolId?: string;
+      inputSummary?: string;
+      outputSummary?: string;
+      filePath?: string;
+    };
+
 interface ChatMessagesProps {
   items: ChatItem[];
   isTyping?: boolean;
@@ -399,8 +410,14 @@ const MessageBubble = memo(function MessageBubble({
         {role === "assistant" && (message.metadata?.toolName || message.metadata?.toolCalls) && (
           <div className="flex flex-wrap gap-2 mb-2">
             {message.metadata.toolCalls
-              ? message.metadata.toolCalls.map((toolName: string, i: number) => (
-                  <InlineToolCall key={i} toolName={toolName} isError={message.error} />
+              ? message.metadata.toolCalls.map((call: ToolCall, i: number) => (
+                  <InlineToolCall
+                    key={i}
+                    toolName={typeof call === "string" ? call : call.name}
+                    inputSummary={typeof call === "object" ? call.inputSummary : undefined}
+                    filePath={typeof call === "object" ? call.filePath : undefined}
+                    isError={message.error}
+                  />
                 ))
               : message.metadata.toolName && <InlineToolCall toolName={message.metadata.toolName} isError={message.error} />}
           </div>

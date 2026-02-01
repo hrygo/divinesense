@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock, FileCode, Wrench, XCircle, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, FileEdit, Wrench, XCircle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SessionSummaryData {
@@ -25,17 +25,17 @@ interface SessionSummaryPanelProps {
 
 // Status configuration
 const STATUS_CONFIG = {
-  success: { color: "text-green-500", bg: "bg-green-500/10", icon: CheckCircle2, label: "Success" },
-  error: { color: "text-red-500", bg: "bg-red-500/10", icon: XCircle, label: "Error" },
-  cancelled: { color: "text-yellow-500", bg: "bg-yellow-500/10", icon: AlertCircle, label: "Cancelled" },
+  success: { color: "text-emerald-600 dark:text-emerald-400", icon: CheckCircle2 },
+  error: { color: "text-red-600 dark:text-red-400", icon: XCircle },
+  cancelled: { color: "text-amber-600 dark:text-amber-400", icon: AlertCircle },
 } as const;
 
 type StatusType = keyof typeof STATUS_CONFIG;
 
 /**
- * SessionSummaryPanel - Displays session statistics for Geek/Evolution modes
+ * SessionSummaryPanel - Compact single-line session summary for Geek/Evolution modes
  *
- * Shows timing breakdown, token usage, and tool call summary
+ * Shows: status | duration | tokens | tools | files
  */
 export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelProps) {
   // Format duration in human-readable format
@@ -45,152 +45,117 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
     return `${(ms / 60000).toFixed(1)}m`;
   };
 
-  // Format large numbers
+  // Format large numbers with unit suffix
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
 
-  // Calculate total tokens
-  const totalTokens = (summary.totalInputTokens || 0) + (summary.totalOutputTokens || 0);
-
   // Get status configuration
   const statusKey: StatusType =
     summary.status?.toLowerCase() === "error" ? "error" : summary.status?.toLowerCase() === "cancelled" ? "cancelled" : "success";
   const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.success;
 
+  // Calculate meaningful metrics - only show values that are meaningful
+  const totalTokens = (summary.totalInputTokens || 0) + (summary.totalOutputTokens || 0);
+  const hasTiming = summary.totalDurationMs && summary.totalDurationMs > 0;
+  const hasTokens = totalTokens > 0;
+  const hasTools = summary.toolCallCount && summary.toolCallCount > 0;
+  const hasFiles = summary.filesModified && summary.filesModified > 0;
+
+  // Filter out zero-value duration breakdown parts
+  const hasThinkingBreakdown = summary.thinkingDurationMs && summary.thinkingDurationMs > 0;
+  const hasToolBreakdown = summary.toolDurationMs && summary.toolDurationMs > 0;
+  const hasGenerationBreakdown = summary.generationDurationMs && summary.generationDurationMs > 0;
+
   // Don't render if no meaningful data
-  if (!summary.totalDurationMs && !summary.toolCallCount && !totalTokens && !summary.thinkingDurationMs) {
+  if (!hasTiming && !hasTokens && !hasTools && !hasFiles) {
     return null;
   }
 
+  const StatusIcon = statusCfg.icon;
+
   return (
-    <div className={cn("rounded-lg border border-border/50 bg-background overflow-hidden", "shadow-sm", className)}>
-      {/* Header */}
-      <div className="px-4 py-2 border-b border-border/50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileCode className="w-4 h-4 text-muted-foreground" />
-          <span className="font-medium text-sm">Session Summary</span>
-        </div>
-        <div className={cn("flex items-center gap-1.5 text-xs px-2 py-1 rounded-full", statusCfg.bg, statusCfg.color)}>
-          <statusCfg.icon className="w-3.5 h-3.5" />
-          {statusCfg.label}
-        </div>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground px-3 py-2",
+        "bg-muted/30 rounded-lg border border-border/50",
+        className,
+      )}
+    >
+      {/* Status */}
+      <div className={cn("flex items-center gap-1", statusCfg.color)}>
+        <StatusIcon className="w-3.5 h-3.5" />
+        <span className="font-medium capitalize">{statusKey}</span>
       </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-4">
-        {/* Timing Section */}
-        {(summary.totalDurationMs || summary.thinkingDurationMs || summary.toolDurationMs || summary.generationDurationMs) && (
-          <div>
-            <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              Timing
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {summary.thinkingDurationMs !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Thinking</span>
-                  <span className="font-mono">{summary.thinkingDurationMs > 0 ? formatDuration(summary.thinkingDurationMs) : "-"}</span>
-                </div>
-              )}
-              {summary.toolDurationMs !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tools</span>
-                  <span className="font-mono">{summary.toolDurationMs > 0 ? formatDuration(summary.toolDurationMs) : "-"}</span>
-                </div>
-              )}
-              {summary.generationDurationMs !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Generation</span>
-                  <span className="font-mono">{summary.generationDurationMs > 0 ? formatDuration(summary.generationDurationMs) : "-"}</span>
-                </div>
-              )}
-              {summary.totalDurationMs !== undefined && (
-                <div className="flex justify-between col-span-2 border-t border-border/30 pt-2 mt-1">
-                  <span className="text-muted-foreground">Total</span>
-                  <span className="font-mono">{formatDuration(summary.totalDurationMs)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      {/* Separator */}
+      <span className="text-border/50">|</span>
 
-        {/* Token Section */}
-        {totalTokens > 0 && (
-          <div>
-            <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5" />
-              Tokens
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {summary.totalInputTokens && summary.totalInputTokens > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Input</span>
-                  <span className="font-mono">{formatNumber(summary.totalInputTokens)}</span>
-                </div>
-              )}
-              {summary.totalOutputTokens && summary.totalOutputTokens > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Output</span>
-                  <span className="font-mono">{formatNumber(summary.totalOutputTokens)}</span>
-                </div>
-              )}
-              <div className="flex justify-between col-span-2">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-mono">{formatNumber(totalTokens)}</span>
-              </div>
-              {((summary.totalCacheReadTokens && summary.totalCacheReadTokens > 0) ||
-                (summary.totalCacheWriteTokens && summary.totalCacheWriteTokens > 0)) && (
-                <div className="flex justify-between col-span-2">
-                  <span className="text-muted-foreground">Cache</span>
-                  <span className="font-mono text-xs">
-                    R: {formatNumber(summary.totalCacheReadTokens || 0)} / W: {formatNumber(summary.totalCacheWriteTokens || 0)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      {/* Duration with breakdown */}
+      {hasTiming && (
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-blue-500" />
+          <span className="font-mono font-medium">{formatDuration(summary.totalDurationMs!)}</span>
+          {/* Breakdown with space separators - only show non-zero values */}
+          {(hasThinkingBreakdown || hasToolBreakdown || hasGenerationBreakdown) && (
+            <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
+              (
+              {[
+                (summary.thinkingDurationMs || 0) > 0 && `💭${formatDuration(summary.thinkingDurationMs!)}`,
+                (summary.toolDurationMs || 0) > 0 && `🔧${formatDuration(summary.toolDurationMs!)}`,
+                (summary.generationDurationMs || 0) > 0 && `✍${formatDuration(summary.generationDurationMs!)}`,
+              ]
+                .filter(Boolean)
+                .join(" + ")}
+              )
+            </span>
+          )}
+        </div>
+      )}
 
-        {/* Tools Section */}
-        {((summary.toolCallCount && summary.toolCallCount > 0) || (summary.toolsUsed && summary.toolsUsed.length > 0)) && (
-          <div>
-            <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-              <Wrench className="w-3.5 h-3.5" />
-              Tools ({summary.toolCallCount || 0})
-            </div>
-            {summary.toolsUsed && summary.toolsUsed.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {summary.toolsUsed.map((tool, i) => (
-                  <span key={i} className="px-2 py-1 rounded-md bg-muted text-xs font-mono">
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground italic">No tools used</div>
+      {/* Tokens with breakdown */}
+      {hasTokens && (
+        <>
+          {hasTiming && <span className="text-border/50">•</span>}
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span className="font-mono font-medium">{formatNumber(totalTokens)}</span>
+            <span className="text-[10px]">tokens</span>
+            {/* Input/Output breakdown */}
+            {(summary.totalInputTokens || summary.totalOutputTokens) && (
+              <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
+                (in:{formatNumber(summary.totalInputTokens || 0)}/out:{formatNumber(summary.totalOutputTokens || 0)})
+              </span>
             )}
           </div>
-        )}
+        </>
+      )}
 
-        {/* Files Section (Evolution Mode) */}
-        {summary.filesModified && summary.filesModified > 0 && (
-          <div>
-            <div className="text-xs text-muted-foreground mb-2">Files Modified ({summary.filesModified})</div>
-            {summary.filePaths && summary.filePaths.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {summary.filePaths.slice(0, 5).map((path, i) => (
-                  <span key={i} className="px-2 py-1 rounded-md bg-muted text-xs truncate max-w-[200px]" title={path}>
-                    {path.split("/").pop()}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+      {/* Tools */}
+      {hasTools && (
+        <>
+          {(hasTiming || hasTokens) && <span className="text-border/50">•</span>}
+          <div className="flex items-center gap-1.5">
+            <Wrench className="w-3.5 h-3.5 text-purple-500" />
+            <span className="font-mono font-medium">{summary.toolCallCount}</span>
+            <span className="text-[10px]">calls</span>
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Files (Evolution Mode) */}
+      {hasFiles && (
+        <>
+          {(hasTiming || hasTokens || hasTools) && <span className="text-border/50">•</span>}
+          <div className="flex items-center gap-1.5">
+            <FileEdit className="w-3.5 h-3.5 text-green-500" />
+            <span className="font-mono font-medium">{summary.filesModified}</span>
+            <span className="text-[10px]">files</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

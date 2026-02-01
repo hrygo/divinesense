@@ -434,8 +434,10 @@ const AIChat = () => {
       const userMessage = (messageContent || input).trim();
       if (!userMessage) return;
 
+      // Block sending when AI is still typing/replying
+      // 用户可以在输入框输入文本，但当 AI 正在回复时不能发送新消息
       if (isTyping) {
-        resetTypingState();
+        return;
       }
 
       // 智能路由：根据输入内容自动识别能力

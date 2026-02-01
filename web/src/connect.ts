@@ -23,7 +23,7 @@ const RETRY_HEADER_VALUE = "true";
 
 // Default timeout for streaming requests (5 minutes)
 // Streaming requests may take longer due to LLM processing time
-const DEFAULT_STREAM_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_STREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
 // ============================================================================
 // Token Refresh State Management

@@ -235,9 +235,10 @@ export function useChat() {
       // WORKAROUND: Manually set evolutionMode if create() didn't include it
       // Root cause: @bufbuild/protobuf create() omits default bool values (false)
       // in JSON serialization, but backend expects explicit false for mode routing.
+      // This is a known limitation of protobuf JSON serialization.
+      // Track: https://github.com/bufbuild/protobuf/issues
       if (params.evolutionMode && request.evolutionMode === undefined) {
-        // biome-ignore lint/suspicious/noExplicitAny: Protobuf workaround for default bool values
-        (request as any).evolutionMode = true;
+        (request as unknown as { evolutionMode?: boolean }).evolutionMode = true;
       }
 
       // Cancel any existing request
