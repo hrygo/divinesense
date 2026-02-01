@@ -179,9 +179,14 @@ install_binary_mode() {
     mkdir -p "$INSTALL_DIR"/{bin,data,logs,backups,docker}
     mkdir -p "$CONFIG_DIR"
 
-    if ! id divinesense &>/dev/null; then
-        useradd -r -s /bin/false -d "$INSTALL_DIR" divinesense
+    if ! id divine &>/dev/null; then
+        useradd -r -s /bin/bash -d /home/divine -m divine
     fi
+
+    # 创建 Geek Mode 和 Evolution Mode 工作目录
+    mkdir -p /home/divine/.divinesense
+    mkdir -p /home/divine/source
+    chown -R divine:divine /home/divine
 
     # 使用共享下载函数
     local download_url="https://github.com/hrygo/divinesense/releases/latest/download/divinesense-linux-${BINARY_ARCH}"
@@ -200,16 +205,23 @@ DIVINESENSE_PORT=${PORT}
 DIVINESENSE_MODE=prod
 DIVINESENSE_DATA=${INSTALL_DIR}/data
 DIVINESENSE_DRIVER=postgres
-DIVINESENSE_DSN=postgres://divinesense:${db_password}@localhost:25432/divinesense?sslmode=disable
+DIVINESENSE_DSN=postgres://divine:${db_password}@localhost:25432/divinesense?sslmode=disable
 DIVINESENSE_AI_ENABLED=${ENABLE_AI}
 DIVINESENSE_CLAUDE_CODE_ENABLED=${ENABLE_GEEK}
-DIVINESENSE_CLAUDE_CODE_WORKDIR=${INSTALL_DIR}/data
+DIVINESENSE_CLAUDE_CODE_WORKDIR=/home/divine/.divinesense
 DIVINESENSE_EVOLUTION_ENABLED=${ENABLE_EVOLUTION}
 DIVINESENSE_EVOLUTION_ADMIN_ONLY=true
+DIVINESENSE_EVOLUTION_SOURCE_DIR=/home/divine/source/divinesense
 EOF
 
     echo "$db_password" > "$CONFIG_DIR/.db_password"
     chmod 600 "$CONFIG_DIR/.db_password"
+
+    # 配置目录权限：divine 用户需要读取配置文件
+    chown -R root:divine "$CONFIG_DIR"
+    chmod 750 "$CONFIG_DIR"
+    chmod 640 "$CONFIG_DIR/config"
+    chmod 640 "$CONFIG_DIR/.db_password"
 
     # PostgreSQL in Docker
     cat > "$INSTALL_DIR/docker/postgres.yml" << EOF
@@ -221,7 +233,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: divinesense
-      POSTGRES_USER: divinesense
+      POSTGRES_USER: divine
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -250,7 +262,7 @@ Wants=network-online.target
 
 [Service]
 Type=exec
-User=divinesense
+User=divine
 EnvironmentFile=-${CONFIG_DIR}/config
 ExecStart=${INSTALL_DIR}/bin/divinesense
 Restart=always
@@ -264,7 +276,7 @@ EOF
     systemctl enable "$SERVICE_NAME"
     systemctl start "$SERVICE_NAME"
 
-    chown -R divinesense:divinesense "$INSTALL_DIR"
+    chown -R divine:divine "$INSTALL_DIR"
 
     log_success "安装完成"
 }

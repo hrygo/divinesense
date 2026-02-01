@@ -362,9 +362,9 @@ uninstall() {
 
     # 询问用户删除
     echo ""
-    read -p "删除 divinesense 用户? (yes/no): " remove_user
+    read -p "删除 divine 用户? (yes/no): " remove_user
     if [ "${remove_user}" = "yes" ]; then
-        userdel divinesense 2>/dev/null || true
+        userdel divine 2>/dev/null || true
         log_info "用户已删除"
     fi
 
