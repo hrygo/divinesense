@@ -302,13 +302,14 @@ func TestConflictResolver_BusinessHoursPreference(t *testing.T) {
 func TestConflictResolver_AdjacentDayPreference(t *testing.T) {
 	ctx := context.Background()
 	userID := int32(1)
-	now := time.Now()
+	// Use a fixed date to avoid issues with time.Now() at month boundaries in UTC
+	now := time.Date(2026, 2, 15, 10, 0, 0, 0, time.UTC)
 
 	// Make the current day fully booked
 	var schedules []*store.Schedule
 	for hour := 8; hour < 22; hour++ {
-		start := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.Local)
-		end := time.Date(now.Year(), now.Month(), now.Day(), hour+1, 0, 0, 0, time.Local)
+		start := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.UTC)
+		end := time.Date(now.Year(), now.Month(), now.Day(), hour+1, 0, 0, 0, time.UTC)
 		schedules = append(schedules, &store.Schedule{
 			ID:        int32(hour),
 			CreatorID: userID,
@@ -324,7 +325,7 @@ func TestConflictResolver_AdjacentDayPreference(t *testing.T) {
 	resolver := NewConflictResolver(svc)
 
 	// Request a slot on the fully booked day
-	requestedStart := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, time.Local)
+	requestedStart := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, time.UTC)
 	duration := time.Hour
 
 	resolution, err := resolver.Resolve(ctx, userID, requestedStart, time.Time{}, duration)
