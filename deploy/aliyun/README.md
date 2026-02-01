@@ -1,6 +1,6 @@
-# DivineSense 单机部署指南 (2C2G)
+# DivineSense 单机部署指南
 
-适用于阿里云/腾讯云 2核2G 服务器的生产环境部署方案。
+适用于阿里云/腾讯云服务器的生产环境部署方案。
 
 ---
 
@@ -141,6 +141,50 @@ DivineSense 需要 2 个 API Key（国内推荐）：
    cd /opt/divinesense && ./deploy.sh restart
    ```
 
+### 🧬 Evolution Mode (进化模式) 配置
+
+**Evolution Mode** 是最高级功能，允许 AI 自我修改 DivineSense 源代码。
+
+**工作目录**: `/home/divine/source/divinesense`
+
+**安全提示**: 仅限管理员使用，所有代码变更通过 GitHub PR 审核。
+
+#### 二进制部署
+
+1. **克隆源码**:
+   ```bash
+   sudo -u divine git clone https://github.com/hrygo/divinesense.git /home/divine/source/divinesense
+   ```
+
+2. **启用功能**:
+   修改配置 `/etc/divinesense/config`:
+   ```bash
+   DIVINESENSE_CLAUDE_CODE_ENABLED=true
+   DIVINESENSE_EVOLUTION_ENABLED=true
+   DIVINESENSE_EVOLUTION_ADMIN_ONLY=true
+   DIVINESENSE_EVOLUTION_SOURCE_DIR=/home/divine/source/divinesense
+   ```
+
+3. **重启服务**:
+   ```bash
+   systemctl restart divinesense
+   ```
+
+#### Docker 部署
+
+修改 `/opt/divinesense/.env.prod` 文件：
+```bash
+DIVINESENSE_CLAUDE_CODE_ENABLED=true
+DIVINESENSE_EVOLUTION_ENABLED=true
+DIVINESENSE_EVOLUTION_ADMIN_ONLY=true
+DIVINESENSE_EVOLUTION_SOURCE_DIR=/home/divine/source/divinesense
+```
+
+重启服务：
+```bash
+cd /opt/divinesense && ./deploy.sh restart
+```
+
 ---
 
 ## 运维命令
@@ -206,6 +250,10 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/insta
 ├── .db_password          # 数据库密码
 ├── deploy.sh             # 运维脚本
 └── backups/              # 备份目录
+
+/home/divine/            # divine 用户家目录
+├── .divinesense/        # Geek Mode 工作目录
+└── source/              # Evolution Mode 源码目录
 ```
 
 ### 二进制模式
@@ -220,10 +268,15 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/insta
     ├── postgres.yml
     └── .env
 
+/home/divine/            # divine 用户家目录
+├── .divinesense/        # Geek Mode 工作目录
+└── source/              # Evolution Mode 源码目录
+    └── divinesense/     # 项目源码
+
 /etc/divinesense/         # DIVINE_CONFIG_DIR (默认)
 ├── config                # 配置文件
-└── .db_password          # 数据库密码 (600 权限)
+└── .db_password          # 数据库密码 (640 权限, root:divine)
 
 /etc/systemd/system/      # systemd 服务
-└── divinesense.service
+└── divinesense.service   # User=divine
 ```
