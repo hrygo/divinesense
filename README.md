@@ -13,11 +13,12 @@
 ### 一键部署（推荐）
 
 ```bash
-# 交互式部署向导（自动配置所有选项）
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/interactive/wizard.sh | sudo bash
-```
+# 交互式安装（推荐新手）
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --interactive
 
-向导将自动完成：系统检测、数据库配置、AI 功能设置、管理员账户创建。
+# 二进制模式（Geek Mode）
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=binary
+```
 
 ### Docker 测试
 

@@ -4,55 +4,25 @@
 
 ---
 
-## 部署方式概览
-
-| 部署方式 | 说明 | Geek Mode | Evolution Mode |
-|:--------|:-----|:-----------|:--------------|
-| **交互式向导** | TUI 引导式配置，推荐新手 | ✅ 支持 | ✅ 支持 |
-| **Docker 模式** | 容器化一键部署 | ⚠️ 需配置 | ❌ 不支持 |
-| **二进制模式** | 原生部署，性能最优 | ✅ 原生支持 | ✅ 原生支持 |
-
----
-
 ## 快速开始
 
-### 方式 1: 交互式向导（推荐）
+### 一键部署（推荐）
 
 ```bash
-# 下载并运行交互式向导
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/interactive/wizard.sh | sudo bash
-```
+# 交互式安装（推荐新手）
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --interactive
 
-向导将引导您完成：
-- 系统检查与依赖检测
-- 部署模式选择
-- 数据库配置
-- AI 功能配置
-- Geek Mode 配置
-- Evolution Mode 配置（可选）
-- 管理员账户设置
-- 配置摘要确认
-- 自动安装
+# 二进制模式（Geek Mode 推荐）
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=binary
 
-详细说明：[交互式部署向导文档](INTERACTIVE_WIZARD.md)
-
-### 方式 2: 一键脚本
-
-```bash
-# Docker 模式 (默认)
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash
-
-# 二进制模式 (推荐 Geek Mode)
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --mode=binary
-
-# 指定版本
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --mode=binary --version=v1.0.0
+# Docker 模式
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --mode=docker
 ```
 
 ### 查看帮助
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyun/install.sh | sudo bash -s -- --help
+curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/install.sh | sudo bash -s -- --help
 ```
 
 ---
