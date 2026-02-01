@@ -18,6 +18,7 @@
 
 | 文档                                                                   | 描述                           | 状态     |
 | :--------------------------------------------------------------------- | :----------------------------- | :------- |
+| [auto-update-research.md](./auto-update-research.md)                   | 应用自动更新功能调研           | 📝 待开发 |
 | [idea-researcher-self-research.md](./idea-researcher-self-research.md) | Idea Researcher Skill 自我调研 | ✅ 已完成 |
 | [skill-design-audit.md](./skill-design-audit.md)                       | Skill 设计原则与审计           | ✅ 已完成 |
 | [cc-runner-async-upgrade.md](./cc-runner-async-upgrade.md)             | CCRunner 异步化与 UX 升级      | ✅ 已完成 |
