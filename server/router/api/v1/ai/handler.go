@@ -501,15 +501,20 @@ func (h *ParrotHandler) executeAgent(
 		sessionSummary.FilePaths = detailedStats.FilePaths
 	}
 
-	if err := stream.Send(&v1pb.ChatResponse{
+	// Safely send done marker
+	streamMu.Lock()
+	sendErr := stream.Send(&v1pb.ChatResponse{
 		Done:           true,
 		SessionSummary: sessionSummary,
-	}); err != nil {
+	})
+	streamMu.Unlock()
+
+	if sendErr != nil {
 		// If send fails, return the error (prefer execErr if it exists)
 		if execErr != nil {
 			return execErr
 		}
-		return err
+		return sendErr
 	}
 
 	// Safely get unique event count
