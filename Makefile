@@ -147,10 +147,6 @@ deps-ai: ## 安装 AI 依赖
 
 deps-all: deps deps-web ## 安装所有依赖
 
-install-hooks: ## 安装 git hooks (pre-commit 检查)
-	@echo "📦 Installing git hooks..."
-	@$(SCRIPT_DIR)/install-hooks.sh
-
 # ===========================================================================
 # Docker (PostgreSQL)
 # ===========================================================================
