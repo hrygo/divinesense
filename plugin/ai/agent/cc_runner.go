@@ -753,19 +753,44 @@ func (r *CCRunner) streamOutput(
 
 		scanDone := make(chan bool)
 		go func() {
+			r.logger.Info("CCRunner: scanner loop started",
+				"mode", cfg.Mode,
+				"session_id", cfg.SessionID)
+
+			lineCount := 0
+			lastValidDataTime := time.Now() // Track last time we received valid data
+
 			for scanner.Scan() {
+				lineCount++
+
+				// Check for inactivity before processing the line
+				// This detects when CLI stops sending data while scanner is blocked
+				if time.Since(lastValidDataTime) > 60*time.Second {
+					r.logger.Warn("CCRunner: no valid data from CLI for 60+ seconds",
+						"mode", cfg.Mode,
+						"session_id", cfg.SessionID,
+						"last_line_count", lineCount)
+					// Reset timer to avoid spamming
+					lastValidDataTime = time.Now()
+				}
+
 				line := scanner.Text()
 				if line == "" {
 					continue
 				}
+
+				// Update last activity time when we receive non-empty line
+				lastValidDataTime = time.Now()
 
 				// Log raw line for debugging (truncate if too long)
 				logLine := line
 				if len(logLine) > 200 {
 					logLine = logLine[:200] + "..."
 				}
-				r.logger.Debug("CCRunner: raw line",
+				// Use Info level for visibility in production
+				r.logger.Info("CCRunner: raw line",
 					"mode", cfg.Mode,
+					"line_number", lineCount,
 					"line", logLine)
 
 				var msg StreamMessage
@@ -783,9 +808,10 @@ func (r *CCRunner) streamOutput(
 					continue
 				}
 
-				// Log message type for debugging (Debug level to avoid log flooding)
-				r.logger.Debug("CCRunner: received message",
+				// Log message type for debugging (Info level for production visibility)
+				r.logger.Info("CCRunner: received message",
 					"mode", cfg.Mode,
+					"line_number", lineCount,
 					"type", msg.Type,
 					"name", msg.Name,
 					"has_output", msg.Output != "",
@@ -804,10 +830,17 @@ func (r *CCRunner) streamOutput(
 
 				// Check for completion
 				if msg.Type == "result" || msg.Type == "error" {
+					r.logger.Info("CCRunner: completion message received, ending scanner loop",
+						"mode", cfg.Mode,
+						"type", msg.Type,
+						"total_lines", lineCount)
 					return
 				}
 			}
 			scanDone <- true
+			r.logger.Info("CCRunner: scanner loop ended",
+				"mode", cfg.Mode,
+				"total_lines", lineCount)
 		}()
 
 		// Wait for scan to complete or context to be cancelled
@@ -1038,6 +1071,16 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			}
 		}
 	default:
+		// Log unknown message type for debugging
+		r.logger.Warn("CCRunner: unknown message type",
+			"type", msg.Type,
+			"role", msg.Role,
+			"name", msg.Name,
+			"has_content", len(msg.Content) > 0,
+			"has_message", msg.Message != nil,
+			"has_error", msg.Error != "",
+			"has_output", msg.Output != "")
+
 		// Try to extract any text content
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
