@@ -331,6 +331,7 @@ def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
 
 | 版本 | 日期 | 变更内容 |
 |:-----|:-----|:---------|
+| v1.3 | 2026-02-02 | **Agent 对标**：Parrot 扫描增强、Pi Agent 架构对比、Skills 维度对标 |
 | v1.2 | 2026-02-02 | **完善文档**：统一版本号、添加错误处理、改进模板 |
 | v1.1 | 2026-02-02 | **实时动态**：零硬编码、增量对比、状态持久化 |
 | v1.0 | 2026-02-02 | 初始版本：全面对标、价值评估、智能分组 |
@@ -339,7 +340,8 @@ def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
 
 - [x] v1.1: 增量对比模式（基于 CHANGELOG）
 - [x] v1.2: 语义相似度重复检测（基础实现）
-- [ ] v1.3: 自动化触发（GitHub Webhook）
+- [x] v1.3: Agent/Pi Agent 架构对标
+- [ ] v1.4: 自动化触发（GitHub Webhook）
 - [ ] v2.0: 多竞品支持（Memos、Obsidian 等）
 
 ---
@@ -387,4 +389,4 @@ find plugin/ai/agent/tools -name "*.go"
 
 ---
 
-*文档版本：v1.2 | 最后更新：2026-02-02*
+*文档版本：v1.3 | 最后更新：2026-02-02*

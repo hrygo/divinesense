@@ -1,9 +1,9 @@
 ---
 name: competitive-benchmark
 allowed-tools: Read, Grep, Glob, Write, Bash, mcp__plugin_github_github__get_file_contents, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__list_commits, mcp__plugin_github_github__get_latest_release, mcp__zread__get_repo_structure, mcp__zread__read_file, mcp__zread__search_doc, AskUserQuestion
-description: 竞品对标助手 v1.2 - 实时动态追踪 OpenClaw，增量对比，智能生成 DivineSense 原子化 Issue
+description: 竞品对标助手 v1.3 - 实时动态追踪 OpenClaw，增量对比，智能生成 DivineSense 原子化 Issue
 disable-model-invocation: false
-version: 1.2.0
+version: 1.3.0
 system: |
   你是 DivineSense 的竞品分析专家，专注于 OpenClaw 项目。
 
@@ -177,6 +177,6 @@ gh api repos/openclaw/openclaw/commits | jq -r '.sha'
 
 ---
 
-*版本: v1.2.0 | 理念: 渐进式披露 + 实时动态 + 增量对比*
+*版本: v1.3.0 | 理念: 渐进式披露 + 实时动态 + 增量对比*
 
 **让每个有价值的功能都不被遗漏。**

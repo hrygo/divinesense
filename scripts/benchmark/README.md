@@ -194,6 +194,7 @@ append_state "$TIMESTAMP" "$OC_SHA" "$DS_SHA" "$FEATURES" "$ISSUES"
 
 | 版本 | 日期 | 修复内容 |
 |:-----|:-----|:---------|
+| v1.4 | 2026-02-02 | **功能增强**：Parrot 扫描支持 v2 变体（schedule_parrot_v2.go） |
 | v1.3 | 2026-02-02 | **安全修复**：输入验证、文件锁、jq 构建 JSON |
 | v1.2 | 2026-02-02 | 初始版本 |
 
@@ -216,4 +217,4 @@ append_state "$TIMESTAMP" "$OC_SHA" "$DS_SHA" "$FEATURES" "$ISSUES"
 
 ---
 
-*版本: v1.3 | 最后更新: 2026-02-02*
+*版本: v1.4 | 最后更新: 2026-02-02*

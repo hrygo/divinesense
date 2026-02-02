@@ -138,7 +138,7 @@ def generate_capability_matrix():
 ```python
 # 自动过滤条件
 TS_SPECIFIC = ['jiti', 'tsx', 'oxlint', 'vitest', 'rollup', 'npm', 'pnpm']
-CHANNELS = ['whatsapp', 'discord', 'telegram', 'signal', 'slack']
+CHANNELS = ['whatsapp', 'discord', 'telegram', 'signal', 'slack', 'imessage']
 
 def should_filter(feature):
     if any(ts in feature.lower() for ts in TS_SPECIFIC):
@@ -147,6 +147,104 @@ def should_filter(feature):
         return True, '多渠道集成（不同定位）'
     return False, None
 ```
+
+---
+
+## Agent/Pi Agent 架构对比
+
+### 核心概念映射
+
+| 概念 | OpenClaw | DivineSense | 对等程度 |
+|:-----|:---------|:------------|:---------|
+| **Agent 实体** | Pi Agent | Parrot（鹦鹉） | 0.7 |
+| **运行时** | p-mono 嵌入式 | ChatRouter 三层路由 | 0.6 |
+| **路由机制** | 配置驱动的绑定规则 | 规则 + 历史 + LLM 分类 | 0.7 |
+| **会话管理** | Session Manager | conversation_context 表 (JSONB) | 1.0 |
+| **隔离策略** | 工作区隔离 (agentDir) | 会话 ID 隔离 | 0.5 |
+
+### Parrot 代理列表（DivineSense）
+
+| Parrot | 文件 | 中文名 | 用途 |
+|:-------|:-----|:-------|:-----|
+| **MemoParrot** | `memo_parrot.go` | 灰灰 | 笔记搜索和检索 |
+| **AmazingParrot** | `amazing_parrot.go` | 折衷 | 综合助理（笔记 + 日程） |
+| **ScheduleParrotV2** | `schedule_parrot_v2.go` | 时巧 | 日程创建和管理 |
+| **GeekParrot** | `geek_parrot.go` | 极客 | Claude Code CLI 集成（零 LLM） |
+| **EvolutionParrot** | `evolution_parrot.go` | 进化 | 自我进化能力（源代码修改） |
+
+### 路由架构对比
+
+**OpenClaw - Agent Router**：
+```yaml
+# 配置驱动的确定性分层匹配
+bindings:
+  - agentId: support-bot
+    match:
+      channel: discord
+      guildId: "123456789012345678"
+  - agentId: community-mod
+    match:
+      channel: telegram
+```
+
+**DivineSense - ChatRouter**：
+```go
+// 三层路由：规则(0ms) + 历史(~10ms) + LLM(~400ms)
+func (r *ChatRouter) Route(input string) AgentType {
+    // 1. 规则匹配（关键词）
+    if rule := matchByRules(input); rule.confidence >= 0.80 {
+        return rule.agent
+    }
+    // 2. 历史感知（对话上下文）
+    if agent := matchByHistory(input); agent != Unknown {
+        return agent
+    }
+    // 3. LLM 降级（语义理解）
+    return classifyByLLM(input)
+}
+```
+
+### 差异分析
+
+| 维度 | OpenClaw 优势 | DivineSense 优势 |
+|:-----|:-------------|:----------------|
+| **扩展性** | 40+ 技能，配置驱动 | 工具系统 Go 原生 |
+| **路由** | 确定性配置，零 LLM 开销 | LLM 降级处理模糊输入 |
+| **特殊能力** | 多渠道原生支持 | Geek Mode / Evolution Mode |
+| **部署** | 需要 Node.js 运行时 | 单二进制，无依赖 |
+
+---
+
+## Skills 维度对标
+
+### OpenClaw 技能分类
+
+> OpenClaw 内置 40+ 技能，按功能领域分类：
+
+| 类别 | 技能数量 | 示例 |
+|:-----|:--------|:-----|
+| **生产力** | 10+ | Coding Agent, GitHub CLI, Model Usage |
+| **媒体处理** | 8+ | FFmpeg, ImageMagick, PDF 处理 |
+| **通信** | 8+ | WhatsApp, Discord, Telegram, Signal |
+| **自动化** | 6+ | Cron 任务, Webhook, 定时器 |
+| **实用工具** | 8+ | 食品订购, 音乐播放, 智能家居 |
+
+### DivineSense 工具对应
+
+| DivineSense 工具 | 文件 | 对等 OpenClaw 技能 |
+|:----------------|:-----|:-------------------|
+| **memo_search** | `memo_search.go` | Coding Agent（搜索功能） |
+| **scheduler** | `scheduler.go` | Calendar 技能 |
+| **claude_code** | `claude_code.go` | Coding Agent（增强版） |
+
+### 差距分析
+
+| 维度 | OpenClaw | DivineSense | 差距 |
+|:-----|:---------|:------------|:-----|
+| **技能数量** | 40+ | 8 工具 | 显著 |
+| **媒体处理** | FFmpeg/ImageMagick | 无 | 高 |
+| **通信渠道** | 8+ 原生 | Web | 不同定位 |
+| **代码能力** | Coding Agent | Geek Mode（CC Runner） | 对等 |
 
 ---
 
@@ -217,4 +315,4 @@ interface FeatureGap {
 
 ---
 
-*文档版本：v1.2 | 最后更新：2026-02-02*
+*文档版本：v1.3 | 最后更新：2026-02-02*

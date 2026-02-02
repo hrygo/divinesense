@@ -42,10 +42,19 @@ log_error() { echo "[$(date -u +"%Y-%m-%d %H:%M:%S")][ERROR] $*" >&2; }
 declare -A SCAN_CACHE
 
 # scan_parrots - 扫描 AI 代理数量
+# 支持两种命名模式：
+#   - *_parrot.go (标准 Parrot)
+#   - *_parrot_v2.go (V2 变体，如 schedule_parrot_v2.go)
 # 输出: 代理数量
 scan_parrots() {
     if [[ -z "${SCAN_CACHE[parrots]:-}" ]]; then
-        SCAN_CACHE[parrots]=$(find "$AGENT_DIR" -name "*_parrot.go" 2>/dev/null | wc -l | tr -d ' ')
+        # 扫描标准 Parrot 和 V2 变体
+        SCAN_CACHE[parrots]=$(
+            (
+                find "$AGENT_DIR" -name "*_parrot.go" 2>/dev/null
+                find "$AGENT_DIR" -name "*_parrot_v2.go" 2>/dev/null
+            ) | wc -l | tr -d ' '
+        )
     fi
     echo "${SCAN_CACHE[parrots]}"
 }
@@ -54,8 +63,12 @@ scan_parrots() {
 # 输出: 代理名称（每行一个）
 scan_parrot_names() {
     if [[ -z "${SCAN_CACHE[parrot_names]:-}" ]]; then
-        SCAN_CACHE[parrot_names]=$(find "$AGENT_DIR" -name "*_parrot.go" 2>/dev/null | \
-            sed 's/.*\///' | sed 's/_parrot.go//' | sort)
+        SCAN_CACHE[parrot_names]=$(
+            (
+                find "$AGENT_DIR" -name "*_parrot.go" -o -name "*_parrot_v2.go" 2>/dev/null
+            ) | sed 's/.*\///' | \
+            sed 's/_parrot_v2\.go$//' | sed 's/_parrot\.go$//' | sort -u
+        )
     fi
     echo "${SCAN_CACHE[parrot_names]}"
 }
