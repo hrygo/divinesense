@@ -22,7 +22,7 @@ allowed-tools:
   - mcp__web-reader__webReader
   - AskUserQuestion
   - Task
-description: 产品洞察引擎 - 完整调研、系统对比、批量产出
+description: 产品洞察引擎 - 双模式调研（首次深度/增量快速）+ 价值三问 + 战略产出
 version: 2.6.0
 system: |
   # PRODUCT INSIGHT SKILL
