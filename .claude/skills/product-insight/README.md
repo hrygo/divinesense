@@ -105,6 +105,6 @@ Skill "product-insight" "执行目标产品洞察分析"
 
 ## 相关文档
 
-- [Idea Researcher](../idea-researcher/) — 创意调研 Skill
+- [Idea Researcher](../idea-researcher/) — 深度技术调研与方案设计（可对 product-insight 发现的功能进行细化）
 - [CLAUDE.md](../../../CLAUDE.md) — 项目指南
 - [ARCHITECTURE.md](../../../docs/dev-guides/ARCHITECTURE.md) — 系统架构

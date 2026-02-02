@@ -170,6 +170,7 @@ find plugin/ai/agent -name "*_parrot.go" 2>/dev/null | wc -l
 
 ### 竞品分析
 - **参考**: [产品名] - [实现方式]
+- **提示**: 如需深度竞品分析，可先运行 `/product-insight [目标产品]`
 
 ### 复杂度
 - **工作量**: [X 人周]

@@ -132,6 +132,15 @@ idea-researcher/
 
 ---
 
+## 相关工具
+
+| 工具 | 用途 |
+|:-----|:-----|
+| **[Product Insight](../product-insight/)** | 竞品分析 → 发现功能差距（可作为 idea-researcher 的输入源）|
+| **[Docs Manager](../docs-manager/)** | 文档引用完整性维护 |
+
+---
+
 ## 进化路线
 
 | 版本 | 状态     | 特性                                           |
