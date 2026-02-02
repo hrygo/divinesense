@@ -1,6 +1,6 @@
 # Competitive Benchmark Skill
 
-> 竞品对标助手 v1.1 — 实时动态追踪 OpenClaw，增量对比，智能生成 DivineSense 原子化 Issue
+> 竞品对标助手 v1.2 — 实时动态追踪 OpenClaw，增量对比，智能生成 DivineSense 原子化 Issue
 
 ## 简介
 
@@ -22,6 +22,17 @@
 Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 ```
 
+## 独立脚本
+
+除了 Skill 文档中的示例代码，项目还提供了可独立执行的脚本：
+
+| 脚本 | 用途 |
+|:-----|:-----|
+| **scripts/benchmark/state.sh** | 状态持久化管理 |
+| **scripts/benchmark/scan.sh** | DivineSense 能力矩阵扫描 |
+
+详见: [scripts/benchmark/README.md](../../../scripts/benchmark/README.md)
+
 ## 工作流程
 
 ```
@@ -30,13 +41,14 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 
 ## 核心特性
 
-| 特性 | v1.0 | v1.1 |
-|:-----|:-----|:-----|
-| 实时动态发现 | ❌ | ✅ GitHub API |
-| 增量对比 | ❌ | ✅ 基于 SHA |
-| 状态持久化 | ❌ | ✅ state.jsonl |
-| 智能过滤 | ✅ | ✅ 增强规则 |
-| 自动关闭已实现 | ❌ | ✅ 动态检测 |
+| 特性 | v1.0 | v1.1 | v1.2 |
+|:-----|:-----|:-----|:-----|
+| 实时动态发现 | ❌ | ✅ GitHub API | ✅ |
+| 增量对比 | ❌ | ✅ 基于 SHA | ✅ |
+| 状态持久化 | ❌ | ✅ state.jsonl | ✅ |
+| 独立脚本 | ❌ | ❌ | ✅ scripts/benchmark/ |
+| 智能过滤 | ✅ | ✅ 增强规则 | ✅ |
+| 自动关闭已实现 | ❌ | ✅ 动态检测 | ✅ |
 
 ## 对标策略
 
@@ -82,6 +94,11 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 └── templates/
     ├── issue.md      # Issue 模板
     └── report.md     # 报告模板
+
+scripts/benchmark/
+├── state.sh          # 状态持久化管理
+├── scan.sh           # 能力矩阵扫描
+└── README.md         # 脚本使用说明
 ```
 
 ## 状态文件
@@ -96,6 +113,7 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 
 | 版本 | 日期 | 变更内容 |
 |:-----|:-----|:---------|
+| v1.2 | 2026-02-02 | **完善文档**：统一版本号、添加错误处理、提取独立脚本 |
 | v1.1 | 2026-02-02 | **实时动态**：零硬编码、增量对比、状态持久化 |
 | v1.0 | 2026-02-02 | 初始版本 |
 

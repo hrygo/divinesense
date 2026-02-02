@@ -100,47 +100,33 @@ parse_changelog_since() {
 
 ### 状态操作命令
 
+> **脚本**: `scripts/benchmark/state.sh`
+
 ```bash
-# 追加新状态
-append_state() {
-    local timestamp=$1
-    local oc_sha=$2
-    local ds_sha=$3
-    local features=$4  # JSON array
-    local issues=$5      # JSON array
+# 方式一：直接执行脚本
+./scripts/benchmark/state.sh append "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
+./scripts/benchmark/state.sh get
+./scripts/benchmark/state.sh query "openclaw_sha"
+./scripts/benchmark/state.sh summary
 
-    STATE_FILE="docs/research/benchmark/state.jsonl"
-    cat >> "$STATE_FILE" <<EOF
-{"timestamp":"$timestamp","openclaw_sha":"$oc_sha","divinesense_sha":"$ds_sha","analyzed_features":$features,"discovered_functions":[],"created_issues":$issues}
-EOF
-}
-
-# 读取最新状态
-get_latest_state() {
-    STATE_FILE="docs/research/benchmark/state.jsonl"
-    if [ -f "$STATE_FILE" ]; then
-        tail -1 "$STATE_FILE" | jq -r '.'
-    else
-        echo '{"timestamp":"","openclaw_sha":"","divinesense_sha":"","analyzed_features":[],"discovered_functions":[],"created_issues":[]}'
-    fi
-}
+# 方式二：source 后使用（更灵活）
+source scripts/benchmark/state.sh
+append_state "$timestamp" "$oc_sha" "$ds_sha" "$features" "$issues"
+get_latest_state
+query_state "openclaw_sha"
+show_state_summary
 ```
 
 ### 状态查询
 
 ```bash
-# 查询上次对标时间
-last_run=$(get_latest_state | jq -r '.timestamp')
+# 显示完整摘要
+./scripts/benchmark/state.sh summary
 
-# 查询已分析功能数量
-analyzed_count=$(get_latest_state | jq -r '.analyzed_features | length')
-
-# 查询已创建 Issue 数量
-issues_count=$(get_latest_state | jq -r '.created_issues | length')
-
-echo "上次对标: $last_run"
-echo "已分析功能: $analyzed_count 个"
-echo "已创建 Issue: $issues_count 个"
+# 查询特定字段
+last_run=$(./scripts/benchmark/state.sh query timestamp)
+analyzed_count=$(./scripts/benchmark/state.sh get | jq -r '.analyzed_features | length')
+issues_count=$(./scripts/benchmark/state.sh get | jq -r '.created_issues | length')
 ```
 
 ---
@@ -369,6 +355,11 @@ def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
 └── templates/
     ├── issue.md      # Issue 模板
     └── report.md     # 报告模板
+
+scripts/benchmark/
+├── state.sh          # 状态持久化管理
+├── scan.sh           # 能力矩阵扫描
+└── README.md         # 脚本使用说明
 ```
 
 ---

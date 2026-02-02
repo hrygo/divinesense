@@ -52,19 +52,19 @@ system: |
 ## 阶段 0: 状态恢复
 
 > **依赖**: `jq` (JSON 处理), `gh` (GitHub CLI)
+> **脚本**: `scripts/benchmark/state.sh`
 
 ```bash
-# 读取上次对标状态（带错误处理）
-STATE_FILE="docs/research/benchmark/state.jsonl"
-if [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
-  LAST_SHA=$(tail -1 "$STATE_FILE" | jq -r '.openclaw_sha // empty')
-  # 如果 jq 解析失败或返回 null，设置为空
-  [ -z "$LAST_SHA" ] && LAST_SHA=""
-else
-  LAST_SHA=""  # 首次运行
-fi
+# 方式一：使用脚本
+./scripts/benchmark/state.sh summary
+LAST_SHA=$(./scripts/benchmark/state.sh query openclaw_sha)
 
-# 获取当前 SHA（带错误处理）
+# 方式二：source 后使用函数
+source scripts/benchmark/state.sh
+show_state_summary
+LAST_SHA=$(query_state "openclaw_sha")
+
+# 获取当前 OpenClaw SHA
 CURRENT_OPENCLAW_SHA=$(gh api repos/openclaw/openclaw/commits 2>/dev/null | jq -r '.sha // empty')
 if [ -z "$CURRENT_OPENCLAW_SHA" ]; then
   echo "错误: 无法获取 OpenClaw SHA，请检查网络连接和 gh 认证"
@@ -88,13 +88,23 @@ gh api repos/openclaw/openclaw/contents/CHANGELOG.md | jq -r '.content' | base64
 
 ## 阶段 2: 动态能力对比
 
-```bash
-# DivineSense 动态扫描
-PARROTS=$(find plugin/ai/agent -name "*_parrot.go" 2>/dev/null | wc -l)
-TOOLS=$(find plugin/ai/agent/tools -name "*.go" 2>/dev/null | wc -l)
+> **脚本**: `scripts/benchmark/scan.sh`
 
-# 检测已实现功能
-has_feature() { grep -rq "$1" plugin/ai/agent/ web/src/ 2>/dev/null; }
+```bash
+# 方式一：使用脚本生成 JSON 矩阵
+MATRIX=$(./scripts/benchmark/scan.sh matrix)
+PARROTS=$(echo "$MATRIX" | jq -r '.parrots')
+TOOLS=$(echo "$MATRIX" | jq -r '.tools')
+
+# 方式二：直接扫描单项
+PARROTS=$(./scripts/benchmark/scan.sh parrots)
+TOOLS=$(./scripts/benchmark/scan.sh tools)
+
+# 检查功能是否已实现
+./scripts/benchmark/scan.sh has "session.*prun"  # 退出码 0=已实现, 1=未实现
+
+# 显示人类可读摘要
+./scripts/benchmark/scan.sh summary
 ```
 
 ---
@@ -141,14 +151,18 @@ has_feature() { grep -rq "$1" plugin/ai/agent/ web/src/ 2>/dev/null; }
 ## 常用命令
 
 ```bash
+# 状态管理
+./scripts/benchmark/state.sh summary      # 查看状态摘要
+./scripts/benchmark/state.sh query openclaw_sha  # 查询字段
+./scripts/benchmark/state.sh count         # 记录数量
+
+# 能力扫描
+./scripts/benchmark/scan.sh summary        # 能力摘要
+./scripts/benchmark/scan.sh parrots        # 代理数量
+./scripts/benchmark/scan.sh has "pattern"  # 检查功能
+
 # 获取 OpenClaw 最新 SHA
 gh api repos/openclaw/openclaw/commits | jq -r '.sha'
-
-# 读取状态文件
-tail -1 docs/research/benchmark/state.jsonl | jq -r '.'
-
-# 检查 DivineSense 功能
-has_feature "session.*prun"
 ```
 
 ---
@@ -159,6 +173,7 @@ has_feature "session.*prun"
 |:-----|:-----|
 | **REFERENCE.md** | 动态发现方法、评分标准、过滤规则 |
 | **ADVANCED.md** | 增量算法、状态持久化、自动进化 |
+| **scripts/benchmark/** | 独立脚本（state.sh, scan.sh） |
 
 ---
 

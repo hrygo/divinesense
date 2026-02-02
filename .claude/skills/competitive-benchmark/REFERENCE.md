@@ -71,22 +71,26 @@ gh api repos/openclaw/openclaw/contents/CHANGELOG.md | \
 
 ### 动态扫描命令
 
+> **脚本**: `scripts/benchmark/scan.sh`
+
 ```bash
-# 发现代理（动态）
-PARROTS=$(find plugin/ai/agent -name "*_parrot.go" 2>/dev/null)
-PARROT_NAMES=$(echo "$PARROTS" | sed 's/.*\///' | sed 's/_parrot.go//')
+# 方式一：使用脚本（推荐）
+MATRIX=$(./scripts/benchmark/scan.sh matrix)
+PARROTS=$(./scripts/benchmark/scan.sh parrots)
+TOOLS=$(./scripts/benchmark/scan.sh tools)
+PAGES=$(./scripts/benchmark/scan.sh pages)
+TABLES=$(./scripts/benchmark/scan.sh tables)
 
-# 发现工具（动态）
-TOOLS=$(find plugin/ai/agent/tools -name "*.go" 2>/dev/null)
-TOOL_NAMES=$(echo "$TOOLS" | sed 's/.*\///' | sed 's/\.go$//')
+# 列出名称
+PARROT_NAMES=$(./scripts/benchmark/scan.sh parrot-names)
+TOOL_NAMES=$(./scripts/benchmark/scan.sh tool-names)
 
-# 发现前端页面（动态）
-PAGES=$(find web/src/pages -name "*.tsx" 2>/dev/null)
-PAGE_NAMES=$(echo "$PAGES" | sed 's/.*\///' | sed 's/\.tsx$//')
+# 显示摘要
+./scripts/benchmark/scan.sh summary
 
-# 发现数据库表（动态）
-TABLES=$(grep -r "CREATE TABLE" store/migration/postgres/ 2>/dev/null | \
-  sed 's/.*CREATE TABLE IF NOT EXISTS //' | sed 's/ .*//' | sort -u)
+# 方式二：手动扫描（兼容性）
+PARROTS=$(find plugin/ai/agent -name "*_parrot.go" 2>/dev/null | wc -l)
+TOOLS=$(find plugin/ai/agent/tools -name "*.go" 2>/dev/null | wc -l)
 ```
 
 ### 运行时能力矩阵生成
@@ -159,6 +163,14 @@ def should_filter(feature):
 ## 常用命令
 
 ```bash
+# 状态管理
+./scripts/benchmark/state.sh summary
+./scripts/benchmark/state.sh query openclaw_sha
+
+# 能力扫描
+./scripts/benchmark/scan.sh summary
+./scripts/benchmark/scan.sh has "pattern"
+
 # 仓库信息（动态）
 REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
 
@@ -167,11 +179,6 @@ gh issue list --repo "$REPO" --search "<关键词>"
 
 # 创建 Issue
 gh issue create --repo "$REPO" --title "[feat] 功能" --body "..."
-
-# 检查 DivineSense 是否已实现某功能
-has_feature() {
-    grep -rq "$1" plugin/ai/agent/ web/src/ 2>/dev/null
-}
 ```
 
 ---
