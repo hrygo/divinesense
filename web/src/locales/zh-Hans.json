@@ -362,9 +362,22 @@
     "create-your-account": "创建您的账户",
     "host-tip": "您正在注册为站点管理员。",
     "new-password": "新密码",
+    "password-auth-not-allowed": "密码认证已禁用。",
     "repeat-new-password": "重复新密码",
     "sign-in-tip": "已有账户？",
-    "sign-up-tip": "还没有账户？"
+    "sign-up-not-allowed": "用户注册已禁用。",
+    "sign-up-tip": "还没有账户？",
+    "error": {
+      "default": "登录失败，请检查您的用户名和密码后重试。",
+      "invalid-credentials": "用户名或密码错误。",
+      "network": "网络错误，请检查您的网络连接后重试。",
+      "server": "服务器错误，请稍后重试。",
+      "user-not-found": "用户不存在，请检查用户名是否正确。",
+      "rate-limit": "尝试次数过多，请稍后再试。",
+      "sign-up-failed": "注册失败，请重试。",
+      "oauth-context": "OAuth 登录失败",
+      "oauth-failed": "OAuth 登录失败，请重试。"
+    }
   },
   "chat": {
     "new": "新对话"

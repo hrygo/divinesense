@@ -1,3 +1,4 @@
+import { LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -6,10 +7,10 @@ import PasswordSignInForm from "@/components/PasswordSignInForm";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { identityProviderServiceClient } from "@/connect";
+import { useAuth } from "@/contexts/AuthContext";
 import { useInstance } from "@/contexts/InstanceContext";
 import { extractIdentityProviderIdFromName } from "@/helpers/resource-names";
 import { absolutifyLink } from "@/helpers/utils";
-import useCurrentUser from "@/hooks/useCurrentUser";
 import { handleError } from "@/lib/error";
 import { Routes } from "@/router";
 import { IdentityProvider, IdentityProvider_Type } from "@/types/proto/api/v1/idp_service_pb";
@@ -18,25 +19,45 @@ import { storeOAuthState } from "@/utils/oauth";
 
 const SignIn = () => {
   const t = useTranslate();
-  const currentUser = useCurrentUser();
+  const { currentUser, isInitialized: authInitialized } = useAuth();
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
-  const { generalSetting: instanceGeneralSetting } = useInstance();
+  const [idpLoading, setIdpLoading] = useState(true);
+  const { generalSetting: instanceGeneralSetting, isLoading: instanceLoading } = useInstance();
 
-  // Redirect to root page if already signed in.
+  // Redirect to root page if already signed in (only after auth is initialized)
   useEffect(() => {
-    if (currentUser?.name) {
+    if (authInitialized && currentUser?.name) {
       window.location.href = Routes.ROOT;
     }
-  }, [currentUser]);
+  }, [authInitialized, currentUser]);
 
   // Prepare identity provider list.
   useEffect(() => {
     const fetchIdentityProviderList = async () => {
-      const { identityProviders } = await identityProviderServiceClient.listIdentityProviders({});
-      setIdentityProviderList(identityProviders);
+      try {
+        const { identityProviders } = await identityProviderServiceClient.listIdentityProviders({});
+        setIdentityProviderList(identityProviders);
+      } catch (error) {
+        // Silently fail - OAuth is optional
+        console.error("Failed to fetch identity providers:", error);
+      } finally {
+        setIdpLoading(false);
+      }
     };
     fetchIdentityProviderList();
   }, []);
+
+  // Show loading state while instance config is loading
+  if (instanceLoading) {
+    return (
+      <div className="py-4 sm:py-8 w-80 max-w-full min-h-svh mx-auto flex flex-col justify-start items-center">
+        <div className="w-full py-4 grow flex flex-col justify-center items-center">
+          <LoaderIcon className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+        <AuthFooter />
+      </div>
+    );
+  }
 
   const handleSignInWithIdentityProvider = async (identityProvider: IdentityProvider) => {
     if (identityProvider.type === IdentityProvider_Type.OAUTH2) {
@@ -64,8 +85,8 @@ const SignIn = () => {
         window.location.href = authUrl;
       } catch (error) {
         handleError(error, toast.error, {
-          context: "Failed to initiate OAuth flow",
-          fallbackMessage: "Failed to initiate sign-in. Please try again.",
+          context: t("auth.error.oauth-context"),
+          fallbackMessage: t("auth.error.oauth-failed"),
         });
       }
     }
@@ -81,7 +102,8 @@ const SignIn = () => {
         {!instanceGeneralSetting.disallowPasswordAuth ? (
           <PasswordSignInForm />
         ) : (
-          identityProviderList.length === 0 && <p className="w-full text-2xl mt-2 text-muted-foreground">Password auth is not allowed.</p>
+          identityProviderList.length === 0 &&
+          !idpLoading && <p className="w-full text-2xl mt-2 text-muted-foreground">{t("auth.password-auth-not-allowed")}</p>
         )}
         {!instanceGeneralSetting.disallowUserRegistration && !instanceGeneralSetting.disallowPasswordAuth && (
           <p className="w-full mt-4 text-sm">
@@ -91,7 +113,8 @@ const SignIn = () => {
             </Link>
           </p>
         )}
-        {identityProviderList.length > 0 && (
+        {/* Always reserve space for OAuth buttons to prevent layout shift */}
+        {(identityProviderList.length > 0 || idpLoading) && (
           <>
             {!instanceGeneralSetting.disallowPasswordAuth && (
               <div className="relative my-4 w-full">
@@ -102,16 +125,22 @@ const SignIn = () => {
               </div>
             )}
             <div className="w-full flex flex-col space-y-2">
-              {identityProviderList.map((identityProvider) => (
-                <Button
-                  className="bg-background w-full"
-                  key={identityProvider.name}
-                  variant="outline"
-                  onClick={() => handleSignInWithIdentityProvider(identityProvider)}
-                >
-                  {t("common.sign-in-with", { provider: identityProvider.title })}
-                </Button>
-              ))}
+              {idpLoading ? (
+                <div className="flex justify-center py-2">
+                  <LoaderIcon className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                identityProviderList.map((identityProvider) => (
+                  <Button
+                    className="bg-background w-full"
+                    key={identityProvider.name}
+                    variant="outline"
+                    onClick={() => handleSignInWithIdentityProvider(identityProvider)}
+                  >
+                    {t("common.sign-in-with", { provider: identityProvider.title })}
+                  </Button>
+                ))
+              )}
             </div>
           </>
         )}

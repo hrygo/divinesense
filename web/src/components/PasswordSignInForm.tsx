@@ -12,6 +12,39 @@ import useNavigateTo from "@/hooks/useNavigateTo";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 
+// Helper function to convert technical error messages to user-friendly ones
+function getFriendlyErrorMessage(errorMessage: string, t: ReturnType<typeof useTranslate>): string {
+  const lowerMessage = errorMessage.toLowerCase();
+
+  // Network/connection errors
+  if (lowerMessage.includes("network") || lowerMessage.includes("fetch") || lowerMessage.includes("connect")) {
+    return t("auth.error.network");
+  }
+  // Authentication failures
+  if (
+    lowerMessage.includes("401") ||
+    lowerMessage.includes("unauthorized") ||
+    lowerMessage.includes("invalid") ||
+    lowerMessage.includes("credentials")
+  ) {
+    return t("auth.error.invalid-credentials");
+  }
+  // User not found
+  if (lowerMessage.includes("not found") || lowerMessage.includes("404")) {
+    return t("auth.error.user-not-found");
+  }
+  // Server errors
+  if (lowerMessage.includes("500") || lowerMessage.includes("502") || lowerMessage.includes("503")) {
+    return t("auth.error.server");
+  }
+  // Rate limiting
+  if (lowerMessage.includes("429") || lowerMessage.includes("rate limit") || lowerMessage.includes("too many")) {
+    return t("auth.error.rate-limit");
+  }
+  // Default fallback
+  return t("auth.error.default");
+}
+
 function PasswordSignInForm() {
   const t = useTranslate();
   const navigateTo = useNavigateTo();
@@ -65,7 +98,7 @@ function PasswordSignInForm() {
     } catch (error: unknown) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setError(errorMessage || t("common.failed-to-sign-in"));
+      setError(getFriendlyErrorMessage(errorMessage, t));
     }
     actionBtnLoadingState.setFinish();
   };

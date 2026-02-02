@@ -35,14 +35,14 @@ docker run -d --name divinesense \
 
 ## 功能特性
 
-| 类别 | 功能 |
-|:-----|:-----|
-| **笔记** | Markdown 编辑、语义搜索、AI 标签、附件管理 |
-| **日程** | 自然语言创建、冲突检测、多视图日历、周期事件 |
-| **AI 代理** | 五位智能代理（灰灰/时巧/折衷/极客/进化）协同工作 |
-| **搜索** | BM25 + 向量混合检索，精准定位内容 |
-| **Geek Mode** | Claude Code CLI 集成，自动化编码任务 |
-| **Evolution Mode** | 系统自我进化，AI 修改源代码并提交 PR |
+| 类别               | 功能                                             |
+| :----------------- | :----------------------------------------------- |
+| **笔记**           | Markdown 编辑、语义搜索、AI 标签、附件管理       |
+| **日程**           | 自然语言创建、冲突检测、多视图日历、周期事件     |
+| **AI 代理**        | 五位智能代理（灰灰/时巧/折衷/极客/进化）协同工作 |
+| **搜索**           | BM25 + 向量混合检索，精准定位内容                |
+| **Geek Mode**      | Claude Code CLI 集成，自动化编码任务             |
+| **Evolution Mode** | 系统自我进化，AI 修改源代码并提交 PR             |
 
 ---
 
@@ -72,18 +72,19 @@ git clone https://github.com/hrygo/divinesense.git && cd divinesense
 make deps-all && make start
 ```
 
-访问 http://localhost:25173
+访问 http://localhost:25173，详见 [贡献指南](CONTRIBUTING.md)
 
 ---
 
 ## 开发文档
 
-| 文档 | 说明 |
-|:-----|:-----|
-| [系统架构](docs/dev-guides/ARCHITECTURE.md) | AI 代理、数据流、项目结构 |
-| [后端开发](docs/dev-guides/BACKEND_DB.md) | API、数据库、环境配置 |
-| [前端开发](docs/dev-guides/FRONTEND.md) | 布局、组件、Tailwind 4 |
-| [Git 工作流](.claude/rules/git-workflow.md) | 分支管理、PR 规范 |
+| 文档                                        | 说明                                        |
+| :------------------------------------------ | :------------------------------------------ |
+| [系统架构](docs/dev-guides/ARCHITECTURE.md) | AI 代理、数据流、项目结构                   |
+| [后端开发](docs/dev-guides/BACKEND_DB.md)   | API、数据库、环境配置                       |
+| [前端开发](docs/dev-guides/FRONTEND.md)     | 布局、组件、Tailwind 4                      |
+| [Git 工作流](.claude/rules/git-workflow.md) | 分支管理、PR 规范                           |
+| [贡献指南](CONTRIBUTING.md)                 | **入门必读**：环境搭建、开发规范、Checklist |
 
 ---
 

@@ -20,7 +20,19 @@ const SignUp = () => {
   const actionBtnLoadingState = useLoading(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { generalSetting: instanceGeneralSetting, profile } = useInstance();
+  const { generalSetting: instanceGeneralSetting, profile, isLoading: instanceLoading } = useInstance();
+
+  // Show loading state while instance config is loading
+  if (instanceLoading) {
+    return (
+      <div className="py-4 sm:py-8 w-80 max-w-full min-h-svh mx-auto flex flex-col justify-start items-center">
+        <div className="w-full py-4 grow flex flex-col justify-center items-center">
+          <LoaderIcon className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+        <AuthFooter />
+      </div>
+    );
+  }
 
   const handleUsernameInputChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value as string;
@@ -67,7 +79,7 @@ const SignUp = () => {
       window.location.href = "/";
     } catch (error: unknown) {
       handleError(error, toast.error, {
-        fallbackMessage: "Sign up failed",
+        fallbackMessage: t("auth.error.sign-up-failed"),
       });
     }
     actionBtnLoadingState.setFinish();
@@ -125,7 +137,7 @@ const SignUp = () => {
             </form>
           </>
         ) : (
-          <p className="w-full text-2xl mt-2 text-muted-foreground">Sign up is not allowed.</p>
+          <p className="w-full text-2xl mt-2 text-muted-foreground">{t("auth.sign-up-not-allowed")}</p>
         )}
         {!profile.owner ? (
           <p className="w-full mt-4 text-sm font-medium text-muted-foreground">{t("auth.host-tip")}</p>

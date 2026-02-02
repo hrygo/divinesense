@@ -1,15 +1,15 @@
-# GitHub Issue 模板 - 竞品洞察
+# GitHub Issue 模板 - 产品洞察
 
-> competitive-benchmark skill v2.0 生成的 Issue 模板
+> product-insight skill v2.3.0 生成的 Issue 模板
 
 ---
 
 ## [类型] 功能标题
 
-### 竞品来源
+### 目标产品来源
 
-**对标产品**: {{competitor_name}} (默认: OpenClaw)
-**对标版本**: {{competitor_version}}
+**目标产品**: {{target_name}} (默认: OpenClaw)
+**产品版本**: {{target_version}}
 **参考功能**: {{reference_features}}
 
 ---
@@ -57,9 +57,9 @@ ___________ vs ___________
 
 ## 第三问：创造性转化
 
-### 竞品实现
+### 目标产品实现
 
-<!-- 描述竞品是如何实现这个功能的 -->
+<!-- 描述目标产品是如何实现这个功能的 -->
 
 ### 我们的适配方式
 
@@ -118,7 +118,7 @@ ___________ vs ___________
 
 ### 参考资源
 
-- [竞品参考实现]({{reference_link}})
+- [目标产品参考实现]({{reference_link}})
 - [相关文档链接]
 - 📄 详细洞察报告：`docs/research/benchmark/{{report_filename}}`
 
@@ -140,4 +140,4 @@ ___________ vs ___________
 ---
 
 **洞察生成时间**: {{timestamp}}
-**对标版本**: v2.0 (价值三问框架)
+**洞察版本**: v2.3.0 (价值三问框架)

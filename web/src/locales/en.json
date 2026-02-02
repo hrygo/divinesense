@@ -367,9 +367,22 @@
     "create-your-account": "Create your account",
     "host-tip": "You are registering as the Site Host.",
     "new-password": "New password",
+    "password-auth-not-allowed": "Password authentication is disabled.",
     "repeat-new-password": "Repeat the new password",
     "sign-in-tip": "Already have an account?",
-    "sign-up-tip": "Don't have an account yet?"
+    "sign-up-not-allowed": "User registration is disabled.",
+    "sign-up-tip": "Don't have an account yet?",
+    "error": {
+      "default": "Sign in failed. Please check your credentials and try again.",
+      "invalid-credentials": "Invalid username or password.",
+      "network": "Network error. Please check your connection and try again.",
+      "server": "Server error. Please try again later.",
+      "user-not-found": "User not found. Please check your username.",
+      "rate-limit": "Too many attempts. Please wait a moment and try again.",
+      "sign-up-failed": "Registration failed. Please try again.",
+      "oauth-context": "OAuth sign-in failed",
+      "oauth-failed": "Failed to sign in with OAuth. Please try again."
+    }
   },
   "chat": {
     "new": "New Chat"
