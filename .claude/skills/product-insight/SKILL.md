@@ -23,7 +23,7 @@ allowed-tools:
   - AskUserQuestion
   - Task
 description: 产品洞察引擎 - 完整调研、系统对比、批量产出
-version: 2.4.0
+version: 2.5.0
 system: |
   # PRODUCT INSIGHT SKILL
 
@@ -40,6 +40,28 @@ system: |
   - 每个功能分析经过价值三问
   - 先完成能力矩阵对比，再询问用户
   - 分析后判断，而非自动过滤
+
+  ## 容错策略（重要）
+
+  MCP 工具可能不稳定，执行时遵循降级优先级：
+
+  1. **GitHub API（必需）** - mcp__plugin_github_* 工具
+     - Releases, Issues, Commits 是核心数据源
+     - 如果失败，尝试 Bash + gh CLI 作为备用
+
+  2. **网页读取（可选）** - mcp__web-reader__webReader
+     - 用于获取 README/文档
+     - 失败时使用 GitHub API 的 get_file_contents 备用
+
+  3. **目录结构（可选）** - mcp__zread__get_repo_structure
+     - 用于了解架构
+     - 失败时基于 Issues 推断能力矩阵
+
+  4. **网络搜索（可选）** - mcp__web-search-prime__webSearchPrime
+     - 用于补充上下文
+     - 失败时跳过，不影响核心分析
+
+  **关键原则**：不要因为可选工具失败而停止分析。用现有数据完成洞察。
 
   ## 价值三问
 
@@ -108,21 +130,27 @@ system: |
 
 判断：SHA 为空 = 首次分析，走完整流程。
 
-## Step 2: 数据收集
+## Step 2: 数据收集（带降级策略）
 
 ```bash
-# Releases（最新 10 个）
+# 核心数据（必需）- 优先使用 MCP GitHub 工具
+mcp__plugin_github_github__get_latest_release
+mcp__plugin_github_github__list_issues (state=open, limit=30)
+
+# 备用：如果 MCP 失败，使用 gh CLI
 gh release list --repo "$BENCHMARK_TARGET" --limit 10
-
-# Issues（分页，至少 90 个）
 gh issue list --repo "$BENCHMARK_TARGET" --limit 30 --state open
-gh issue list --repo "$BENCHMARK_TARGET" --limit 30 --state open --page 2
-gh issue list --repo "$BENCHMARK_TARGET" --limit 30 --state open --page 3
 
-# README 和代码结构
-gh repo view "$BENCHMARK_TARGET" --json description,topics
-mcp__zread__get_repo_structure "$BENCHMARK_TARGET" "/"
+# 可选数据（失败时跳过）
+# - README: mcp__plugin_github_github__get_file_contents (owner, repo, path: "README.md")
+# - 目录结构: mcp__zread__get_repo_structure (失败时基于 Issues 推断)
+# - 网络搜索: mcp__web-search-prime__webSearchPrime (失败时跳过)
 ```
+
+**降级执行原则**：
+- 核心数据源失败时尝试 gh CLI
+- 可选数据源失败时继续分析，记录警告
+- 始终基于可用数据产出洞察
 
 ## Step 3: 能力矩阵
 
@@ -193,12 +221,28 @@ mcp__zread__get_repo_structure "$BENCHMARK_TARGET" "/"
 
 ## 快捷指令
 
-| 指令       | 行为                             |
-| :--------- | :------------------------------- |
+| 指令 | 行为 |
+|:-----|:-----|
 | "完整分析" | 首次对标，全面扫描（5-10 Issue） |
-| "增量分析" | 基于已有状态，只看新增内容       |
-| "深入 X"   | 聚焦分析 X                       |
-| "总结"     | 当前阶段总结                     |
+| "增量分析" | 基于已有状态，只看新增内容 |
+| "快速分析" | 跳过 HITL，直接输出战略建议 |
+| "跳过 X" | 跳过某个数据源（当 MCP 不稳定时） |
+| "总结" | 当前阶段总结 |
+
+## 故障排查
+
+| 问题 | 原因 | 解决方案 |
+|:-----|:-----|:---------|
+| MCP 工具 JSON-RPC 错误 | MCP 服务器连接断开 | 继续 Skill，会自动降级到 gh CLI |
+| 分析中断 | 会话超时或工具失败 | 重新触发 Skill，状态已保存 |
+| 状态文件损坏 | JSON 格式错误 | 删除 state.jsonl，重新 init |
+
+## 输出说明
+
+- **洞察报告**：输出到对话（实时），可选择保存到 `docs/research/benchmark/report-YYYYMMDD.md`
+- **GitHub Issue**：显示预览，询问用户是否创建（不自动创建）
+- **状态更新**：自动写入 `docs/research/benchmark/state.jsonl`
+- **能力矩阵**：通过 `scripts/scan.py` 实时扫描 DivineSense 项目
 
 ## 辅助脚本
 

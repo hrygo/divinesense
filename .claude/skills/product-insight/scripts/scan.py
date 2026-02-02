@@ -106,6 +106,7 @@ class CapabilityScanner:
                 capture_output=True,
                 text=True,
                 check=True,
+                timeout=10,  # 10秒超时
             )
             return result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):

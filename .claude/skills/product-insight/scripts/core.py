@@ -104,6 +104,7 @@ def get_target_sha(repo: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        timeout=30,  # 30秒超时
     )
     import json
 
