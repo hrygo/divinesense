@@ -247,6 +247,101 @@ ls web/dist/assets/ | grep lodash  # 应该看到 lodash-vendor-xxx.js
 
 ---
 
+## 二进制部署运维权限问题 (2026-02)
+
+### 问题描述
+二进制模式部署后，divine 用户执行运维操作遇到权限问题：
+1. `make restart` 提示需要输入 sudo 密码
+2. `docker ps` 报错 "permission denied while trying to connect to the docker API"
+
+### 错误表现
+```
+==== AUTHENTICATING FOR org.freedesktop.systemd1.manage-units ===
+Authentication is required to restart 'divinesense.service'.
+Authenticating as: root
+Password:
+permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
+```
+
+### 根本原因
+
+1. **docker 组缺失**：divine 用户创建时未加入 docker 组，无法执行 docker 命令
+2. **sudoers 未配置**：divine 用户没有免密执行 systemctl 的权限
+3. **缺少运维工具**：用户主目录没有 Makefile 运维工具
+
+### 解决方案
+
+**安装时自动配置**（`deploy/install.sh`）：
+
+```bash
+# 1. 配置 docker 组
+if ! groups divine | grep -q docker; then
+    usermod -aG docker divine
+fi
+
+# 2. 配置 sudoers 免密（仅限 DivineSense 相关命令）
+cat > /etc/sudoers.d/divinesense << 'EOF'
+divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
+EOF
+chmod 440 /etc/sudoers.d/divinesense
+
+# 3. 创建用户运维 Makefile
+cat > /home/divine/Makefile << 'MAKEFILE'
+# ... (包含 status, restart, logs, db-backup 等命令)
+MAKEFILE_EOF
+
+# 4. 配置 bash 别名
+cat >> /home/divine/.bashrc << 'EOF'
+alias ds-status='make -C /home/divine status'
+alias ds-restart='make -C /home/divine restart'
+# ...
+EOF
+```
+
+### 手动修复（已部署服务器）
+
+如果服务器已部署但遇到权限问题，手动执行以下命令：
+
+```bash
+# 添加 docker 组
+sudo usermod -aG docker divine
+
+# 配置 sudoers
+sudo tee /etc/sudoers.d/divinesense > /dev/null << 'EOF'
+divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
+EOF
+sudo chmod 440 /etc/sudoers.d/divinesense
+
+# 重新登录使 docker 组生效
+exit
+ssh aliyun  # 重新登录
+```
+
+### 经验教训
+
+| 问题 | 教练 |
+|:-----|:-----|
+| **部署脚本不完整** | 安装脚本应自动配置用户运维权限，而非依赖手动配置 |
+| **docker 组需要重新登录** | 用户加入 docker 组后，必须重新登录才能生效 |
+| **sudo 安全最小化** | 仅开放必要的命令免密，而非全部 sudo 权限 |
+| **运维工具缺失** | 应为用户创建友好的运维工具（Makefile），而非让用户直接敲命令 |
+
+### 预防措施
+
+1. **安装脚本改进**：`deploy/install.sh` 自动调用权限配置函数
+2. **文档更新**：部署文档说明安装后自动创建的运维工具
+3. **用户友好**：提供 `ds-*` 快捷别名，降低使用门槛
+
+---
+
 ## 贡献指南
 
 当你遇到一个新的调试问题时：

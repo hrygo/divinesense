@@ -73,20 +73,43 @@ cd /opt/divinesense
 3. 创建用户和目录
 4. 安装 systemd 服务
 5. 配置 PostgreSQL (Docker 或系统)
-6. 启动服务
+6. **配置用户运维权限**（自动完成）：
+   - divine 用户加入 docker 组
+   - 配置 sudoers 免密（仅限服务管理命令）
+   - 创建 `~/Makefile` 运维工具
+   - 配置 bash 快捷别名
+7. 启动服务
 
 ### 服务管理
 
+**方式一：用户 Makefile（推荐，无需 sudo 密码）**
+
+安装完成后，divine 用户主目录会自动创建运维 Makefile：
+
 ```bash
-/opt/divinesense/deploy-binary.sh status     # 查看状态
-/opt/divinesense/deploy-binary.sh logs       # 查看日志
-/opt/divinesense/deploy-binary.sh restart    # 重启服务
-/opt/divinesense/deploy-binary.sh backup     # 备份数据
-/opt/divinesense/deploy-binary.sh restore    # 恢复数据
-/opt/divinesense/deploy-binary.sh upgrade    # 升级版本
+# SSH 登录后使用（以 divine 用户）
+make help          # 查看所有命令
+make status        # 查看服务状态
+make health        # 健康检查
+make restart       # 重启服务
+make logs          # 查看日志
+make db-backup     # 备份数据库
+make db-shell      # 进入数据库 Shell
+make upgrade       # 升级到最新版本
+make clone-source  # 克隆源码（Evolution Mode）
 ```
 
-### systemd 命令
+**快捷别名**（重新登录生效）：
+
+```bash
+ds-status    # 等同于 make status
+ds-restart   # 等同于 make restart
+ds-health    # 等同于 make health
+ds-backup    # 等同于 make db-backup
+ds-db        # 等同于 make db-shell
+```
+
+**方式二：systemd 命令**
 
 ```bash
 sudo systemctl status divinesense    # 查看状态

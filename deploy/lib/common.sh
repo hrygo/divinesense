@@ -254,3 +254,366 @@ show_complete() {
     echo -e "    重启: ${CYAN}systemctl restart ${SERVICE_NAME}${NC}"
     echo ""
 }
+
+# ============================================================================
+# 权限配置 ( divine 用户运维权限 )
+# ============================================================================
+
+# 获取 divine 用户家目录（动态）
+get_divine_home() {
+    getent passwd divine 2>/dev/null | cut -d: -f6 || echo "/home/divine"
+}
+
+# 验证 divine 用户存在
+validate_divine_user() {
+    if ! id divine &>/dev/null; then
+        log_error "divine 用户不存在，无法配置权限"
+        return 1
+    fi
+    return 0
+}
+
+# 配置 docker 组权限
+configure_docker_group() {
+    # 验证用户存在
+    validate_divine_user || return 1
+
+    if ! command -v docker &>/dev/null; then
+        log_warn "Docker 未安装，跳过 docker 组配置"
+        return 0
+    fi
+
+    log_step "配置 docker 组权限..."
+
+    # 确保 docker 组存在
+    if ! grep -q "^docker:" /etc/group 2>/dev/null; then
+        groupadd docker 2>/dev/null || true
+    fi
+
+    # 将 divine 用户添加到 docker 组
+    if ! groups divine 2>/dev/null | grep -q docker; then
+        usermod -aG docker divine
+        log_success "divine 用户已加入 docker 组"
+    else
+        log_info "divine 用户已在 docker 组中"
+    fi
+}
+
+# 配置 sudoers 免密 (仅限 DivineSense 运维命令)
+configure_sudoers() {
+    # 验证用户存在
+    validate_divine_user || return 1
+
+    log_step "配置 sudoers 免密..."
+
+    local sudoers_file="/etc/sudoers.d/divinesense"
+    local sudoers_dir="/etc/sudoers.d"
+
+    # 验证 sudoers.d 目录存在
+    if [ ! -d "$sudoers_dir" ]; then
+        log_error "sudoers.d 目录不存在: $sudoers_dir"
+        return 1
+    fi
+
+    # 写入 sudoers 配置
+    cat > "$sudoers_file" << EOF
+# DivineSense 运维 - divine 用户免密执行特定命令
+# 安全说明: 仅允许管理 divinesense 服务，不包括其他系统操作
+divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
+EOF
+
+    chmod 440 "$sudoers_file"
+
+    # 验证 sudoers 语法
+    if ! visudo -c >/dev/null 2>&1; then
+        log_error "sudoers 语法验证失败，正在回滚..."
+        rm -f "$sudoers_file"
+        return 1
+    fi
+
+    log_success "sudoers 配置完成"
+}
+
+# 创建用户运维 Makefile
+create_user_makefile() {
+    # 验证用户存在
+    validate_divine_user || return 1
+
+    log_step "创建用户运维工具..."
+
+    local divine_home
+    divine_home=$(get_divine_home)
+    local makefile="${divine_home}/Makefile"
+
+    # 确保家目录存在
+    if [ ! -d "$divine_home" ]; then
+        log_error "家目录不存在: $divine_home"
+        return 1
+    fi
+
+    cat > "$makefile" << 'MAKEFILE_EOF'
+.PHONY: help status start stop restart logs logs-follow health db-shell db-backup db-restore db-reset upgrade pull-source check-version clone-source source-status
+
+# ============================================================
+# 配置
+# ============================================================
+DB_NAME     = divinesense
+DB_USER     = divine
+DB_CONTAINER= divinesense-postgres
+BACKUP_DIR  = /opt/divinesense/backups
+SOURCE_DIR  = /home/divine/source/divinesense
+SOURCE_REPO = https://github.com/hrygo/divinesense.git
+GITHUB_API  = https://api.github.com/repos/hrygo/divinesense/releases/latest
+
+# 从配置文件读取端口（如果存在）
+-include /etc/divinesense/config
+DIVINESENSE_PORT ?= 5230
+
+# 命令（systemctl 已配置免密 sudo）
+SYSTEMCTL   = sudo systemctl
+JOURNALCTL  = sudo journalctl
+
+# ============================================================
+# 默认目标：显示帮助
+# ============================================================
+help:
+	@echo "DivineSense 运维工具"
+	@echo ""
+	@echo "服务管理:"
+	@echo "  make status          - 查看服务状态"
+	@echo "  make start           - 启动服务"
+	@echo "  make stop            - 停止服务"
+	@echo "  make restart         - 重启服务"
+	@echo "  make logs            - 查看日志（最近 50 行）"
+	@echo "  make logs-follow     - 实时跟踪日志"
+	@echo "  make health          - 健康检查"
+	@echo ""
+	@echo "数据库管理:"
+	@echo "  make db-shell        - 进入数据库 Shell"
+	@echo "  make db-backup       - 备份数据库"
+	@echo "  make db-restore FILE=<文件> - 恢复数据库"
+	@echo "  make db-reset        - 重置数据库（危险！）"
+	@echo ""
+	@echo "版本管理:"
+	@echo "  make check-version   - 检查当前和最新版本"
+	@echo "  make upgrade         - 升级到最新版本"
+	@echo ""
+	@echo "源码管理 (Evolution Mode):"
+	@echo "  make clone-source    - 克隆源码仓库"
+	@echo "  make pull-source     - 拉取源码更新"
+	@echo "  make source-status   - 查看源码状态"
+
+# ============================================================
+# 服务管理
+# ============================================================
+status:
+	@echo "=== DivineSense 服务状态 ==="
+	@$(SYSTEMCTL) status divinesense --no-pager
+	@echo ""
+	@echo "=== PostgreSQL 容器状态 ==="
+	@docker ps --filter name=$(DB_CONTAINER) --format "table {{.Names}}\t{{.Status}}"
+
+start:
+	@echo "启动 DivineSense 服务..."
+	@$(SYSTEMCTL) start divinesense
+	@echo "服务已启动"
+	@make status
+
+stop:
+	@echo "停止 DivineSense 服务..."
+	@$(SYSTEMCTL) stop divinesense
+	@echo "服务已停止"
+
+restart:
+	@echo "重启 DivineSense 服务..."
+	@$(SYSTEMCTL) restart divinesense
+	@echo "服务已重启"
+	@make status
+
+logs:
+	@echo "=== 最近 50 条日志 ==="
+	@$(JOURNALCTL) -u divinesense -n 50 --no-pager
+
+logs-follow:
+	@echo "=== 实时日志 (Ctrl+C 退出) ==="
+	@$(JOURNALCTL) -u divinesense -f
+
+health:
+	@echo "=== 健康检查 ==="
+	@echo -n "服务状态: "
+	@$(SYSTEMCTL) is-active divinesense 2>/dev/null || echo "unknown"
+	@echo -n "HTTP 响应: "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:$(DIVINESENSE_PORT)/health || echo "failed"
+	@echo -n "数据库连接: "
+	@docker exec $(DB_CONTAINER) pg_isready -U $(DB_USER) 2>/dev/null && echo "OK" || echo "FAILED"
+
+# ============================================================
+# 数据库管理
+# ============================================================
+db-shell:
+	@echo "进入 PostgreSQL Shell (输入 \\q 退出)"
+	@docker exec -it $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME)
+
+db-backup:
+	@echo "备份数据库..."
+	@mkdir -p $(BACKUP_DIR)
+	@docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) $(DB_NAME) | gzip > $(BACKUP_DIR)/divinesense_$$(date +%Y%m%d_%H%M%S).sql.gz
+	@echo "备份完成: $(BACKUP_DIR)/divinesense_$$(date +%Y%m%d_%H%M%S).sql.gz"
+	@ls -lh $(BACKUP_DIR)/divinesense_$$(date +%Y%m%d_%H%M%S).sql.gz
+
+db-restore:
+	@if [ -z "$(FILE)" ]; then \
+		echo "错误: 请指定备份文件，例如: make db-restore FILE=divinesense_20260201_120000.sql.gz"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(FILE)" ]; then \
+		echo "错误: 文件不存在: $(FILE)"; \
+		exit 1; \
+	fi
+	@echo "警告: 即将恢复数据库，现有数据将被覆盖！"
+	@read -p "确认继续？[y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		gunzip -c "$(FILE)" | docker exec -i $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME); \
+		echo "数据库恢复完成"; \
+	else \
+		echo "已取消"; \
+	fi
+
+db-reset:
+	@echo "警告: 此操作将删除所有数据！"
+	@read -p "确认重置数据库？[y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker exec -i $(DB_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"; \
+		echo "数据库已重置，请重启服务以执行迁移"; \
+	else \
+		echo "已取消"; \
+	fi
+
+# ============================================================
+# 版本管理
+# ============================================================
+check-version:
+	@echo "=== 版本信息 ==="
+	@echo -n "当前版本: "
+	@/opt/divinesense/bin/divinesense --version 2>/dev/null || echo "未知"
+	@echo -n "最新版本: "
+	@curl -s $(GITHUB_API) | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
+
+upgrade:
+	@echo "=== 升级 DivineSense ==="
+	@echo "1. 备份当前数据..."
+	@make db-backup
+	@echo ""
+	@echo "2. 获取最新版本并下载..."
+	@cd /tmp && \
+		LATEST_VERSION=$$(curl -s $(GITHUB_API) | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/') && \
+		echo "最新版本: $$LATEST_VERSION" && \
+		rm -f divinesense_linux_amd64.tar.gz && \
+		curl -sSL https://github.com/hrygo/divinesense/releases/download/$$LATEST_VERSION/divinesense_linux_amd64.tar.gz -o divinesense_linux_amd64.tar.gz
+	@echo ""
+	@echo "3. 停止服务..."
+	@$(SYSTEMCTL) stop divinesense
+	@echo ""
+	@echo "4. 替换二进制文件..."
+	@tar -xzf /tmp/divinesense_linux_amd64.tar.gz -C /opt/divinesense/bin/ --strip-components=1
+	@chmod +x /opt/divinesense/bin/divinesense
+	@echo ""
+	@echo "5. 启动服务..."
+	@$(SYSTEMCTL) start divinesense
+	@echo ""
+	@echo "升级完成！"
+	@make status
+
+# ============================================================
+# 源码管理 (Evolution Mode)
+# ============================================================
+clone-source:
+	@if [ -d "$(SOURCE_DIR)/.git" ]; then \
+		echo "源码已存在，请使用 'make pull-source' 更新"; \
+	else \
+		echo "克隆源码仓库..."; \
+		git clone $(SOURCE_REPO) $(SOURCE_DIR); \
+		echo "源码已克隆到: $(SOURCE_DIR)"; \
+	fi
+
+pull-source:
+	@if [ -d "$(SOURCE_DIR)/.git" ]; then \
+		echo "拉取源码更新..."; \
+		cd $(SOURCE_DIR) && git pull origin main; \
+		echo "源码已更新"; \
+	else \
+		echo "源码不存在，请先运行 'make clone-source'"; \
+	fi
+
+source-status:
+	@if [ -d "$(SOURCE_DIR)/.git" ]; then \
+		echo "=== 源码状态 ==="; \
+		cd $(SOURCE_DIR) && git status; \
+		echo ""; \
+		echo "=== 最近提交 ==="; \
+		cd $(SOURCE_DIR) && git log --oneline -5; \
+	else \
+		echo "源码不存在，请先运行 'make clone-source'"; \
+	fi
+MAKEFILE_EOF
+
+    chown divine:divine "$makefile"
+    log_success "Makefile 运维工具已创建: ~/Makefile"
+}
+
+# 配置 bash 别名
+configure_bash_aliases() {
+    # 验证用户存在
+    validate_divine_user || return 1
+
+    log_step "配置 bash 别名..."
+
+    local divine_home
+    divine_home=$(get_divine_home)
+    local bashrc="${divine_home}/.bashrc"
+    local alias_marker="# ===== DivineSense 运维快捷别名 ====="
+
+    # 确保家目录存在
+    if [ ! -d "$divine_home" ]; then
+        log_warn "家目录不存在: $divine_home，跳过别名配置"
+        return 1
+    fi
+
+    # 创建 .bashrc 如果不存在
+    if [ ! -f "$bashrc" ]; then
+        touch "$bashrc"
+        chown divine:divine "$bashrc"
+    fi
+
+    # 检查是否已配置
+    if grep -q "$alias_marker" "$bashrc" 2>/dev/null; then
+        log_info "别名已配置"
+        return 0
+    fi
+
+    cat >> "$bashrc" << EOF
+
+$alias_marker
+alias ds='make -C ${divine_home}'
+alias ds-help='make -C ${divine_home} help'
+alias ds-status='make -C ${divine_home} status'
+alias ds-start='make -C ${divine_home} start'
+alias ds-stop='make -C ${divine_home} stop'
+alias ds-restart='make -C ${divine_home} restart'
+alias ds-logs='make -C ${divine_home} logs'
+alias ds-health='make -C ${divine_home} health'
+alias ds-db='make -C ${divine_home} db-shell'
+alias ds-backup='make -C ${divine_home} db-backup'
+alias ds-upgrade='make -C ${divine_home} upgrade'
+alias ds-pull='make -C ${divine_home} pull-source'
+EOF
+
+    chown divine:divine "$bashrc"
+    log_success "bash 别名已配置 (重新登录生效)"
+}

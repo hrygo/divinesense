@@ -291,6 +291,31 @@ EOF
 
     chown -R divine:divine "$INSTALL_DIR"
 
+    # ============================================================================
+    # 配置用户运维权限和工具
+    # ============================================================================
+    log_step "配置用户运维权限和工具..."
+
+    # 配置 docker 组（非关键）
+    if ! configure_docker_group; then
+        log_warn "Docker 组配置失败，继续安装..."
+    fi
+
+    # 配置 sudoers（关键）
+    if ! configure_sudoers; then
+        log_warn "sudoers 配置失败，用户可能需要输入密码来管理服务"
+    fi
+
+    # 创建 Makefile（非关键）
+    if ! create_user_makefile; then
+        log_warn "Makefile 创建失败"
+    fi
+
+    # 配置 bash 别名（非关键）
+    if ! configure_bash_aliases; then
+        log_warn "bash 别名配置失败"
+    fi
+
     log_success "安装完成"
 }
 
