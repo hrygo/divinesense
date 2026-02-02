@@ -229,7 +229,7 @@ case "${1:-matrix}" in
             echo "错误: 'has' 命令需要搜索模式参数" >&2
             echo "" >&2
             echo "Usage: $0 has <pattern>" >&2
-            echo "示例: $0 has \"session.*prun\"" >&2
+            echo "示例: $0 has \"session.prun\"" >&2
             exit 1
         fi
         if has_feature "$2"; then

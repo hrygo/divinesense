@@ -74,8 +74,8 @@ init_benchmark() {
         log_info "初始化成功"
         echo ""
         echo "下一步:"
-        echo "  ./scripts/benchmark/benchmark.sh run    # 运行全量对标分析"
-        echo "  ./scripts/benchmark/benchmark.sh status  # 查看对标状态"
+        echo "  ./.claude/skills/competitive-benchmark/scripts/benchmark.sh run    # 运行全量对标分析"
+        echo "  ./.claude/skills/competitive-benchmark/scripts/benchmark.sh status  # 查看对标状态"
     else
         log_error "初始化失败"
         exit 1
@@ -203,7 +203,7 @@ case "${1:-help}" in
 Competitive Benchmark - 竞品对标工具
 
 用法:
-  ./scripts/benchmark/benchmark.sh <command>
+  ./.claude/skills/competitive-benchmark/scripts/benchmark.sh <command>
 
 命令:
   init         初始化对标状态（首次运行）

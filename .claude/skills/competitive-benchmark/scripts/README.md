@@ -20,13 +20,13 @@
 
 ```bash
 # 1. 初始化对标状态
-./scripts/benchmark/benchmark.sh init
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh init
 
 # 2. 查看当前状态和能力
-./scripts/benchmark/benchmark.sh status
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh status
 
 # 3. 运行全量对标分析
-./scripts/benchmark/benchmark.sh run
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh run
 
 # 4. 或通过 Skill 执行对标
 /competitive-benchmark
@@ -37,9 +37,9 @@
 ## benchmark.sh - 主入口
 
 ```bash
-./scripts/benchmark/benchmark.sh init    # 初始化对标状态
-./scripts/benchmark/benchmark.sh run     # 运行全量对标分析
-./scripts/benchmark/benchmark.sh status  # 查看对标状态和能力
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh init    # 初始化对标状态
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh run     # 运行全量对标分析
+./.claude/skills/competitive-benchmark/scripts/benchmark.sh status  # 查看对标状态和能力
 ```
 
 ---
@@ -58,18 +58,18 @@
 
 ```bash
 # 方式一：source 后调用函数
-source scripts/benchmark/state.sh
+source .claude/skills/competitive-benchmark/scripts/state.sh
 append_state "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
 get_latest_state
 query_state "openclaw_sha"
 
 # 方式二：直接执行子命令
-./scripts/benchmark/state.sh append "..." "..." "..." '[]' '[]'
-./scripts/benchmark/state.sh get
-./scripts/benchmark/state.sh query "openclaw_sha"
-./scripts/benchmark/state.sh summary
-./scripts/benchmark/state.sh count
-./scripts/benchmark/state.sh init
+./.claude/skills/competitive-benchmark/scripts/state.sh append "..." "..." "..." '[]' '[]'
+./.claude/skills/competitive-benchmark/scripts/state.sh get
+./.claude/skills/competitive-benchmark/scripts/state.sh query "openclaw_sha"
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
+./.claude/skills/competitive-benchmark/scripts/state.sh count
+./.claude/skills/competitive-benchmark/scripts/state.sh init
 ```
 
 ### 安全特性
@@ -98,24 +98,24 @@ query_state "openclaw_sha"
 
 ```bash
 # 生成完整能力矩阵 (JSON)
-./scripts/benchmark/scan.sh
-./scripts/benchmark/scan.sh matrix
+./.claude/skills/competitive-benchmark/scripts/scan.sh
+./.claude/skills/competitive-benchmark/scripts/scan.sh matrix
 
 # 扫描单项
-./scripts/benchmark/scan.sh parrots      # 代理数量
-./scripts/benchmark/scan.sh tools        # 工具数量
-./scripts/benchmark/scan.sh pages        # 页面数量
-./scripts/benchmark/scan.sh tables       # 表数量
+./.claude/skills/competitive-benchmark/scripts/scan.sh parrots      # 代理数量
+./.claude/skills/competitive-benchmark/scripts/scan.sh tools        # 工具数量
+./.claude/skills/competitive-benchmark/scripts/scan.sh pages        # 页面数量
+./.claude/skills/competitive-benchmark/scripts/scan.sh tables       # 表数量
 
 # 列出名称
-./scripts/benchmark/scan.sh parrot-names
-./scripts/benchmark/scan.sh tool-names
+./.claude/skills/competitive-benchmark/scripts/scan.sh parrot-names
+./.claude/skills/competitive-benchmark/scripts/scan.sh tool-names
 
 # 检查功能是否实现（固定字符串搜索，非正则）
-./scripts/benchmark/scan.sh has "session.prun"
+./.claude/skills/competitive-benchmark/scripts/scan.sh has "session.prun"
 
 # 显示人类可读摘要
-./scripts/benchmark/scan.sh summary
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary
 ```
 
 ### 安全特性
@@ -132,7 +132,7 @@ query_state "openclaw_sha"
 ## 输出示例
 
 ```bash
-$ ./scripts/benchmark/benchmark.sh status
+$ ./.claude/skills/competitive-benchmark/scripts/benchmark.sh status
 [2026-02-02 13:50:00][INFO] 查看对标状态...
 
 对标状态摘要:
@@ -167,15 +167,15 @@ DivineSense 能力矩阵:
 
 ```bash
 # 初始化状态
-source scripts/benchmark/state.sh
+source .claude/skills/competitive-benchmark/scripts/state.sh
 init_state
 
 # 获取上次对标状态
 LAST_SHA=$(query_state "openclaw_sha")
 
 # 扫描当前能力
-PARROTS=$(./scripts/benchmark/scan.sh parrots)
-TOOLS=$(./scripts/benchmark/scan.sh tools)
+PARROTS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh parrots)
+TOOLS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh tools)
 
 # 保存新状态
 append_state "$TIMESTAMP" "$OC_SHA" "$DS_SHA" "$FEATURES" "$ISSUES"

@@ -71,7 +71,7 @@ gh api repos/openclaw/openclaw/contents/CHANGELOG.md | \
 
 ### 动态扫描命令
 
-> **脚本**: `scripts/benchmark/scan.sh`
+> **脚本**: `scripts/scan.sh`
 
 ```bash
 # 方式一：使用脚本（推荐）
