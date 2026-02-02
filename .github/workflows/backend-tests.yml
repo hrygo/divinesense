@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: actions/setup-go@v6
         with:
           go-version: 1.25
@@ -50,7 +50,7 @@ jobs:
           - other
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: actions/setup-go@v6
         with:
           go-version: 1.25
@@ -58,25 +58,51 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Run tests - ${{ matrix.test-group }}
+        id: tests
         run: |
           case "${{ matrix.test-group }}" in
             store)
-              go test -v -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./store/...
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./store/... 2>&1 | tee test.json
               ;;
             server)
-              go test -v -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./server/...
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./server/... 2>&1 | tee test.json
               ;;
             plugin)
-              go test -v -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
-                $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$")
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
+                $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$") 2>&1 | tee test.json
               ;;
             other)
-              go test -v -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
-                ./cmd/... ./internal/...
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
+                ./cmd/... ./internal/... 2>&1 | tee test.json
               ;;
           esac
         env:
           DRIVER: sqlite  # Use SQLite for fastest test execution
+
+      - name: Parse test results for summary
+        if: always()
+        run: |
+          echo "## Test Results (${{ matrix.test-group }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -f test.json ]; then
+            # Count passes and fails using correct jq syntax
+            PASSES=$(jq -r 'select(.Action == "pass") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
+            FAILS=$(jq -r 'select(.Action == "fail") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
+            TOTAL=$((PASSES + FAILS))
+
+            echo "✅ Passed: $PASSES" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Failed: $FAILS" >> $GITHUB_STEP_SUMMARY
+            echo "📊 Total: $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Show failures if any
+            if [ "$FAILS" -gt 0 ]; then
+              echo "Failed packages:" >> $GITHUB_STEP_SUMMARY
+              jq -r 'select(.Action == "fail") | "❌ \(.Package)"' test.json >> $GITHUB_STEP_SUMMARY || true
+            fi
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -85,3 +111,10 @@ jobs:
           files: ./coverage.out
           flags: ${{ matrix.test-group }}
           fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-group }}
+          path: test.json
