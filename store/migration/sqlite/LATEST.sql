@@ -132,3 +132,86 @@ CREATE TABLE ai_message (
   created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
+-- memo_embedding (Vector storage for AI semantic search)
+CREATE TABLE memo_embedding (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  memo_id INTEGER NOT NULL,
+  embedding BLOB NOT NULL,
+  model TEXT NOT NULL DEFAULT 'BAAI/bge-m3',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  UNIQUE(memo_id, model),
+  CONSTRAINT fk_memo_embedding_memo FOREIGN KEY (memo_id) REFERENCES memo(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_memo_embedding_memo_id ON memo_embedding(memo_id);
+CREATE INDEX idx_memo_embedding_model ON memo_embedding(model);
+
+-- episodic_memory (AI agent long-term memory)
+CREATE TABLE episodic_memory (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  timestamp INTEGER NOT NULL,
+  agent_type TEXT NOT NULL,
+  user_input TEXT,
+  outcome TEXT,
+  summary TEXT,
+  importance REAL,
+  created_ts INTEGER NOT NULL,
+  CONSTRAINT fk_episodic_memory_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_episodic_memory_user_id ON episodic_memory(user_id);
+CREATE INDEX idx_episodic_memory_timestamp ON episodic_memory(timestamp DESC);
+
+-- user_preferences (AI personalization settings)
+CREATE TABLE user_preferences (
+  user_id INTEGER PRIMARY KEY,
+  preferences TEXT NOT NULL DEFAULT '{}',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- conversation_context (AI session persistence)
+CREATE TABLE conversation_context (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL UNIQUE,
+  user_id INTEGER NOT NULL,
+  agent_type TEXT NOT NULL,
+  context_data TEXT NOT NULL DEFAULT '{}',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  CONSTRAINT fk_conversation_context_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE,
+  CONSTRAINT chk_conversation_context_agent_type CHECK (agent_type IN ('memo', 'schedule', 'amazing', 'assistant'))
+);
+CREATE INDEX idx_conversation_context_user ON conversation_context(user_id);
+CREATE INDEX idx_conversation_context_updated ON conversation_context(updated_ts DESC);
+
+-- agent_metrics (AI agent performance tracking)
+CREATE TABLE agent_metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  hour_bucket INTEGER NOT NULL,
+  agent_type TEXT NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 0,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  latency_sum_ms INTEGER NOT NULL DEFAULT 0,
+  latency_p50_ms INTEGER,
+  latency_p95_ms INTEGER,
+  errors TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL,
+  CONSTRAINT uq_agent_metrics_hour_type UNIQUE (hour_bucket, agent_type)
+);
+CREATE INDEX idx_agent_metrics_hour ON agent_metrics(hour_bucket DESC);
+
+-- tool_metrics (AI tool usage tracking)
+CREATE TABLE tool_metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  hour_bucket INTEGER NOT NULL,
+  tool_name TEXT NOT NULL,
+  call_count INTEGER NOT NULL DEFAULT 0,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  latency_sum_ms INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  CONSTRAINT uq_tool_metrics_hour_name UNIQUE (hour_bucket, tool_name)
+);
+CREATE INDEX idx_tool_metrics_hour ON tool_metrics(hour_bucket DESC);
+

@@ -17,23 +17,24 @@ import (
 // ============================================================================
 // SQLITE SUPPORT POLICY
 // ============================================================================
-// SQLite is supported on a BEST-EFFORT basis for development and testing only.
+// SQLite is supported for development and client-side deployment.
 //
-// Supported Features (High ROI):
-// - Basic CRUD operations
-// - Simple queries
-// - Single-user instances
+// Supported Features:
+// - Full AI features: vector search, conversation persistence, episodic memory
+// - Vector search: application-layer cosine similarity (JSON-encoded vectors)
+// - Full-text search: FTS5 (if available) with LIKE fallback
+// - All AI agent capabilities: memo, schedule, amazing agents
 //
-// NOT Supported (Low ROI / High Complexity):
-// - Concurrent writes (SQLite limitation)
-// - Full-text search (BM25, hybrid search)
-// - Advanced AI features (reranking)
-// - Complex migrations
+// Implementation Notes:
+// - Vectors stored as BLOB (JSON-encoded float32 arrays)
+// - Similarity computed in Go (not SQL) for pure Go compatibility
+// - JSONB fields replaced with TEXT (JSON strings)
+// - Performance suitable for <10k vectors; use PostgreSQL for larger datasets
 //
 // When adding new features to SQLite:
-// 1. Only implement if the ROI is high (low complexity, high value)
-// 2. Prefer returning a clear error over partial/broken implementation
-// 3. Add a comment explaining what is NOT supported
+// 1. Maintain feature parity with PostgreSQL where feasible
+// 2. Document any performance limitations
+// 3. Use pure Go (modernc.org/sqlite) for easy cross-compilation
 // ============================================================================
 
 type DB struct {
