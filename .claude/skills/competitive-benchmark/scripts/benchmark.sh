@@ -164,10 +164,25 @@ run_benchmark() {
     echo "  3. 生成 Issue: gh issue create --title '[feat] 功能' --body '...'"
 
     # 询问是否更新状态
+    # 支持 BENCHMARK_AUTO_CONFIRM 环境变量（非终端环境或 Skill 调用）
     echo ""
-    read -p "是否更新对标状态? (y/N) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    local should_update=false
+
+    if [[ "${BENCHMARK_AUTO_CONFIRM:-}" == "true" ]]; then
+        should_update=true
+    elif [[ -t 0 ]] && [[ -t 1 ]]; then
+        # 终端环境，交互式询问
+        read -p "是否更新对标状态? (y/N) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            should_update=true
+        fi
+    else
+        # 非终端环境，默认不更新（静默跳过）
+        log_info "非终端环境，跳过状态更新（设置 BENCHMARK_AUTO_CONFIRM=true 自动更新）"
+    fi
+
+    if [[ "$should_update" == "true" ]]; then
         local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         "$SCRIPT_DIR/state.sh" append "$timestamp" "$current_oc_sha" "$current_ds_sha" '[]' '[]'
         log_info "状态已更新"

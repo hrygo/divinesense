@@ -217,4 +217,4 @@ append_state "$TIMESTAMP" "$OC_SHA" "$DS_SHA" "$FEATURES" "$ISSUES"
 
 ---
 
-*版本: v1.4 | 最后更新: 2026-02-02*
+*版本: 跟随 Skill 版本 (v2.0.0) | 最后更新: 2026-02-02*
