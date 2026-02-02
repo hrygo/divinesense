@@ -26,6 +26,8 @@ mcp__zread__get_repo_structure "openclaw/openclaw" "/"
 
 ### 功能分类动态推断
 
+> 以下代码为**伪代码示例**，用于说明算法逻辑，实际使用时需根据 Skill 环境调整。
+
 ```python
 # 基于目录路径推断功能分类
 FUNCTION_CATEGORIES = {
@@ -89,6 +91,8 @@ TABLES=$(grep -r "CREATE TABLE" store/migration/postgres/ 2>/dev/null | \
 
 ### 运行时能力矩阵生成
 
+> 以下代码为**伪代码示例**，用于说明算法逻辑。
+
 ```python
 def generate_capability_matrix():
     """生成 DivineSense 实时能力矩阵"""
@@ -124,6 +128,8 @@ def generate_capability_matrix():
 | **0.1** | 边缘场景，用户需求弱 | 多渠道集成（不同定位） |
 
 ### 过滤规则
+
+> 以下代码为**伪代码示例**，用于说明过滤逻辑。
 
 ```python
 # 自动过滤条件
@@ -204,4 +210,4 @@ interface FeatureGap {
 
 ---
 
-*文档版本：v1.1 | 最后更新：2026-02-02*
+*文档版本：v1.2 | 最后更新：2026-02-02*

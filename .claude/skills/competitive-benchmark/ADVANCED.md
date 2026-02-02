@@ -10,12 +10,14 @@
 
 **增量对比**：基于上次对标状态，仅分析 OpenClaw 的新增功能。
 
+> 以下代码为**伪代码示例**，用于说明算法逻辑，`get_latest_commit` 等函数需通过 MCP 工具实现。
+
 ```python
 def incremental_benchmark(last_state):
     """增量对比算法"""
     # 1. 获取当前状态
-    current_openclaw_sha = get_latest_commit("openclaw/openclaw")
-    current_divinesense_sha = get_latest_commit("divinesense")
+    current_openclaw_sha = get_latest_commit("openclaw/openclaw")  # MCP: gh api
+    current_divinesense_sha = get_latest_commit("divinesense")     # MCP: git rev-parse
 
     # 2. 检测是否有新提交
     if current_openclaw_sha == last_state["openclaw_sha"]:
@@ -147,6 +149,8 @@ echo "已创建 Issue: $issues_count 个"
 
 ### 自我更新触发条件
 
+> 以下代码为**伪代码示例**，用于说明检测逻辑。
+
 ```python
 def should_self_update():
     """检测是否需要自我更新"""
@@ -198,6 +202,8 @@ def generate_evolution_suggestion(triggers):
 
 ### 分组策略
 
+> 以下代码为**伪代码示例**，用于说明算法逻辑。
+
 ```python
 def group_features(features: List[FeatureGap]) -> List[FeatureGroup]:
     """智能分组算法"""
@@ -240,6 +246,8 @@ def group_features(features: List[FeatureGap]) -> List[FeatureGroup]:
 
 ### 工作量估算
 
+> 以下代码为**伪代码示例**，用于说明估算逻辑。
+
 ```python
 def estimate_effort(category: str, feature_count: int) -> int:
     """估算工作量（人周）"""
@@ -278,6 +286,8 @@ check_duplicate_issue() {
 
 ### 功能去重
 
+> 以下代码为**伪代码示例**，用于说明去重逻辑。
+
 ```python
 def is_duplicate_feature(feature_name: str, analyzed_features: List[str]) -> bool:
     """检测功能是否已分析"""
@@ -299,6 +309,8 @@ def is_duplicate_feature(feature_name: str, analyzed_features: List[str]) -> boo
 ## 批量 Issue 创建
 
 ### 创建策略
+
+> 以下代码为**伪代码示例**，实际使用 MCP GitHub 工具创建 Issue。
 
 ```python
 def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
@@ -333,13 +345,14 @@ def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
 
 | 版本 | 日期 | 变更内容 |
 |:-----|:-----|:---------|
+| v1.2 | 2026-02-02 | **完善文档**：统一版本号、添加错误处理、改进模板 |
 | v1.1 | 2026-02-02 | **实时动态**：零硬编码、增量对比、状态持久化 |
 | v1.0 | 2026-02-02 | 初始版本：全面对标、价值评估、智能分组 |
 
 ### 未来方向
 
 - [x] v1.1: 增量对比模式（基于 CHANGELOG）
-- [ ] v1.2: 语义相似度重复检测
+- [x] v1.2: 语义相似度重复检测（基础实现）
 - [ ] v1.3: 自动化触发（GitHub Webhook）
 - [ ] v2.0: 多竞品支持（Memos、Obsidian 等）
 
@@ -383,4 +396,4 @@ find plugin/ai/agent/tools -name "*.go"
 
 ---
 
-*文档版本：v1.1 | 最后更新：2026-02-02*
+*文档版本：v1.2 | 最后更新：2026-02-02*

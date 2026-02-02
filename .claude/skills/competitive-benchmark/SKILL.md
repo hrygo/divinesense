@@ -51,17 +51,25 @@ system: |
 
 ## 阶段 0: 状态恢复
 
+> **依赖**: `jq` (JSON 处理), `gh` (GitHub CLI)
+
 ```bash
-# 读取上次对标状态
+# 读取上次对标状态（带错误处理）
 STATE_FILE="docs/research/benchmark/state.jsonl"
-if [ -f "$STATE_FILE" ]; then
-  LAST_SHA=$(tail -1 "$STATE_FILE" | jq -r '.openclaw_sha')
+if [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
+  LAST_SHA=$(tail -1 "$STATE_FILE" | jq -r '.openclaw_sha // empty')
+  # 如果 jq 解析失败或返回 null，设置为空
+  [ -z "$LAST_SHA" ] && LAST_SHA=""
 else
   LAST_SHA=""  # 首次运行
 fi
 
-# 获取当前 SHA
-CURRENT_OPENCLAW_SHA=$(gh api repos/openclaw/openclaw/commits | jq -r '.sha')
+# 获取当前 SHA（带错误处理）
+CURRENT_OPENCLAW_SHA=$(gh api repos/openclaw/openclaw/commits 2>/dev/null | jq -r '.sha // empty')
+if [ -z "$CURRENT_OPENCLAW_SHA" ]; then
+  echo "错误: 无法获取 OpenClaw SHA，请检查网络连接和 gh 认证"
+  exit 1
+fi
 ```
 
 ---
@@ -105,6 +113,16 @@ has_feature() { grep -rq "$1" plugin/ai/agent/ web/src/ 2>/dev/null; }
 优先级 < 0.3 → 自动过滤
 优先级 ≥ 0.7 → 高优先级
 ```
+
+---
+
+## 环境依赖
+
+| 工具 | 用途 | 安装 |
+|:-----|:-----|:-----|
+| **gh** | GitHub CLI | `brew install gh` 或 `https://cli.github.com/` |
+| **jq** | JSON 处理 | `brew install jq` 或 `apt install jq` |
+| **base64** | 编码解码 | 系统内置 |
 
 ---
 
