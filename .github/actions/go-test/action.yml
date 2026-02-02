@@ -4,6 +4,10 @@ inputs:
   path:
     description: 'Test path (e.g., ./store/...)'
     required: true
+  exclude-cron:
+    description: 'Exclude plugin/cron from plugin tests'
+    required: false
+    default: 'false'
   race:
     description: 'Enable race detector'
     required: false
@@ -50,6 +54,12 @@ runs:
       id: run-tests
       shell: bash
       run: |
+        # Build test path (handle exclude-cron for plugin tests)
+        TEST_PATH="${{ inputs.path }}"
+        if [ "${{ inputs.exclude-cron }}" = "true" ]; then
+          TEST_PATH=$(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$")
+        fi
+
         # Build test command
         TEST_CMD="go test"
 
@@ -69,7 +79,7 @@ runs:
           TEST_CMD="$TEST_CMD -short"
         fi
 
-        TEST_CMD="$TEST_CMD -json ${{ inputs.path }}"
+        TEST_CMD="$TEST_CMD -json $TEST_PATH"
 
         echo "Running: $TEST_CMD"
 
