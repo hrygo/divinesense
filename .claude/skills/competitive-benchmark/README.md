@@ -28,8 +28,8 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 
 | 脚本 | 用途 |
 |:-----|:-----|
-| **scripts/benchmark/state.sh** | 状态持久化管理 |
-| **scripts/benchmark/scan.sh** | DivineSense 能力矩阵扫描 |
+| **scripts/state.sh** | 状态持久化管理 |
+| **scripts/scan.sh** | DivineSense 能力矩阵扫描 |
 
 详见: [scripts/README.md](./scripts/README.md)
 
@@ -46,7 +46,7 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 | 实时动态发现 | ❌ | ✅ GitHub API | ✅ | ✅ |
 | 增量对比 | ❌ | ✅ 基于 SHA | ✅ | ✅ |
 | 状态持久化 | ❌ | ✅ state.jsonl | ✅ | ✅ |
-| 独立脚本 | ❌ | ❌ | ✅ scripts/benchmark/ | ✅ |
+| 独立脚本 | ❌ | ❌ | ✅ scripts/ | ✅ |
 | 智能过滤 | ✅ | ✅ 增强规则 | ✅ | ✅ |
 | 自动关闭已实现 | ❌ | ✅ 动态检测 | ✅ | ✅ |
 | Parrot 扫描增强 | ❌ | ❌ | ❌ | ✅ v2 支持 |

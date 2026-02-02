@@ -4,9 +4,11 @@
 # 扫描 DivineSense 项目的能力矩阵
 #
 # Usage:
-#   ./scripts/benchmark/scan.sh          # 生成完整矩阵
-#   ./scripts/benchmark/scan.sh parrots  # 扫描代理
-#   ./scripts/benchmark/scan.sh tools    # 扫描工具
+#   ./scan.sh          # 生成完整矩阵
+#   ./scan.sh parrots  # 扫描代理
+#   ./scan.sh tools    # 扫描工具
+#
+# Requires: Bash 4.0+ (for associative arrays)
 
 set -euo pipefail
 
@@ -14,6 +16,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 项目根目录
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Bash 版本检查（P2: 关联数组需要 Bash 4.0+）
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo "错误: 此脚本需要 Bash 4.0+ 版本" >&2
+    echo "当前版本: $BASH_VERSION" >&2
+    echo "请升级 bash 或使用兼容版本运行" >&2
+    exit 1
+fi
 
 # 验证项目根目录
 validate_project_root() {

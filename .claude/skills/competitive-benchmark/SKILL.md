@@ -52,15 +52,15 @@ system: |
 ## 阶段 0: 状态恢复
 
 > **依赖**: `jq` (JSON 处理), `gh` (GitHub CLI)
-> **脚本**: `scripts/benchmark/state.sh`
+> **脚本**: `scripts/state.sh`
 
 ```bash
-# 方式一：使用脚本
-./scripts/benchmark/state.sh summary
-LAST_SHA=$(./scripts/benchmark/state.sh query openclaw_sha)
+# 方式一：使用脚本（从项目根目录）
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
+LAST_SHA=$(./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha)
 
 # 方式二：source 后使用函数
-source scripts/benchmark/state.sh
+source .claude/skills/competitive-benchmark/scripts/state.sh
 show_state_summary
 LAST_SHA=$(query_state "openclaw_sha")
 
@@ -88,23 +88,23 @@ gh api repos/openclaw/openclaw/contents/CHANGELOG.md | jq -r '.content' | base64
 
 ## 阶段 2: 动态能力对比
 
-> **脚本**: `scripts/benchmark/scan.sh`
+> **脚本**: `scripts/scan.sh`
 
 ```bash
-# 方式一：使用脚本生成 JSON 矩阵
-MATRIX=$(./scripts/benchmark/scan.sh matrix)
+# 方式一：使用脚本生成 JSON 矩阵（从项目根目录）
+MATRIX=$(./.claude/skills/competitive-benchmark/scripts/scan.sh matrix)
 PARROTS=$(echo "$MATRIX" | jq -r '.parrots')
 TOOLS=$(echo "$MATRIX" | jq -r '.tools')
 
 # 方式二：直接扫描单项
-PARROTS=$(./scripts/benchmark/scan.sh parrots)
-TOOLS=$(./scripts/benchmark/scan.sh tools)
+PARROTS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh parrots)
+TOOLS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh tools)
 
-# 检查功能是否已实现
-./scripts/benchmark/scan.sh has "session.*prun"  # 退出码 0=已实现, 1=未实现
+# 检查功能是否已实现（使用固定字符串）
+./.claude/skills/competitive-benchmark/scripts/scan.sh has "session.prun"
 
 # 显示人类可读摘要
-./scripts/benchmark/scan.sh summary
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary
 ```
 
 ---
@@ -150,16 +150,18 @@ TOOLS=$(./scripts/benchmark/scan.sh tools)
 
 ## 常用命令
 
+> **注意**: 以下命令需从项目根目录执行
+
 ```bash
 # 状态管理
-./scripts/benchmark/state.sh summary      # 查看状态摘要
-./scripts/benchmark/state.sh query openclaw_sha  # 查询字段
-./scripts/benchmark/state.sh count         # 记录数量
+./.claude/skills/competitive-benchmark/scripts/state.sh summary      # 查看状态摘要
+./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha  # 查询字段
+./.claude/skills/competitive-benchmark/scripts/state.sh count         # 记录数量
 
 # 能力扫描
-./scripts/benchmark/scan.sh summary        # 能力摘要
-./scripts/benchmark/scan.sh parrots        # 代理数量
-./scripts/benchmark/scan.sh has "pattern"  # 检查功能
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary        # 能力摘要
+./.claude/skills/competitive-benchmark/scripts/scan.sh parrots        # 代理数量
+./.claude/skills/competitive-benchmark/scripts/scan.sh has "pattern"  # 检查功能
 
 # 获取 OpenClaw 最新 SHA
 gh api repos/openclaw/openclaw/commits | jq -r '.sha'
@@ -173,7 +175,7 @@ gh api repos/openclaw/openclaw/commits | jq -r '.sha'
 |:-----|:-----|
 | **REFERENCE.md** | 动态发现方法、评分标准、过滤规则 |
 | **ADVANCED.md** | 增量算法、状态持久化、自动进化 |
-| **scripts/benchmark/** | 独立脚本（state.sh, scan.sh） |
+| **scripts/** | 对标脚本（state.sh, scan.sh, benchmark.sh） |
 
 ---
 

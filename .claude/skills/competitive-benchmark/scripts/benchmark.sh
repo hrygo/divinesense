@@ -4,9 +4,11 @@
 # 竞品对标主入口，支持初始化和运行全量分析
 #
 # Usage:
-#   ./scripts/benchmark/benchmark.sh init    # 初始化对标状态
-#   ./scripts/benchmark/benchmark.sh run     # 运行全量对标分析
-#   ./scripts/benchmark/benchmark.sh status  # 查看对标状态
+#   ./benchmark.sh init    # 初始化对标状态
+#   ./benchmark.sh run     # 运行全量对标分析
+#   ./benchmark.sh status  # 查看对标状态
+#
+# Requires: Bash 4.0+ (for associative arrays in scan.sh)
 
 set -euo pipefail
 
@@ -210,9 +212,9 @@ Competitive Benchmark - 竞品对标工具
   help         显示此帮助信息
 
 首次使用:
-  1. ./scripts/benchmark/benchmark.sh init
+  1. ./.claude/skills/competitive-benchmark/scripts/benchmark.sh init
   2. /competitive-benchmark  # 通过 Skill 执行对标
-  3. ./scripts/benchmark/benchmark.sh status
+   3. ./.claude/skills/competitive-benchmark/scripts/benchmark.sh status
 
 依赖:
   - jq (JSON 处理)

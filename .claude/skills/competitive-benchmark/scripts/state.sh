@@ -4,19 +4,22 @@
 # 管理对标状态文件的读写操作
 #
 # Usage:
-#   source scripts/benchmark/state.sh
-#   append_state "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
+#   source state.sh
+#   append_state "2026-02-02T10:00:00Z" "abc123" "def456' '["feat1"]' '[30]'
 #   get_latest_state
 #   query_state "openclaw_sha"
 #
 # Or direct execution:
-#   ./scripts/benchmark/state.sh append "..." "..." "..." '[]' '[]'
-#   ./scripts/benchmark/state.sh get
-#   ./scripts/benchmark/state.sh query openclaw_sha
-#   ./scripts/benchmark/state.sh summary
-#   ./scripts/benchmark/state.sh init
+#   ./state.sh append "..." "..." "..." '[]' '[]'
+#   ./state.sh get
+#   ./state.sh query openclaw_sha
+#   ./state.sh summary
+#   ./state.sh init
 
 set -euo pipefail
+
+# Bash 版本说明
+# 此脚本兼容 Bash 3.2+（不使用关联数组等 Bash 4 特性）
 
 # 脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -170,9 +173,11 @@ append_state() {
               analyzed_features: $features, discovered_functions: [],
               created_issues: $issues}' >> "$STATE_FILE"
 
-        log_info "状态已追加: oc_sha=$oc_sha, features=$($(
+        log_info "状态已追加: oc_sha=$oc_sha, features=$(
             echo "$features" | jq 'length'
-        )) 个, issues=$($echo "$issues" | jq 'length')) 个"
+        ) 个, issues=$(
+            echo "$issues" | jq 'length'
+        ) 个"
     ) 9>"$lock_file"; then
         log_error "追加状态失败"
         return 1
@@ -231,7 +236,7 @@ get_state_count() {
 show_state_summary() {
     if ! state_exists; then
         echo "状态文件不存在，首次运行"
-        echo "建议运行: ./scripts/benchmark/benchmark.sh init"
+        echo "建议运行: ./.claude/skills/competitive-benchmark/scripts/benchmark.sh init"
         return
     fi
 
@@ -281,7 +286,7 @@ init_state() {
 
     echo "状态文件已初始化: $STATE_FILE"
     echo "DivineSense SHA: $current_sha"
-    echo "建议运行: ./scripts/benchmark/benchmark.sh run"
+    echo "建议运行: ./.claude/skills/competitive-benchmark/scripts/benchmark.sh run"
 }
 
 # 如果直接执行脚本（非 source），允许子命令调用
