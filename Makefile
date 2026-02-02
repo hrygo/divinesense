@@ -94,13 +94,13 @@ dev: run ## Alias for run
 web: ## 启动前端开发服务器
 	@cd $(WEB_DIR) && pnpm dev
 
-start: build ## 一键启动所有服务 (自动构建最新版本)
+start: ## 一键启动所有服务 (使用 go run 开发模式)
 	@$(SCRIPT_DIR)/dev.sh start
 
 stop: ## 一键停止所有服务
 	@$(SCRIPT_DIR)/dev.sh stop
 
-restart: build ## 重启所有服务 (自动构建最新版本)
+restart: ## 重启所有服务 (使用 go run 开发模式)
 	@$(SCRIPT_DIR)/dev.sh restart
 
 status: ## 查看所有服务状态

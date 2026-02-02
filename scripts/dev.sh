@@ -194,7 +194,7 @@ start_backend() {
     load_env
 
     # 启动后端（后台运行）
-    nohup go run ./cmd/divinesense --mode dev --port $BACKEND_PORT \
+    nohup go run -tags=noui ./cmd/divinesense --mode dev --port $BACKEND_PORT \
         > "$BACKEND_LOG" 2>&1 &
 
     local pid=$!
