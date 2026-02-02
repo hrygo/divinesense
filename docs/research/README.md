@@ -32,15 +32,22 @@
 | 文档                                               | 描述                           | 状态     |
 | :------------------------------------------------- | :----------------------------- | :------- |
 | [parrot-naming-research.md](./parrot-naming-research.md) | 鹦鹉代理命名系统调研         | 📝 待审核 |
-| [assistant-roadmap.md](./assistant-roadmap.md)     | 助手系统实施路线图             | 🚧 进行中 |
-| [memo-roadmap.md](./memo-roadmap.md)               | 笔记助手 (MemoParrot) 路线图   | 🚧 进行中 |
-| [assistant-research.md](./assistant-research.md)   | 助手系统基础调研               | ✅ 已完成 |
 
 ---
 
 ## 🔮 历史调研 (归档)
 
-> 见 `docs/archived/research_cleanup_20260131/reports/`
+> 研究路线图已归档至 `archived/research_20250202/`：
+> - 00-master-roadmap.md (统一实施路线图)
+> - assistant-roadmap.md (助手系统路线图)
+> - assistant-roadmap-industry.md (行业参考)
+> - assistant-research.md (助手系统基础调研)
+> - memo-roadmap.md (笔记助手路线图)
+> - memo-research.md (笔记增强调研)
+> - schedule-roadmap.md (日程管理路线图)
+> - schedule-research.md (日程管理调研)
+>
+> 早期报告见 `archived/research_cleanup_20260131/reports/`
 
 ---
 

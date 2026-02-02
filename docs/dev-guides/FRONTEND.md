@@ -1,5 +1,7 @@
 # 前端开发指南
 
+> **保鲜状态**: ✅ 已验证 (2025-02-02) | **最后检查**: v6.0
+
 ## 技术栈
 - **框架**：React 18 + Vite 7
 - **语言**：TypeScript
@@ -132,13 +134,18 @@ ls web/dist/assets/ | grep "^_"  # 应该为空
 
 ## 布局架构
 
+> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `web/src/layouts/*.tsx` | **最后检查**: v6.0
+
 ### 布局层级
 
 ```
 RootLayout (全局导航 + 认证)
     │
-    ├── MainLayout (可折叠侧边栏：MemoExplorer)
+    ├── MemoLayout (可折叠侧边栏：MemoExplorer)
     │   └── /, /explore, /archived, /u/:username
+    │
+    ├── GeneralLayout (无侧边栏，全宽内容)
+    │   └── /knowledge-graph, /inboxes, /attachments
     │
     ├── AIChatLayout (固定侧边栏：AIChatSidebar)
     │   └── /chat
@@ -152,7 +159,8 @@ RootLayout (全局导航 + 认证)
 | 文件 | 用途 | 侧边栏类型 | 响应式 |
 |:-----|:-----|:-----------|:-------|
 | `RootLayout.tsx` | 全局导航和认证 | 无 | N/A |
-| `MainLayout.tsx` | 内容密集页面 | 可折叠 `MemoExplorer` | md: 固定 |
+| `MemoLayout.tsx` | 内容密集页面 | 可折叠 `MemoExplorer` | md: 固定 |
+| `GeneralLayout.tsx` | 全宽功能页面 | 无 | sm: 导航栏 |
 | `AIChatLayout.tsx` | AI 聊天界面 | 固定 `AIChatSidebar` | 始终固定 |
 | `ScheduleLayout.tsx` | 日程/日历 | 固定 `ScheduleCalendar` | 始终固定 |
 
@@ -195,7 +203,7 @@ const FeatureLayout = () => {
 **侧边栏宽度选项**：
 | 类 | 像素 | 用途 |
 |:-------|:-----|:-----|
-| `w-56` | 224px | 可折叠侧边栏（MainLayout md） |
+| `w-56` | 224px | 可折叠侧边栏（MemoLayout md） |
 | `w-64` | 256px | 标准侧边栏 |
 | `w-72` | 288px | 默认功能侧边栏（AIChat 等） |
 | `w-80` | 320px | 宽侧边栏（Schedule） |
@@ -211,19 +219,30 @@ const FeatureLayout = () => {
 
 ## 页面组件
 
+> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v6.0
+
 ### 可用页面
 
 | 路径 | 组件 | 布局 | 用途 |
 |:-----|:-----|:-----|:-----|
-| `/` | `Home.tsx` | MainLayout | 主时间线 + 笔记编辑器 |
-| `/explore` | `Explore.tsx` | MainLayout | 搜索和探索内容 |
-| `/archived` | `Archived.tsx` | MainLayout | 已归档笔记 |
+| `/` | `Home.tsx` | MemoLayout | 主时间线 + 笔记编辑器 |
+| `/explore` | `Explore.tsx` | MemoLayout | 搜索和探索内容 |
+| `/archived` | `Archived.tsx` | MemoLayout | 已归档笔记 |
+| `/m/:id` | `MemoDetail.tsx` | None | 笔记详情页 |
 | `/chat` | `AIChat.tsx` | AIChatLayout | AI 聊天界面 |
 | `/schedule` | `Schedule.tsx` | ScheduleLayout | 日历视图 |
-| `/review` | `Review.tsx` | MainLayout | 每日回顾 |
-| `/setting` | `Setting.tsx` | MainLayout | 用户设置 |
-| `/u/:username` | `UserProfile.tsx` | MainLayout | 公开用户资料 |
+| `/inboxes` | `Inboxes.tsx` | GeneralLayout | 收件箱 |
+| `/attachments` | `Attachments.tsx` | GeneralLayout | 附件管理 |
+| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱 |
+| `/review` | `Review.tsx` | MemoLayout | 每日回顾 |
+| `/setting` | `Setting.tsx` | MemoLayout | 用户设置 |
+| `/u/:username` | `UserProfile.tsx` | MemoLayout | 公开用户资料 |
 | `/auth/callback` | `AuthCallback.tsx` | None | OAuth 回调处理 |
+| `/auth/signin` | `SignIn.tsx` | None | 登录页 |
+| `/auth/signup` | `SignUp.tsx` | None | 注册页 |
+| `/auth/admin` | `AdminSignIn.tsx` | None | 管理员登录 |
+| `/404` | `NotFound.tsx` | None | 404 页面 |
+| `/403` | `PermissionDenied.tsx` | None | 权限拒绝 |
 
 ### 添加新页面
 

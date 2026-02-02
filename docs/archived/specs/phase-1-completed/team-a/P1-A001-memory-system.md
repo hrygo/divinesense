@@ -232,8 +232,8 @@ CREATE TABLE user_preferences (
 
 ### A. 参考资料
 
-- [主路线图 - 记忆系统架构](../../research/00-master-roadmap.md)
-- [智能助理路线图](../../research/assistant-roadmap.md)
+- [主路线图 - 记忆系统架构](../../../archived/research_20250202/00-master-roadmap.md)
+- [智能助理路线图](../../../archived/research_20250202/assistant-roadmap.md)
 
 ### B. 变更记录
 

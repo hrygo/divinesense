@@ -693,7 +693,7 @@ func TestTagSuggestion(t *testing.T) {
 
 ---
 
-> **纲领来源**: [00-master-roadmap.md](../../../research/00-master-roadmap.md)  
+> **纲领来源**: [00-master-roadmap.md](../../../archived/research_20250202/00-master-roadmap.md)  
 > **研究文档**: [memo-roadmap.md](../../../research/memo-roadmap.md)  
 > **版本**: v1.0  
 > **更新时间**: 2026-01-27

@@ -156,4 +156,4 @@ go test ./plugin/ai/memory/... ./plugin/ai/router/... ./plugin/ai/vector/... \
 
 - [Sprint 0 Spec](./sprint-0/S0-interface-contract.md)
 - [实施计划 INDEX](./INDEX.md)
-- [主路线图](../research/00-master-roadmap.md)
+- [主路线图](../archived/research_20250202/00-master-roadmap.md)

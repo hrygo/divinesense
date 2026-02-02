@@ -10,12 +10,13 @@
 
 ## 快速导航
 
-- [整体路线图](../research/00-master-roadmap.md)
 - [Spec 编写模板](./SPEC_TEMPLATE.md)
 - [Sprint 0: 接口契约](#sprint-0-接口契约)
-- [Phase 1: 基础稳定](#phase-1-基础稳定-sprint-1-2)
+- [Phase 1: 基础稳定](#phase-1-基础稳定-sprint-1-2) ⚠️ 已完成规格已归档
 - [Phase 2: 智能进化](#phase-2-智能进化-sprint-3-4)
 - [Phase 3: 极致体验](#phase-3-极致体验-sprint-5-6)
+
+> **注**: 整体路线图和研究文档已归档至 [`archived/research_20250202/`](../archived/research_20250202/)
 
 ---
 
@@ -101,26 +102,28 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 ### Sprint 1
 
+> **已完成规格已归档至 [`archived/specs/phase-1-completed/`](../archived/specs/phase-1-completed/)
+
 #### 团队 A: 公共基础服务
 
 | Spec ID | 功能 | 投入 | 依赖 | 状态 |
 |:---|:---|---:|:---|:---:|
-| [P1-A001](./phase-1/team-a/P1-A001-memory-system.md) | 轻量记忆系统 | 3人天 | - | ✅ |
-| [P1-A002](./phase-1/team-a/P1-A002-metrics-framework.md) | 基础评估指标 | 2人天 | - | ✅ |
+| [P1-A001](../archived/specs/phase-1-completed/team-a/P1-A001-memory-system.md) | 轻量记忆系统 | 3人天 | - | ✅ 已归档 |
+| [P1-A002](../archived/specs/phase-1-completed/team-a/P1-A002-metrics-framework.md) | 基础评估指标 | 2人天 | - | ✅ 已归档 |
 
 #### 团队 B: 智能助理+日程
 
 | Spec ID | 功能 | 投入 | 依赖 | 状态 |
 |:---|:---|---:|:---|:---:|
-| [P1-B001](./phase-1/team-b/P1-B001-tool-resilience.md) | 工具可靠性增强 | 2人天 | P1-A001 | ✅ |
-| [P1-B002](./phase-1/team-b/P1-B002-error-recovery.md) | 错误恢复机制 | 1人天 | - | ✅ |
+| [P1-B001](../archived/specs/phase-1-completed/team-b/P1-B001-tool-resilience.md) | 工具可靠性增强 | 2人天 | P1-A001 | ✅ 已归档 |
+| [P1-B002](../archived/specs/phase-1-completed/team-b/P1-B002-error-recovery.md) | 错误恢复机制 | 1人天 | - | ✅ 已归档 |
 
 #### 团队 C: 笔记 AI 增强
 
 | Spec ID | 功能 | 投入 | 依赖 | 状态 |
 |:---|:---|---:|:---|:---:|
-| [P1-C001](./phase-1/team-c/P1-C001-search-highlight.md) | 搜索结果高亮 | 3人天 | - | ✅ |
-| [P1-C002](./phase-1/team-c/P1-C002-context-snippet.md) | 上下文智能摘录 | 2人天 | P1-C001 | ✅ |
+| [P1-C001](../archived/specs/phase-1-completed/team-c/P1-C001-search-highlight.md) | 搜索结果高亮 | 3人天 | - | ✅ 已归档 |
+| [P1-C002](../archived/specs/phase-1-completed/team-c/P1-C002-context-snippet.md) | 上下文智能摘录 | 2人天 | P1-C001 | ✅ 已归档 |
 
 **Sprint 1 集成验收点**:
 - [x] A→B: MemoryService 调用通过
@@ -134,16 +137,16 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 | Spec ID | 功能 | 投入 | 依赖 | 状态 |
 |:---|:---|---:|:---|:---:|
-| [P1-A003](./phase-1/team-a/P1-A003-llm-router.md) | LLM路由优化 | 3人天 | P1-A001 | ✅ |
-| [P1-A004](./phase-1/team-a/P1-A004-time-service.md) | 时间解析服务 | 2人天 | - | ✅ |
-| [P1-A005](./phase-1/team-a/P1-A005-cache-layer.md) | 通用缓存层 | 1人天 | - | ✅ |
+| [P1-A003](../archived/specs/phase-1-completed/team-a/P1-A003-llm-router.md) | LLM路由优化 | 3人天 | P1-A001 | ✅ 已归档 |
+| [P1-A004](../archived/specs/phase-1-completed/team-a/P1-A004-time-service.md) | 时间解析服务 | 2人天 | - | ✅ 已归档 |
+| [P1-A005](../archived/specs/phase-1-completed/team-a/P1-A005-cache-layer.md) | 通用缓存层 | 1人天 | - | ✅ 已归档 |
 
 #### 团队 B
 
 | Spec ID | 功能 | 投入 | 依赖 | 状态 |
 |:---|:---|---:|:---|:---:|
-| [P1-B003](./phase-1/team-b/P1-B003-time-parser.md) | 时间解析加固 | 2人天 | P1-A004 | ✅ |
-| [P1-B004](./phase-1/team-b/P1-B004-rule-classifier.md) | 规则分类器扩展 | 2人天 | P1-A003 | ✅ |
+| [P1-B003](../archived/specs/phase-1-completed/team-b/P1-B003-time-parser.md) | 时间解析加固 | 2人天 | P1-A004 | ✅ 已归档 |
+| [P1-B004](../archived/specs/phase-1-completed/team-b/P1-B004-rule-classifier.md) | 规则分类器扩展 | 2人天 | P1-A003 | ✅ 已归档 |
 
 #### 团队 C
 
@@ -330,6 +333,6 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 ---
 
-> **纲领来源**: [00-master-roadmap.md](../research/00-master-roadmap.md)  
-> **版本**: v1.0  
-> **更新时间**: 2026-01-27
+> **纲领来源**: [00-master-roadmap.md](../archived/research_20250202/00-master-roadmap.md) (已归档)
+> **版本**: v1.1
+> **更新时间**: 2025-02-02

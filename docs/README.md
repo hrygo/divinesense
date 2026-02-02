@@ -1,7 +1,7 @@
 # DivineSense 文档中心
 
-> **更新时间**: 2026-01-31
-> **文档版本**: v1.0
+> **更新时间**: 2025-02-02
+> **文档版本**: v1.1
 
 ---
 
@@ -18,12 +18,9 @@ docs/
 │   └── UNEXPOSED_FEATURES.md    # 未暴露功能
 ├── deployment/                  # 部署文档
 │   └── BINARY_DEPLOYMENT.md     # 二进制部署指南
-├── research/                    # 研究文档 (活跃)
-│   ├── 00-master-roadmap.md     # 统一实施路线图
-│   ├── assistant-*.md           # 智能助理研究
-│   ├── memo-*.md                # 笔记增强研究
-│   ├── schedule-*.md            # 日程管理研究
+├── research/                    # 研究文档
 │   ├── BEST_PRACTICE_CLI_AGENT.md # CLI 最佳实践
+│   ├── cc-runner-async-upgrade.md # CC Runner 异步架构
 │   └── DEBUG_LESSONS.md         # 调试经验
 ├── specs/                       # 规格文档 (活跃)
 │   ├── INDEX.md                 # 规格总索引
@@ -39,7 +36,10 @@ docs/
 └── archived/                    # 历史归档
     ├── cleanup_20260123/        # 早期归档 (2026-01-23)
     ├── research_cleanup_20260131/ # 研究归档 (2026-01-31)
-    └── specs/                   # 已完成规格归档
+    ├── research_20250202/       # 研究路线图归档 (2025-02-02)
+    ├── specs/                   # 已完成规格归档
+    │   └── phase-1-completed/    # Phase-1 已完成规格
+    └── specs/                   # 已完成 AI/FE 规格
 ```
 
 ---
@@ -73,6 +73,8 @@ docs/
 |:-----|:---------|:-----|
 | [`archived/cleanup_20260123/`](archived/cleanup_20260123/) | 2026-01-23 | 早期实施计划、RAG 研究 |
 | [`archived/research_cleanup_20260131/`](archived/research_cleanup_20260131/) | 2026-01-31 | 历史报告、方法论 |
+| [`archived/research_20250202/`](archived/research_20250202/) | 2025-02-02 | 研究路线图（8 个文档） |
+| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/) | 2025-02-02 | Phase-1 已完成规格（9 个） |
 | [`archived/specs/`](archived/specs/) | 2026-01-23 | 已完成的 AI/FE 规格 |
 
 ---

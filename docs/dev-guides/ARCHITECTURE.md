@@ -1,5 +1,7 @@
 # 架构文档
 
+> **保鲜状态**: ✅ 已验证 (2025-02-02) | **最后检查**: v6.0
+
 ## 项目概述
 
 DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 AI 驱动的「鹦鹉」代理增强用户体验。
@@ -98,6 +100,24 @@ divinesense/
    - 智能查询路由（检测日程 vs. 搜索查询）
    - 自然语言日期解析
    - 带冲突检测的日程助理
+
+### API 服务
+
+> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v6.0
+
+| 服务 | Proto 文件 | 描述 |
+|:-----|:-----------|:-----|
+| **ActivityService** | `activity_service.proto` | 用户活动记录 |
+| **AttachmentService** | `attachment_service.proto` | 附件管理 |
+| **AuthService** | `auth_service.proto` | 认证授权 |
+| **IdpService** | `idp_service.proto` | 身份提供商集成 |
+| **InstanceService** | `instance_service.proto` | 实例配置 |
+| **MemoService** | `memo_service.proto` | 笔记 CRUD |
+| **ScheduleService** | `schedule_service.proto` | 日程管理 |
+| **ShortcutService** | `shortcut_service.proto` | 快捷方式 |
+| **UserService** | `user_service.proto` | 用户管理 |
+| **Common** | `common.proto` | 通用类型定义 |
+| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索 |
 
 ---
 
