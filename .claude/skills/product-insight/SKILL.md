@@ -22,7 +22,7 @@ allowed-tools:
   - mcp__web-reader__webReader
   - AskUserQuestion
   - Task
-description: 产品洞察引擎 - 双模式调研（首次深度/增量快速）+ 价值三问 + 战略产出
+description: Competitive analysis engine that researches products, compares capabilities, and generates strategic GitHub Issues. Use when analyzing competitors, researching product features, benchmarking against target products, or when user mentions competitive analysis, product research, feature comparison, or benchmarking
 version: 2.6.0
 system: |
   # PRODUCT INSIGHT SKILL
