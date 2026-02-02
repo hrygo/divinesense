@@ -200,18 +200,14 @@ update_specs_index_remove("phase-1")
 📦 归档完成
 
 源目录: docs/specs/phase-1/
-目标目录: docs/archived/specs/phase1_20260131/
+目标目录: docs/archived/specs/phase-1-completed/  (2025-02-02)
 
 归档文件:
   ✓ phase-1/team-a/P1-A001-memory-system.md
   ✓ phase-1/team-a/P1-A002-metrics-framework.md
-  ... (共 12 个文件)
+  ... (共 9 个文件)
 
-创建文档:
-  ✓ archived/specs/phase1_20260131/README.md
-
-更新索引:
-  ✓ docs/specs/INDEX.md (移除 Phase 1 引用)
+> 注: Phase-1 已完成规格已归档，此示例展示历史归档格式
 ```
 
 ---
@@ -390,7 +386,7 @@ suggestions = {
 │   │   └── 📄 EVOLUTION_MODE_SPEC.md ✅
 │   ├── 📂 sprint-0/
 │   │   └── 📄 S0-interface-contract.md ✅
-│   ├── 📂 phase-1/ ✅ (已完成)
+│   ├── 📂 phase-1/ 📦 (已完成并归档至 archived/specs/phase-1-completed/)
 │   ├── 📂 phase-2/ 🔄 (进行中)
 │   └── 📂 phase-3/ ⏸️ (搁置)
 └── 📂 archived/
