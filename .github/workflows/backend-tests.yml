@@ -62,20 +62,22 @@ jobs:
         run: |
           case "${{ matrix.test-group }}" in
             store)
-              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./store/... 2>&1 | tee test.json
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./store/... 2>&1 > test.json || TEST_EXIT_CODE=$?
               ;;
             server)
-              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./server/... 2>&1 | tee test.json
+              go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./server/... 2>&1 > test.json || TEST_EXIT_CODE=$?
               ;;
             plugin)
               go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
-                $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$") 2>&1 | tee test.json
+                $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$") 2>&1 > test.json || TEST_EXIT_CODE=$?
               ;;
             other)
               go test -json -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
-                ./cmd/... ./internal/... 2>&1 | tee test.json
+                ./cmd/... ./internal/... 2>&1 > test.json || TEST_EXIT_CODE=$?
               ;;
           esac
+          # Preserve exit code for later check
+          echo "exit_code=${TEST_EXIT_CODE:-0}" >> $GITHUB_OUTPUT
         env:
           DRIVER: sqlite  # Use SQLite for fastest test execution
 
@@ -84,9 +86,9 @@ jobs:
         run: |
           echo "## Test Results (${{ matrix.test-group }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+
           if [ -f test.json ]; then
-            # Count passes and fails using correct jq syntax
+            # Count passes and fails
             PASSES=$(jq -r 'select(.Action == "pass") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
             FAILS=$(jq -r 'select(.Action == "fail") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
             TOTAL=$((PASSES + FAILS))
@@ -96,13 +98,19 @@ jobs:
             echo "📊 Total: $TOTAL" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
-            # Show failures if any
+            # Show failure details if any
             if [ "$FAILS" -gt 0 ]; then
-              echo "Failed packages:" >> $GITHUB_STEP_SUMMARY
-              jq -r 'select(.Action == "fail") | "❌ \(.Package)"' test.json >> $GITHUB_STEP_SUMMARY || true
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              # Extract test output for failed tests
+              jq -r 'select(.Action == "output" and .Test != null) | .Output' test.json >> $GITHUB_STEP_SUMMARY || true
+              echo '```' >> $GITHUB_STEP_SUMMARY
             fi
           fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Exit with original test exit code
+          exit ${{ steps.tests.outputs.exit_code }}
 
       - name: Upload coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
