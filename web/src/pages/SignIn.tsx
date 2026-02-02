@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import AuthFooter from "@/components/AuthFooter";
+import { AuthSkeleton } from "@/components/AuthSkeleton";
 import PasswordSignInForm from "@/components/PasswordSignInForm";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -49,14 +50,7 @@ const SignIn = () => {
 
   // Show loading state while instance config is loading
   if (instanceLoading) {
-    return (
-      <div className="py-4 sm:py-8 w-80 max-w-full min-h-svh mx-auto flex flex-col justify-start items-center">
-        <div className="w-full py-4 grow flex flex-col justify-center items-center">
-          <LoaderIcon className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-        <AuthFooter />
-      </div>
-    );
+    return <AuthSkeleton />;
   }
 
   const handleSignInWithIdentityProvider = async (identityProvider: IdentityProvider) => {
@@ -64,7 +58,7 @@ const SignIn = () => {
       const redirectUri = absolutifyLink("/auth/callback");
       const oauth2Config = identityProvider.config?.config?.case === "oauth2Config" ? identityProvider.config.config.value : undefined;
       if (!oauth2Config) {
-        toast.error("Identity provider configuration is invalid.");
+        toast.error(t("auth.error.oauth-invalid"));
         return;
       }
 
@@ -92,6 +86,9 @@ const SignIn = () => {
     }
   };
 
+  // Determine if OAuth section should be shown (including loading state)
+  const showOAuthSection = idpLoading || identityProviderList.length > 0;
+
   return (
     <div className="py-4 sm:py-8 w-80 max-w-full min-h-svh mx-auto flex flex-col justify-start items-center">
       <div className="w-full py-4 grow flex flex-col justify-center items-center">
@@ -102,8 +99,10 @@ const SignIn = () => {
         {!instanceGeneralSetting.disallowPasswordAuth ? (
           <PasswordSignInForm />
         ) : (
-          identityProviderList.length === 0 &&
-          !idpLoading && <p className="w-full text-2xl mt-2 text-muted-foreground">{t("auth.password-auth-not-allowed")}</p>
+          !idpLoading &&
+          identityProviderList.length === 0 && (
+            <p className="w-full text-2xl mt-2 text-muted-foreground">{t("auth.password-auth-not-allowed")}</p>
+          )
         )}
         {!instanceGeneralSetting.disallowUserRegistration && !instanceGeneralSetting.disallowPasswordAuth && (
           <p className="w-full mt-4 text-sm">
@@ -113,9 +112,9 @@ const SignIn = () => {
             </Link>
           </p>
         )}
-        {/* Always reserve space for OAuth buttons to prevent layout shift */}
-        {(identityProviderList.length > 0 || idpLoading) && (
-          <>
+        {/* OAuth section - reserve space to prevent layout shift */}
+        {showOAuthSection && (
+          <div className="w-full min-h-[60px]">
             {!instanceGeneralSetting.disallowPasswordAuth && (
               <div className="relative my-4 w-full">
                 <Separator />
@@ -142,7 +141,7 @@ const SignIn = () => {
                 ))
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
       <AuthFooter />

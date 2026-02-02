@@ -374,14 +374,20 @@
     "sign-up-tip": "Don't have an account yet?",
     "error": {
       "default": "Sign in failed. Please check your credentials and try again.",
+      "empty-fields": "Please enter username and password",
       "invalid-credentials": "Invalid username or password.",
-      "network": "Network error. Please check your connection and try again.",
-      "server": "Server error. Please try again later.",
+      "network": "Network connection failed. Please check your network and try again",
+      "server": "Server is temporarily unavailable. Please try again later",
       "user-not-found": "User not found. Please check your username.",
-      "rate-limit": "Too many attempts. Please wait a moment and try again.",
+      "rate-limit": "Too many attempts. Please try again in {{count}} minutes.",
       "sign-up-failed": "Registration failed. Please try again.",
-      "oauth-context": "OAuth sign-in failed",
-      "oauth-failed": "Failed to sign in with OAuth. Please try again."
+      "oauth-invalid": "Sign-in configuration is invalid. Please contact the administrator.",
+      "oauth-context": "OAuth sign-in",
+      "oauth-failed": "Failed to sign in with OAuth. Please try again.",
+      "username-exists": "Username already exists. Please use a different username.",
+      "username-format": "Invalid username format (only letters, numbers, and hyphens, 1-32 characters).",
+      "username-email-format": "Username cannot be an email address. Please use a username without @ or .",
+      "invalid-input": "Invalid input format. Please check and try again."
     }
   },
   "chat": {
@@ -427,6 +433,7 @@
     "input": "Input",
     "language": "Language",
     "last-updated-at": "Last updated at",
+    "loading": "Loading...",
     "layout": "Layout",
     "learn-more": "Learn more",
     "location": "Location",

@@ -1,3 +1,4 @@
+import { Code } from "@connectrpc/connect";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { clearAccessToken } from "@/auth-state";
@@ -81,7 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(userKeys.currentUser(), currentUser);
       queryClient.setQueryData(userKeys.detail(currentUser.name), currentUser);
     } catch (error) {
-      console.error("Failed to initialize auth:", error);
+      // Silently handle unauthenticated errors (normal state for non-logged-in users)
+      const isAuthError = error && typeof error === "object" && "code" in error && error.code === Code.Unauthenticated;
+
+      if (!isAuthError && import.meta.env.DEV) {
+        console.error("Failed to initialize auth:", error);
+      }
       clearAccessToken();
       setState({
         currentUser: undefined,

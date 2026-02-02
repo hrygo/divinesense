@@ -369,14 +369,20 @@
     "sign-up-tip": "还没有账户？",
     "error": {
       "default": "登录失败，请检查您的用户名和密码后重试。",
+      "empty-fields": "请填写用户名和密码",
       "invalid-credentials": "用户名或密码错误。",
-      "network": "网络错误，请检查您的网络连接后重试。",
-      "server": "服务器错误，请稍后重试。",
-      "user-not-found": "用户不存在，请检查用户名是否正确。",
-      "rate-limit": "尝试次数过多，请稍后再试。",
-      "sign-up-failed": "注册失败，请重试。",
-      "oauth-context": "OAuth 登录失败",
-      "oauth-failed": "OAuth 登录失败，请重试。"
+      "network": "网络连接失败，请检查网络后重试",
+      "server": "服务器暂时无法响应，请稍后重试",
+      "user-not-found": "用户不存在，请检查用户名是否正确",
+      "rate-limit": "尝试次数过多，请 {{count}} 分钟后再试",
+      "sign-up-failed": "注册失败，请重试",
+      "oauth-invalid": "登录配置无效，请联系管理员",
+      "oauth-context": "OAuth 登录",
+      "oauth-failed": "OAuth 登录失败，请重试",
+      "username-exists": "用户名已存在，请使用其他用户名",
+      "username-format": "用户名格式不正确（只能包含字母、数字和连字符，1-32个字符）",
+      "username-email-format": "用户名不能是邮箱格式。请使用不含 @ 和 . 的用户名",
+      "invalid-input": "输入格式不正确，请检查后重试"
     }
   },
   "chat": {
@@ -422,6 +428,7 @@
     "input": "输入",
     "language": "语言",
     "last-updated-at": "最后更新时间",
+    "loading": "加载中...",
     "layout": "布局",
     "learn-more": "了解更多",
     "location": "地点",
