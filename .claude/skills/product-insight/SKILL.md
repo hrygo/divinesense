@@ -23,7 +23,7 @@ allowed-tools:
   - AskUserQuestion
   - Task
 description: 产品洞察引擎 - 完整调研、系统对比、批量产出
-version: 2.5.0
+version: 2.6.0
 system: |
   # PRODUCT INSIGHT SKILL
 
@@ -116,75 +116,135 @@ system: |
 
 # Product Insight
 
-## 执行流程
+## 执行模式
+
+| 模式 | 触发条件 | 数据源 | 深度 | 产出 |
+|:-----|:---------|:-------|:-----|:-----|
+| **首次分析** | SHA 为空 | 文档+源码+社区 | 深度全面 | 5-10 Issue |
+| **增量分析** | SHA 已存在 | Releases+Issues | 快速聚焦 | 1-3 Issue |
+
+---
+
+## 模式一：首次分析（深度调研）
+
+**目标**：建立对竞品的全面认知，理解架构、能力、用户痛点。
+
+### Phase 1: 官方文档解读（必需）
 
 ```
-状态恢复 → 数据收集 → 能力矩阵 → 价值三问 → HITL确认 → 批量产出
+1. README.md - 产品定位、核心价值、快速开始
+2. 官方文档 - docs/ 目录（如果存在）
+3. 架构文档 - ARCHITECTURE.md, DESIGN.md 等
+4. API 文档 - API 路由、数据模型
 ```
 
-## Step 1: 状态恢复
+### Phase 2: 核心源码解读（必需）
+
+```
+1. 目录结构 - 了解代码组织方式
+   mcp__zread__get_repo_structure(owner, repo, "/")
+
+2. 核心模块 - 根据产品定位选择：
+   - AI Agent 系统: agent/, router/, llm/
+   - 数据存储: store/, database/, models/
+   - API 层: api/, routes/, handlers/
+   - 配置系统: config/, settings/
+
+3. 关键文件解读 - 使用 mcp__zread__read_file 或 GitHub get_file_contents
+   - 找到"核心逻辑"文件（通常在 src/, lib/, core/ 等目录）
+   - 读取主要接口、数据结构、算法实现
+   - 理解技术栈和架构模式
+```
+
+### Phase 3: 用户痛点挖掘（必需）
+
+```
+1. Issues - 最新 90+ 个（分 3 页）
+   mcp__plugin_github_github__list_issues(state=open, limit=30, page=1)
+   mcp__plugin_github_github__list_issues(state=open, limit=30, page=2)
+   mcp__plugin_github_github__list_issues(state=open, limit=30, page=3)
+
+   分类统计：
+   - bug: 功能缺陷、崩溃、性能问题
+   - enhancement: 功能请求、改进建议
+   - documentation: 文档问题
+
+2. Releases - 最新 10 个
+   mcp__plugin_github_github__list_releases(limit=10)
+   - 版本演进方向
+   - 官方重视的功能
+
+3. 社区讨论（可选）
+   - 热门 Issue 的评论
+   - Discussion 板（如果有的话）
+```
+
+### Phase 4: 能力矩阵与价值三问
+
+```
+1. 构建能力矩阵（对比）
+2. 对每个差距进行价值三问
+3. 按价值密度排序
+4. 筛选 Top 5-10 候选
+```
+
+---
+
+## 模式二：增量分析（快速聚焦）
+
+**目标**：快速了解新增变化，判断是否需要更新认知。
+
+### 数据收集（轻量级）
+
+```
+1. 最新 Releases - 自上次 SHA 后的新版本
+   mcp__plugin_github_github__list_releases()
+
+2. 新增 Issues - 自上次 SHA 后的新 issue
+   mcp__plugin_github_github__list_issues(sort=comments, order=desc)
+
+3. 核心：识别变化模式
+   - 新功能 vs bug fix
+   - 方向性变化 vs 迭代优化
+```
+
+### 快速判断
+
+```
+- 如果只是 bug fix / 小优化 → 无需产出 Issue
+- 如果有新功能方向 → 进入价值三问
+- 如果有架构变化 → 更新能力矩阵
+```
+
+---
+
+## 通用步骤（两种模式都适用）
+
+### Step A: DivineSense 能力扫描
 
 ```bash
-./.claude/skills/product-insight/scripts/state.py summary
-```
-
-判断：SHA 为空 = 首次分析，走完整流程。
-
-## Step 2: 数据收集（带降级策略）
-
-```bash
-# 核心数据（必需）- 优先使用 MCP GitHub 工具
-mcp__plugin_github_github__get_latest_release
-mcp__plugin_github_github__list_issues (state=open, limit=30)
-
-# 备用：如果 MCP 失败，使用 gh CLI
-gh release list --repo "$BENCHMARK_TARGET" --limit 10
-gh issue list --repo "$BENCHMARK_TARGET" --limit 30 --state open
-
-# 可选数据（失败时跳过）
-# - README: mcp__plugin_github_github__get_file_contents (owner, repo, path: "README.md")
-# - 目录结构: mcp__zread__get_repo_structure (失败时基于 Issues 推断)
-# - 网络搜索: mcp__web-search-prime__webSearchPrime (失败时跳过)
-```
-
-**降级执行原则**：
-- 核心数据源失败时尝试 gh CLI
-- 可选数据源失败时继续分析，记录警告
-- 始终基于可用数据产出洞察
-
-## Step 3: 能力矩阵
-
-```bash
-# DivineSense 能力
 ./.claude/skills/product-insight/scripts/scan.py summary
 ```
 
-构建差距矩阵：
+### Step B: 构建差距矩阵
 
-| 功能领域 | OpenClaw      | DivineSense        | 差距     |
-| :------- | :------------ | :----------------- | :------- |
-| 人际记忆 | hooks         | episodic_memory 表 | 我们优势 |
-| 部署     | Fly.io        | 单二进制           | 我们优势 |
-| 多通道   | 12+ 通道      | Web + Geek         | 不做     |
-| TTS      | Edge fallback | 无                 | P1       |
+| 功能领域 | 竞品 | DivineSense | 差距分析 |
+|:-------|:-----|:------------|:---------|
+|         |      |            | （待填充）|
 
-## Step 4: 价值三问
+### Step C: 价值三问
 
-对每个差距进行分析：
+| 阶段 | 问题 | 输出 |
+|:-----|:-----|:-----|
+| Q1 | 解决了什么痛点？ | 这不仅是[X]，而是【Y模式】 |
+| Q2 | 为什么有价值？ | 主要价值：效率/成本/可能性 |
+| Q3 | 能否更好实现？ | 利用我们的[优势]实现[价值] |
 
-| 阶段 | 问题             | 输出                       |
-| :--- | :--------------- | :------------------------- |
-| Q1   | 解决了什么痛点？ | 这不仅是[X]，而是【Y模式】 |
-| Q2   | 为什么有价值？   | 主要价值：效率/成本/可能性 |
-| Q3   | 能否更好实现？   | 利用我们的[优势]实现[价值] |
-
-按价值密度排序：用户需求 × 我们优势 × 实现成本
-
-## Step 5: HITL 确认
+### Step D: HITL 确认
 
 **此时才询问用户**，展示能力矩阵差距，确认优先级。
 
-## Step 6: 批量产出 Issue
+### Step E: 批量产出 Issue
 
 筛选标准：
 ```
@@ -196,13 +256,15 @@ gh issue list --repo "$BENCHMARK_TARGET" --limit 30 --state open
   P2 (未来考虑)     ≤ 2 个
 ```
 
-输出格式：
+---
+
+## 输出格式
 
 ```
 ╔════════════════════════════════════════════════════════════╗
 ║  📊 执行摘要                                                ║
 ╠════════════════════════════════════════════════════════════╣
-║  分析范围: OpenClaw @ abc1234 (+N commits)                 ║
+║  分析范围: [竞品] @ SHA (+N commits)                      ║
 ║  核心发现: [一句话总结]                                     ║
 ║  战略建议: 做 X / 不做 Y / 差异化 Z                        ║
 ╚════════════════════════════════════════════════════════════╝
