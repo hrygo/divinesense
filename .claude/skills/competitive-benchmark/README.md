@@ -31,7 +31,7 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 | **scripts/benchmark/state.sh** | 状态持久化管理 |
 | **scripts/benchmark/scan.sh** | DivineSense 能力矩阵扫描 |
 
-详见: [scripts/benchmark/README.md](../../../scripts/benchmark/README.md)
+详见: [scripts/README.md](./scripts/README.md)
 
 ## 工作流程
 
@@ -94,14 +94,14 @@ Skill "competitive-benchmark" "执行 OpenClaw 增量对标"
 ├── REFERENCE.md      # 参考（动态发现方法）
 ├── ADVANCED.md       # 高级（增量算法、状态持久化）
 ├── README.md         # 本文件
-└── templates/
-    ├── issue.md      # Issue 模板
-    └── report.md     # 报告模板
-
-scripts/benchmark/
-├── state.sh          # 状态持久化管理
-├── scan.sh           # 能力矩阵扫描
-└── README.md         # 脚本使用说明
+├── templates/        # Issue/Report 模板
+│   ├── issue.md      # Issue 模板
+│   └── report.md     # 报告模板
+└── scripts/          # 对标脚本（自包含）
+    ├── benchmark.sh  # 主入口：init/run/status
+    ├── state.sh      # 状态持久化管理
+    ├── scan.sh       # 能力矩阵扫描
+    └── README.md     # 脚本使用说明
 ```
 
 ## 状态文件

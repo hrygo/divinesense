@@ -100,17 +100,17 @@ parse_changelog_since() {
 
 ### 状态操作命令
 
-> **脚本**: `scripts/benchmark/state.sh`
+> **脚本**: `scripts/state.sh`
 
 ```bash
 # 方式一：直接执行脚本
-./scripts/benchmark/state.sh append "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
-./scripts/benchmark/state.sh get
-./scripts/benchmark/state.sh query "openclaw_sha"
-./scripts/benchmark/state.sh summary
+./.claude/skills/competitive-benchmark/scripts/state.sh append "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
+./.claude/skills/competitive-benchmark/scripts/state.sh get
+./.claude/skills/competitive-benchmark/scripts/state.sh query "openclaw_sha"
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
 
 # 方式二：source 后使用（更灵活）
-source scripts/benchmark/state.sh
+source .claude/skills/competitive-benchmark/scripts/state.sh
 append_state "$timestamp" "$oc_sha" "$ds_sha" "$features" "$issues"
 get_latest_state
 query_state "openclaw_sha"
@@ -121,12 +121,12 @@ show_state_summary
 
 ```bash
 # 显示完整摘要
-./scripts/benchmark/state.sh summary
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
 
 # 查询特定字段
-last_run=$(./scripts/benchmark/state.sh query timestamp)
-analyzed_count=$(./scripts/benchmark/state.sh get | jq -r '.analyzed_features | length')
-issues_count=$(./scripts/benchmark/state.sh get | jq -r '.created_issues | length')
+last_run=$(./.claude/skills/competitive-benchmark/scripts/state.sh query timestamp)
+analyzed_count=$(./.claude/skills/competitive-benchmark/scripts/state.sh get | jq -r '.analyzed_features | length')
+issues_count=$(./.claude/skills/competitive-benchmark/scripts/state.sh get | jq -r '.created_issues | length')
 ```
 
 ---
@@ -354,14 +354,14 @@ def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
 ├── REFERENCE.md      # 参考（动态发现方法）
 ├── ADVANCED.md       # 高级（本文档）
 ├── README.md         # 介绍
-└── templates/
-    ├── issue.md      # Issue 模板
-    └── report.md     # 报告模板
-
-scripts/benchmark/
-├── state.sh          # 状态持久化管理
-├── scan.sh           # 能力矩阵扫描
-└── README.md         # 脚本使用说明
+├── templates/        # Issue/Report 模板
+│   ├── issue.md      # Issue 模板
+│   └── report.md     # 报告模板
+└── scripts/          # 对标脚本（自包含）
+    ├── benchmark.sh  # 主入口：init/run/status
+    ├── state.sh      # 状态持久化管理
+    ├── scan.sh       # 能力矩阵扫描
+    └── README.md     # 脚本使用说明
 ```
 
 ---
@@ -380,10 +380,10 @@ git rev-parse HEAD
 # 读取状态文件
 tail -1 docs/research/benchmark/state.jsonl | jq -r '.'
 
-# 扫描 DivineSense 代理
-find plugin/ai/agent -name "*_parrot.go"
+# 扫描 DivineSense 代理（使用脚本）
+./.claude/skills/competitive-benchmark/scripts/scan.sh parrot-names
 
-# 扫描 DivineSense 工具
+# 扫描 DivineSense 工具（使用脚本）
 find plugin/ai/agent/tools -name "*.go"
 ```
 

@@ -75,18 +75,18 @@ gh api repos/openclaw/openclaw/contents/CHANGELOG.md | \
 
 ```bash
 # 方式一：使用脚本（推荐）
-MATRIX=$(./scripts/benchmark/scan.sh matrix)
-PARROTS=$(./scripts/benchmark/scan.sh parrots)
-TOOLS=$(./scripts/benchmark/scan.sh tools)
-PAGES=$(./scripts/benchmark/scan.sh pages)
-TABLES=$(./scripts/benchmark/scan.sh tables)
+MATRIX=./.claude/skills/competitive-benchmark/scripts/scan.sh matrix
+PARROTS=./.claude/skills/competitive-benchmark/scripts/scan.sh parrots
+TOOLS=./.claude/skills/competitive-benchmark/scripts/scan.sh tools
+PAGES=./.claude/skills/competitive-benchmark/scripts/scan.sh pages
+TABLES=./.claude/skills/competitive-benchmark/scripts/scan.sh tables
 
 # 列出名称
-PARROT_NAMES=$(./scripts/benchmark/scan.sh parrot-names)
-TOOL_NAMES=$(./scripts/benchmark/scan.sh tool-names)
+PARROT_NAMES=./.claude/skills/competitive-benchmark/scripts/scan.sh parrot-names
+TOOL_NAMES=./.claude/skills/competitive-benchmark/scripts/scan.sh tool-names
 
 # 显示摘要
-./scripts/benchmark/scan.sh summary
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary
 
 # 方式二：手动扫描（兼容性）
 PARROTS=$(find plugin/ai/agent -name "*_parrot.go" 2>/dev/null | wc -l)
@@ -262,12 +262,12 @@ func (r *ChatRouter) Route(input string) AgentType {
 
 ```bash
 # 状态管理
-./scripts/benchmark/state.sh summary
-./scripts/benchmark/state.sh query openclaw_sha
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
+./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha
 
 # 能力扫描
-./scripts/benchmark/scan.sh summary
-./scripts/benchmark/scan.sh has "pattern"
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary
+./.claude/skills/competitive-benchmark/scripts/scan.sh has "pattern"
 
 # 仓库信息（动态）
 REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
