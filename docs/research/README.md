@@ -11,6 +11,8 @@
 | [2026-01-31-web-performance-stability.md](./2026-01-31-web-performance-stability.md) | Web 性能与渲染稳定性优化 | 📝 待实施 |
 | [claude-stream-json-format.md](./claude-stream-json-format.md)             | Claude CLI stream-json 格式调研 | ✅ 已完成 |
 | [event-type-ui-research.md](./event-type-ui-research.md)                 | 前端事件类型展示调研           | 📝 待实施 |
+| [voice-interaction-research.md](./voice-interaction-research.md)         | 语音交互功能调研               | 📝 待实施 |
+| [pwa-mobile-research.md](./pwa-mobile-research.md)                     | PWA 移动端增强调研             | 📝 待实施 |
 
 ---
 
@@ -42,4 +44,4 @@
 
 ---
 
-> 更新于 2026-02-01
+> 更新于 2026-02-02
