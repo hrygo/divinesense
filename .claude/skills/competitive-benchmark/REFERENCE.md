@@ -1,318 +1,228 @@
-# Reference - 竞品对标参考文档
+# Reference - 价值三问方法论
 
-> 动态功能发现方法、DivineSense 能力扫描、对标方法论。
+> 竞品分析的核心方法论：从功能表层深入到价值本质
 
 ---
 
-## 动态功能发现
+## 核心框架：价值三问
 
-> **核心原则**：零硬编码，所有数据运行时从 GitHub API 动态获取。
-
-### OpenClaw 实时数据获取
-
-```bash
-# 获取 OpenClaw 最新版本信息
-gh repo view openclaw/openclaw --json name,description,defaultBranchRef,releases
-
-# 获取最新 Release
-gh release list --repo openclaw/openclaw --limit 1
-
-# 获取最新 Commit
-gh api repos/openclaw/openclaw/commits | jq -r '.sha'
-
-# 获取目录结构（动态发现功能模块）
-mcp__zread__get_repo_structure "openclaw/openclaw" "/"
 ```
-
-### 功能分类动态推断
-
-> 以下代码为**伪代码示例**，用于说明算法逻辑，实际使用时需根据 Skill 环境调整。
-
-```python
-# 基于目录路径推断功能分类
-FUNCTION_CATEGORIES = {
-    'session': ['src/sessions', 'src/memory', 'src/context'],
-    'plugin': ['src/plugin-sdk', 'extensions/', 'src/plugins'],
-    'agent': ['src/agents', 'src/parrot'],
-    'command': ['src/commands', 'src/cli'],
-    'media': ['src/media', 'src/image', 'src/pdf'],
-    'channel': ['src/whatsapp', 'src/discord', 'src/telegram'],
-}
-
-def discover_functions(openclaw_structure):
-    """从 OpenClaw 目录结构动态发现功能"""
-    functions = []
-    for path in openclaw_structure:
-        category = infer_category(path)
-        if category and category != 'channel':  # 过滤多渠道
-            functions.append({
-                'name': extract_feature_name(path),
-                'category': category,
-                'path': path,
-            })
-    return functions
-```
-
-### CHANGELOG 增量解析
-
-```bash
-# 获取上次对标后的 CHANGELOG 增量
-LAST_DATE=$(cat docs/research/benchmark/state.jsonl | jq -r '.[-1].timestamp' | cut -dT -f1)
-
-# 获取 CHANGELOG 并解析新增内容
-gh api repos/openclaw/openclaw/contents/CHANGELOG.md | \
-  jq -r '.content' | base64 -d | \
-  awk "/$LAST_DATE/,0" | grep -E "^\-|\*"
+┌─────────────────────────────────────────────────────────────┐
+│                    价值三问                                │
+├─────────────────────────────────────────────────────────────┤
+│  1. 问题本质：这个功能解决了用户的什么痛点？            │
+│  2. 价值来源：为什么用户认为它有价值？                    │
+│  3. 创造性转化：同样的价值，我们能否用更好方式实现？    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## DivineSense 能力矩阵
+## 第一问：问题本质
 
-### 动态扫描命令
+### 分析维度
 
-> **脚本**: `scripts/scan.sh`
-
-```bash
-# 方式一：使用脚本（推荐）
-MATRIX=./.claude/skills/competitive-benchmark/scripts/scan.sh matrix
-PARROTS=./.claude/skills/competitive-benchmark/scripts/scan.sh parrots
-TOOLS=./.claude/skills/competitive-benchmark/scripts/scan.sh tools
-PAGES=./.claude/skills/competitive-benchmark/scripts/scan.sh pages
-TABLES=./.claude/skills/competitive-benchmark/scripts/scan.sh tables
-
-# 列出名称
-PARROT_NAMES=./.claude/skills/competitive-benchmark/scripts/scan.sh parrot-names
-TOOL_NAMES=./.claude/skills/competitive-benchmark/scripts/scan.sh tool-names
-
-# 显示摘要
-./.claude/skills/competitive-benchmark/scripts/scan.sh summary
-
-# 方式二：手动扫描（兼容性）
-PARROTS=$(find plugin/ai/agent -name "*_parrot.go" 2>/dev/null | wc -l)
-TOOLS=$(find plugin/ai/agent/tools -name "*.go" 2>/dev/null | wc -l)
-```
-
-### 运行时能力矩阵生成
-
-> 以下代码为**伪代码示例**，用于说明算法逻辑。
-
-```python
-def generate_capability_matrix():
-    """生成 DivineSense 实时能力矩阵"""
-    return {
-        'agents': scan_parrots(),
-        'tools': scan_tools(),
-        'pages': scan_pages(),
-        'tables': scan_tables(),
-        'timestamp': datetime.utcnow().isoformat()
-    }
-```
-
----
-
-## 对标方法论
-
-### 技术契合度评分
-
-| 评分 | 标准 | 示例 |
+| 维度 | 问题 | 示例 |
 |:-----|:-----|:-----|
-| **1.0** | Go 原生支持，可直接复用设计 | 会话修剪、压缩 |
-| **0.7** | 需适配但有参考实现 | 插件 SDK（Go 版） |
-| **0.4** | 需重构或使用不同技术 | Pi Agent（用 Parrot 替代） |
-| **0.1** | TypeScript 特异性，难以迁移 | jiti 动态导入 |
+| **用户痛点** | 解决了什么问题？ | API 成本高 |
+| **矛盾核心** | 什么在互相制约？ | 记忆增长 vs 成本控制 |
+| **真实需求** | 用户真正想要的？ | 便宜且好用的 AI |
 
-### 用户价值评分
+### 避免的陷阱
 
-| 评分 | 标准 | 示例 |
-|:-----|:-----|:-----|
-| **1.0** | 高频使用，解决核心痛点 | 会话管理（每次 AI 交互） |
-| **0.7** | 中频使用，显著提升体验 | 插件系统（扩展能力） |
-| **0.4** | 低频使用，锦上添花 | 会话导出 |
-| **0.1** | 边缘场景，用户需求弱 | 多渠道集成（不同定位） |
+```
+❌ "竞品有会话修剪" → 我们也要有
+✅ "用户受限于 API 成本" → 我们能用本地化解决
 
-### 过滤规则
-
-> 以下代码为**伪代码示例**，用于说明过滤逻辑。
-
-```python
-# 自动过滤条件
-TS_SPECIFIC = ['jiti', 'tsx', 'oxlint', 'vitest', 'rollup', 'npm', 'pnpm']
-CHANNELS = ['whatsapp', 'discord', 'telegram', 'signal', 'slack', 'imessage']
-
-def should_filter(feature):
-    if any(ts in feature.lower() for ts in TS_SPECIFIC):
-        return True, 'TypeScript 特异性'
-    if any(ch in feature.lower() for ch in CHANNELS):
-        return True, '多渠道集成（不同定位）'
-    return False, None
+❌ "这是一个技术优化功能"
+✅ "这是在有限的资源下最大化价值"
 ```
 
 ---
 
-## Agent/Pi Agent 架构对比
+## 第二问：价值来源
 
-### 核心概念映射
+### 价值类型矩阵
 
-| 概念 | OpenClaw | DivineSense | 对等程度 |
-|:-----|:---------|:------------|:---------|
-| **Agent 实体** | Pi Agent | Parrot（鹦鹉） | 0.7 |
-| **运行时** | p-mono 嵌入式 | ChatRouter 三层路由 | 0.6 |
-| **路由机制** | 配置驱动的绑定规则 | 规则 + 历史 + LLM 分类 | 0.7 |
-| **会话管理** | Session Manager | conversation_context 表 (JSONB) | 1.0 |
-| **隔离策略** | 工作区隔离 (agentDir) | 会话 ID 隔离 | 0.5 |
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    用户价值来源                            │
+├─────────────────────────────────────────────────────────────┤
+│  效率提升    →  省时间 / 省精力                           │
+│  成本控制    → 省钱 / 省资源                             │
+│  可能性      → 新能力 / 新场景                             │
+│  社交连接    → 协作 / 分享 / 认可                          │
+│  自我实现    → 定制化 / 创造 / 表达                         │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### Parrot 代理列表（DivineSense）
+### 价值判断方法
 
-| Parrot | 文件 | 中文名 | 用途 |
-|:-------|:-----|:-------|:-----|
-| **MemoParrot** | `memo_parrot.go` | 灰灰 | 笔记搜索和检索 |
-| **AmazingParrot** | `amazing_parrot.go` | 折衷 | 综合助理（笔记 + 日程） |
-| **ScheduleParrotV2** | `schedule_parrot_v2.go` | 时巧 | 日程创建和管理 |
-| **GeekParrot** | `geek_parrot.go` | 极客 | Claude Code CLI 集成（零 LLM） |
-| **EvolutionParrot** | `evolution_parrot.go` | 进化 | 自我进化能力（源代码修改） |
-
-### 路由架构对比
-
-**OpenClaw - Agent Router**：
 ```yaml
-# 配置驱动的确定性分层匹配
-bindings:
-  - agentId: support-bot
-    match:
-      channel: discord
-      guildId: "123456789012345678"
-  - agentId: community-mod
-    match:
-      channel: telegram
-```
+主要价值 vs 次要价值:
+  观察用户讨论: "这个功能帮我省了 X" → 主要价值
+  观察用户讨论: "顺便也..." → 次要价值
 
-**DivineSense - ChatRouter**：
-```go
-// 三层路由：规则(0ms) + 历史(~10ms) + LLM(~400ms)
-func (r *ChatRouter) Route(input string) AgentType {
-    // 1. 规则匹配（关键词）
-    if rule := matchByRules(input); rule.confidence >= 0.80 {
-        return rule.agent
-    }
-    // 2. 历史感知（对话上下文）
-    if agent := matchByHistory(input); agent != Unknown {
-        return agent
-    }
-    // 3. LLM 降级（语义理解）
-    return classifyByLLM(input)
-}
-```
-
-### 差异分析
-
-| 维度 | OpenClaw 优势 | DivineSense 优势 |
-|:-----|:-------------|:----------------|
-| **扩展性** | 40+ 技能，配置驱动 | 工具系统 Go 原生 |
-| **路由** | 确定性配置，零 LLM 开销 | LLM 降级处理模糊输入 |
-| **特殊能力** | 多渠道原生支持 | Geek Mode / Evolution Mode |
-| **部署** | 需要 Node.js 运行时 | 单二进制，无依赖 |
-
----
-
-## Skills 维度对标
-
-### OpenClaw 技能分类
-
-> OpenClaw 内置 40+ 技能，按功能领域分类：
-
-| 类别 | 技能数量 | 示例 |
-|:-----|:--------|:-----|
-| **生产力** | 10+ | Coding Agent, GitHub CLI, Model Usage |
-| **媒体处理** | 8+ | FFmpeg, ImageMagick, PDF 处理 |
-| **通信** | 8+ | WhatsApp, Discord, Telegram, Signal |
-| **自动化** | 6+ | Cron 任务, Webhook, 定时器 |
-| **实用工具** | 8+ | 食品订购, 音乐播放, 智能家居 |
-
-### DivineSense 工具对应
-
-| DivineSense 工具 | 文件 | 对等 OpenClaw 技能 |
-|:----------------|:-----|:-------------------|
-| **memo_search** | `memo_search.go` | Coding Agent（搜索功能） |
-| **scheduler** | `scheduler.go` | Calendar 技能 |
-| **claude_code** | `claude_code.go` | Coding Agent（增强版） |
-
-### 差距分析
-
-| 维度 | OpenClaw | DivineSense | 差距 |
-|:-----|:---------|:------------|:-----|
-| **技能数量** | 40+ | 8 工具 | 显著 |
-| **媒体处理** | FFmpeg/ImageMagick | 无 | 高 |
-| **通信渠道** | 8+ 原生 | Web | 不同定位 |
-| **代码能力** | Coding Agent | Geek Mode（CC Runner） | 对等 |
-
----
-
-## 功能映射模板
-
-### OpenClaw → DivineSense 映射（运行时生成）
-
-| OpenClaw 功能 | DivineSense 对等 | 迁移复杂度 |
-|:-------------|:----------------|:-----------|
-| *动态发现* | *动态发现* | *动态评估* |
-
----
-
-## 常用命令
-
-```bash
-# 状态管理
-./.claude/skills/competitive-benchmark/scripts/state.sh summary
-./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha
-
-# 能力扫描
-./.claude/skills/competitive-benchmark/scripts/scan.sh summary
-./.claude/skills/competitive-benchmark/scripts/scan.sh has "pattern"
-
-# 仓库信息（动态）
-REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
-
-# 搜索现有 Issue
-gh issue list --repo "$REPO" --search "<关键词>"
-
-# 创建 Issue
-gh issue create --repo "$REPO" --title "[feat] 功能" --body "..."
+官方强调点:
+  Release Notes 标题 → 官方认为的价值
+  Issue 热度 → 用户关心的价值
 ```
 
 ---
 
-## 数据结构
+## 第三问：创造性转化
 
-### 状态记录（state.jsonl）
+### 转化层次
 
-```json
-{
-  "timestamp": "2026-02-02T10:00:00Z",
-  "openclaw_sha": "abc123",
-  "divinesense_sha": "def456",
-  "analyzed_features": ["会话修剪", "会话压缩"],
-  "discovered_functions": [
-    {"name": "会话修剪", "category": "session", "path": "src/sessions/pruning.ts"},
-    {"name": "会话压缩", "category": "session", "path": "src/commands/compact.ts"}
-  ],
-  "created_issues": [30, 31]
-}
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  创造性转化层次                            │
+├─────────────────────────────────────────────────────────────┤
+│  Level 1: 直接复制    → "我们也要有" (最不推荐)          │
+│  Level 2: 技术适配    → "用 Go 实现" (中性)               │
+│  Level 3: 模式迁移    → "抽象模式，换个方式" (推荐)      │
+│  Level 4: 差距化创新  → "我们独有的更好方案" (最推荐)    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 功能差距记录
+### 转化分析框架
 
-```typescript
-interface FeatureGap {
-  name: string;           // 功能名称
-  category: string;       // 分类（动态推断）
-  openclaw_path: string;  // OpenClaw 文件路径
-  techFit: number;        // 技术契合度 0-1
-  userValue: number;      // 用户价值 0-1
-  priority: number;       // 优先级 = techFit*0.4 + userValue*0.6
-  filterReason?: string;  // 过滤原因（如被过滤）
-}
+```yaml
+我们的独特优势:
+  - 本地化（零 API 成本）
+  - 单二进制（零依赖部署）
+  - Geek Mode（开发者集成）
+  - Evolution Mode（自我进化）
+
+转化问题:
+  - 竞品用云端的成本问题 → 我们的优势是本地化
+  - 竞品用 Node.js 的生态 → 我们的优势是性能
+  - 竞品用多渠道的触达 → 我们的专注是个人场景
 ```
 
 ---
 
-*文档版本：v1.3 | 最后更新：2026-02-02*
+## 过滤规则 2.0
+
+### v1.3 规则（简化版）
+
+```yaml
+自动过滤:
+  TypeScript 特异性: jiti, tsx, vitest...
+  多渠道集成: WhatsApp, Discord...
+  外部服务依赖: npm registry...
+```
+
+### v2.0 规则（判断版）
+
+```yaml
+不再"自动过滤"，而是"分析后判断":
+
+TypeScript 特异性:
+  不直接过滤 → 分析其解决的问题 → 能否用 Go 实现？
+
+多渠道集成:
+  不直接过滤 → 分析其用户价值 → 是否符合个人场景？
+
+外部服务依赖:
+  不直接过滤 → 分析其必要性 → 能否本地化替代？
+```
+
+---
+
+## 模式抽象
+
+### 常见设计模式
+
+| 模式 | OpenClaw 实现 | 可迁移性 |
+|:-----|:-------------|:---------|
+| **记忆成本管理** | 会话修剪、压缩 | ✅ 本地索引 |
+| **工具分离** | Plugin SDK | ✅ 工具接口 |
+| **三层路由** | 规则→历史→LLM | ✅ 已实现 |
+
+### 模式识别方法
+
+```yaml
+识别模式:
+  1. 功能对比：找出共同点
+  2. 问题抽象：归纳本质矛盾
+  3. 方案对比：不同解决方式
+  4. 提取模式：跨技术栈适用
+
+验证模式:
+  - 能否用不同技术实现？
+  - 能否应用到不同场景？
+  - 是否解决了本质矛盾？
+```
+
+---
+
+## 差距化分析
+
+### 差距化机会矩阵
+
+```
+            竞品优势    我们优势    差距化机会
+              │            │            │
+成本          云端        本地        本地优化
+性能          Node.js     Go          单二进制
+可扩展性      Plugin      工具        简化接口
+集成          多渠道      Web         专注个人
+AI 能力      外部 LLM    本地+云端   Geek Mode
+```
+
+### 战略判断框架
+
+```yaml
+做:
+  - 符合我们独特优势
+  - 竞品没做或做不好的
+  - 用户有真实需求
+
+不做:
+  - 简单跟随无意义
+  - 不符合本地化定位
+  - 我们做没有优势
+
+差异化:
+  - 同样的用户价值
+  - 用我们独特的方式实现
+```
+
+---
+
+## 分析示例
+
+### 示例：会话修剪
+
+```yaml
+第一问 - 问题本质:
+  用户痛点: AI 对话历史无限增长，API 成本升高
+  矛盾核心: 记忆完整性 vs 成本控制
+
+第二问 - 价值来源:
+  主要价值: 成本控制（省钱）
+  次要价值: 响应速度（更快）
+
+第三问 - 创造性转化:
+  OpenClaw 方式: 主动修剪旧对话（时间维度）
+  我们的机会: 基于语义的相关性检索（语义维度）
+  战略判断: 值得做，但用我们的方式
+```
+
+---
+
+## 快速参考
+
+### 价值三问检查清单
+
+```
+□ 我理解了用户真正想要什么吗？
+□ 我知道为什么用户认为它有价值吗？
+□ 我找到了更好的实现方式吗？
+□ 我确认了这符合我们的差异化战略吗？
+```
+
+---
+
+*版本: v2.0 | 详见：ADVANCED.md (HITL)、INSIGHT.md (模板)*

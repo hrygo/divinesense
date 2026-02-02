@@ -1,392 +1,305 @@
-# Advanced - 竞品对标高级功能
+# Advanced - HITL 交互设计
 
-> 增量对比算法、状态持久化、自动进化机制。
-
----
-
-## 增量对比算法
-
-### 核心思想
-
-**增量对比**：基于上次对标状态，仅分析 OpenClaw 的新增功能。
-
-> 以下代码为**伪代码示例**，用于说明算法逻辑，`get_latest_commit` 等函数需通过 MCP 工具实现。
-
-```python
-def incremental_benchmark(last_state):
-    """增量对比算法"""
-    # 1. 获取当前状态
-    current_openclaw_sha = get_latest_commit("openclaw/openclaw")  # MCP: gh api
-    current_divinesense_sha = get_latest_commit("divinesense")     # MCP: git rev-parse
-
-    # 2. 检测是否有新提交
-    if current_openclaw_sha == last_state["openclaw_sha"]:
-        return {
-            "has_changes": False,
-            "message": f"OpenClaw 无变化，上次对标: {last_state['timestamp']}"
-        }
-
-    # 3. 获取变更文件列表
-    changed_files = get_changed_files(
-        "openclaw/openclaw",
-        since=last_state["openclaw_sha"]
-    )
-
-    # 4. 过滤相关文件
-    relevant_files = filter_relevant_files(changed_files)
-
-    # 5. 提取新功能
-    new_features = extract_features(relevant_files)
-
-    # 6. 排除已分析功能
-    new_features = [
-        f for f in new_features
-        if f["name"] not in last_state["analyzed_features"]
-    ]
-
-    return {
-        "has_changes": True,
-        "new_features": new_features,
-        "total_changes": len(changed_files)
-    }
-```
-
-### 变更检测
-
-```bash
-# 获取两个 SHA 之间的文件变更
-gh api repos/openclaw/openclaw/compare/$LAST_SHA...$CURRENT_SHA | \
-  jq -r '.files[].filename'
-
-# 过滤核心功能目录
-grep -E "^(src/sessions|src/plugin-sdk|src/commands|extensions/)"
-```
-
-### CHANGELOG 增量解析
-
-```bash
-# 获取上次对标日期后的 CHANGELOG 条目
-LAST_DATE=$(cat docs/research/benchmark/state.jsonl | \
-  jq -r '.[-1].timestamp' | cut -dT -f1)
-
-# 解析 CHANGELOG 格式（OpenClaw 使用日期格式）
-parse_changelog_since() {
-    local since_date=$1
-    gh api repos/openclaw/openclaw/contents/CHANGELOG.md | \
-      jq -r '.content' | base64 -d | \
-      awk -v date="$since_date" '
-      /^## / {
-        if (match($0, /^## ([0-9]{4}\.[0-9]+\.[0-9]+)/, m)) {
-          current_date = m[1]
-          next
-        }
-      }
-      current_date >= date { print }
-      '
-}
-```
+> Human-in-the-Loop：让 AI 成为思考伙伴，而非全自动工具
 
 ---
 
-## 状态持久化
+## 交互哲学
 
-### 状态文件格式
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    传统模式 (v1.3)                         │
+│  输入 → AI 分析 → 输出 Issue                                  │
+│  (人类无参与)                                                │
+└─────────────────────────────────────────────────────────────┘
 
-```json
-// docs/research/benchmark/state.jsonl (JSONL 格式，每行一条记录)
-{"timestamp":"2026-02-01T10:00:00Z","openclaw_sha":"abc123","divinesense_sha":"def456","analyzed_features":[],"discovered_functions":[],"created_issues":[]}
-{"timestamp":"2026-02-02T10:00:00Z","openclaw_sha":"xyz789","divinesense_sha":"ghi012","analyzed_features":["会话修剪"],"discovered_functions":[{"name":"会话修剪","category":"session","path":"src/sessions/pruning.ts"}],"created_issues":[30]}
+┌─────────────────────────────────────────────────────────────┐
+│                    HITL 模式 (v2.0)                          │
+│  输入 → AI 初步分析 ↔ 人类判断 → 深度分析 → 洞察产出    │
+│  (关键决策点人类参与)                                        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 状态操作命令
+**核心原则**：
+- AI 是"思考伙伴"，提供分析和选项
+- 人类负责判断和决策
+- 关键节点必须人类确认
 
-> **脚本**: `scripts/state.sh`
+---
 
-```bash
-# 方式一：直接执行脚本
-./.claude/skills/competitive-benchmark/scripts/state.sh append "2026-02-02T10:00:00Z" "abc123" "def456" '["feat1"]' '[30]'
-./.claude/skills/competitive-benchmark/scripts/state.sh get
-./.claude/skills/competitive-benchmark/scripts/state.sh query "openclaw_sha"
-./.claude/skills/competitive-benchmark/scripts/state.sh summary
+## 四个关键交互点
 
-# 方式二：source 后使用（更灵活）
-source .claude/skills/competitive-benchmark/scripts/state.sh
-append_state "$timestamp" "$oc_sha" "$ds_sha" "$features" "$issues"
-get_latest_state
-query_state "openclaw_sha"
-show_state_summary
+### 交互点 1：分析方向选择
+
+**触发**：发现多个值得深入的方向
+
+```yaml
+AI 提问:
+  "发现了 3 个值得深入的方向：
+   1. 成本优化模式（会话修剪）
+   2. 可扩展性模式（插件系统）
+   3. 用户触达模式（多渠道）
+
+   你希望我：
+   a) 全部分析（推荐）
+   b) 重点分析某个维度
+   c) 先给我快速摘要"
+
+人类选择:
+  - a/b/c → AI 按选择继续
 ```
 
-### 状态查询
+### 交互点 2：模式验证
 
-```bash
-# 显示完整摘要
-./.claude/skills/competitive-benchmark/scripts/state.sh summary
+**触发**：抽象出新的模式或假设
 
-# 查询特定字段
-last_run=$(./.claude/skills/competitive-benchmark/scripts/state.sh query timestamp)
-analyzed_count=$(./.claude/skills/competitive-benchmark/scripts/state.sh get | jq -r '.analyzed_features | length')
-issues_count=$(./.claude/skills/competitive-benchmark/scripts/state.sh get | jq -r '.created_issues | length')
+```yaml
+AI 提问:
+  "我注意到一个模式：
+   OpenClaw 的'会话修剪'、'记忆压缩'
+   本质上都是同一个底层模式：
+
+   【记忆成本管理】→ 在有限资源下最大化价值
+
+   这个归纳准确吗？
+   a) 准确，继续
+   b) 部分准确，我的看法是...
+   c) 不准确，我认为..."
+
+人类选择:
+  - a → 继续此模式
+  - b/c → AI 整合人类观点
+```
+
+### 交互点 3：战略判断
+
+**触发**：需要判断"做/不做"时
+
+```yaml
+AI 提问:
+  "关于'插件系统'功能：
+
+   正方：用户定制化需求强
+   反方：增加维护复杂度
+
+   我的倾向：不做竞品那样的插件，
+   而是优化现有工具接口。
+
+   你怎么看？
+   a) 同意
+   b) 不同意，我认为应该做
+   c) 再给我更多分析"
+
+人类选择:
+  - a/b → 更新战略建议
+  - c → 提供更多数据
+```
+
+### 交互点 4：优先级排序
+
+**触发**：生成多个行动建议时
+
+```yaml
+AI 提问:
+  "基于分析，我建议的优先级：
+   P0: 本地记忆索引优化
+   P1: 工具接口标准化
+
+   你同意吗？还是需要调整？
+   a) 同意
+   b) 调整：把 X 提到 P0
+   c) Y 不需要做"
+
+人类选择:
+  - a/b/c → 更新最终 Issue
 ```
 
 ---
 
-## 自动化进化
+## 交互模式控制
 
-### 自我更新触发条件
+### 交互深度
 
-> 以下代码为**伪代码示例**，用于说明检测逻辑。
+```yaml
+minimal:    # 仅关键决策
+  - 战略方向确认
+  - 做/不做判断
 
-```python
-def should_self_update():
-    """检测是否需要自我更新"""
-    last_state = get_latest_state()
-    current = scan_current_state()
+standard:   # 标准交互（默认）
+  - 分析方向选择
+  - 模式验证
+  - 战略判断
+  - 优先级确认
 
-    triggers = {
-        "openclaw_updated": last_state["openclaw_sha"] != current["openclaw_sha"],
-        "divinesense_updated": last_state["divinesense_sha"] != current["divinesense_sha"],
-        "new_parrot": current["parrot_count"] > last_state.get("parrot_count", 0),
-        "new_tool": current["tool_count"] > last_state.get("tool_count", 0),
-    }
-
-    return any(triggers.values()), triggers
+deep:       # 深度交互
+  - 每个阶段都确认
+  - 邀请人类输入观点
+  - 共同创造
 ```
 
-### 进化建议生成
+### 智能交互
 
-```python
-def generate_evolution_suggestion(triggers):
-    """生成进化建议"""
-    suggestions = []
+```yaml
+自动确认（无需询问）:
+  - 低价值判断（明显不适合的功能）
+  - 已确认过的模式
+  - 非关键的分析步骤
 
-    if triggers["openclaw_updated"]:
-        suggestions.append({
-            "type": "info",
-            "message": f"OpenClaw 有新提交，建议运行增量对标"
-        })
-
-    if triggers["divinesense_updated"]:
-        suggestions.append({
-            "type": "action",
-            "message": f"DivineSense 有新代码，建议更新能力矩阵",
-            "action": "update_capability_matrix"
-        })
-
-    if triggers["new_parrot"]:
-        suggestions.append({
-            "type": "info",
-            "message": f"发现新代理，可能需要更新对标策略"
-        })
-
-    return suggestions
+必须询问:
+  - 战略方向变更
+  - 做/不做判断
+  - 高优先级任务
 ```
 
 ---
 
-## 智能分组算法
+## 快捷指令
 
-### 分组策略
+| 指令 | 行为 | 示例 |
+|:-----|:-----|:-----|
+| "深入 X" | 聚焦分析 | "深入插件系统" |
+| "换个角度" | 尝试不同框架 | "换个角度分析" |
+| "为什么" | 解释推理 | "为什么这样归纳？" |
+| "确认" | 使用当前假设 | "确认，继续" |
+| "调整：..." | 修正方向 | "调整：我觉得是..." |
+| "跳过" | 跳过当前分析 | "跳过这个" |
+| "总结" | 当前阶段总结 | "总结一下" |
+| "完成" | 生成最终报告 | "完成" |
 
-> 以下代码为**伪代码示例**，用于说明算法逻辑。
+---
 
-```python
-def group_features(features: List[FeatureGap]) -> List[FeatureGroup]:
-    """智能分组算法"""
-    groups = {}
+## 完整对话示例
 
-    for feature in features:
-        category = feature["category"]
-        if category not in groups:
-            groups[category] = {
-                "name": CATEGORY_NAMES.get(category, category),
-                "features": [],
-                "techFit": [],
-                "userValue": [],
-                "paths": []
-            }
-
-        groups[category]["features"].append(feature["name"])
-        groups[category]["techFit"].append(feature["techFit"])
-        groups[category]["userValue"].append(feature["userValue"])
-        groups[category]["paths"].append(feature.get("path", ""))
-
-    # 计算分组优先级和估算
-    result = []
-    for category, data in groups.items():
-        avg_tech = sum(data["techFit"]) / len(data["techFit"])
-        avg_value = sum(data["userValue"]) / len(data["userValue"])
-        priority = avg_tech * 0.4 + avg_value * 0.6
-
-        result.append({
-            "name": data["name"],
-            "features": data["features"],
-            "paths": data["paths"],
-            "priority": priority,
-            "estimatedEffort": estimate_effort(category, len(data["features"])),
-            "riskLevel": assess_risk(avg_tech, avg_value)
-        })
-
-    return sorted(result, key=lambda x: x["priority"], reverse=True)
 ```
+────────────────────────────────────────────────────────────────
+You: /competitive-benchmark
 
-### 工作量估算
+AI: 竞品分析启动。
 
-> 以下代码为**伪代码示例**，用于说明估算逻辑。
+    当前 OpenClaw SHA: abc1234 (+23 commits)
 
-```python
-def estimate_effort(category: str, feature_count: int) -> int:
-    """估算工作量（人周）"""
-    BASE_EFFORT = {
-        "session": 1,      # 会话管理：1-2 周
-        "plugin": 2,       # 插件系统：2-3 周
-        "agent": 1,        # 代理功能：1-2 周
-        "media": 2,        # 媒体处理：2-3 周
-        "ui": 1,           # UI 组件：1 周
-    }
+    发现的主要变化：
+    • 新增：会话修剪功能
+    • 增强：插件 SDK v2
+    • 重构：Agent 路由机制
 
-    base = BASE_EFFORT.get(category, 1)
-    return base + feature_count * 0.5  # 每个额外功能 +0.5 周
+    我准备从以下维度深入分析：
+    1. 成本优化模式（会话修剪）
+    2. 可扩展性模式（插件系统）
+    3. 本地化差异化机会
+
+    你希望我：
+    a) 全部分析（推荐）
+    b) 重点分析某个维度
+
+────────────────────────────────────────────────────────────────
+You: a)
+
+AI: 全部分析中...
+
+    [分析过程...]
+
+    关于"会话修剪"，我归纳出：
+    【记忆成本管理】→ 价值保留 × 成本控制
+
+    这个归纳准确吗？
+    a) 准确，继续
+    b) 部分准确，我认为是"相关性"问题
+
+────────────────────────────────────────────────────────────────
+You: b)
+
+AI: 有趣角度！如果核心是"相关性"...
+
+    [重新分析...]
+
+    基于语义相关性的方案：
+    利用本地 pgvector + 向量索引
+    这与我们的本地化优势契合
+
+    这是一个差异化机会，值得做吗？
+    a) 值得做，加入 P0
+    b) 值得做，但优先级低
+    c) 不太确定
+
+────────────────────────────────────────────────────────────────
+You: a)
+
+AI: 好，已加入 P0。
+
+    [继续分析其他维度...]
+
+    ┌─────────────────────────────────────────────────┐
+    │  战略建议                                    │
+    ├─────────────────────────────────────────────────┤
+    │  P0: 本地记忆相关性检索（差异化）          │
+    │  P1: 工具接口标准化                        │
+    │  不做: 主动对话修剪（无成本压力）        │
+    │  不做: 多渠道集成（非个人场景）          │
+    └─────────────────────────────────────────────────┘
+
+    同意这个优先级吗？
+    a) 同意
+    b) 调整
+
+────────────────────────────────────────────────────────────────
+You: a)
+
+AI: 分析完成，正在生成洞察报告...
+
+    [INSIGHT.md 内容]
+
+    需要创建 Issue 吗？
+    a) 是，创建 P0 任务
+    b) 是，创建 P0+P1
+    c) 先看看，我之后决定
+
+────────────────────────────────────────────────────────────────
 ```
 
 ---
 
-## 重复检测
+## 交互质量保证
 
-### Issue 重复检测
+### 设计原则
 
-```bash
-# 搜索关键词组合
-check_duplicate_issue() {
-    local feature_name=$1
-    local keywords=($(echo "$feature_name" | tr ' ' '\n'))
-
-    for kw in "${keywords[@]}"; do
-        results=$(gh issue list --repo "$REPO" --search "$kw" --state all --limit 5)
-        if [ -n "$results" ]; then
-            echo "可能重复: $kw"
-        fi
-    done
-}
+```
+1. 每次交互都有明确目的
+2. 选项简洁明确（≤ 4 个）
+3. 人类可随时打断
+4. AI 记住选择，不重复问
+5. 人类可要求"解释推理"
 ```
 
-### 功能去重
+### 质量指标
 
-> 以下代码为**伪代码示例**，用于说明去重逻辑。
-
-```python
-def is_duplicate_feature(feature_name: str, analyzed_features: List[str]) -> bool:
-    """检测功能是否已分析"""
-    # 精确匹配
-    if feature_name in analyzed_features:
-        return True
-
-    # 模糊匹配
-    for analyzed in analyzed_features:
-        similarity = calculate_similarity(feature_name, analyzed)
-        if similarity > 0.8:
-            return True
-
-    return False
+```
+• 平均交互轮次：3-5 次
+• 每轮理解时间：< 30 秒
+• 人类满意度：70%+ 认可 AI 建议
 ```
 
 ---
 
-## 批量 Issue 创建
+## 多竞品支持
 
-### 创建策略
+### 配置示例
 
-> 以下代码为**伪代码示例**，实际使用 MCP GitHub 工具创建 Issue。
+```yaml
+competitors:
+  primary:
+    - name: OpenClaw
+      repo: openclaw/openclaw
+      focus: Agent 系统
 
-```python
-def create_issues(groups: List[FeatureGroup], repo: str) -> List[int]:
-    """批量创建 Issue"""
-    created_issues = []
+  secondary:
+    - name: Memos
+      repo: usememos/memos
+      focus: 笔记管理
 
-    for group in groups:
-        if group["priority"] < 0.3:
-            continue  # 跳过低优先级
-
-        # 检查重复
-        if is_duplicate_group(group, repo):
-            print(f"跳过重复: {group['name']}")
-            continue
-
-        # 创建 Issue
-        issue_number = create_github_issue(
-            repo=repo,
-            title=format_issue_title(group),
-            body=format_issue_body(group)
-        )
-
-        created_issues.append(issue_number)
-        print(f"创建 Issue: #{issue_number} - {group['name']}")
-
-    return created_issues
+cross_cutting_analysis: true  # 横向对比
 ```
 
 ---
 
-## Skill 进化记录
-
-| 版本 | 日期 | 变更内容 |
-|:-----|:-----|:---------|
-| v1.3 | 2026-02-02 | **Agent 对标**：Parrot 扫描增强、Pi Agent 架构对比、Skills 维度对标 |
-| v1.2 | 2026-02-02 | **完善文档**：统一版本号、添加错误处理、改进模板 |
-| v1.1 | 2026-02-02 | **实时动态**：零硬编码、增量对比、状态持久化 |
-| v1.0 | 2026-02-02 | 初始版本：全面对标、价值评估、智能分组 |
-
-### 未来方向
-
-- [x] v1.1: 增量对比模式（基于 CHANGELOG）
-- [x] v1.2: 语义相似度重复检测（基础实现）
-- [x] v1.3: Agent/Pi Agent 架构对标
-- [ ] v1.4: 自动化触发（GitHub Webhook）
-- [ ] v2.0: 多竞品支持（Memos、Obsidian 等）
-
----
-
-## 文件结构
-
-```
-.claude/skills/competitive-benchmark/
-├── SKILL.md          # 核心（6 阶段状态机）
-├── REFERENCE.md      # 参考（动态发现方法）
-├── ADVANCED.md       # 高级（本文档）
-├── README.md         # 介绍
-├── templates/        # Issue/Report 模板
-│   ├── issue.md      # Issue 模板
-│   └── report.md     # 报告模板
-└── scripts/          # 对标脚本（自包含）
-    ├── benchmark.sh  # 主入口：init/run/status
-    ├── state.sh      # 状态持久化管理
-    ├── scan.sh       # 能力矩阵扫描
-    └── README.md     # 脚本使用说明
-```
-
----
-
-## 快速参考
-
-### 核心命令
-
-```bash
-# 获取 OpenClaw 最新 SHA
-gh api repos/openclaw/openclaw/commits | jq -r '.sha'
-
-# 获取 DivineSense 当前 SHA
-git rev-parse HEAD
-
-# 读取状态文件
-tail -1 docs/research/benchmark/state.jsonl | jq -r '.'
-
-# 扫描 DivineSense 代理（使用脚本）
-./.claude/skills/competitive-benchmark/scripts/scan.sh parrot-names
-
-# 扫描 DivineSense 工具（使用脚本）
-find plugin/ai/agent/tools -name "*.go"
-```
-
----
-
-*文档版本：v1.3 | 最后更新：2026-02-02*
+*版本: v2.0 | 详见：REFERENCE.md（方法论）、INSIGHT.md（模板）*

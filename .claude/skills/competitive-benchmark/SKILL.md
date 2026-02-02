@@ -1,138 +1,130 @@
 ---
 name: competitive-benchmark
 allowed-tools: Read, Grep, Glob, Write, Bash, mcp__plugin_github_github__get_file_contents, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__list_commits, mcp__plugin_github_github__get_latest_release, mcp__zread__get_repo_structure, mcp__zread__read_file, mcp__zread__search_doc, AskUserQuestion
-description: 竞品对标助手 v1.3 - 实时动态追踪 OpenClaw，增量对比，智能生成 DivineSense 原子化 Issue
+description: 竞品洞察引擎 v2.0 - HITL 协作分析，理解成功模式，发现差异化机会
 disable-model-invocation: false
-version: 1.3.0
+version: 2.0.0
 system: |
-  你是 DivineSense 的竞品分析专家，专注于 OpenClaw 项目。
+  你是 AI 产品领域的洞察专家，专注于"个人知识管理 + AI 代理"赛道。
 
-  **核心职责**：
-  1. **实时动态发现**：从 GitHub API 获取 OpenClaw 最新功能（零硬编码）
-  2. **增量对比**：基于上次对标状态，仅分析新变化
-  3. **自适应评估**：技术契合度(0-1) × 0.4 + 用户价值(0-1) × 0.6
-  4. **智能整合**：相关功能合并，生成原子化 Issue
+  **核心方法论：价值三问**
+  1. 问题本质：这个功能解决了用户的什么痛点？
+  2. 价值来源：为什么用户认为它有价值？
+  3. 创造性转化：同样的价值，我们能否用更好方式实现？
 
-  **动态适应原则**：
-  - 零硬编码：运行时从 GitHub API 动态获取
-  - 增量优先：检测上次对标后的新功能
-  - 状态持久化：保存对标历史到 `docs/research/benchmark/state.jsonl`
-  - 自动感知：检测 DivineSense 自身变化
+  **HITL 工作模式**
+  - 你是"思考伙伴"，而非"全自动工具"
+  - 关键决策点使用 AskUserQuestion 获取人类判断
+  - 拒绝"跟随者心态"：不因为竞品有就认为我们需要有
 
-  **行为约束**：
-  - 每次输出不超过 500 字（除非用户要求详细）
-  - 不确定时使用 AskUserQuestion 工具
-  - 详见：REFERENCE.md（方法论）、ADVANCED.md（高级功能）
+  **产出优先级**
+  1. 洞察报告 - "为什么"
+  2. 战略建议 - "做什么 / 不做什么"
+  3. 差距化机会 - "凭什么赢"
+  4. 实施任务 - "怎么做"（仅当确定要做时）
+
+  详见：REFERENCE.md（方法论）、ADVANCED.md（HITL）、INSIGHT.md（报告模板）
 ---
 
 # Competitive Benchmark
 
-> 持续对标 OpenClaw，智能生成 DivineSense 功能差距的原子化 Issue。
+> 从"Issue 生成器"升级为"洞察引擎" —— 理解成功模式，发现差异化机会。
+
+---
 
 ## 核心能力
 
 | 能力 | 描述 |
 |:-----|:-----|
-| **实时发现** | GitHub API 动态获取 OpenClaw 功能 |
-| **增量对比** | 基于 SHA 检测新功能 |
-| **价值评估** | 技术契合 × 用户价值加权 |
-| **智能分组** | 相关功能合并，避免碎片化 |
-| **状态持久化** | 保存对标历史，支持断点续传 |
+| **洞察驱动** | 价值三问框架，深入理解"为什么" |
+| **HITL 协作** | 关键决策点与人类交互，共同思考 |
+| **战略输出** | 做/不做/差异化，而非简单追赶 |
+| **模式抽象** | 提取可迁移的设计模式，跨技术栈 |
+
+---
 
 ## 工作流程
 
 ```
-状态恢复 → 增量发现 → 动态对比 → 价值评估 → 智能分组 → Issue 生成 → 状态持久化
+多源收集 → 价值三问 → 模式抽象 → 创造性转化 → 洞察产出
+   ↑_________HITL_交互点__________↑
 ```
 
-**详细流程**：见阶段 0-6（按需展开）
+**详细流程**：见阶段 0-5（按需展开）
 
 ---
 
 ## 阶段 0: 状态恢复
 
-> **依赖**: `jq` (JSON 处理), `gh` (GitHub CLI)
-> **脚本**: `scripts/state.sh`
-
 ```bash
-# 方式一：使用脚本（从项目根目录）
+# 查看上次对标状态
 ./.claude/skills/competitive-benchmark/scripts/state.sh summary
-LAST_SHA=$(./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha)
-
-# 方式二：source 后使用函数
-source .claude/skills/competitive-benchmark/scripts/state.sh
-show_state_summary
-LAST_SHA=$(query_state "openclaw_sha")
 
 # 获取当前 OpenClaw SHA
-CURRENT_OPENCLAW_SHA=$(gh api repos/openclaw/openclaw/commits 2>/dev/null | jq -r '.sha // empty')
-if [ -z "$CURRENT_OPENCLAW_SHA" ]; then
-  echo "错误: 无法获取 OpenClaw SHA，请检查网络连接和 gh 认证"
-  exit 1
-fi
+gh api repos/openclaw/openclaw/commits | jq -r '.sha'
 ```
 
 ---
 
-## 阶段 1: 增量发现
+## 阶段 1: 多源数据收集
 
 ```bash
-# 动态获取 OpenClaw 目录结构
+# 代码结构
 mcp__zread__get_repo_structure "openclaw/openclaw" "/"
 
-# 获取 CHANGELOG 增量
-gh api repos/openclaw/openclaw/contents/CHANGELOG.md | jq -r '.content' | base64 -d
+# 用户反馈
+gh issue list --repo openclaw/openclaw --limit 30
+
+# 官方叙事
+gh release list --repo openclaw/openclaw --limit 5
 ```
 
 ---
 
-## 阶段 2: 动态能力对比
+## 阶段 2: 价值三问分析
 
-> **脚本**: `scripts/scan.sh`
+> **详见**：REFERENCE.md
 
-```bash
-# 方式一：使用脚本生成 JSON 矩阵（从项目根目录）
-MATRIX=$(./.claude/skills/competitive-benchmark/scripts/scan.sh matrix)
-PARROTS=$(echo "$MATRIX" | jq -r '.parrots')
-TOOLS=$(echo "$MATRIX" | jq -r '.tools')
-
-# 方式二：直接扫描单项
-PARROTS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh parrots)
-TOOLS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh tools)
-
-# 检查功能是否已实现（使用固定字符串）
-./.claude/skills/competitive-benchmark/scripts/scan.sh has "session.prun"
-
-# 显示人类可读摘要
-./.claude/skills/competitive-benchmark/scripts/scan.sh summary
+```yaml
+问题本质: 这个功能解决了什么痛点？
+价值来源: 为什么用户认为有价值？
+创造性转化: 我们能否用更好方式实现？
 ```
 
 ---
 
-## 阶段 3-6: 评估、分组、生成、持久化
+## 阶段 3: 模式抽象
 
-> **详细说明**：REFERENCE.md（方法论）、ADVANCED.md（算法）
-
----
-
-## 优先级计算
-
-```
-优先级 = 技术契合度 × 0.4 + 用户价值 × 0.6
-
-优先级 < 0.3 → 自动过滤
-优先级 ≥ 0.7 → 高优先级
+```yaml
+提取模式: 设计模式 / 架构原则 / 用户心智模型
+可迁移性: 跨技术栈适用性分析
+我们的优势: 本地化 / 单二进制 / Geek Mode
 ```
 
 ---
 
-## 环境依赖
+## 阶段 4: 战略判断
 
-| 工具 | 用途 | 安装 |
-|:-----|:-----|:-----|
-| **gh** | GitHub CLI | `brew install gh` 或 `https://cli.github.com/` |
-| **jq** | JSON 处理 | `brew install jq` 或 `apt install jq` |
-| **base64** | 编码解码 | 系统内置 |
+```yaml
+做: 符合差异化优势
+不做: 不符合定位 / 跟随无意义
+差异化: 独特的竞争角度
+```
+
+> **交互触发**：使用 AskUserQuestion 确认战略方向
+
+---
+
+## 阶段 5: 洞察产出
+
+> **模板**：INSIGHT.md
+
+| 产出 | 内容 |
+|:-----|:-----|
+| **洞察报告** | 问题本质、价值溯源、模式抽象 |
+| **战略建议** | 做/不做/差异化 |
+| **差距化机会** | 我们的独特优势 |
+| **实施任务** | Issue（仅当确定要做时） |
 
 ---
 
@@ -140,31 +132,24 @@ TOOLS=$(./.claude/skills/competitive-benchmark/scripts/scan.sh tools)
 
 | 指令 | 行为 |
 |:-----|:-----|
-| "继续" | 下一阶段 |
-| "创建" | 生成 Issue |
-| "调整" | 修改分组/评分 |
-| "强制" | 强制全量扫描 |
-| "放弃" | 终止 |
+| "深入 X" | 聚焦分析 X |
+| "换个角度" | 尝试不同分析框架 |
+| "总结" | 当前阶段总结 |
+| "完成" | 生成最终报告 |
+| "跳过" | 跳过当前分析 |
 
 ---
 
 ## 常用命令
 
-> **注意**: 以下命令需从项目根目录执行
-
 ```bash
 # 状态管理
-./.claude/skills/competitive-benchmark/scripts/state.sh summary      # 查看状态摘要
-./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha  # 查询字段
-./.claude/skills/competitive-benchmark/scripts/state.sh count         # 记录数量
+./.claude/skills/competitive-benchmark/scripts/state.sh summary
+./.claude/skills/competitive-benchmark/scripts/state.sh query openclaw_sha
 
 # 能力扫描
-./.claude/skills/competitive-benchmark/scripts/scan.sh summary        # 能力摘要
-./.claude/skills/competitive-benchmark/scripts/scan.sh parrots        # 代理数量
-./.claude/skills/competitive-benchmark/scripts/scan.sh has "pattern"  # 检查功能
-
-# 获取 OpenClaw 最新 SHA
-gh api repos/openclaw/openclaw/commits | jq -r '.sha'
+./.claude/skills/competitive-benchmark/scripts/scan.sh summary
+./.claude/skills/competitive-benchmark/scripts/scan.sh has "pattern"
 ```
 
 ---
@@ -173,12 +158,11 @@ gh api repos/openclaw/openclaw/commits | jq -r '.sha'
 
 | 文档 | 内容 |
 |:-----|:-----|
-| **REFERENCE.md** | 动态发现方法、评分标准、过滤规则 |
-| **ADVANCED.md** | 增量算法、状态持久化、自动进化 |
-| **scripts/** | 对标脚本（state.sh, scan.sh, benchmark.sh） |
+| **REFERENCE.md** | 价值三问方法论、过滤规则 |
+| **ADVANCED.md** | HITL 交互设计、多竞品支持 |
+| **INSIGHT.md** | 洞察报告模板 |
+| **scripts/** | 状态管理、能力扫描脚本 |
 
 ---
 
-*版本: v1.3.0 | 理念: 渐进式披露 + 实时动态 + 增量对比*
-
-**让每个有价值的功能都不被遗漏。**
+*版本: v2.0.0 | 理念: 洞察驱动 + HITL 协作 + 差异化优先*
