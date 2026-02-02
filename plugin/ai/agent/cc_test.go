@@ -189,7 +189,7 @@ func TestGeekModeCheckPermission(t *testing.T) {
 	}
 }
 
-// TestGeekModeBuildSystemPrompt tests GeekMode system prompt includes File Output.
+// TestGeekModeBuildSystemPrompt tests GeekMode system prompt includes Output Behavior.
 func TestGeekModeBuildSystemPrompt(t *testing.T) {
 	mode := NewGeekMode("")
 	cfg := &CCRunnerConfig{
@@ -205,13 +205,14 @@ func TestGeekModeBuildSystemPrompt(t *testing.T) {
 		t.Error("GeekMode.BuildSystemPrompt() missing base prompt")
 	}
 
-	// Should have File Output section (Geek-specific)
-	if !strings.Contains(prompt, "File Output") {
-		t.Error("GeekMode.BuildSystemPrompt() should contain File Output section")
+	// Should have Output Behavior section (Geek-specific)
+	if !strings.Contains(prompt, "Output Behavior") {
+		t.Error("GeekMode.BuildSystemPrompt() should contain Output Behavior section")
 	}
 
-	if !strings.Contains(prompt, "announce the filename") {
-		t.Error("GeekMode.BuildSystemPrompt() should contain file announcement instruction")
+	// Should have file access path instruction
+	if !strings.Contains(prompt, "/file/geek/42/<filename>") {
+		t.Error("GeekMode.BuildSystemPrompt() should contain file access path")
 	}
 }
 
