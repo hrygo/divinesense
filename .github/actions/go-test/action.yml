@@ -73,11 +73,12 @@ runs:
 
         echo "Running: $TEST_CMD"
 
-        # Run tests with gotestsum
-        gotestsum --format testname --jsonfile=test.json -- $TEST_CMD || TEST_EXIT_CODE=$?
+        # Run tests with gotestsum (capture exit code properly)
+        gotestsum --format testname --jsonfile=test.json -- $TEST_CMD
+        TEST_EXIT_CODE=$?
 
         # Preserve exit code
-        echo "exit_code=${TEST_EXIT_CODE:-0}" >> $GITHUB_OUTPUT
+        echo "exit_code=$TEST_EXIT_CODE" >> $GITHUB_OUTPUT
 
     - name: Parse test results
       id: parse-results

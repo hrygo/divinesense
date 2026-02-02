@@ -67,6 +67,7 @@ jobs:
         uses: ./.github/actions/go-test
         with:
           path: ${{ matrix.test-path }}
+          coverprofile: coverage-${{ matrix.test-group }}.out
         env:
           DRIVER: sqlite  # Use SQLite for fastest test execution
 
@@ -74,7 +75,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage.out
+          files: ./coverage-${{ matrix.test-group }}.out
           flags: ${{ matrix.test-group }}
           fail_ci_if_error: false
 
@@ -82,5 +83,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.test_group }}
+          name: test-results-${{ matrix.test-group }}
           path: test.json
