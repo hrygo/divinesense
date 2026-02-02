@@ -1,0 +1,123 @@
+name: 'Go Test'
+description: 'Run Go tests with structured output and GitHub summary'
+inputs:
+  path:
+    description: 'Test path (e.g., ./store/...)'
+    required: true
+  race:
+    description: 'Enable race detector'
+    required: false
+    default: 'true'
+  cover:
+    description: 'Enable coverage'
+    required: false
+    default: 'true'
+  coverprofile:
+    description: 'Coverage profile output file'
+    required: false
+    default: 'coverage.out'
+  build_tags:
+    description: 'Build tags'
+    required: false
+    default: 'noui'
+  test_short:
+    description: 'Run short tests only'
+    required: false
+    default: 'false'
+outputs:
+  exit-code:
+    description: 'Test exit code (0 = success)'
+    value: ${{ steps.run-tests.outputs.exit-code }}
+  passed:
+    description: 'Number of passed tests'
+    value: ${{ steps.parse-results.outputs.passed }}
+  failed:
+    description: 'Number of failed tests'
+    value: ${{ steps.parse-results.outputs.failed }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Install gotestsum
+      shell: bash
+      run: |
+        if ! command -v gotestsum &> /dev/null; then
+          echo "Installing gotestsum..."
+          go install gotest.tools/gotestsum@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+        fi
+
+    - name: Run tests
+      id: run-tests
+      shell: bash
+      run: |
+        # Build test command
+        TEST_CMD="go test"
+
+        if [ "${{ inputs.race }}" = "true" ]; then
+          TEST_CMD="$TEST_CMD -race"
+        fi
+
+        if [ "${{ inputs.cover }}" = "true" ]; then
+          TEST_CMD="$TEST_CMD -coverprofile=${{ inputs.coverprofile }} -covermode=atomic"
+        fi
+
+        if [ -n "${{ inputs.build_tags }}" ]; then
+          TEST_CMD="$TEST_CMD -tags=${{ inputs.build_tags }}"
+        fi
+
+        if [ "${{ inputs.test_short }}" = "true" ]; then
+          TEST_CMD="$TEST_CMD -short"
+        fi
+
+        TEST_CMD="$TEST_CMD -json ${{ inputs.path }}"
+
+        echo "Running: $TEST_CMD"
+
+        # Run tests with gotestsum
+        gotestsum --format testname --jsonfile=test.json -- $TEST_CMD || TEST_EXIT_CODE=$?
+
+        # Preserve exit code
+        echo "exit_code=${TEST_EXIT_CODE:-0}" >> $GITHUB_OUTPUT
+
+    - name: Parse test results
+      id: parse-results
+      if: always()
+      shell: bash
+      run: |
+        if [ ! -f test.json ]; then
+          echo "passed=0" >> $GITHUB_OUTPUT
+          echo "failed=0" >> $GITHUB_OUTPUT
+          exit ${{ steps.run-tests.outputs.exit-code }}
+        fi
+
+        # Count passes and fails
+        PASSES=$(jq -r 'select(.Action == "pass") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
+        FAILS=$(jq -r 'select(.Action == "fail") | .Package' test.json 2>/dev/null | wc -l | xargs || echo "0")
+
+        echo "passed=$PASSES" >> $GITHUB_OUTPUT
+        echo "failed=$FAILS" >> $GITHUB_OUTPUT
+
+    - name: Generate summary
+      if: always()
+      shell: bash
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Passed: ${{ steps.parse-results.outputs.passed }}" >> $GITHUB_STEP_SUMMARY
+        echo "❌ Failed: ${{ steps.parse-results.outputs.failed }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Show failure details if any
+        if [ "${{ steps.parse-results.outputs.failed }}" -gt 0 ] && [ -f test.json ]; then
+          echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          jq -r 'select(.Action == "output" and .Test != null) | .Output' test.json >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Check test result
+      if: always()
+      shell: bash
+      run: |
+        exit ${{ steps.run-tests.outputs.exit-code }}
