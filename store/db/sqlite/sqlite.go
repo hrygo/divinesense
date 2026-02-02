@@ -21,22 +21,21 @@ import (
 // SQLite is supported for development and client-side deployment.
 //
 // Supported Features:
-// - Full AI features: vector search (via sqlite-vec), conversation persistence, episodic memory
-// - Vector search: sqlite-vec extension with vec0_distance() for efficient similarity search
+// - Full AI features: vector search, conversation persistence, episodic memory
+// - Vector search: application-layer cosine similarity (JSON-encoded vectors)
 // - Full-text search: FTS5 (if available) with LIKE fallback
 // - All AI agent capabilities: memo, schedule, amazing agents
 //
 // Implementation Notes:
-// - Vectors stored in vec0 format for optimal performance
-// - Similarity computed using sqlite-vec's vec0_distance_L2 function
+// - Vectors stored as BLOB (JSON-encoded float32 arrays)
+// - Similarity computed in Go (not SQL) for pure Go compatibility
 // - JSONB fields replaced with TEXT (JSON strings)
-// - Requires CGO for sqlite-vec extension
-// - Performance suitable for large datasets (>100k vectors)
+// - Performance suitable for <10k vectors; use PostgreSQL for larger datasets
 //
 // When adding new features to SQLite:
 // 1. Maintain feature parity with PostgreSQL where feasible
 // 2. Document any performance limitations
-// 3. Use mattn/go-sqlite3 with CGO for sqlite-vec support
+// 3. Use pure Go (modernc.org/sqlite) for easy cross-compilation
 // ============================================================================
 
 type DB struct {

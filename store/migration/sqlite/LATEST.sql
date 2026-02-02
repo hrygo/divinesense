@@ -132,25 +132,19 @@ CREATE TABLE ai_message (
   created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
--- memo_embedding (Vector storage using sqlite-vec)
+-- memo_embedding (Vector storage for AI semantic search)
 CREATE TABLE memo_embedding (
-  memo_id INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  memo_id INTEGER NOT NULL,
+  embedding BLOB NOT NULL,
   model TEXT NOT NULL DEFAULT 'BAAI/bge-m3',
-  embedding BLOB NOT NULL,  -- JSON-encoded float32 array for backward compatibility
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   UNIQUE(memo_id, model),
   CONSTRAINT fk_memo_embedding_memo FOREIGN KEY (memo_id) REFERENCES memo(id) ON DELETE CASCADE
 );
-
--- vec0 virtual table for efficient vector similarity search
--- Vectors are stored in vec0's optimized format for fast KNN queries
-CREATE VIRTUAL TABLE IF NOT EXISTS vec0_embeddings USING vec0(
-  embedding float32[1024]  -- BAAI/bge-m3 dimension
-);
-
--- Note: vec0 virtual tables don't require manual indexes
--- The vec0 extension provides optimized KNN search internally
+CREATE INDEX idx_memo_embedding_memo_id ON memo_embedding(memo_id);
+CREATE INDEX idx_memo_embedding_model ON memo_embedding(model);
 
 -- episodic_memory (AI agent long-term memory)
 CREATE TABLE episodic_memory (
@@ -220,32 +214,4 @@ CREATE TABLE tool_metrics (
   CONSTRAINT uq_tool_metrics_hour_name UNIQUE (hour_bucket, tool_name)
 );
 CREATE INDEX idx_tool_metrics_hour ON tool_metrics(hour_bucket DESC);
-
--- schedule (AI-powered schedule assistant)
-CREATE TABLE schedule (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  uid TEXT NOT NULL UNIQUE,
-  creator_id INTEGER NOT NULL,
-  created_ts INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-  updated_ts INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-  row_status TEXT NOT NULL DEFAULT 'NORMAL',
-  title TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  location TEXT DEFAULT '',
-  start_ts INTEGER NOT NULL,
-  end_ts INTEGER,
-  all_day INTEGER NOT NULL DEFAULT 0,
-  timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
-  recurrence_rule TEXT,
-  recurrence_end_ts INTEGER,
-  reminders TEXT NOT NULL DEFAULT '[]',
-  payload TEXT NOT NULL DEFAULT '{}',
-  CONSTRAINT fk_schedule_creator FOREIGN KEY (creator_id) REFERENCES "user"(id) ON DELETE CASCADE,
-  CHECK (end_ts IS NULL OR end_ts >= start_ts)
-);
-CREATE INDEX idx_schedule_creator_start ON schedule(creator_id, start_ts);
-CREATE INDEX idx_schedule_creator_status ON schedule(creator_id, row_status);
-CREATE INDEX idx_schedule_start_ts ON schedule(start_ts);
-CREATE INDEX idx_schedule_uid ON schedule(uid);
-CREATE TRIGGER trigger_schedule_updated_ts AFTER UPDATE ON schedule FOR EACH ROW WHEN NEW.updated_ts <= OLD.updated_ts BEGIN UPDATE schedule SET updated_ts = strftime('%s', 'now') WHERE id = NEW.id; END;
 
