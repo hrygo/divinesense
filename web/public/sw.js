@@ -152,4 +152,4 @@ self.addEventListener("message", (event) => {
   }
 });
 
-export default null;
+// Service Worker file - no ES module exports
