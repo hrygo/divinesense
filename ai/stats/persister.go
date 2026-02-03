@@ -19,13 +19,13 @@ const (
 // Persister handles async persistence of session statistics.
 // Persister 处理会话统计数据的异步持久化。
 type Persister struct {
-	store         store.AgentStatsStore
-	queue         chan *agent.AgentSessionStatsForStorage
-	wg            sync.WaitGroup
-	logger        *slog.Logger
-	stopCh        chan struct{}
-	once          sync.Once
-	seenSessions  sync.Map // map[string]int64 - session ID -> last enqueued timestamp
+	store        store.AgentStatsStore
+	queue        chan *agent.AgentSessionStatsForStorage
+	wg           sync.WaitGroup
+	logger       *slog.Logger
+	stopCh       chan struct{}
+	once         sync.Once
+	seenSessions sync.Map // map[string]int64 - session ID -> last enqueued timestamp
 	dedupEnabled atomic.Bool
 }
 
@@ -55,13 +55,15 @@ func (p *Persister) Enqueue(stats *agent.AgentSessionStatsForStorage) bool {
 	// Idempotency check: prevent duplicate enqueues within a time window
 	if p.dedupEnabled.Load() {
 		if lastEnqueued, ok := p.seenSessions.Load(stats.SessionID); ok {
-			lastTime := time.Unix(lastEnqueued.(int64), 0)
-			if time.Since(lastTime) < duplicateSessionWindow {
-				p.logger.Debug("Persister: ignoring duplicate stats",
-					"session_id", stats.SessionID,
-					"last_enqueued", lastTime,
-					"elapsed_ms", time.Since(lastTime).Milliseconds())
-				return false
+			if lastTs, ok := lastEnqueued.(int64); ok {
+				lastTime := time.Unix(lastTs, 0)
+				if time.Since(lastTime) < duplicateSessionWindow {
+					p.logger.Debug("Persister: ignoring duplicate stats",
+						"session_id", stats.SessionID,
+						"last_enqueued", lastTime,
+						"elapsed_ms", time.Since(lastTime).Milliseconds())
+					return false
+				}
 			}
 		}
 		// Record this session enqueue time
