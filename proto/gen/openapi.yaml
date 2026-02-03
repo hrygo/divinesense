@@ -4966,6 +4966,10 @@ components:
                     type: array
                     items:
                         type: string
+                totalCostUsd:
+                    type: number
+                    description: Cost tracking (from Claude Code CLI)
+                    format: double
                 status:
                     type: string
                     description: Status

@@ -311,6 +311,10 @@ func (h *ParrotHandler) executeAgent(
 	var toolsUsed []string
 	var toolMu sync.Mutex
 
+	// Track total cost from session_stats event
+	var totalCostUsd float64
+	var costMu sync.Mutex
+
 	// Track last event time for heartbeats
 	lastEventTime := atomic.Int64{}
 	lastEventTime.Store(time.Now().UnixNano())
@@ -374,6 +378,20 @@ func (h *ParrotHandler) executeAgent(
 					toolMu.Unlock()
 				}
 			}
+		} else if eventType == agentpkg.EventTypeSessionStats {
+			// Handle session_stats event (from CCRunner result message)
+			// Extract and store total cost for final SessionSummary
+			if sessionStatsData, ok := eventData.(*agentpkg.SessionStatsData); ok {
+				costMu.Lock()
+				totalCostUsd = sessionStatsData.TotalCostUSD
+				costMu.Unlock()
+				logger.Info("Session stats received",
+					slog.Float64("total_cost_usd", sessionStatsData.TotalCostUSD),
+					slog.Int("total_tokens", int(sessionStatsData.TotalTokens)),
+					slog.Int64("duration_ms", sessionStatsData.TotalDurationMs))
+			}
+			// Don't stream session_stats to frontend (it's included in final SessionSummary)
+			return nil
 		} else {
 			// Handle legacy event types (string, error)
 			switch v := eventData.(type) {
@@ -474,6 +492,7 @@ func (h *ParrotHandler) executeAgent(
 		Status:          status,
 		ToolCallCount:   finalToolCallCount,
 		ToolsUsed:       finalToolsUsed,
+		TotalCostUsd:    totalCostUsd,
 	}
 
 	// Add detailed stats if available (from GeekParrot/EvolutionParrot)

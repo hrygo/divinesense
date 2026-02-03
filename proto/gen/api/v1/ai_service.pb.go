@@ -3825,6 +3825,8 @@ type SessionSummary struct {
 	// File operations (for Evolution Mode)
 	FilesModified int32    `protobuf:"varint,12,opt,name=files_modified,json=filesModified,proto3" json:"files_modified,omitempty"` // Number of files modified
 	FilePaths     []string `protobuf:"bytes,13,rep,name=file_paths,json=filePaths,proto3" json:"file_paths,omitempty"`              // List of affected file paths
+	// Cost tracking (from Claude Code CLI)
+	TotalCostUsd float64 `protobuf:"fixed64,16,opt,name=total_cost_usd,json=totalCostUsd,proto3" json:"total_cost_usd,omitempty"` // Total cost in USD for this session
 	// Status
 	Status        string `protobuf:"bytes,14,opt,name=status,proto3" json:"status,omitempty"`                     // Final session status: "success", "error", "cancelled"
 	ErrorMsg      string `protobuf:"bytes,15,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"` // Error message if status=error
@@ -3951,6 +3953,13 @@ func (x *SessionSummary) GetFilePaths() []string {
 		return x.FilePaths
 	}
 	return nil
+}
+
+func (x *SessionSummary) GetTotalCostUsd() float64 {
+	if x != nil {
+		return x.TotalCostUsd
+	}
+	return 0
 }
 
 func (x *SessionSummary) GetStatus() string {
@@ -4267,7 +4276,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x0eoutput_summary\x18\f \x01(\tR\routputSummary\x12\x1b\n" +
 	"\tfile_path\x18\r \x01(\tR\bfilePath\x12\x1d\n" +
 	"\n" +
-	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xfd\x04\n" +
+	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xa3\x05\n" +
 	"\x0eSessionSummary\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12*\n" +
@@ -4285,7 +4294,8 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"tools_used\x18\v \x03(\tR\ttoolsUsed\x12%\n" +
 	"\x0efiles_modified\x18\f \x01(\x05R\rfilesModified\x12\x1d\n" +
 	"\n" +
-	"file_paths\x18\r \x03(\tR\tfilePaths\x12\x16\n" +
+	"file_paths\x18\r \x03(\tR\tfilePaths\x12$\n" +
+	"\x0etotal_cost_usd\x18\x10 \x01(\x01R\ftotalCostUsd\x12\x16\n" +
 	"\x06status\x18\x0e \x01(\tR\x06status\x12\x1b\n" +
 	"\terror_msg\x18\x0f \x01(\tR\berrorMsg*7\n" +
 	"\x11ScheduleQueryMode\x12\b\n" +

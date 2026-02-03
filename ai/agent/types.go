@@ -116,12 +116,13 @@ func SafeCallback(callback EventCallback) SafeCallbackFunc {
 
 // 常用事件类型.
 const (
-	EventTypeThinking    = "thinking"     // Agent is thinking
-	EventTypeToolUse     = "tool_use"     // Agent is using a tool
-	EventTypeToolResult  = "tool_result"  // Tool execution result
-	EventTypeAnswer      = "answer"       // Final answer from agent
-	EventTypeError       = "error"        // Error occurred
-	EventTypeDangerBlock = "danger_block" // Dangerous operation was blocked
+	EventTypeThinking     = "thinking"      // Agent is thinking
+	EventTypeToolUse      = "tool_use"      // Agent is using a tool
+	EventTypeToolResult   = "tool_result"   // Tool execution result
+	EventTypeAnswer       = "answer"        // Final answer from agent
+	EventTypeError        = "error"         // Error occurred
+	EventTypeDangerBlock  = "danger_block"  // Dangerous operation was blocked
+	EventTypeSessionStats = "session_stats" // Session completion statistics (cost, tokens, duration)
 
 	// Memo-specific events.
 	EventTypeMemoQueryResult = "memo_query_result" // Memo search results
@@ -175,6 +176,33 @@ type ScheduleSummary struct {
 	StartTimestamp int64  `json:"start_ts"`
 	EndTimestamp   int64  `json:"end_ts"`
 	AllDay         bool   `json:"all_day"`
+}
+
+// SessionStatsData represents the final session statistics sent to the frontend and stored in database.
+// SessionStatsData 表示发送给前端并存储到数据库的最终会话统计数据。
+type SessionStatsData struct {
+	SessionID            string   `json:"session_id"`
+	UserID               int32    `json:"user_id"`
+	AgentType            string   `json:"agent_type"` // "geek", "evolution", etc.
+	StartTime            int64    `json:"start_time"` // Unix timestamp
+	EndTime              int64    `json:"end_time"`   // Unix timestamp
+	TotalDurationMs      int64    `json:"total_duration_ms"`
+	ThinkingDurationMs   int64    `json:"thinking_duration_ms"`
+	ToolDurationMs       int64    `json:"tool_duration_ms"`
+	GenerationDurationMs int64    `json:"generation_duration_ms"`
+	InputTokens          int32    `json:"input_tokens"`
+	OutputTokens         int32    `json:"output_tokens"`
+	CacheWriteTokens     int32    `json:"cache_write_tokens"`
+	CacheReadTokens      int32    `json:"cache_read_tokens"`
+	TotalTokens          int32    `json:"total_tokens"`
+	ToolCallCount        int32    `json:"tool_call_count"`
+	ToolsUsed            []string `json:"tools_used"`
+	FilesModified        int32    `json:"files_modified"`
+	FilePaths            []string `json:"file_paths"`
+	TotalCostUSD         float64  `json:"total_cost_usd"`
+	ModelUsed            string   `json:"model_used"`
+	IsError              bool     `json:"is_error"`
+	ErrorMessage         string   `json:"error_message,omitempty"`
 }
 
 // ParrotStream is the interface for streaming responses to the client.

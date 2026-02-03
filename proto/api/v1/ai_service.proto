@@ -657,6 +657,9 @@ message SessionSummary {
   int32 files_modified = 12; // Number of files modified
   repeated string file_paths = 13; // List of affected file paths
 
+  // Cost tracking (from Claude Code CLI)
+  double total_cost_usd = 16; // Total cost in USD for this session
+
   // Status
   string status = 14; // Final session status: "success", "error", "cancelled"
   string error_msg = 15; // Error message if status=error

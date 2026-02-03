@@ -117,18 +117,32 @@ You are running inside DivineSense, an intelligent assistant system.
 // StreamMessage represents a single event in the stream-json format.
 // StreamMessage 表示 stream-json 格式中的单个事件。
 type StreamMessage struct {
-	Message   *AssistantMessage `json:"message,omitempty"`
-	Input     map[string]any    `json:"input,omitempty"`
-	Type      string            `json:"type"`
-	Timestamp string            `json:"timestamp,omitempty"`
-	SessionID string            `json:"session_id,omitempty"`
-	Role      string            `json:"role,omitempty"`
-	Name      string            `json:"name,omitempty"`
-	Output    string            `json:"output,omitempty"`
-	Status    string            `json:"status,omitempty"`
-	Error     string            `json:"error,omitempty"`
-	Content   []ContentBlock    `json:"content,omitempty"`
-	Duration  int               `json:"duration_ms,omitempty"`
+	Message      *AssistantMessage `json:"message,omitempty"`
+	Input        map[string]any    `json:"input,omitempty"`
+	Type         string            `json:"type"`
+	Timestamp    string            `json:"timestamp,omitempty"`
+	SessionID    string            `json:"session_id,omitempty"`
+	Role         string            `json:"role,omitempty"`
+	Name         string            `json:"name,omitempty"`
+	Output       string            `json:"output,omitempty"`
+	Status       string            `json:"status,omitempty"`
+	Error        string            `json:"error,omitempty"`
+	Content      []ContentBlock    `json:"content,omitempty"`
+	Duration     int               `json:"duration_ms,omitempty"`
+	Subtype      string            `json:"subtype,omitempty"`        // For "result" message
+	IsError      bool              `json:"is_error,omitempty"`       // For "result" message
+	TotalCostUSD float64           `json:"total_cost_usd,omitempty"` // For "result" message
+	Usage        *UsageStats       `json:"usage,omitempty"`          // For "result" message
+	Result       string            `json:"result,omitempty"`         // For "result" message
+}
+
+// UsageStats represents token usage from result messages.
+// UsageStats 表示 result 消息中的 token 使用情况。
+type UsageStats struct {
+	InputTokens           int32 `json:"input_tokens"`
+	OutputTokens          int32 `json:"output_tokens"`
+	CacheWriteInputTokens int32 `json:"cache_creation_input_tokens,omitempty"`
+	CacheReadInputTokens  int32 `json:"cache_read_input_tokens,omitempty"`
 }
 
 // GetContentBlocks returns the content blocks, checking both direct and nested locations.
@@ -823,6 +837,24 @@ func (r *CCRunner) streamOutput(
 					"has_output", msg.Output != "",
 					"has_error", msg.Error != "")
 
+				// Handle result message - extract and send session statistics
+				if msg.Type == "result" {
+					r.handleResultMessage(msg, stats, cfg, callback)
+					r.logger.Info("CCRunner: completion message received, ending scanner loop",
+						"mode", cfg.Mode,
+						"type", msg.Type,
+						"total_lines", lineCount)
+					return
+				}
+
+				// Handle system message - silently consume
+				if msg.Type == "system" {
+					r.logger.Debug("CCRunner: system message received (control data, no callback needed)",
+						"subtype", msg.Subtype,
+						"session_id", msg.SessionID)
+					continue
+				}
+
 				// Dispatch event to callback
 				if callback != nil {
 					if err := r.dispatchCallback(msg, callback, stats); err != nil {
@@ -834,11 +866,10 @@ func (r *CCRunner) streamOutput(
 					}
 				}
 
-				// Check for completion
-				if msg.Type == "result" || msg.Type == "error" {
-					r.logger.Info("CCRunner: completion message received, ending scanner loop",
+				// Check for error completion
+				if msg.Type == "error" {
+					r.logger.Info("CCRunner: error completion message received, ending scanner loop",
 						"mode", cfg.Mode,
-						"type", msg.Type,
 						"total_lines", lineCount)
 					return
 				}
@@ -1109,6 +1140,75 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 		}
 	}
 	return nil
+}
+
+// handleResultMessage processes the result message from CLI, extracts statistics,
+// and sends session_stats event to frontend.
+// handleResultMessage 处理 CLI 的 result 消息，提取统计数据，并发送 session_stats 事件到前端。
+func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, cfg *CCRunnerConfig, callback EventCallback) {
+	stats.mu.Lock()
+	defer stats.mu.Unlock()
+
+	// Update final duration from CLI report
+	if msg.Duration > 0 {
+		stats.TotalDurationMs = int64(msg.Duration)
+	}
+
+	// Update token usage from CLI report
+	if msg.Usage != nil {
+		stats.InputTokens = msg.Usage.InputTokens
+		stats.OutputTokens = msg.Usage.OutputTokens
+		stats.CacheWriteTokens = msg.Usage.CacheWriteInputTokens
+		stats.CacheReadTokens = msg.Usage.CacheReadInputTokens
+	}
+
+	// Collect tools used
+	toolsUsed := make([]string, 0, len(stats.ToolsUsed))
+	for tool := range stats.ToolsUsed {
+		toolsUsed = append(toolsUsed, tool)
+	}
+
+	// Build session stats data for frontend and storage
+	sessionStatsData := &SessionStatsData{
+		SessionID:            cfg.SessionID,
+		UserID:               cfg.UserID,
+		AgentType:            cfg.Mode,
+		StartTime:            stats.StartTime.Unix(),
+		EndTime:              time.Now().Unix(),
+		TotalDurationMs:      stats.TotalDurationMs,
+		ThinkingDurationMs:   stats.ThinkingDurationMs,
+		ToolDurationMs:       stats.ToolDurationMs,
+		GenerationDurationMs: stats.GenerationDurationMs,
+		InputTokens:          stats.InputTokens,
+		OutputTokens:         stats.OutputTokens,
+		CacheWriteTokens:     stats.CacheWriteTokens,
+		CacheReadTokens:      stats.CacheReadTokens,
+		TotalTokens:          stats.InputTokens + stats.OutputTokens + stats.CacheWriteTokens + stats.CacheReadTokens,
+		ToolCallCount:        stats.ToolCallCount,
+		ToolsUsed:            toolsUsed,
+		FilesModified:        stats.FilesModified,
+		FilePaths:            stats.FilePaths,
+		TotalCostUSD:         msg.TotalCostUSD,
+		IsError:              msg.IsError,
+		ErrorMessage:         msg.Error,
+	}
+
+	// Log session completion stats
+	r.logger.Info("CCRunner: session completed",
+		"mode", cfg.Mode,
+		"session_id", cfg.SessionID,
+		"duration_ms", stats.TotalDurationMs,
+		"input_tokens", stats.InputTokens,
+		"output_tokens", stats.OutputTokens,
+		"total_cost_usd", msg.TotalCostUSD,
+		"tool_calls", stats.ToolCallCount,
+		"files_modified", stats.FilesModified)
+
+	// Send session_stats event to frontend (non-critical)
+	if callback != nil {
+		callbackSafe := SafeCallback(callback)
+		callbackSafe(EventTypeSessionStats, sessionStatsData)
+	}
 }
 
 // sanitizeUTF8 ensures a string contains only valid UTF-8 characters.
