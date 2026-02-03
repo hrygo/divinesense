@@ -165,7 +165,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
           {summary.sessionId && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Session ID</span>
-              <span className="font-mono text-muted-foreground/70 select-all">{summary.sessionId.slice(0, 8)}...</span>
+              <span className="font-mono text-muted-foreground/70 select-all break-all">{summary.sessionId}</span>
             </div>
           )}
 
