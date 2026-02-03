@@ -656,8 +656,8 @@ func TestBuildSystemPromptCoverage(t *testing.T) {
 	// Verify key components are present
 	requiredStrings := []string{
 		"DivineSense",
-		"User ID: 42",
-		"Session: test-session-123",
+		"**User ID**: 42",
+		"**Session**: test-session-123",
 		"Desktop",
 		"1920x1080",
 		workDir,
