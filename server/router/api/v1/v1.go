@@ -33,6 +33,7 @@ type APIV1Service struct {
 	v1pb.UnimplementedAuthServiceServer
 	v1pb.UnimplementedInstanceServiceServer
 	v1pb.UnimplementedMemoServiceServer
+	v1pb.UnimplementedChatAppServiceServer
 	MarkdownService      markdown.Service
 	Profile              *profile.Profile
 	Store                *store.Store
@@ -201,6 +202,10 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 		if err := v1pb.RegisterScheduleAgentServiceHandlerServer(ctx, gwMux, s.ScheduleAgentService); err != nil {
 			return err
 		}
+	}
+	// Register ChatAppService
+	if err := v1pb.RegisterChatAppServiceHandlerServer(ctx, gwMux, s); err != nil {
+		return err
 	}
 	gwGroup := echoServer.Group("")
 	gwGroup.Use(middleware.CORS())

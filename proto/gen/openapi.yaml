@@ -876,6 +876,227 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/chat-apps/credentials:
+        get:
+            tags:
+                - ChatAppService
+            description: ListCredentials returns all registered chat app credentials for the current user.
+            operationId: ChatAppService_ListCredentials
+            parameters:
+                - name: platform
+                  in: query
+                  schema:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListCredentialsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        post:
+            tags:
+                - ChatAppService
+            description: |-
+                RegisterCredential binds a chat app account to the current user.
+                 The user must provide platform-specific credentials obtained from
+                 the chat platform (e.g., Bot Token for Telegram).
+            operationId: ChatAppService_RegisterCredential
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RegisterCredentialRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Credential'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/chat-apps/credentials/{platform}:
+        delete:
+            tags:
+                - ChatAppService
+            description: |-
+                DeleteCredential removes a chat app binding for the current user.
+                 This will revoke DivineSense's access to the user's account on that platform.
+            operationId: ChatAppService_DeleteCredential
+            parameters:
+                - name: platform
+                  in: path
+                  required: true
+                  schema:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - ChatAppService
+            description: UpdateCredential modifies an existing credential (e.g., enable/disable).
+            operationId: ChatAppService_UpdateCredential
+            parameters:
+                - name: platform
+                  in: path
+                  required: true
+                  schema:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateCredentialRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Credential'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/chat-apps/send:
+        post:
+            tags:
+                - ChatAppService
+            description: |-
+                SendMessage sends a message to a chat app channel.
+                 This is used internally to deliver AI responses to users.
+            operationId: ChatAppService_SendMessage
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SendMessageRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/chat-apps/webhook-info/{platform}:
+        get:
+            tags:
+                - ChatAppService
+            description: |-
+                GetWebhookInfo returns webhook configuration for a platform.
+                 This provides the webhook URL and setup instructions.
+            operationId: ChatAppService_GetWebhookInfo
+            parameters:
+                - name: platform
+                  in: path
+                  required: true
+                  schema:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/WebhookInfo'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/chat-apps/webhook/{platform}:
+        post:
+            tags:
+                - ChatAppService
+            description: |-
+                HandleWebhook processes incoming webhook events from chat platforms.
+                 This endpoint is called by the chat platforms when new messages arrive.
+                 The endpoint verifies the request signature and routes the message
+                 to the appropriate AI agent.
+            operationId: ChatAppService_HandleWebhook
+            parameters:
+                - name: platform
+                  in: path
+                  required: true
+                  schema:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/WebhookRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/WebhookResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/identity-providers:
         get:
             tags:
@@ -3310,6 +3531,36 @@ components:
                 schedule:
                     $ref: '#/components/schemas/Schedule'
             description: CreateScheduleRequest is the request for CreateSchedule.
+        Credential:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    format: int32
+                userId:
+                    type: integer
+                    format: int32
+                platform:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+                platformUserId:
+                    type: string
+                platformChatId:
+                    type: string
+                enabled:
+                    type: boolean
+                createdTs:
+                    type: string
+                updatedTs:
+                    type: string
+            description: |-
+                Credential represents a chat app binding.
+                 The access_token is never returned in API responses for security.
         DetectDuplicatesRequest:
             required:
                 - content
@@ -3799,6 +4050,14 @@ components:
                     type: integer
                     description: The total count of attachments (may be approximate).
                     format: int32
+        ListCredentialsResponse:
+            type: object
+            properties:
+                credentials:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Credential'
+            description: ListCredentialsResponse contains the list of credentials.
         ListIdentityProvidersResponse:
             type: object
             properties:
@@ -4412,6 +4671,29 @@ components:
                     type: string
                     description: When the access token expires.
                     format: date-time
+        RegisterCredentialRequest:
+            required:
+                - platform
+                - platformUserId
+            type: object
+            properties:
+                platform:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+                platformUserId:
+                    type: string
+                platformChatId:
+                    type: string
+                accessToken:
+                    type: string
+                webhookUrl:
+                    type: string
+            description: RegisterCredentialRequest creates a new chat app credential binding.
         Reminder:
             type: object
             properties:
@@ -4603,6 +4885,43 @@ components:
                     items:
                         $ref: '#/components/schemas/SearchResult'
             description: SemanticSearchResponse is the response for SemanticSearch.
+        SendMessageRequest:
+            required:
+                - platform
+                - platformChatId
+                - content
+            type: object
+            properties:
+                platform:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+                platformChatId:
+                    type: string
+                content:
+                    type: string
+                messageType:
+                    enum:
+                        - MESSAGE_TYPE_UNSPECIFIED
+                        - MESSAGE_TYPE_TEXT
+                        - MESSAGE_TYPE_PHOTO
+                        - MESSAGE_TYPE_AUDIO
+                        - MESSAGE_TYPE_VIDEO
+                        - MESSAGE_TYPE_DOCUMENT
+                    type: string
+                    format: enum
+                mediaData:
+                    type: string
+                    format: bytes
+                mediaMimeType:
+                    type: string
+                fileName:
+                    type: string
+            description: SendMessageRequest sends a message to a chat app channel.
         SessionSummary:
             type: object
             properties:
@@ -4878,6 +5197,26 @@ components:
                     type: string
                 pinned:
                     type: boolean
+        UpdateCredentialRequest:
+            required:
+                - platform
+            type: object
+            properties:
+                platform:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+                enabled:
+                    type: boolean
+                accessToken:
+                    type: string
+                webhookUrl:
+                    type: string
+            description: UpdateCredentialRequest modifies an existing credential.
         UpdateScheduleRequest:
             required:
                 - schedule
@@ -5116,12 +5455,62 @@ components:
                     description: The last update time of the webhook.
                     format: date-time
             description: UserWebhook represents a webhook owned by a user.
+        WebhookInfo:
+            type: object
+            properties:
+                webhookUrl:
+                    type: string
+                setupInstructions:
+                    type: string
+                headers:
+                    type: object
+                    additionalProperties:
+                        type: string
+                requiresVerification:
+                    type: boolean
+            description: WebhookInfo contains webhook setup information.
+        WebhookRequest:
+            required:
+                - platform
+            type: object
+            properties:
+                platform:
+                    enum:
+                        - PLATFORM_UNSPECIFIED
+                        - PLATFORM_TELEGRAM
+                        - PLATFORM_WHATSAPP
+                        - PLATFORM_DINGTALK
+                    type: string
+                    format: enum
+                payload:
+                    type: string
+                    format: bytes
+                headers:
+                    type: object
+                    additionalProperties:
+                        type: string
+                queryString:
+                    type: string
+            description: WebhookRequest represents an incoming webhook from a chat platform.
+        WebhookResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                message:
+                    type: string
+            description: WebhookResponse is the response to a webhook request.
 tags:
     - name: AIService
       description: AIService provides AI-powered features for memo management.
     - name: ActivityService
     - name: AttachmentService
     - name: AuthService
+    - name: ChatAppService
+      description: |-
+        ChatAppService manages chat app integrations for DivineSense.
+         This service enables users to bind and manage chat platform accounts
+         (Telegram, WhatsApp, DingTalk) for AI agent interaction.
     - name: IdentityProviderService
     - name: InstanceService
     - name: MemoService
