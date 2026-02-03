@@ -14,12 +14,12 @@ import (
 // Persister handles async persistence of session statistics.
 // Persister 处理会话统计数据的异步持久化。
 type Persister struct {
-	store    store.AgentStatsStore
-	queue    chan *agent.AgentSessionStatsForStorage
-	wg       sync.WaitGroup
-	logger   *slog.Logger
-	stopCh   chan struct{}
-	once     sync.Once
+	store  store.AgentStatsStore
+	queue  chan *agent.AgentSessionStatsForStorage
+	wg     sync.WaitGroup
+	logger *slog.Logger
+	stopCh chan struct{}
+	once   sync.Once
 }
 
 // NewPersister creates a new async persister.
@@ -103,29 +103,29 @@ func (p *Persister) processQueue() {
 func (p *Persister) saveSessionStats(ctx context.Context, stats *agent.AgentSessionStatsForStorage) error {
 	// Convert to store format
 	storeStats := &store.AgentSessionStats{
-		SessionID:             stats.SessionID,
-		ConversationID:        stats.ConversationID,
-		UserID:                stats.UserID,
-		AgentType:             stats.AgentType,
-		StartedAt:             stats.StartTime,
-		EndedAt:               stats.EndedAt,
-		TotalDurationMs:       stats.TotalDurationMs,
-		ThinkingDurationMs:    stats.ThinkingDurationMs,
-		ToolDurationMs:        stats.ToolDurationMs,
-		GenerationDurationMs:  stats.GenerationDurationMs,
-		InputTokens:           stats.InputTokens,
-		OutputTokens:          stats.OutputTokens,
-		CacheWriteTokens:      stats.CacheWriteTokens,
-		CacheReadTokens:       stats.CacheReadTokens,
-		TotalTokens:           stats.TotalTokens,
-		TotalCostUSD:          stats.TotalCostUSD,
-		ToolCallCount:         stats.ToolCallCount,
-		ToolsUsed:             stats.ToolsUsed,
-		FilesModified:         stats.FilesModified,
-		FilePaths:             stats.FilePaths,
-		ModelUsed:             stats.ModelUsed,
-		IsError:               stats.IsError,
-		ErrorMessage:          stats.ErrorMessage,
+		SessionID:            stats.SessionID,
+		ConversationID:       stats.ConversationID,
+		UserID:               stats.UserID,
+		AgentType:            stats.AgentType,
+		StartedAt:            stats.StartTime,
+		EndedAt:              stats.EndedAt,
+		TotalDurationMs:      stats.TotalDurationMs,
+		ThinkingDurationMs:   stats.ThinkingDurationMs,
+		ToolDurationMs:       stats.ToolDurationMs,
+		GenerationDurationMs: stats.GenerationDurationMs,
+		InputTokens:          stats.InputTokens,
+		OutputTokens:         stats.OutputTokens,
+		CacheWriteTokens:     stats.CacheWriteTokens,
+		CacheReadTokens:      stats.CacheReadTokens,
+		TotalTokens:          stats.TotalTokens,
+		TotalCostUSD:         stats.TotalCostUSD,
+		ToolCallCount:        stats.ToolCallCount,
+		ToolsUsed:            stats.ToolsUsed,
+		FilesModified:        stats.FilesModified,
+		FilePaths:            stats.FilePaths,
+		ModelUsed:            stats.ModelUsed,
+		IsError:              stats.IsError,
+		ErrorMessage:         stats.ErrorMessage,
 	}
 
 	return p.store.SaveSessionStats(ctx, storeStats)
@@ -135,18 +135,40 @@ func (p *Persister) saveSessionStats(ctx context.Context, stats *agent.AgentSess
 // drainQueue 在关闭期间处理队列中剩余的项。
 func (p *Persister) drainQueue() {
 	p.logger.Info("Persister: draining queue", "remaining", len(p.queue))
+	lostCount := 0
+	savedCount := 0
 	for {
 		select {
 		case stats := <-p.queue:
 			if stats == nil {
+				if lostCount > 0 {
+					p.logger.Error("Persister: shutdown complete with data loss",
+						"saved", savedCount,
+						"lost", lostCount)
+				}
 				return
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			_ = p.saveSessionStats(ctx, stats)
+			err := p.saveSessionStats(ctx, stats)
 			cancel()
 
+			if err != nil {
+				lostCount++
+				p.logger.Error("Persister: failed to save session stats during shutdown",
+					"session_id", stats.SessionID,
+					"cost_usd", stats.TotalCostUSD,
+					"error", err)
+			} else {
+				savedCount++
+			}
+
 		default:
+			if lostCount > 0 {
+				p.logger.Error("Persister: shutdown complete with data loss",
+					"saved", savedCount,
+					"lost", lostCount)
+			}
 			return
 		}
 	}

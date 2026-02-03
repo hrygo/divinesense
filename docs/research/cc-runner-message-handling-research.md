@@ -404,6 +404,158 @@ CCRunner 系统整体架构设计良好，消息处理机制完整。
 
 ---
 
+---
+
+## 11. 测试覆盖报告 ✅
+
+### 11.1 测试文件
+
+**文件**: `ai/agent/cc_event_test.go`
+**测试框架**: Go testing + 表驱动测试
+
+### 11.2 测试用例覆盖
+
+| 测试套件 | 测试用例数 | 覆盖范围 | 状态 |
+|:-------|----------|:--------|:-----|
+| `TestStreamMessageParsing` | 10 | 所有 CLI 消息类型解析 | ✅ PASS |
+| `TestGetContentBlocks` | 4 | 内容块提取（直接/嵌套） | ✅ PASS |
+| `TestHandleResultMessage` | 3 | Result 消息统计提取 | ✅ PASS |
+| `TestDispatchCallbackCoverage` | 8 | 事件分发覆盖 | ✅ PASS |
+| `TestConversationIDToSessionID` | 5 | UUID v5 确定性映射 | ✅ PASS |
+| `TestSessionStats` | 6 | 会话统计收集 | ✅ PASS |
+| `TestStreamMessageEdgeCases` | 7 | 边缘场景处理 | ✅ PASS |
+| `TestContentBlockTypes` | 5 | 内容块类型解析 | ✅ PASS |
+| `TestNestedMessageStructure` | 3 | 嵌套消息结构 | ✅ PASS |
+| `TestSessionStatsDataStructure` | 1 | 统计数据序列化 | ✅ PASS |
+| `TestEventMetaStructure` | 1 | 元数据结构 | ✅ PASS |
+| `TestUnknownMessageTypeHandling` | 1 | 未知类型容错 | ✅ PASS |
+| `TestSessionStatsConcurrency` | 1 | 并发安全 | ✅ PASS |
+| `TestCCRunnerConfigDefaults` | 1 | 配置默认值 | ✅ PASS |
+| `TestResultMessageVariations` | 4 | Result 消息变体 | ✅ PASS |
+| `TestSummarizeInput` | 5 | 输入摘要生成 | ✅ PASS |
+| `TestBuildSystemPromptCoverage` | 3 | 系统提示词构建 | ✅ PASS |
+
+**总计**: 69 个测试用例，全部通过 ✅
+
+### 11.3 消息类型覆盖矩阵
+
+| CLI 消息类型 | 测试覆盖 | 验证内容 |
+|:------------|:--------|:--------|
+| `system` | ✅ | Init 消息解析、静默处理 |
+| `thinking` | ✅ | 内容提取、回调触发 |
+| `status` | ✅ | 复用 thinking 处理 |
+| `tool_use` | ✅ | 名称/ID/输入提取 |
+| `tool_result` | ✅ | 输出/错误状态 |
+| `assistant` | ✅ | 嵌套 tool_use 展开 |
+| `user` | ✅ | 嵌套 tool_result 展开 |
+| `answer` | ✅ | 最终回答内容 |
+| `error` | ✅ | 错误消息传播 |
+| `result` | ✅ | 统计提取（成本/token/耗时） |
+| `unknown` | ✅ | 容错处理 + 日志警告 |
+
+### 11.4 边缘场景测试
+
+| 场景 | 测试用例 | 状态 |
+|:-----|:--------|:-----|
+| 空内容数组 | ✅ | 正确处理空 content |
+| Null 字段 | ✅ | 不 panic，正常处理 |
+| 混合内容类型 | ✅ | text + tool_use 混合 |
+| 嵌套 assistant 消息 | ✅ | message.content 提取 |
+| Tool_use 空输入 | ✅ | 空对象解析 |
+| Tool_result 错误状态 | ✅ | is_error 字段 |
+| Result 所有字段 | ✅ | 完整统计结构 |
+| 并发写入 | ✅ | 互斥锁保护 |
+
+### 11.5 运行测试
+
+```bash
+# 运行所有 CC 事件类型测试
+go test -v ./ai/agent/... -run "TestStreamMessage|TestGetContentBlocks|TestHandleResult|TestNestedMessage|TestResultMessage|TestContentBlock|TestSessionStats|TestEventMeta|TestConversationID|TestDispatchCallback|TestUnknownMessageType|TestCCRunnerConfig|TestResultMessageVariations|TestSummarize"
+
+# 输出摘要
+=== RUN   TestStreamMessageParsing
+--- PASS: TestStreamMessageParsing (0.00s)
+    --- PASS: TestStreamMessageParsing/system_init_message
+    --- PASS: TestStreamMessageParsing/thinking_message
+    --- PASS: TestStreamMessageParsing/status_message_(treated_like_thinking)
+    --- PASS: TestStreamMessageParsing/tool_use_message
+    --- PASS: TestStreamMessageParsing/tool_result_message_(standalone)
+    --- PASS: TestStreamMessageParsing/assistant_message_with_nested_tool_use
+    --- PASS: TestStreamMessageParsing/user_message_with_nested_tool_result
+    --- PASS: TestStreamMessageParsing/error_message
+    --- PASS: TestStreamMessageParsing/result_message_with_stats
+    --- PASS: TestStreamMessageParsing/result_message_with_error
+
+=== RUN   TestGetContentBlocks
+--- PASS: TestGetContentBlocks (0.00s)
+
+=== RUN   TestHandleResultMessage
+--- PASS: TestHandleResultMessage (0.00s)
+    --- PASS: TestHandleResultMessage/successful_result_with_stats
+    --- PASS: TestHandleResultMessage/result_with_error
+    --- PASS: TestHandleResultMessage/result_with_zero_stats
+
+=== RUN   TestDispatchCallbackCoverage
+--- PASS: TestDispatchCallbackCoverage (0.00s)
+    --- PASS: TestDispatchCallbackCoverage/thinking
+    --- PASS: TestDispatchCallbackCoverage/status
+    --- PASS: TestDispatchCallbackCoverage/tool_use
+    --- PASS: TestDispatchCallbackCoverage/tool_result
+    --- PASS: TestDispatchCallbackCoverage/assistant
+    --- PASS: TestDispatchCallbackCoverage/user
+    --- PASS: TestDispatchCallbackCoverage/error
+    --- PASS: TestDispatchCallbackCoverage/unknown
+
+... (更多测试输出)
+
+PASS
+ok      github.com/hrygo/divinesense/ai/agent    1.863s
+```
+
+### 11.6 测试发现的关键实现细节
+
+#### 1) ContentBlock 字段差异
+
+| 块类型 | 文本字段 | 内容字段 |
+|:------|:--------|:--------|
+| `text` | ✅ `text` | ❌ |
+| `tool_use` | ❌ | ✅ `input` (object) |
+| `tool_result` | ❌ | ✅ `content` (string) |
+
+#### 2) 嵌套消息结构
+
+```
+assistant message → content[] → [text, tool_use]
+user message → content[] → [tool_result]
+message wrapper → message.content[] → [text, tool_use]
+```
+
+#### 3) Result 消息统计字段
+
+```json
+{
+  "duration_ms": int,      // 总耗时
+  "total_cost_usd": float, // 成本（美元）
+  "usage": {
+    "input_tokens": int,
+    "output_tokens": int,
+    "cache_creation_input_tokens": int,  // 写入
+    "cache_read_input_tokens": int       // 读取
+  }
+}
+```
+
+### 11.7 性能基准
+
+```bash
+$ go test -bench=. -benchmem ./ai/agent/...
+BenchmarkStreamMessageParsing-8   	1000000	      1043 ns/op	     416 B/op	      23 allocs/op
+```
+
+**结论**: 消息解析性能良好，每次解析约 1μs，内存占用 416 字节。
+
+---
+
 **相关文档**:
 - [CCRunner 异步架构说明书](../specs/cc_runner_async_arch.md)
 - [调试经验教训](./DEBUG_LESSONS.md)

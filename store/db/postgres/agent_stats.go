@@ -2,8 +2,11 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"database/sql"
 
 	"github.com/hrygo/divinesense/store"
 )
@@ -219,6 +222,9 @@ func (d *DB) ListSessionStats(ctx context.Context, userID int32, limit, offset i
 
 		statsList = append(statsList, &stats)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating session stats: %w", err)
+	}
 
 	return statsList, total, nil
 }
@@ -339,7 +345,10 @@ func (d *DB) GetMostExpensiveSession(ctx context.Context, userID int32, since ti
 	)
 
 	if err != nil {
-		return nil, nil // No sessions found
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No sessions found
+		}
+		return nil, fmt.Errorf("failed to get most expensive session: %w", err)
 	}
 
 	if toolsUsedJSONB != nil {
@@ -359,16 +368,13 @@ func (d *DB) getDailyCostBreakdown(ctx context.Context, userID int32, days int) 
 			COUNT(*) as session_count
 		FROM agent_session_stats
 		WHERE user_id = $1
-		  AND started_at >= NOW() - INTERVAL '%d days'
+		  AND started_at >= NOW() - INTERVAL '1 day' * $2
 		  AND is_error = false
 		GROUP BY DATE(started_at)
 		ORDER BY date DESC
 	`
 
-	// Safe SQL formatting for integer
-	query = fmt.Sprintf(query, days)
-
-	rows, err := d.db.QueryContext(ctx, query, userID)
+	rows, err := d.db.QueryContext(ctx, query, userID, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get daily cost breakdown: %w", err)
 	}
@@ -382,6 +388,9 @@ func (d *DB) getDailyCostBreakdown(ctx context.Context, userID int32, days int) 
 			return nil, fmt.Errorf("failed to scan daily cost: %w", err)
 		}
 		breakdown = append(breakdown, &data)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating daily cost breakdown: %w", err)
 	}
 
 	return breakdown, nil
@@ -546,6 +555,9 @@ func (d *DB) ListSecurityEvents(ctx context.Context, userID int32, limit, offset
 		}
 		events = append(events, &event)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating security events: %w", err)
+	}
 
 	return events, total, nil
 }
@@ -598,6 +610,9 @@ func (d *DB) ListSecurityEventsByRisk(ctx context.Context, userID int32, riskLev
 			return nil, 0, fmt.Errorf("failed to scan security event: %w", err)
 		}
 		events = append(events, &event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating security events by risk: %w", err)
 	}
 
 	return events, total, nil

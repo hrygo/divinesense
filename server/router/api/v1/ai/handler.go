@@ -16,6 +16,7 @@ import (
 	"github.com/hrygo/divinesense/ai"
 	agentpkg "github.com/hrygo/divinesense/ai/agent"
 	"github.com/hrygo/divinesense/ai/router"
+	aistats "github.com/hrygo/divinesense/ai/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/internal/errors"
 	"github.com/hrygo/divinesense/server/internal/observability"
@@ -32,13 +33,15 @@ type ParrotHandler struct {
 	factory    *AgentFactory
 	llm        ai.LLMService
 	chatRouter *agentpkg.ChatRouter
+	persister  *aistats.Persister // session stats persister
 }
 
 // NewParrotHandler creates a new parrot handler.
-func NewParrotHandler(factory *AgentFactory, llm ai.LLMService) *ParrotHandler {
+func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aistats.Persister) *ParrotHandler {
 	return &ParrotHandler{
-		factory: factory,
-		llm:     llm,
+		factory:   factory,
+		llm:       llm,
+		persister: persister,
 	}
 }
 
@@ -389,6 +392,16 @@ func (h *ParrotHandler) executeAgent(
 					slog.Float64("total_cost_usd", sessionStatsData.TotalCostUSD),
 					slog.Int("total_tokens", int(sessionStatsData.TotalTokens)),
 					slog.Int64("duration_ms", sessionStatsData.TotalDurationMs))
+
+				// Enqueue for async persistence
+				if h.persister != nil {
+					enqueued := h.persister.EnqueueSessionStatsData(sessionStatsData)
+					if !enqueued {
+						logger.Warn("Failed to enqueue session stats for persistence",
+							slog.String("session_id", sessionStatsData.SessionID),
+							slog.Int("queue_size", h.persister.QueueSize()))
+					}
+				}
 			}
 			// Don't stream session_stats to frontend (it's included in final SessionSummary)
 			return nil
@@ -441,11 +454,16 @@ func (h *ParrotHandler) executeAgent(
 					// Send heartbeat
 					streamMu.Lock()
 					// Just send a lightweight ping chunk
-					_ = stream.Send(&v1pb.ChatResponse{
+					err := stream.Send(&v1pb.ChatResponse{
 						EventType: "ping",
 						EventData: ".", // Minimal data
 					})
 					streamMu.Unlock()
+					// If send fails, client disconnected - stop heartbeat early
+					if err != nil {
+						logger.Debug("Heartbeat send failed, stopping", slog.String("error", err.Error()))
+						return
+					}
 				}
 			}
 		}

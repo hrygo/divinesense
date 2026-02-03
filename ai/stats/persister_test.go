@@ -80,14 +80,14 @@ func TestPersister_EnqueueSessionStatsData(t *testing.T) {
 	p := NewPersister(mockStore, 10, nil)
 
 	data := &agent.SessionStatsData{
-		SessionID:            "test-session-456",
-		ConversationID:       1,
-		UserID:               1,
-		AgentType:            "geek",
-		StartTime:            time.Now().Unix(),
-		EndTime:              time.Now().Unix(),
-		TotalDurationMs:      15000,
-		TotalCostUSD:         0.25,
+		SessionID:       "test-session-456",
+		ConversationID:  1,
+		UserID:          1,
+		AgentType:       "geek",
+		StartTime:       time.Now().Unix(),
+		EndTime:         time.Now().Unix(),
+		TotalDurationMs: 15000,
+		TotalCostUSD:    0.25,
 	}
 
 	// Test enqueue via SessionStatsData
