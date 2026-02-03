@@ -306,7 +306,7 @@ CREATE TABLE agent_session_stats (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_session_stats_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE,
-    CONSTRAINT fk_session_stats_conv FOREIGN KEY (conversation_id) REFERENCES ai_conversation(id) ON DELETE CASCADE,
+    -- Note: conversation_id FK removed in V0.54.3 - Geek/Evolution modes operate independently
     CONSTRAINT chk_agent_session_stats_type CHECK (agent_type IN ('geek', 'evolution'))
 );
 
