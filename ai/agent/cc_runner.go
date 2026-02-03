@@ -800,25 +800,28 @@ func (r *CCRunner) executeWithSession(
 	r.logger.Info("CCRunner: waiting for CLI process to exit", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	waitErr := cmd.Wait()
 	if waitErr != nil {
-		r.logger.Error("CCRunner: CLI process exited with error", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", waitErr)
-		// Include stderr context in error
-		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
-			exitCode := 0
-			if cmd.ProcessState != nil {
-				exitCode = cmd.ProcessState.ExitCode()
-			}
-			return fmt.Errorf("command exited with code %d: %w (stderr: %s)", exitCode, waitErr, strings.Join(stderrLines, "; "))
-		}
-	} else {
-		r.logger.Info("CCRunner: CLI process exited successfully", "mode", cfg.Mode, "session_id", cfg.SessionID)
-	}
-	if waitErr != nil {
+		r.logger.Error("CCRunner: CLI process exited with error",
+			"mode", cfg.Mode,
+			"session_id", cfg.SessionID,
+			"error", waitErr)
+
+		// Get exit code if available
 		exitCode := 0
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
+
+		// Include stderr context in error if available
+		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
+			return fmt.Errorf("command exited with code %d: %w (stderr: %s)",
+				exitCode, waitErr, strings.Join(stderrLines, "; "))
+		}
 		return fmt.Errorf("command exited with code %d: %w", exitCode, waitErr)
 	}
+
+	r.logger.Info("CCRunner: CLI process exited successfully",
+		"mode", cfg.Mode,
+		"session_id", cfg.SessionID)
 
 	return nil
 }
@@ -882,7 +885,8 @@ func (r *CCRunner) streamOutput(
 	errCh := make(chan error, 2)
 	done := make(chan struct{})
 	// Create a cancel context to signal goroutines to stop
-	streamCtx, stopStreams := context.WithCancel(context.Background())
+	// Derive from parent ctx so cancellation propagates (fixes goroutine leak)
+	streamCtx, stopStreams := context.WithCancel(ctx)
 	defer stopStreams()
 
 	// Create safe callback once for all goroutines to reuse
@@ -907,6 +911,20 @@ func (r *CCRunner) streamOutput(
 
 			lineCount := 0
 			lastValidDataTime := time.Now() // Track last time we received valid data
+
+			// Add panic recovery to ensure scanDone is always closed even on panic
+			// 添加 panic recovery 以确保即使 panic 也关闭 scanDone
+			defer func() {
+				if panicVal := recover(); panicVal != nil {
+					r.logger.Error("CCRunner: scanner goroutine panic recovered",
+						"mode", cfg.Mode,
+						"session_id", cfg.SessionID,
+						"panic", panicVal)
+					scanDone <- true // Signal completion even on panic
+				} else {
+					close(scanDone) // Normal exit: close channel for proper cleanup
+				}
+			}()
 
 			for scanner.Scan() {
 				lineCount++
@@ -1335,13 +1353,10 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 			"cache_read_gt_input", stats.CacheReadTokens > stats.InputTokens)
 	}
 
-	// Collect tools used (with deduplication)
-	toolsUsedSet := make(map[string]bool, len(stats.ToolsUsed))
+	// Collect tools used (convert map to slice)
+	// ToolsUsed is already a map[string]bool, so we can iterate directly
+	toolsUsed := make([]string, 0, len(stats.ToolsUsed))
 	for tool := range stats.ToolsUsed {
-		toolsUsedSet[tool] = true
-	}
-	toolsUsed := make([]string, 0, len(toolsUsedSet))
-	for tool := range toolsUsedSet {
 		toolsUsed = append(toolsUsed, tool)
 	}
 

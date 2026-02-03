@@ -417,23 +417,25 @@ func (s *Session) WriteInput(msg map[string]any) error {
 	// Reset existing timer if any (prevents goroutine accumulation)
 	// 重置现有定时器（防止 goroutine 累积）
 	if s.statusResetTimer != nil {
-		// Check if timer was already stopped/fired
+		// Stop the timer and check if it was already fired
 		if !s.statusResetTimer.Stop() {
-			// Timer already fired, wait a moment for callback to complete
-			// This prevents race condition where old callback interferes with new state
-			select {
-			case <-time.After(10 * time.Millisecond):
-			case <-time.After(100 * time.Millisecond):
-			}
+			// Timer already fired - callback may be running or about to run
+			// Release lock briefly to allow callback to complete if it's holding lock
+			s.mu.Unlock()
+			time.Sleep(50 * time.Millisecond) // Give callback time to complete
+			s.mu.Lock()
 		}
 	}
 
 	// Schedule status recovery to Ready after a short delay
 	// This allows the session to be marked busy while the CLI processes the input
 	// 调度状态恢复到 Ready（允许 CLI 处理输入时保持 Busy 状态）
+	// Callback acquires lock to prevent race with WriteInput
 	s.statusResetTimer = time.AfterFunc(statusBusyDuration, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		if s.IsAlive() {
-			s.SetStatus(SessionStatusReady)
+			s.Status = SessionStatusReady
 		}
 	})
 
