@@ -276,8 +276,120 @@ CREATE TRIGGER trigger_ai_conversation_updated_ts
   FOR EACH ROW
   EXECUTE FUNCTION update_ai_conversation_updated_ts();
 -- =============================================================================
+-- Agent Session Stats (V0.54.0)
+-- =============================================================================
+CREATE TABLE agent_session_stats (
+    id BIGSERIAL PRIMARY KEY,
+    session_id VARCHAR(64) NOT NULL UNIQUE,
+    conversation_id BIGINT NOT NULL,
+    user_id INTEGER NOT NULL,
+    agent_type VARCHAR(20) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    ended_at TIMESTAMPTZ NOT NULL,
+    total_duration_ms BIGINT NOT NULL,
+    thinking_duration_ms BIGINT NOT NULL DEFAULT 0,
+    tool_duration_ms BIGINT NOT NULL DEFAULT 0,
+    generation_duration_ms BIGINT NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL DEFAULT 0,
+    total_cost_usd NUMERIC(10,4) NOT NULL DEFAULT 0,
+    tool_call_count INTEGER NOT NULL DEFAULT 0,
+    tools_used JSONB,
+    files_modified INTEGER NOT NULL DEFAULT 0,
+    file_paths TEXT[],
+    model_used VARCHAR(100),
+    is_error BOOLEAN NOT NULL DEFAULT FALSE,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_session_stats_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT fk_session_stats_conv FOREIGN KEY (conversation_id) REFERENCES ai_conversation(id) ON DELETE CASCADE,
+    CONSTRAINT chk_agent_session_stats_type CHECK (agent_type IN ('geek', 'evolution'))
+);
+
+CREATE INDEX idx_session_stats_user_date ON agent_session_stats(user_id, started_at DESC);
+CREATE INDEX idx_session_stats_conv ON agent_session_stats(conversation_id);
+CREATE INDEX idx_session_stats_agent ON agent_session_stats(agent_type, started_at DESC);
+CREATE INDEX idx_session_stats_cost ON agent_session_stats(total_cost_usd) WHERE total_cost_usd > 0;
+
+CREATE OR REPLACE FUNCTION update_agent_session_stats_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_agent_session_stats_updated_at
+  BEFORE UPDATE ON agent_session_stats
+  FOR EACH ROW
+  EXECUTE FUNCTION update_agent_session_stats_updated_at();
+
+-- =============================================================================
+-- User Cost Settings (V0.54.1)
+-- =============================================================================
+CREATE TABLE user_cost_settings (
+    id BIGSERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE,
+    daily_budget_usd NUMERIC(10,4),
+    per_session_threshold_usd NUMERIC(10,4) DEFAULT 5.0,
+    alert_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    alert_email BOOLEAN NOT NULL DEFAULT FALSE,
+    alert_in_app BOOLEAN NOT NULL DEFAULT TRUE,
+    budget_reset_at DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_cost_settings_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_cost_settings_user ON user_cost_settings(user_id);
+
+CREATE OR REPLACE FUNCTION update_user_cost_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_user_cost_settings_updated_at
+  BEFORE UPDATE ON user_cost_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_user_cost_settings_updated_at();
+
+-- =============================================================================
+-- Security Audit Log (V0.54.2)
+-- =============================================================================
+CREATE TABLE agent_security_audit (
+    id BIGSERIAL PRIMARY KEY,
+    session_id VARCHAR(64),
+    user_id INTEGER NOT NULL,
+    agent_type VARCHAR(20) NOT NULL,
+    operation_type VARCHAR(50) NOT NULL,
+    operation_name VARCHAR(100),
+    risk_level VARCHAR(20) NOT NULL,
+    command_input TEXT,
+    command_matched_pattern TEXT,
+    action_taken VARCHAR(50),
+    reason TEXT,
+    file_path TEXT,
+    tool_id VARCHAR(100),
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT chk_audit_risk_level CHECK (risk_level IN ('low', 'medium', 'high', 'critical'))
+);
+
+CREATE INDEX idx_audit_user_date ON agent_security_audit(user_id, occurred_at DESC);
+CREATE INDEX idx_audit_risk ON agent_security_audit(risk_level, occurred_at DESC);
+CREATE INDEX idx_audit_operation ON agent_security_audit(operation_type, occurred_at DESC);
+CREATE INDEX idx_audit_session ON agent_security_audit(session_id) WHERE session_id IS NOT NULL;
+
+-- =============================================================================
 -- 版本记录
 -- =============================================================================
 INSERT INTO system_setting (name, value, description) VALUES
-('schema_version', '0.52', '数据库 schema 版本')
-ON CONFLICT (name) DO NOTHING;
+('schema_version', '0.54.2', '数据库 schema 版本')
+ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;

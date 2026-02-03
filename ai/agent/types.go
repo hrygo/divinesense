@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 // ParrotAgent is the interface for all parrot agents.
@@ -182,6 +183,7 @@ type ScheduleSummary struct {
 // SessionStatsData 表示发送给前端并存储到数据库的最终会话统计数据。
 type SessionStatsData struct {
 	SessionID            string   `json:"session_id"`
+	ConversationID       int64    `json:"conversation_id"` // Database conversation ID
 	UserID               int32    `json:"user_id"`
 	AgentType            string   `json:"agent_type"` // "geek", "evolution", etc.
 	StartTime            int64    `json:"start_time"` // Unix timestamp
@@ -203,6 +205,63 @@ type SessionStatsData struct {
 	ModelUsed            string   `json:"model_used"`
 	IsError              bool     `json:"is_error"`
 	ErrorMessage         string   `json:"error_message,omitempty"`
+}
+
+// ToAgentSessionStats converts SessionStatsData to store.AgentSessionStats for persistence.
+func (s *SessionStatsData) ToAgentSessionStats() *AgentSessionStatsForStorage {
+	return &AgentSessionStatsForStorage{
+		SessionID:            s.SessionID,
+		ConversationID:       s.ConversationID,
+		UserID:               s.UserID,
+		AgentType:            s.AgentType,
+		StartTime:            time.Unix(s.StartTime, 0),
+		EndedAt:              time.Unix(s.EndTime, 0),
+		TotalDurationMs:      s.TotalDurationMs,
+		ThinkingDurationMs:   s.ThinkingDurationMs,
+		ToolDurationMs:       s.ToolDurationMs,
+		GenerationDurationMs: s.GenerationDurationMs,
+		InputTokens:          s.InputTokens,
+		OutputTokens:         s.OutputTokens,
+		CacheWriteTokens:     s.CacheWriteTokens,
+		CacheReadTokens:      s.CacheReadTokens,
+		TotalTokens:          s.TotalTokens,
+		TotalCostUSD:         s.TotalCostUSD,
+		ToolCallCount:        s.ToolCallCount,
+		ToolsUsed:            s.ToolsUsed,
+		FilesModified:        s.FilesModified,
+		FilePaths:            s.FilePaths,
+		ModelUsed:            s.ModelUsed,
+		IsError:              s.IsError,
+		ErrorMessage:         s.ErrorMessage,
+	}
+}
+
+// AgentSessionStatsForStorage is a storage-compatible version of SessionStatsData.
+// AgentSessionStatsForStorage 是 SessionStatsData 的存储兼容版本。
+type AgentSessionStatsForStorage struct {
+	SessionID            string
+	ConversationID       int64
+	UserID               int32
+	AgentType            string
+	StartTime            time.Time
+	EndedAt              time.Time
+	TotalDurationMs      int64
+	ThinkingDurationMs   int64
+	ToolDurationMs       int64
+	GenerationDurationMs int64
+	InputTokens          int32
+	OutputTokens         int32
+	CacheWriteTokens     int32
+	CacheReadTokens      int32
+	TotalTokens          int32
+	TotalCostUSD         float64
+	ToolCallCount        int32
+	ToolsUsed            []string
+	FilesModified        int32
+	FilePaths            []string
+	ModelUsed            string
+	IsError              bool
+	ErrorMessage         string
 }
 
 // ParrotStream is the interface for streaming responses to the client.

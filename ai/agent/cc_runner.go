@@ -1171,6 +1171,7 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 	// Build session stats data for frontend and storage
 	sessionStatsData := &SessionStatsData{
 		SessionID:            cfg.SessionID,
+		ConversationID:       cfg.ConversationID,
 		UserID:               cfg.UserID,
 		AgentType:            cfg.Mode,
 		StartTime:            stats.StartTime.Unix(),
