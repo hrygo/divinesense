@@ -272,8 +272,17 @@ export function useChat() {
         const sources: string[] = [];
         let fullContent = "";
         let doneCalled = false;
+        let responseCount = 0;
+
+        if (import.meta.env.DEV) {
+          console.log("[AI Chat] Starting stream loop", { message: params.message.slice(0, 50) });
+        }
 
         for await (const response of stream) {
+          responseCount++;
+          if (import.meta.env.DEV && responseCount % 10 === 0) {
+            console.log("[AI Chat] Stream progress", { responseCount, hasContent: !!response.content, hasEventType: !!response.eventType });
+          }
           // Handle sources (sent in first response)
           if (response.sources.length > 0) {
             sources.push(...response.sources);
@@ -447,6 +456,12 @@ export function useChat() {
 
           // Handle completion
           if (response.done === true) {
+            if (import.meta.env.DEV) {
+              console.log("[AI Chat] Received done=true signal, ending stream", {
+                hasSessionSummary: !!response.sessionSummary,
+                sessionId: response.sessionSummary?.sessionId,
+              });
+            }
             doneCalled = true;
             // Send session summary if available (Geek/Evolution modes)
             if (response.sessionSummary) {
@@ -481,7 +496,16 @@ export function useChat() {
 
         // Fallback: if stream ended without done signal, call onDone
         if (!doneCalled) {
+          if (import.meta.env.DEV) {
+            console.warn("[AI Chat] Stream ended without done=true signal", {
+              responseCount,
+              doneCalled,
+              callingFallback: true,
+            });
+          }
           callbacks?.onDone?.();
+        } else if (import.meta.env.DEV) {
+          console.log("[AI Chat] Stream completed successfully", { responseCount, doneCalled });
         }
 
         // Clear timeout on successful completion

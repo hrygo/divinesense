@@ -538,6 +538,11 @@ func (h *ParrotHandler) executeAgent(
 
 	// Safely send done marker
 	streamMu.Lock()
+	logger.Info("Agent: sending done marker with session summary",
+		slog.String("session_id", sessionSummary.SessionId),
+		slog.Int64("duration_ms", sessionSummary.TotalDurationMs),
+		slog.Int64("tool_calls", int64(sessionSummary.ToolCallCount)),
+	)
 	sendErr := stream.Send(&v1pb.ChatResponse{
 		Done:           true,
 		SessionSummary: sessionSummary,
@@ -545,6 +550,7 @@ func (h *ParrotHandler) executeAgent(
 	streamMu.Unlock()
 
 	if sendErr != nil {
+		logger.Error("Agent: failed to send done marker", sendErr)
 		// If send fails, return the error (prefer execErr if it exists)
 		if execErr != nil {
 			return execErr

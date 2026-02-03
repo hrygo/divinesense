@@ -35,10 +35,11 @@ import (
 // - Pre-v0.22 installations: Must upgrade to v0.25.x first (migration_history → system_setting migration)
 //
 // Migration Files:
-// - Location: store/migration/{driver}/{version}/NN__description.sql
-// - Naming: NN is zero-padded patch number, description is human-readable
-// - Ordering: Files sorted lexicographically and applied in order
-// - LATEST.sql: Full schema for new installations (faster than incremental migrations)
+// - Location: store/migration/{driver}/migrate/{timestamp}_{description}.{up|down}.sql
+// - Schema: store/migration/{driver}/schema/LATEST.sql (full schema for new installations)
+// - Naming: {YYYY}{MM}{DD}{HH}{MM}{SS}_{snake_case_description}.{up|down}.sql
+// - Ordering: Files sorted by timestamp, applied sequentially
+// - Up/Down: Separate files for apply and rollback
 
 //go:embed migration
 var migrationFS embed.FS
@@ -47,12 +48,16 @@ var migrationFS embed.FS
 var seedFS embed.FS
 
 const (
-	// MigrateFileNameSplit is the split character between the patch version and the description in the migration file name.
-	// For example, "1__create_table.sql".
-	MigrateFileNameSplit = "__"
+	// MigrateFilePrefix is the prefix for migration files.
+	// Migration files use timestamp format: YYYYMMDDHHMMSS_description.sql
+	MigrateFilePrefix = ""
 	// LatestSchemaFileName is the name of the latest schema file.
 	// This file is used to initialize fresh installations with the current schema.
 	LatestSchemaFileName = "LATEST.sql"
+	// MigrateDirName is the subdirectory containing migration files.
+	MigrateDirName = "migrate"
+	// SchemaDirName is the subdirectory containing the base schema file.
+	SchemaDirName = "schema"
 
 	// defaultSchemaVersion is used when schema version is empty or not set.
 	// This handles edge cases for old installations without version tracking.
@@ -86,18 +91,30 @@ func shouldApplyMigration(fileVersion, currentDBVersion, targetVersion string) b
 }
 
 // validateMigrationFileName checks if a migration file follows the expected naming convention.
-// Expected format: "NN__description.sql" where NN is a zero-padded number.
+// Expected format: "YYYYMMDDHHMMSS_description.{up|down}.sql"
+// Only .up.sql files should be applied; .down.sql files are for rollback.
 func validateMigrationFileName(filename string) error {
-	if !strings.Contains(filename, MigrateFileNameSplit) {
-		return errors.Errorf("invalid migration filename format (missing %s): %s", MigrateFileNameSplit, filename)
+	// Skip down migration files
+	if strings.HasSuffix(filename, ".down.sql") {
+		return errors.Errorf("down migration files should not be applied: %s", filename)
 	}
-	parts := strings.Split(filename, MigrateFileNameSplit)
+	// Check for .up.sql extension
+	if !strings.HasSuffix(filename, ".up.sql") {
+		return errors.Errorf("migration file must have .up.sql extension: %s", filename)
+	}
+	// Extract the part before the first underscore
+	baseName := strings.TrimSuffix(filename, ".up.sql")
+	parts := strings.SplitN(baseName, "_", 2)
 	if len(parts) < 2 {
-		return errors.Errorf("invalid migration filename format: %s", filename)
+		return errors.Errorf("migration filename must be in format YYYYMMDDHHMMSS_description.up.sql: %s", filename)
 	}
-	// Check if first part is a number
-	if _, err := strconv.Atoi(parts[0]); err != nil {
-		return errors.Errorf("migration filename must start with a number: %s", filename)
+	// Check if first part is a 14-digit timestamp
+	timestamp := parts[0]
+	if len(timestamp) != 14 {
+		return errors.Errorf("migration timestamp must be 14 digits (YYYYMMDDHHMMSS): %s", filename)
+	}
+	if _, err := strconv.Atoi(timestamp); err != nil {
+		return errors.Errorf("migration timestamp must be numeric: %s", filename)
 	}
 	return nil
 }
@@ -227,7 +244,7 @@ func (s *Store) preMigrate(ctx context.Context) error {
 	}
 
 	if !initialized {
-		filePath := s.getMigrationBasePath() + LatestSchemaFileName
+		filePath := s.getSchemaBasePath() + LatestSchemaFileName
 		bytes, err := migrationFS.ReadFile(filePath)
 		if err != nil {
 			return errors.Errorf("failed to read latest schema file: %s", err)
@@ -268,7 +285,11 @@ func (s *Store) preMigrate(ctx context.Context) error {
 }
 
 func (s *Store) getMigrationBasePath() string {
-	return fmt.Sprintf("migration/%s/", s.profile.Driver)
+	return fmt.Sprintf("migration/%s/%s/", s.profile.Driver, MigrateDirName)
+}
+
+func (s *Store) getSchemaBasePath() string {
+	return fmt.Sprintf("migration/%s/%s/", s.profile.Driver, SchemaDirName)
 }
 
 func (s *Store) getSeedBasePath() string {
@@ -315,40 +336,53 @@ func (s *Store) seed(ctx context.Context) error {
 
 func (s *Store) GetCurrentSchemaVersion() (string, error) {
 	currentVersion := version.GetCurrentVersion(s.profile.Mode)
-	minorVersion := version.GetMinorVersion(currentVersion)
-	filePaths, err := fs.Glob(migrationFS, fmt.Sprintf("%s%s/*.sql", s.getMigrationBasePath(), minorVersion))
+	// Get all migration files and find the latest one by timestamp
+	basePath := s.getMigrationBasePath()
+	filePaths, err := fs.Glob(migrationFS, fmt.Sprintf("%s*.up.sql", basePath))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read migration files")
 	}
 
 	sort.Strings(filePaths)
 	if len(filePaths) == 0 {
-		return fmt.Sprintf("%s.0", minorVersion), nil
+		return currentVersion, nil
 	}
-	return s.getSchemaVersionOfMigrateScript(filePaths[len(filePaths)-1])
+	// Extract timestamp from the latest migration file
+	latestFile := filepath.Base(filePaths[len(filePaths)-1])
+	parts := strings.SplitN(strings.TrimSuffix(latestFile, ".up.sql"), "_", 2)
+	if len(parts) < 1 {
+		return currentVersion, nil
+	}
+	timestamp := parts[0]
+	// Return the timestamp as the version (for comparison purposes)
+	return timestamp, nil
 }
 
-// getSchemaVersionOfMigrateScript extracts the schema version from the migration script file path.
-// It returns the schema version in the format "major.minor.patch".
-// If the file is the latest schema file, it returns the current schema version.
+// getSchemaVersionOfMigrateScript extracts the schema version (timestamp) from the migration script file path.
+// For new format: returns the 14-digit timestamp (YYYYMMDDHHMMSS).
+// For the latest schema file: returns the current schema version.
 func (s *Store) getSchemaVersionOfMigrateScript(filePath string) (string, error) {
 	// If the file is the latest schema file, return the current schema version.
 	if strings.HasSuffix(filePath, LatestSchemaFileName) {
 		return s.GetCurrentSchemaVersion()
 	}
 
-	normalizedPath := filepath.ToSlash(filePath)
-	elements := strings.Split(normalizedPath, "/")
-	if len(elements) < 2 {
-		return "", errors.Errorf("invalid file path: %s", filePath)
+	// Extract timestamp from filename: YYYYMMDDHHMMSS_description.up.sql
+	filename := filepath.Base(filePath)
+	// Remove .up.sql extension
+	baseName := strings.TrimSuffix(filename, ".up.sql")
+	baseName = strings.TrimSuffix(baseName, ".down.sql")
+	// Split on first underscore to get timestamp
+	parts := strings.SplitN(baseName, "_", 2)
+	if len(parts) < 1 {
+		return "", errors.Errorf("invalid migration filename: %s", filename)
 	}
-	minorVersion := elements[len(elements)-2]
-	rawPatchVersion := strings.Split(elements[len(elements)-1], MigrateFileNameSplit)[0]
-	patchVersion, err := strconv.Atoi(rawPatchVersion)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to convert patch version to int: %s", rawPatchVersion)
+	timestamp := parts[0]
+	// Validate timestamp is 14 digits
+	if len(timestamp) != 14 {
+		return "", errors.Errorf("migration timestamp must be 14 digits: %s", filename)
 	}
-	return fmt.Sprintf("%s.%d", minorVersion, patchVersion+1), nil
+	return timestamp, nil
 }
 
 // execute executes a SQL statement within a transaction context.
