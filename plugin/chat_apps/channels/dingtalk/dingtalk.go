@@ -2,15 +2,19 @@
 package dingtalk
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hrygo/divinesense/plugin/chat_apps"
@@ -32,12 +36,19 @@ type DingTalkConfig struct {
 type DingTalkChannel struct {
 	config     *DingTalkConfig
 	webhookURL string
+	client      *http.Client
+	accessToken string
+	tokenMu     sync.RWMutex
+	tokenExpiry time.Time
 }
 
 // NewDingTalkChannel creates a new DingTalk channel.
 func NewDingTalkChannel(config *DingTalkConfig) (*DingTalkChannel, error) {
 	return &DingTalkChannel{
 		config: config,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}, nil
 }
 
@@ -82,7 +93,7 @@ func (d *DingTalkChannel) ValidateWebhook(ctx context.Context, headers map[strin
 	// Constant-time comparison to prevent timing attacks
 	if !hmac.Equal([]byte(sign), []byte(expectedSign)) {
 		slog.Warn("dingtalk: signature mismatch",
-			"expected", expectedSign[:8]+"...",  // Log only prefix for security
+			"expected", expectedSign[:8]+"...", // Log only prefix for security
 			"received", sign[:8]+"...",
 		)
 		return channels.ErrInvalidSignature
@@ -193,16 +204,46 @@ func (d *DingTalkChannel) SendChunkedMessage(ctx context.Context, chatID string,
 
 // DownloadMedia downloads media from DingTalk using the downloadCode.
 func (d *DingTalkChannel) DownloadMedia(ctx context.Context, downloadCode string) ([]byte, string, error) {
-	// DingTalk uses downloadCode for temporary file download
-	// We need to call the media download API
+	// Get access token for API call
+	token, err := d.GetAccessToken(ctx)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+	}
 
-	// url := fmt.Sprintf("%s/media/download?downloadCode=%s",
-	// 	DingTalkAPIBaseURL, downloadCode)
+	// DingTalk media download API
+	apiURL := fmt.Sprintf("%s/media/download?downloadCode=%s&accessToken=%s",
+		DingTalkAPIBaseURL,
+		url.QueryEscape(downloadCode),
+		url.QueryEscape(token),
+	)
 
-	// Make HTTP request with authentication
-	// Implementation omitted for brevity
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create request: %w", err)
+	}
 
-	return nil, "", fmt.Errorf("not implemented")
+	resp, err := d.client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("%w: status %d", channels.ErrMediaDownloadFailed, resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Detect MIME type from response
+	mimeType := resp.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+
+	return data, mimeType, nil
 }
 
 // Close closes the DingTalk channel.
@@ -213,10 +254,18 @@ func (d *DingTalkChannel) Close() error {
 // Helper methods
 
 func (d *DingTalkChannel) sendText(ctx context.Context, msg *chat_apps.OutgoingMessage) error {
-	// Use outgoing webhook or conversation API
-	// Implementation depends on DingTalk robot type
+	// For webhook-based robots, use the webhook URL
+	// The PlatformChatID for DingTalk is the webhook URL
 
-	// For webhook-based robots:
+	webhookURL := msg.PlatformChatID
+	if webhookURL == "" {
+		webhookURL = d.webhookURL
+	}
+
+	if webhookURL == "" {
+		return fmt.Errorf("no webhook URL configured")
+	}
+
 	payload := map[string]interface{}{
 		"msgtype": "text",
 		"text": map[string]string{
@@ -224,19 +273,61 @@ func (d *DingTalkChannel) sendText(ctx context.Context, msg *chat_apps.OutgoingM
 		},
 	}
 
-	return d.sendWebhook(ctx, msg.PlatformChatID, payload)
+	return d.sendWebhook(ctx, webhookURL, payload)
 }
 
 func (d *DingTalkChannel) sendMedia(ctx context.Context, msg *chat_apps.OutgoingMessage) error {
-	// DingTalk media messages require special handling
-	// Implementation depends on media type
+	// DingTalk media messages require uploading media first
+	// then sending with the media ID
 
-	return fmt.Errorf("media sending not yet implemented")
+	webhookURL := msg.PlatformChatID
+	if webhookURL == "" {
+		webhookURL = d.webhookURL
+	}
+
+	if webhookURL == "" {
+		return fmt.Errorf("no webhook URL configured")
+	}
+
+	// TODO: Implement media upload to DingTalk
+	// For now, send as text with a note
+	payload := map[string]interface{}{
+		"msgtype": "text",
+		"text": map[string]string{
+			"content": fmt.Sprintf("[Media: %s] %s", msg.Type, msg.Content),
+		},
+	}
+
+	return d.sendWebhook(ctx, webhookURL, payload)
 }
 
-func (d *DingTalkChannel) sendWebhook(ctx context.Context, url string, payload interface{}) error {
-	// Send to DingTalk webhook
-	// Implementation omitted
+func (d *DingTalkChannel) sendWebhook(ctx context.Context, webhookURL string, payload interface{}) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := d.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send webhook: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		slog.Error("dingtalk: webhook returned non-200 status",
+			"status", resp.StatusCode,
+			"response", string(respBody),
+		)
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
 
 	return nil
 }
@@ -252,10 +343,71 @@ func (d *DingTalkChannel) computeSignature(timestamp, body string) string {
 }
 
 // GetAccessToken retrieves an access token from DingTalk.
+// The token is cached until expiry (default 2 hours).
 func (d *DingTalkChannel) GetAccessToken(ctx context.Context) (string, error) {
-	// Implementation: call gettoken API
-	// GET https://oapi.dingtalk.com/gettoken?appkey=xxx&appsecret=xxx
-	return "", fmt.Errorf("not implemented")
+	// Check if we have a valid cached token
+	d.tokenMu.RLock()
+	if d.accessToken != "" && time.Now().Before(d.tokenExpiry) {
+		token := d.accessToken
+		d.tokenMu.RUnlock()
+		return token, nil
+	}
+	d.tokenMu.RUnlock()
+
+	// Need to fetch a new token
+	d.tokenMu.Lock()
+	defer d.tokenMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if d.accessToken != "" && time.Now().Before(d.tokenExpiry) {
+		return d.accessToken, nil
+	}
+
+	// Build request URL
+	apiURL := fmt.Sprintf("%s/gettoken?appkey=%s&appsecret=%s",
+		DingTalkAPIBaseURL,
+		url.QueryEscape(d.config.AppKey),
+		url.QueryEscape(d.config.AppSecret),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := d.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to get access token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("gettoken returned status %d", resp.StatusCode)
+	}
+
+	var result struct {
+		ErrCode int32  `json:"errcode"`
+		ErrMsg  string `json:"errmsg"`
+		Token   string `json:"access_token"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if result.ErrCode != 0 {
+		return "", fmt.Errorf("DingTalk API error %d: %s", result.ErrCode, result.ErrMsg)
+	}
+
+	// Cache the token (expire 5 minutes early to be safe)
+	d.accessToken = result.Token
+	d.tokenExpiry = time.Now().Add(2 * time.Hour).Add(-5 * time.Minute)
+
+	slog.Debug("dingtalk: obtained new access token",
+		"expires_at", d.tokenExpiry,
+	)
+
+	return result.Token, nil
 }
 
 // DingTalkMessage represents a message from DingTalk.
