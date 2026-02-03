@@ -1061,6 +1061,7 @@ func (r *CCRunner) streamOutput(
 			line := scanner.Text()
 			stderrBuf.addLine(line)
 
+			//nolint:gosec // Sampling for logging, not security-critical
 			if rand.Intn(100) < sampleRate {
 				r.logger.Warn("CCRunner: stderr sample",
 					"user_id", cfg.UserID,
