@@ -599,7 +599,15 @@ const MessageBubble = memo(function MessageBubble({
 
                 {/* Message timestamp - subtle display below content */}
                 {/* 消息时间戳 - 在内容下方微妙显示 */}
-                <div className={cn("mt-1 text-[10px] text-muted-foreground/50", role === "user" ? "text-right" : "text-left")}>
+                <div
+                  className={cn(
+                    "mt-1 text-[10px",
+                    // User messages: high contrast for visibility on dark bubble
+                    // 用户消息：深色气泡上使用高对比度
+                    role === "user" ? "text-white/70 dark:text-slate-900/60" : "text-muted-foreground/50",
+                    role === "user" ? "text-right" : "text-left",
+                  )}
+                >
                   {formatMessageTime(message.timestamp, t)}
                 </div>
               </div>
