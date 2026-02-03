@@ -327,7 +327,7 @@ func (dd *DangerDetector) LoadCustomPatterns(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open custom patterns file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }() //nolint:errcheck // file cleanup
 
 	dd.mu.Lock()
 	defer dd.mu.Unlock()

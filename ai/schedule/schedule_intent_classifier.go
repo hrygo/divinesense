@@ -67,7 +67,7 @@ var (
 	// Update patterns: modification verbs + target.
 	updatePatterns = []*regexp.Regexp{
 		regexp.MustCompile(`(改|换|调|推迟|提前|取消|删除|延后|调整).*(会议|日程|安排|时间)`),
-		regexp.MustCompile(`把.*(改|换|调|移)到`),
+		regexp.MustCompile(`把.*([改换调移])到`),
 		regexp.MustCompile(`(取消|删除|移除).*(这个|那个|上午|下午)?(会议|日程|安排)?`),
 		regexp.MustCompile(`(会议|日程|安排).*(改|换|调|推迟|提前|取消|删除|延后)`),
 		regexp.MustCompile(`(会议|日程).*(延后|推迟|提前)`),
@@ -75,12 +75,12 @@ var (
 
 	// Batch patterns: repetition keywords.
 	batchPatterns = []*regexp.Regexp{
-		regexp.MustCompile(`每(天|日|周|月|年)`),
+		regexp.MustCompile(`每([天日周月年])`),
 		regexp.MustCompile(`工作日`),
 		regexp.MustCompile(`周[一二三四五六日](到|至)周[一二三四五六日]`),
 		regexp.MustCompile(`(连续|接下来).*\d+.*天`),
-		regexp.MustCompile(`(这|下|本)周(所有|每天|每日)`),
-		regexp.MustCompile(`(从|自).*(到|至).*每`),
+		regexp.MustCompile(`([这下本])周(所有|每天|每日)`),
+		regexp.MustCompile(`[从自].*[到至].*每`),
 	}
 
 	// Pre-compiled patterns for hasTimeAndAction.

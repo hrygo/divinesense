@@ -220,7 +220,7 @@ func (w *Worker) ProcessReminder(ctx context.Context, reminder *Reminder) error 
 
 	// All retries failed
 	if lastErr != nil {
-		_ = w.store.MarkFailed(ctx, reminder.ID, lastErr.Error())
+		_ = w.store.MarkFailed(ctx, reminder.ID, lastErr.Error()) //nolint:errcheck // best-effort marking
 	}
 
 	return lastErr

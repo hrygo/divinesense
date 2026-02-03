@@ -191,7 +191,7 @@ func (a *Aggregator) GetCurrentStats() *AgentMetrics {
 	agentAggs := make(map[string]*agentAgg)
 
 	// Aggregate all agent metrics
-	allLatencies := make([]int64, 0)
+	allLatencies := make([]int64, 0, len(a.agentMetrics)*10) // Estimate capacity
 	for _, bucket := range a.agentMetrics {
 		stats.RequestCount += bucket.requestCount
 		stats.SuccessCount += bucket.successCount

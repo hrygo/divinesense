@@ -156,7 +156,10 @@ func (c *LRUCache) evictOldest() {
 		return
 	}
 
-	e := oldest.Value.(*entry)
+	e, ok := oldest.Value.(*entry)
+	if !ok {
+		return
+	}
 	c.removeEntry(e)
 }
 

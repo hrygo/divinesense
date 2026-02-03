@@ -144,7 +144,7 @@ func (s *sessionStore) ListSessions(ctx context.Context, userID int32, limit int
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }() //nolint:errcheck // rows cleanup
 
 	var summaries []SessionSummary
 	for rows.Next() {

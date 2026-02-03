@@ -226,14 +226,14 @@ func (t *UserPreferenceTool) analyzeSchedules(schedules []*schedule.ScheduleInst
 		hour int
 		freq int
 	}
-	var hourFreqs []hourFreq
+	hourFreqs := make([]hourFreq, 0, len(hourCounts))
 	for h, f := range hourCounts {
 		hourFreqs = append(hourFreqs, hourFreq{h, f})
 	}
 	sort.Slice(hourFreqs, func(i, j int) bool {
 		return hourFreqs[i].freq > hourFreqs[j].freq
 	})
-	for i := 0; i < min(5, len(hourFreqs)); i++ {
+	for i := 0; i < minInt(5, len(hourFreqs)); i++ {
 		output.PreferredTimeSlots = append(output.PreferredTimeSlots, PreferredTimeSlot{
 			Hour:      hourFreqs[i].hour,
 			Frequency: hourFreqs[i].freq,
@@ -245,14 +245,14 @@ func (t *UserPreferenceTool) analyzeSchedules(schedules []*schedule.ScheduleInst
 		loc  string
 		freq int
 	}
-	var locFreqs []locFreq
+	locFreqs := make([]locFreq, 0, len(locationCounts))
 	for l, f := range locationCounts {
 		locFreqs = append(locFreqs, locFreq{l, f})
 	}
 	sort.Slice(locFreqs, func(i, j int) bool {
 		return locFreqs[i].freq > locFreqs[j].freq
 	})
-	for i := 0; i < min(5, len(locFreqs)); i++ {
+	for i := 0; i < minInt(5, len(locFreqs)); i++ {
 		output.FrequentLocations = append(output.FrequentLocations, locFreqs[i].loc)
 	}
 
@@ -368,7 +368,7 @@ func mode(nums []int) int {
 	return modeVal
 }
 
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

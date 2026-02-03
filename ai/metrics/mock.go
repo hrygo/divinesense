@@ -84,7 +84,7 @@ func (m *MockMetricsService) GetStats(ctx context.Context, timeRange TimeRange) 
 	// Calculate metrics
 	metrics.RequestCount = int64(len(filteredRequests))
 
-	var latencies []time.Duration
+	latencies := make([]time.Duration, 0, len(filteredRequests))
 	agentData := make(map[string]*struct {
 		count        int64
 		successCount int64

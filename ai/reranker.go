@@ -94,10 +94,10 @@ func (s *rerankerService) Rerank(ctx context.Context, query string, documents []
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // response body cleanup
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // error body for debugging
 		return nil, fmt.Errorf("rerank API error: %s", string(body))
 	}
 

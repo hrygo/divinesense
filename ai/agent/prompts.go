@@ -288,23 +288,25 @@ func initFromEnv() {
 		// Memo agent version
 		if v := os.Getenv(EnvMemoVersion); v != "" {
 			if version := PromptVersion(v); isValidPromptVersion(version) {
-				PromptRegistry.Memo.System.SetVersion(version)
+				_ = PromptRegistry.Memo.System.SetVersion(version) //nolint:errcheck // version set during init
 			}
 		}
 
 		// Schedule agent version
 		if v := os.Getenv(EnvScheduleVersion); v != "" {
 			if version := PromptVersion(v); isValidPromptVersion(version) {
-				PromptRegistry.Schedule.System.SetVersion(version)
+				_ = PromptRegistry.Schedule.System.SetVersion(version) //nolint:errcheck // version set during init
 			}
 		}
 
 		// Amazing agent version
 		if v := os.Getenv(EnvAmazingVersion); v != "" {
 			if version := PromptVersion(v); isValidPromptVersion(version) {
-				PromptRegistry.Amazing.System.SetVersion(version)
-				PromptRegistry.Amazing.Planning.SetVersion(version)
-				PromptRegistry.Amazing.Synthesis.SetVersion(version)
+				_ = PromptRegistry.Amazing.System.SetVersion(version) //nolint:errcheck // version set during init
+				//nolint:errcheck // version set during init
+				_ = PromptRegistry.Amazing.Planning.SetVersion(version)
+				//nolint:errcheck // version set during init
+				_ = PromptRegistry.Amazing.Synthesis.SetVersion(version)
 			}
 		}
 	})
@@ -369,7 +371,7 @@ func SetPromptVersion(agentType string, version PromptVersion) error {
 		if err := PromptRegistry.Amazing.System.SetVersion(version); err != nil {
 			return err
 		}
-		PromptRegistry.Amazing.Planning.SetVersion(version)
+		_ = PromptRegistry.Amazing.Planning.SetVersion(version) //nolint:errcheck //nolint:errcheck
 		return PromptRegistry.Amazing.Synthesis.SetVersion(version)
 	default:
 		return fmt.Errorf("unknown agent type: %s", agentType)

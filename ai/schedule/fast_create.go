@@ -70,7 +70,7 @@ func (p *FastCreateParser) Parse(ctx context.Context, userID int32, input string
 	if err != nil || parsedTime.IsZero() {
 		result.CanFastCreate = false
 		result.MissingFields = append(result.MissingFields, "time")
-		return result, nil
+		return result, nil //nolint:nilerr // Return partial result on extraction failure
 	}
 	result.Schedule.StartTime = parsedTime
 

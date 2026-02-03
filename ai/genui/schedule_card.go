@@ -34,6 +34,7 @@ func NewScheduleCard(schedule *ScheduleData, status string) *UIComponent {
 
 	actions := []UIAction{}
 
+	//nolint:staticcheck // single enum check is clearer as if
 	if status == CardStatusPreview {
 		actions = append(actions,
 			UIAction{

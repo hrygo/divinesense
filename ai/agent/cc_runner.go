@@ -387,7 +387,7 @@ type CCRunnerConfig struct {
 func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
 	cliPath, err := exec.LookPath("claude")
 	if err != nil {
-		return nil, fmt.Errorf("Claude Code CLI not found: %w", err)
+		return nil, fmt.Errorf("claude Code CLI not found: %w", err)
 	}
 
 	if logger == nil {
@@ -420,7 +420,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 			)
 			// Send danger block event to client
 			if callback != nil {
-				_ = callback(EventTypeDangerBlock, dangerEvent)
+				_ = callback(EventTypeDangerBlock, dangerEvent) //nolint:errcheck // critical notification
 			}
 			return fmt.Errorf("dangerous operation blocked: %s", dangerEvent.Reason)
 		}
@@ -689,13 +689,13 @@ func (r *CCRunner) executeWithSession(
 	if err != nil {
 		return fmt.Errorf("stdout pipe: %w", err)
 	}
-	defer stdout.Close()
+	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on error path
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("stderr pipe: %w", err)
 	}
-	defer stderr.Close()
+	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on error path
 
 	// Start command
 	// 启动命令
@@ -707,7 +707,7 @@ func (r *CCRunner) executeWithSession(
 	// 带超时流式输出
 	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats); err != nil {
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			_ = cmd.Process.Kill() //nolint:errcheck // process already terminating
 		}
 		return err
 	}
@@ -803,7 +803,7 @@ func (r *CCRunner) streamOutput(
 						"mode", cfg.Mode,
 						"line", line)
 					if callback != nil {
-						callback(EventTypeAnswer, line)
+						_ = callback(EventTypeAnswer, line) //nolint:errcheck // streaming output
 					}
 					continue
 				}
@@ -1084,7 +1084,7 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 		// Try to extract any text content
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
-				callback(EventTypeAnswer, &EventWithMeta{EventType: EventTypeAnswer, EventData: block.Text, Meta: &EventMeta{TotalDurationMs: totalDuration}})
+				_ = callback(EventTypeAnswer, &EventWithMeta{EventType: EventTypeAnswer, EventData: block.Text, Meta: &EventMeta{TotalDurationMs: totalDuration}}) //nolint:errcheck // streaming output
 			}
 		}
 	}

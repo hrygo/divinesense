@@ -232,7 +232,7 @@ func (s *llmService) ChatStream(ctx context.Context, messages []Message) (<-chan
 			}
 			return
 		}
-		defer stream.Close()
+		defer func() { _ = stream.Close() }() //nolint:errcheck // stream cleanup on error
 
 		chunkCount := 0
 		for {

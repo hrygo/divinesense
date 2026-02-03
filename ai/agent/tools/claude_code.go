@@ -129,7 +129,7 @@ func (t *ClaudeCodeTool) Run(ctx context.Context, input string) (string, error) 
 
 	// Check if enabled
 	if !t.enabled {
-		return "", errors.New("Geek Mode is disabled. Enable Geek Mode to use Claude Code CLI")
+		return "", errors.New("geek mode is disabled. Enable Geek Mode to use Claude Code CLI")
 	}
 
 	// Parse input

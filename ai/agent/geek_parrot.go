@@ -109,7 +109,7 @@ func (p *GeekParrot) ExecuteWithCallback(
 // sendError 通过回调发送错误事件。
 func (p *GeekParrot) sendError(callback EventCallback, message string) {
 	if callback != nil {
-		callback(EventTypeError, message)
+		_ = callback(EventTypeError, message) //nolint:errcheck // error notification
 	}
 }
 

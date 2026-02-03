@@ -130,7 +130,7 @@ func (l *StatisticsLayer) cacheTagStats(ctx context.Context, userID int32, stats
 
 	cacheKey := fmt.Sprintf("tags:stats:%d", userID)
 	if data, err := encodeJSON(stats); err == nil {
-		l.cache.Set(ctx, cacheKey, data, 30*time.Minute)
+		_ = l.cache.Set(ctx, cacheKey, data, 30*time.Minute) //nolint:errcheck // cache failure is non-critical
 	}
 }
 

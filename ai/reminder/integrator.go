@@ -43,7 +43,7 @@ func (i *Integrator) OnScheduleCreated(ctx context.Context, userID int32, schedu
 	reminder, err := i.service.CreateForSchedule(ctx, userID, schedule, leadMinutes)
 	if err != nil {
 		// If reminder creation fails (e.g., trigger in past), don't block schedule creation
-		return nil, nil
+		return nil, nil //nolint:nilerr // Intentional - non-blocking reminder
 	}
 
 	return reminder, nil
@@ -83,7 +83,7 @@ func (i *Integrator) OnTodoCreated(ctx context.Context, userID int32, todo *Todo
 
 	reminder, err := i.service.CreateCustom(ctx, req)
 	if err != nil {
-		return nil, nil // Don't block todo creation
+		return nil, nil //nolint:nilerr // Don't block todo creation
 	}
 
 	return reminder, nil
@@ -238,13 +238,13 @@ func (i *Integrator) SyncScheduleReminders(ctx context.Context, userID int32, sc
 	// Cancel reminders for deleted schedules
 	for _, r := range existing {
 		if r.Type == ReminderTypeSchedule && !scheduleIDs[r.TargetID] {
-			_ = i.service.Cancel(ctx, r.ID)
+			_ = i.service.Cancel(ctx, r.ID) //nolint:errcheck // cleanup on sync
 		}
 	}
 
 	// Create/update reminders for current schedules
 	for _, schedule := range schedules {
-		_, _ = i.OnScheduleUpdated(ctx, userID, schedule)
+		_, _ = i.OnScheduleUpdated(ctx, userID, schedule) //nolint:errcheck // sync operation, non-critical
 	}
 
 	return nil

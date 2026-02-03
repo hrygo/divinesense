@@ -96,7 +96,7 @@ func (sm *CCSessionManager) GetOrCreateSession(ctx context.Context, sessionID st
 			return sess, nil
 		}
 		// If dead, cleanup and recreate
-		sm.cleanupSessionLocked(sessionID)
+		_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on dead session
 	}
 
 	// Create new session
@@ -128,7 +128,7 @@ func (sm *CCSessionManager) TerminateSession(sessionID string) error {
 func (sm *CCSessionManager) ListActiveSessions() []*Session {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	var list []*Session
+	list := make([]*Session, 0, len(sm.sessions))
 	for _, s := range sm.sessions {
 		list = append(list, s)
 	}
@@ -160,7 +160,7 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 	// Force kill if needed
 	if sess.Cmd != nil && sess.Cmd.Process != nil {
 		// Use specific signal or Kill
-		_ = sess.Cmd.Process.Kill()
+		_ = sess.Cmd.Process.Kill() //nolint:errcheck // force terminate
 	}
 
 	return nil
@@ -176,7 +176,7 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 
 	cliPath, err := exec.LookPath("claude")
 	if err != nil {
-		return nil, fmt.Errorf("Claude Code CLI not found: %w", err)
+		return nil, fmt.Errorf("claude Code CLI not found: %w", err)
 	}
 
 	// Prepare context with cancellation.
@@ -275,18 +275,20 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 
 	stdout, err = cmd.StdoutPipe()
 	if err != nil {
-		stdin.Close()
+		_ = stdin.Close() //nolint:errcheck // cleanup on error path
 		cancel()
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
+	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
-		stdout.Close()
-		stdin.Close()
+		_ = stdout.Close() //nolint:errcheck // cleanup on error path
+		_ = stdin.Close()  //nolint:errcheck // cleanup on error path
 		cancel()
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
+	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	if err := cmd.Start(); err != nil {
 		startedCh <- err // Signal startup failed
@@ -489,7 +491,7 @@ func (sm *CCSessionManager) cleanupIdleSessions() {
 				"session_id", sessionID,
 				"idle_duration", idleTime,
 				"timeout", sm.timeout)
-			_ = sm.cleanupSessionLocked(sessionID)
+			_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on idle timeout
 		}
 	}
 }
@@ -504,6 +506,6 @@ func (sm *CCSessionManager) Shutdown() {
 
 	// Terminate all sessions
 	for sessionID := range sm.sessions {
-		_ = sm.cleanupSessionLocked(sessionID)
+		_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on shutdown
 	}
 }

@@ -178,7 +178,9 @@ func (a *SchedulerAgentV2) ExecuteWithCallback(ctx context.Context, userInput st
 	promptVersion := GetPromptVersionForUser("schedule", a.userID)
 
 	// Intent classification (if classifier is configured)
-	var intent TaskIntent = IntentSimpleCreate // default
+	//nolint:staticcheck // explicit type for clarity
+	var intent TaskIntent
+	intent = IntentSimpleCreate // default
 	if a.intentClassifier != nil {
 		classifiedIntent, err := a.intentClassifier.Classify(ctx, userInput)
 		if err != nil {

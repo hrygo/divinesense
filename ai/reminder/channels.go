@@ -278,10 +278,13 @@ func (s *WebhookSender) Send(ctx context.Context, userID int32, message string, 
 		s.logger.Error("webhook request failed", "url", s.config.URL, "error", err)
 		return fmt.Errorf("webhook request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // response body cleanup
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			respBody = []byte(fmt.Sprintf("failed to read response body: %v", err))
+		}
 		s.logger.Error("webhook returned error",
 			"url", s.config.URL,
 			"status", resp.StatusCode,

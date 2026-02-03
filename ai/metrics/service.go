@@ -118,8 +118,8 @@ func (s *Service) GetStats(ctx context.Context, timeRange TimeRange) (*AgentMetr
 		memRequests := stats.RequestCount - totalDBRequests
 		if memRequests > 0 && stats.LatencyP50 > 0 {
 			// Weighted average of memory and DB P50/P95
-			memP50Weighted := int64(stats.LatencyP50.Milliseconds()) * memRequests
-			memP95Weighted := int64(stats.LatencyP95.Milliseconds()) * memRequests
+			memP50Weighted := stats.LatencyP50.Milliseconds() * memRequests
+			memP95Weighted := stats.LatencyP95.Milliseconds() * memRequests
 			stats.LatencyP50 = time.Duration((memP50Weighted+totalP50Weighted)/stats.RequestCount) * time.Millisecond
 			stats.LatencyP95 = time.Duration((memP95Weighted+totalP95Weighted)/stats.RequestCount) * time.Millisecond
 		} else {

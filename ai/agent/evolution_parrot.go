@@ -137,7 +137,7 @@ func (p *EvolutionParrot) ExecuteWithCallback(
 // sendError 通过回调发送错误事件。
 func (p *EvolutionParrot) sendError(callback EventCallback, message string) {
 	if callback != nil {
-		callback(EventTypeError, message)
+		_ = callback(EventTypeError, message) //nolint:errcheck // error notification
 	}
 }
 

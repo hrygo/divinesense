@@ -34,7 +34,7 @@ func NewParser(llmService ai.LLMService, timezone string) (*Parser, error) {
 			"requested_timezone", timezone,
 			"error", err)
 		timezone = "Asia/Shanghai"
-		loc, _ = time.LoadLocation("Asia/Shanghai")
+		loc, _ = time.LoadLocation("Asia/Shanghai") //nolint:errcheck // valid timezone
 	}
 
 	validator := NewTimezoneValidator(timezone)

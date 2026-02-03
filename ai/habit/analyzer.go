@@ -230,7 +230,7 @@ func topNHours(hourCounts map[int]int, n int) []int {
 		count int
 	}
 
-	var hcs []hourCount
+	hcs := make([]hourCount, 0, len(hourCounts))
 	for hour, count := range hourCounts {
 		hcs = append(hcs, hourCount{hour, count})
 	}
@@ -253,7 +253,7 @@ func topNStrings(counts map[string]int, n int) []string {
 		count int
 	}
 
-	var scs []strCount
+	scs := make([]strCount, 0, len(counts))
 	for s, count := range counts {
 		scs = append(scs, strCount{s, count})
 	}

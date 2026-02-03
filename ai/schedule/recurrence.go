@@ -86,7 +86,7 @@ func ParseRecurrenceRule(text string) (*RecurrenceRule, error) {
 	text = strings.TrimSpace(text)
 
 	// Daily patterns
-	if matched, _ := regexp.MatchString(`^(每|每天)(\d+)?天?$`, text); matched {
+	if matched, _ := regexp.MatchString(`^(每|每天)(\d+)?天?$`, text); matched { //nolint:errcheck // regex is valid
 		rule := &RecurrenceRule{Type: RecurrenceTypeDaily, Interval: 1}
 		if parts := regexp.MustCompile(`(\d+)`).FindStringSubmatch(text); len(parts) > 1 {
 			if interval := parseInt(parts[1]); interval > 0 {
@@ -100,7 +100,7 @@ func ParseRecurrenceRule(text string) (*RecurrenceRule, error) {
 	}
 
 	// Weekly patterns
-	if matched, _ := regexp.MatchString(`^每(\d+)?(周|星期)(一|二|三|四|五|六|日|天)?$`, text); matched {
+	if matched, _ := regexp.MatchString(`^每(\d+)?(周|星期)(一|二|三|四|五|六|日|天)?$`, text); matched { //nolint:errcheck // regex is valid
 		rule := &RecurrenceRule{Type: RecurrenceTypeWeekly, Interval: 1, Weekdays: []int{1, 2, 3, 4, 5}} // Default weekdays
 
 		// Check for specific weekday
@@ -108,7 +108,7 @@ func ParseRecurrenceRule(text string) (*RecurrenceRule, error) {
 			"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
 			"六": 6, "日": 7, "天": 7,
 		}
-		if dayStr := regexp.MustCompile(`(周|星期)(一|二|三|四|五|六|日|天)`).FindStringSubmatch(text); len(dayStr) > 2 {
+		if dayStr := regexp.MustCompile(`(周|星期)([一二三四五六日天])`).FindStringSubmatch(text); len(dayStr) > 2 {
 			day := dayStr[2]
 			if weekdayNum, ok := weekdayMap[day]; ok {
 				rule.Weekdays = []int{weekdayNum}
@@ -129,7 +129,7 @@ func ParseRecurrenceRule(text string) (*RecurrenceRule, error) {
 	}
 
 	// Monthly patterns
-	if matched, _ := regexp.MatchString(`^每(月)(\d{1,2})号?$`, text); matched {
+	if matched, _ := regexp.MatchString(`^每(月)(\d{1,2})号?$`, text); matched { //nolint:errcheck // regex is valid
 		rule := &RecurrenceRule{Type: RecurrenceTypeMonthly, MonthDay: 0, Interval: 1}
 		if parts := regexp.MustCompile(`(\d{1,2})`).FindStringSubmatch(text); len(parts) > 1 {
 			if day := parseInt(parts[1]); day >= 1 && day <= 31 {

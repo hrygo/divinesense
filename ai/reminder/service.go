@@ -227,7 +227,7 @@ func (s *Service) ProcessDueReminders(ctx context.Context) (int, error) {
 	processed := 0
 	for _, r := range reminders {
 		if err := s.sendReminder(ctx, r); err != nil {
-			_ = s.store.MarkFailed(ctx, r.ID, err.Error())
+			_ = s.store.MarkFailed(ctx, r.ID, err.Error()) //nolint:errcheck // best-effort marking
 			continue
 		}
 

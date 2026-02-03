@@ -179,7 +179,7 @@ func (m *MockVectorService) HybridSearch(ctx context.Context, query string, limi
 	queryLower := strings.ToLower(query)
 
 	for docID, stored := range m.embeddings {
-		content, _ := stored.Metadata["content"].(string)
+		content, _ := stored.Metadata["content"].(string) //nolint:errcheck // type assertion, fallback to empty string
 		contentLower := strings.ToLower(content)
 
 		var score float32

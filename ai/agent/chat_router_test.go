@@ -152,10 +152,8 @@ func TestRouteByRules(t *testing.T) {
 				if result.Method != tc.expectedMethod {
 					t.Errorf("Expected method %q, got %q for input %q", tc.expectedMethod, result.Method, tc.input)
 				}
-			} else {
-				if result != nil {
-					t.Errorf("Expected no rule match (LLM needed) for input %q, but got route %q", tc.input, result.Route)
-				}
+			} else if result != nil {
+				t.Errorf("Expected no rule match (LLM needed) for input %q, but got route %q", tc.input, result.Route)
 			}
 		})
 	}

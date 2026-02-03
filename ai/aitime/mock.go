@@ -190,9 +190,10 @@ func (m *MockTimeService) parseChineseTime(input string, now time.Time, loc *tim
 	if hour == -1 {
 		matches := numPattern.FindStringSubmatch(input)
 		if len(matches) > 1 {
-			h, _ := strconv.Atoi(matches[1])
-			if h >= 0 && h <= 24 {
-				hour = h
+			if h, err := strconv.Atoi(matches[1]); err == nil {
+				if h >= 0 && h <= 24 {
+					hour = h
+				}
 			}
 		}
 	}
@@ -214,7 +215,9 @@ func (m *MockTimeService) parseChineseTime(input string, now time.Time, loc *tim
 	// Extract minutes
 	minutePattern := regexp.MustCompile(`(\d+)分`)
 	if matches := minutePattern.FindStringSubmatch(input); len(matches) > 1 {
-		minute, _ = strconv.Atoi(matches[1])
+		if m, err := strconv.Atoi(matches[1]); err == nil {
+			minute = m
+		}
 	} else if strings.Contains(input, "半") {
 		minute = 30
 	}

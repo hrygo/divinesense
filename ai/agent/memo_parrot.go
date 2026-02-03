@@ -111,7 +111,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 			slog.Info("MemoParrot: Cache hit", "user_id", p.userID)
 			// Send cached answer
 			if callback != nil {
-				callback(EventTypeAnswer, result)
+				_ = callback(EventTypeAnswer, result) //nolint:errcheck // cached result
 			}
 			// Record metrics for cache hit (considered success)
 			p.recordMetrics(startTime, promptVersion, true)
@@ -165,7 +165,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 
 		// Notify thinking
 		if callback != nil {
-			callback(EventTypeThinking, "正在思考...")
+			_ = callback(EventTypeThinking, "正在思考...") //nolint:errcheck // progress notification
 		}
 
 		slog.Debug("MemoParrot: LLM call (iteration)",
@@ -230,11 +230,11 @@ func (p *MemoParrot) ExecuteWithCallback(
 
 		// Notify user of progress with pleasantries if present
 		if cleanText != "" && callback != nil {
-			callback(EventTypeAnswer, cleanText+"\n")
+			_ = callback(EventTypeAnswer, cleanText+"\n") //nolint:errcheck // streaming output
 		}
 
 		if callback != nil {
-			callback(EventTypeToolUse, fmt.Sprintf("正在搜索: %s", toolCall))
+			_ = callback(EventTypeToolUse, fmt.Sprintf("正在搜索: %s", toolCall)) //nolint:errcheck // progress notification
 		}
 
 		var toolResult string
@@ -291,7 +291,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 				}
 				jsonData, jsonErr := json.Marshal(eventData)
 				if jsonErr == nil {
-					_ = callback(EventTypeMemoQueryResult, string(jsonData))
+					_ = callback(EventTypeMemoQueryResult, string(jsonData)) //nolint:errcheck // data tracking event
 
 					// Also send ui_memo_preview events for generative UI rendering
 					if len(structuredResult.Memos) > 0 {
@@ -306,7 +306,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 								Confidence: m.Score,
 								Reason:     fmt.Sprintf("相关度: %.0f%%", m.Score*100),
 							}
-							previewData, _ := json.Marshal(memoPreview)
+							previewData, _ := json.Marshal(memoPreview) //nolint:errcheck // data is controlled, error is unlikely
 							_ = callback(EventTypeUIMemoPreview, string(previewData))
 						}
 					}
@@ -325,7 +325,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 
 		// Send tool result
 		if callback != nil {
-			callback(EventTypeToolResult, toolResult)
+			_ = callback(EventTypeToolResult, toolResult) //nolint:errcheck // tool result
 		}
 
 		// Add to conversation

@@ -135,7 +135,7 @@ func (p *Persister) flushLoop() {
 		select {
 		case <-p.ctx.Done():
 			// Final flush before shutdown
-			_ = p.Flush(context.Background())
+			_ = p.Flush(context.Background()) //nolint:errcheck // best-effort shutdown flush
 			return
 		case <-ticker.C:
 			if err := p.Flush(p.ctx); err != nil {

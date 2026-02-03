@@ -142,7 +142,7 @@ func (p *BatchScheduleParser) Parse(ctx context.Context, input string) (*BatchCr
 	if err != nil || startTime.IsZero() {
 		result.CanBatchCreate = false
 		result.MissingFields = append(result.MissingFields, "time")
-		return result, nil
+		return result, nil //nolint:nilerr // Return partial result on extraction failure
 	}
 	result.Request.StartTime = startTime
 

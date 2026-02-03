@@ -16,10 +16,10 @@ var (
 	hourMinPattern = regexp.MustCompile(`(\d{1,2})[:\s时点](\d{1,2})`)
 
 	// Relative time patterns.
-	relativePattern = regexp.MustCompile(`(\d+)\s*(小时|分钟|天|周|月)(后|前)`)
+	relativePattern = regexp.MustCompile(`(\d+)\s*(小时|分钟|天|周|月)([后前])`)
 
 	// Weekday patterns.
-	weekdayPattern     = regexp.MustCompile(`(?:这|本)?周([一二三四五六日天])`)
+	weekdayPattern     = regexp.MustCompile(`[这本]?周([一二三四五六日天])`)
 	nextWeekdayPattern = regexp.MustCompile(`下周([一二三四五六日天])`)
 	lastWeekdayPattern = regexp.MustCompile(`上周([一二三四五六日天])`)
 )
@@ -181,7 +181,10 @@ func (p *Parser) tryRelativeTime(input string, now time.Time) (time.Time, bool) 
 		return time.Time{}, false
 	}
 
-	n, _ := strconv.Atoi(matches[1])
+	n, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return time.Time{}, false
+	}
 	unit := matches[2]
 	direction := matches[3]
 
@@ -298,8 +301,8 @@ func (p *Parser) parseTimePart(input string) (hour, minute int, found bool) {
 
 	// Try HH:MM format
 	if matches := hourMinPattern.FindStringSubmatch(input); len(matches) > 2 {
-		h, _ := strconv.Atoi(matches[1])
-		m, _ := strconv.Atoi(matches[2])
+		h, _ := strconv.Atoi(matches[1]) //nolint:errcheck // regex ensures digits
+		m, _ := strconv.Atoi(matches[2]) //nolint:errcheck // regex ensures digits
 		if h >= 0 && h <= 24 && m >= 0 && m < 60 {
 			return h, m, true
 		}
@@ -318,7 +321,7 @@ func (p *Parser) parseTimePart(input string) (hour, minute int, found bool) {
 		matches := numberPattern.FindAllStringSubmatch(input, -1)
 		for _, m := range matches {
 			if len(m) > 1 {
-				h, _ := strconv.Atoi(m[1])
+				h, _ := strconv.Atoi(m[1]) //nolint:errcheck // regex ensures digits
 				if h >= 0 && h <= 24 && strings.Contains(input, m[1]+"点") {
 					hour = h
 					break
@@ -354,7 +357,7 @@ func (p *Parser) parseTimePart(input string) (hour, minute int, found bool) {
 
 	// Parse minutes
 	if matches := minutePattern.FindStringSubmatch(input); len(matches) > 1 {
-		minute, _ = strconv.Atoi(matches[1])
+		minute, _ = strconv.Atoi(matches[1]) //nolint:errcheck // regex ensures digits
 	} else if strings.Contains(input, "半") {
 		minute = 30
 	}

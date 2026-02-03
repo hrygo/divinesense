@@ -71,7 +71,6 @@ func (r *PriorityRanker) RankAndTruncate(segments []*ContextSegment, budget int)
 						TokenCost: remaining,
 						Source:    seg.Source,
 					})
-					usedTokens += remaining
 				}
 			}
 			break

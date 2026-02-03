@@ -480,14 +480,14 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 			"request_id", opts.RequestID,
 			"error", vectorRes.err,
 		)
-		return r.convertBM25Results(bm25Res.results), nil
+		return r.convertBM25Results(bm25Res.results), nil //nolint:nilerr // Intentional fallback
 	}
 	if bm25Res.err != nil {
 		opts.Logger.WarnContext(ctx, "BM25 search failed, using vector only",
 			"request_id", opts.RequestID,
 			"error", bm25Res.err,
 		)
-		return r.convertVectorResults(vectorRes.results), nil
+		return r.convertVectorResults(vectorRes.results), nil //nolint:nilerr // Intentional fallback
 	}
 
 	// 使用 RRF 融合两个结果列表
@@ -757,9 +757,12 @@ func (r *AdaptiveRetriever) truncateResults(results []*SearchResult, limit int) 
 	return results[:limit]
 }
 
-// generateRequestID 生成唯一的请求 ID.
+// generateRequestID 生成唯一的请求 ID。
 func generateRequestID() string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback to timestamp-only if crypto rand fails
+		return fmt.Sprintf("%x", time.Now().UnixNano())
+	}
 	return fmt.Sprintf("%x-%x", time.Now().UnixNano(), b)
 }

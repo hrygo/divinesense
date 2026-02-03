@@ -308,7 +308,7 @@ func (s *Service) applySM2Algorithm(state *ReviewState, quality ReviewQuality) *
 	// Calculate new ease factor
 	// EF' = EF + (0.1 - (3 - q) * (0.08 + (3 - q) * 0.02))
 	q := float64(quality)
-	state.EaseFactor = state.EaseFactor + (0.1 - (3-q)*(0.08+(3-q)*0.02))
+	state.EaseFactor += 0.1 - (3-q)*(0.08+(3-q)*0.02)
 	if state.EaseFactor < MinEaseFactor {
 		state.EaseFactor = MinEaseFactor
 	}
@@ -326,6 +326,7 @@ func (s *Service) applySM2Algorithm(state *ReviewState, quality ReviewQuality) *
 		}
 	case QualityGood:
 		// Standard progression
+		//nolint:staticcheck // if-else is more readable than nested switch
 		if state.IntervalDays == 0 {
 			state.IntervalDays = 1
 		} else if state.IntervalDays == 1 {

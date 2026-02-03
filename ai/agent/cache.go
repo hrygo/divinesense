@@ -88,7 +88,7 @@ func (c *LRUCache) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	entry := elem.Value.(*cacheEntry)
+	entry := elem.Value.(*cacheEntry) //nolint:errcheck // type assertion is safe
 
 	// Check expiration
 	if !entry.expiration.IsZero() && time.Now().After(entry.expiration) {
@@ -117,7 +117,7 @@ func (c *LRUCache) Set(key string, value interface{}) {
 	// Check if key already exists
 	if elem, exists := c.entries[key]; exists {
 		// Update existing entry
-		entry := elem.Value.(*cacheEntry)
+		entry := elem.Value.(*cacheEntry) //nolint:errcheck // type assertion is safe
 		entry.value = value
 		entry.expiration = c.calculateExpiration()
 		c.lruList.MoveToFront(elem)
@@ -215,7 +215,7 @@ func (c *LRUCache) evictLRU() {
 // removeElement removes an element from the cache.
 // removeElement 从缓存中移除元素。
 func (c *LRUCache) removeElement(elem *list.Element) {
-	entry := elem.Value.(*cacheEntry)
+	entry := elem.Value.(*cacheEntry) //nolint:errcheck // type assertion is safe
 	delete(c.entries, entry.key)
 	c.lruList.Remove(elem)
 }

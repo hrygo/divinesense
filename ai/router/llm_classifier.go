@@ -88,6 +88,7 @@ func (c *LLMClassifier) Classify(ctx context.Context, input string) (*LLMClassif
 	// Parse response
 	result, err := c.parseResponse(response)
 	if err != nil {
+		//nolint:nilerr // Return partial result on parse failure
 		return &LLMClassifyResult{
 			Intent:     IntentUnknown,
 			Confidence: 0.3,
