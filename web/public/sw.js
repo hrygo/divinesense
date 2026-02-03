@@ -1,15 +1,18 @@
 /**
- * Simple Service Worker for offline support
+ * Service Worker for DivineSense PWA
  *
- * This service worker provides:
- * - Basic offline caching for static assets
+ * Provides:
+ * - Offline caching for static assets
  * - Cache-first strategy for images and fonts
  * - Network-first strategy for API calls and pages
+ * - Update notification support
  */
 
-const CACHE_NAME = "memos-v1";
-const STATIC_CACHE = "memos-static-v1";
-const API_CACHE = "memos-api-v1";
+const CACHE_VERSION = "v1";
+const CACHE_PREFIX = "divinesense";
+const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
+const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
+const API_CACHE = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
 
 // Assets to cache on install
 const PRECACHE_URLS = ["/", "/offline"];
@@ -32,7 +35,15 @@ self.addEventListener("activate", (event) => {
       return Promise.all(
         cacheNames
           .filter((cacheName) => {
-            return cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE && cacheName !== API_CACHE;
+            // Only delete caches that:
+            // 1. Start with our prefix
+            // 2. Are NOT the current active caches
+            return (
+              cacheName.startsWith(CACHE_PREFIX) &&
+              cacheName !== CACHE_NAME &&
+              cacheName !== STATIC_CACHE &&
+              cacheName !== API_CACHE
+            );
           })
           .map((cacheName) => {
             return caches.delete(cacheName);
@@ -55,8 +66,8 @@ self.addEventListener("fetch", (event) => {
   // Skip external requests
   if (url.origin !== self.location.origin) return;
 
-  // API calls - Network First with cache fallback
-  if (url.pathname.startsWith("/api")) {
+  // API calls - Network First with cache fallback (for Connect RPC and REST)
+  if (url.pathname.startsWith("/api") || url.pathname.startsWith("/demo")) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -80,7 +91,7 @@ self.addEventListener("fetch", (event) => {
   if (
     request.destination === "image" ||
     request.destination === "font" ||
-    url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|woff|woff2|ttf|otf)$/)
+    url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|woff|woff2|ttf|otf|ico)$/)
   ) {
     event.respondWith(
       caches.match(request).then((response) => {

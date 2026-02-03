@@ -9,6 +9,7 @@ import { RouterProvider } from "react-router-dom";
 import "./i18n";
 import "./index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import Spinner from "@/components/Spinner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { InstanceProvider, useInstance } from "@/contexts/InstanceContext";
@@ -67,6 +68,7 @@ function Main() {
                 <AppInitializer>
                   <RouterProvider router={router} />
                   <Toaster position="top-right" />
+                  <PWAInstallPrompt />
                 </AppInitializer>
               </ViewProvider>
             </AuthProvider>

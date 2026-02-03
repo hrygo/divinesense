@@ -404,6 +404,8 @@
   },
   "common": {
     "add": "Add",
+    "got-it": "Got it",
+    "not-now": "Not now",
     "apply": "Apply",
     "admin": "Admin",
     "ai-assistant": "Copilot",
@@ -1025,6 +1027,36 @@
     "save-memo": "Save memo",
     "show-help": "Show keyboard shortcuts",
     "title": "Keyboard Shortcuts"
+  },
+  "pwa": {
+    "install": {
+      "title": "Install App",
+      "description": "Install DivineSense to your home screen for a better experience",
+      "install": "Install",
+      "iosSteps": {
+        "title": "How to install on iPhone/iPad:",
+        "share": "Tap the Share button",
+        "addToHome": "Scroll down and tap \"Add to Home Screen\"",
+        "confirm": "Tap \"Add\" to confirm"
+      },
+      "androidSteps": {
+        "title": "How to install on Android:",
+        "tapMenu": "Tap the menu button",
+        "installApp": "Tap \"Install app\" or \"Add to Home Screen\"",
+        "confirm": "Tap \"Install\" to confirm"
+      },
+      "desktopSteps": {
+        "title": "How to install on desktop:",
+        "installMenu": "Click the install icon in the address bar (⊞) or menu",
+        "confirm": "Click \"Install\" to confirm"
+      }
+    },
+    "update": {
+      "title": "Update Available",
+      "description": "A new version of DivineSense is available",
+      "update": "Update Now",
+      "later": "Later"
+    }
   },
   "tag": {
     "create-tags-guide": "You can create tags by inputting `#tag`."

@@ -2,6 +2,7 @@
  * Service Worker Registration
  *
  * Registers the service worker for PWA support and offline capability.
+ * Works in both development and production environments for testing.
  */
 
 const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -18,11 +19,7 @@ const log = {
 
 const registerServiceWorker = () => {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
-    return;
-  }
-
-  // Only register in production
-  if (import.meta.env.DEV) {
+    log.info("Service Worker not supported in this environment");
     return;
   }
 
@@ -45,13 +42,14 @@ const registerServiceWorker = () => {
               if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
                 // New version available
                 log.info("New service worker available. Refresh to update.");
+                // Dispatch custom event for UI to handle
+                window.dispatchEvent(new CustomEvent("sw-update-available"));
               }
             });
           }
         });
 
         // Periodic update check (every hour)
-        // Store interval ID for potential cleanup
         updateIntervalId = window.setInterval(() => {
           registration.update();
         }, UPDATE_CHECK_INTERVAL);
