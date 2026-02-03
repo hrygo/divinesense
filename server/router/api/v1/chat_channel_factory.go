@@ -15,6 +15,19 @@ import (
 	"github.com/hrygo/divinesense/plugin/chat_apps/store"
 )
 
+// validateChatAppsConfig validates the chat apps configuration at startup.
+// This should be called during service initialization to fail fast if config is invalid.
+func validateChatAppsConfig() error {
+	secretKey := os.Getenv("DIVINESENSE_CHAT_APPS_SECRET_KEY")
+	if secretKey == "" {
+		return fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be set for secure token storage")
+	}
+	if len(secretKey) != 32 {
+		return fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be exactly 32 bytes, got %d bytes", len(secretKey))
+	}
+	return nil
+}
+
 // initializeChatChannels loads all enabled credentials from the database
 // and initializes the corresponding chat channels.
 // This should be called during service startup.

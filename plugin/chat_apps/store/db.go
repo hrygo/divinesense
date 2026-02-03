@@ -11,6 +11,14 @@ import (
 	"github.com/hrygo/divinesense/plugin/chat_apps"
 )
 
+// Validation limits for chat app credential fields.
+const (
+	MaxPlatformUserID = 255  // Maximum length for platform user ID
+	MaxAccessToken    = 2048 // Maximum length for access tokens
+	MaxAppSecret      = 2048 // Maximum length for app secrets
+	MaxWebhookURL     = 2048 // Maximum length for webhook URLs
+)
+
 // ChatAppStore manages chat app credentials in the database.
 type ChatAppStore struct {
 	db *sql.DB
@@ -21,8 +29,48 @@ func NewChatAppStore(db *sql.DB) *ChatAppStore {
 	return &ChatAppStore{db: db}
 }
 
+// validateCreateCredentialRequest validates the create credential request.
+func validateCreateCredentialRequest(req *CreateCredentialRequest) error {
+	// Validate platform is supported
+	if !req.Platform.IsValid() {
+		slog.Warn("invalid platform specified", "platform", req.Platform)
+		return fmt.Errorf("invalid platform: %s", req.Platform)
+	}
+
+	// Validate platform_user_id length
+	if len(req.PlatformUserID) == 0 {
+		return fmt.Errorf("platform_user_id is required")
+	}
+	if len(req.PlatformUserID) > MaxPlatformUserID {
+		return fmt.Errorf("platform_user_id too long: max %d characters", MaxPlatformUserID)
+	}
+
+	// Validate access_token length
+	if len(req.AccessToken) > MaxAccessToken {
+		return fmt.Errorf("access_token too long: max %d characters", MaxAccessToken)
+	}
+
+	// Validate app_secret length (optional for some platforms)
+	if len(req.AppSecret) > MaxAppSecret {
+		return fmt.Errorf("app_secret too long: max %d characters", MaxAppSecret)
+	}
+
+	// Validate webhook_url length (optional)
+	if len(req.WebhookURL) > MaxWebhookURL {
+		return fmt.Errorf("webhook_url too long: max %d characters", MaxWebhookURL)
+	}
+
+	return nil
+}
+
 // CreateCredential creates a new chat app credential.
 func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredentialRequest) (*chat_apps.Credential, error) {
+	// Validate request before database operations
+	if err := validateCreateCredentialRequest(req); err != nil {
+		slog.Warn("invalid create credential request", "error", err)
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
 	slog.Info("creating chat app credential",
 		"user_id", req.UserID,
 		"platform", req.Platform,

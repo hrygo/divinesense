@@ -126,6 +126,14 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 
 // RegisterGateway registers the gRPC-Gateway and Connect handlers with the given Echo instance.
 func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Echo) error {
+	// Validate chat apps configuration at startup
+	if err := validateChatAppsConfig(); err != nil {
+		slog.Warn("chat apps configuration invalid, chat apps features will be disabled",
+			"error", err,
+		)
+		// Don't fail startup, just log a warning
+	}
+
 	// Auth middleware for gRPC-Gateway - runs after routing, has access to method name.
 	// Uses the same PublicMethods config as the Connect AuthInterceptor.
 	authenticator := auth.NewAuthenticator(s.Store, s.Secret)

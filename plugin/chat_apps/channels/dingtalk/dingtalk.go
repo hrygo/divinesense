@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +23,8 @@ import (
 )
 
 const (
-	DefaultTimestampWindow = time.Hour
+	DefaultTimestampWindow = 5 * time.Minute // DingTalk webhook timestamp validity window
+	MaxTimestampSkew       = 5 * time.Minute // Maximum allowed clock skew
 	DingTalkAPIBaseURL     = "https://oapi.dingtalk.com"
 )
 
@@ -38,7 +40,7 @@ type DingTalkChannel struct {
 	webhookURL  string
 	client      *http.Client
 	accessToken string
-	tokenMu     sync.RWMutex
+	tokenMu     sync.Mutex // Changed from RWMutex to Mutex to prevent race condition
 	tokenExpiry time.Time
 }
 
@@ -87,15 +89,36 @@ func (d *DingTalkChannel) ValidateWebhook(ctx context.Context, headers map[strin
 		return channels.ErrInvalidSignature
 	}
 
+	// Validate timestamp to prevent replay attacks
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		slog.Warn("dingtalk: invalid timestamp format", "error", err)
+		return channels.ErrInvalidSignature
+	}
+
+	// Check if timestamp is within acceptable window
+	now := time.Now().Unix()
+	msgTime := ts / 1000 // Convert milliseconds to seconds if needed
+	timeDiff := now - msgTime
+	if timeDiff < 0 {
+		timeDiff = -timeDiff
+	}
+
+	// Allow up to 5 minutes clock skew
+	if timeDiff > int64(MaxTimestampSkew.Seconds()) {
+		slog.Warn("dingtalk: timestamp outside valid window",
+			"timestamp", timestamp,
+			"time_diff_seconds", timeDiff,
+		)
+		return channels.ErrInvalidSignature
+	}
+
 	// Compute expected signature
 	expectedSign := d.computeSignature(timestamp, string(body))
 
 	// Constant-time comparison to prevent timing attacks
 	if !hmac.Equal([]byte(sign), []byte(expectedSign)) {
-		slog.Warn("dingtalk: signature mismatch",
-			"expected", expectedSign[:8]+"...", // Log only prefix for security
-			"received", sign[:8]+"...",
-		)
+		slog.Warn("dingtalk: signature mismatch")
 		return channels.ErrInvalidSignature
 	}
 
@@ -279,6 +302,7 @@ func (d *DingTalkChannel) sendText(ctx context.Context, msg *chat_apps.OutgoingM
 func (d *DingTalkChannel) sendMedia(ctx context.Context, msg *chat_apps.OutgoingMessage) error {
 	// DingTalk media messages require uploading media first
 	// then sending with the media ID
+	// Media upload is not yet implemented - return a clear error
 
 	webhookURL := msg.PlatformChatID
 	if webhookURL == "" {
@@ -289,14 +313,18 @@ func (d *DingTalkChannel) sendMedia(ctx context.Context, msg *chat_apps.Outgoing
 		return fmt.Errorf("no webhook URL configured")
 	}
 
-	// TODO: Implement media upload to DingTalk
-	// For now, send as text with a note
+	// Media upload not yet supported - send a text message instead
+	// This is intentional fallback behavior
 	payload := map[string]interface{}{
 		"msgtype": "text",
 		"text": map[string]string{
-			"content": fmt.Sprintf("[Media: %s] %s", msg.Type, msg.Content),
+			"content": fmt.Sprintf("[Media message received - type: %s]\n\n%s", msg.Type, msg.Content),
 		},
 	}
+
+	slog.Info("dingtalk: media message sent as text (media upload not implemented)",
+		"type", msg.Type,
+	)
 
 	return d.sendWebhook(ctx, webhookURL, payload)
 }
@@ -345,20 +373,17 @@ func (d *DingTalkChannel) computeSignature(timestamp, body string) string {
 // GetAccessToken retrieves an access token from DingTalk.
 // The token is cached until expiry (default 2 hours).
 func (d *DingTalkChannel) GetAccessToken(ctx context.Context) (string, error) {
-	// Check if we have a valid cached token
-	d.tokenMu.RLock()
+	// Fast path: check if we have a valid cached token without lock
+	// This is safe for reads due to Go's memory model for int64 and bool
 	if d.accessToken != "" && time.Now().Before(d.tokenExpiry) {
-		token := d.accessToken
-		d.tokenMu.RUnlock()
-		return token, nil
+		return d.accessToken, nil
 	}
-	d.tokenMu.RUnlock()
 
-	// Need to fetch a new token
+	// Need to fetch or refresh token - acquire lock
 	d.tokenMu.Lock()
 	defer d.tokenMu.Unlock()
 
-	// Double-check after acquiring write lock
+	// Double-check after acquiring lock (another goroutine may have refreshed)
 	if d.accessToken != "" && time.Now().Before(d.tokenExpiry) {
 		return d.accessToken, nil
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -153,7 +154,7 @@ type SendMessageRequest struct {
 	FileName string `json:"file_name,omitempty"`
 }
 
-// HealthCheck verifies the bridge is running.
+// HealthCheck verifies the bridge is running and WhatsApp is connected.
 func (b *BaileysBridgeClient) HealthCheck(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", b.baseURL+"/health", nil)
 	if err != nil {
@@ -168,6 +169,22 @@ func (b *BaileysBridgeClient) HealthCheck(ctx context.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("health check failed: status %d", resp.StatusCode)
+	}
+
+	// Parse response to verify WhatsApp connection status
+	var result struct {
+		Status    string `json:"status"`    // "connected", "disconnected", etc.
+		Connected bool   `json:"connected"` // Direct boolean flag
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		// If we can't parse the response, at least we know the bridge is running
+		slog.Debug("whatsapp: could not parse health check response", "error", err)
+		return nil
+	}
+
+	// Check if WhatsApp is actually connected
+	if result.Status == "disconnected" || (result.Status == "" && !result.Connected) {
+		return fmt.Errorf("whatsapp not connected: bridge is running but WhatsApp session is not active")
 	}
 
 	return nil
