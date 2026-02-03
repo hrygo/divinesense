@@ -280,8 +280,16 @@ export function useChat() {
 
         for await (const response of stream) {
           responseCount++;
-          if (import.meta.env.DEV && responseCount % 10 === 0) {
-            console.log("[AI Chat] Stream progress", { responseCount, hasContent: !!response.content, hasEventType: !!response.eventType });
+          if (import.meta.env.DEV) {
+            console.log("[AI Chat] Stream response", {
+              responseCount,
+              hasContent: !!response.content,
+              hasEventType: !!response.eventType,
+              hasEventMeta: !!response.eventMeta,
+              done: response.done,
+              hasSessionSummary: !!response.sessionSummary,
+              eventType: response.eventType,
+            });
           }
           // Handle sources (sent in first response)
           if (response.sources.length > 0) {
@@ -457,9 +465,12 @@ export function useChat() {
           // Handle completion
           if (response.done === true) {
             if (import.meta.env.DEV) {
-              console.log("[AI Chat] Received done=true signal, ending stream", {
+              console.log("[AI Chat] Received done=true signal", {
+                responseCount,
                 hasSessionSummary: !!response.sessionSummary,
                 sessionId: response.sessionSummary?.sessionId,
+                sessionSummary: response.sessionSummary,
+                fullResponse: response,
               });
             }
             doneCalled = true;

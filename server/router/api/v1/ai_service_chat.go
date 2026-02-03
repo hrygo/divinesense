@@ -257,6 +257,13 @@ type eventCollectingStream struct {
 }
 
 func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
+	// Log for debugging
+	if resp.Done {
+		slog.Info("eventCollectingStream: Sending done=true to frontend",
+			"has_summary", resp.SessionSummary != nil,
+			"event_type", resp.EventType)
+	}
+
 	// Collect content from "answer" or "content" events
 	if resp.EventType == "answer" || resp.EventType == "content" {
 		s.mu.Lock()

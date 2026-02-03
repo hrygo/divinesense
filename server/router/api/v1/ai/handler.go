@@ -550,12 +550,21 @@ func (h *ParrotHandler) executeAgent(
 		slog.String("session_id", sessionSummary.SessionId),
 		slog.Int64("duration_ms", sessionSummary.TotalDurationMs),
 		slog.Int64("tool_calls", int64(sessionSummary.ToolCallCount)),
+		slog.Bool("done", true),
+		slog.Bool("has_session_summary", sessionSummary != nil),
 	)
 	sendErr := stream.Send(&v1pb.ChatResponse{
 		Done:           true,
 		SessionSummary: sessionSummary,
 	})
 	streamMu.Unlock()
+
+	if sendErr != nil {
+		logger.Error("Agent: failed to send done marker", sendErr,
+			slog.String("error", sendErr.Error()))
+	} else {
+		logger.Info("Agent: done marker sent successfully")
+	}
 
 	if sendErr != nil {
 		logger.Error("Agent: failed to send done marker", sendErr)

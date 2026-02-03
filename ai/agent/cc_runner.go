@@ -721,16 +721,25 @@ func (r *CCRunner) executeWithSession(
 
 	// Stream output with timeout
 	// 带超时流式输出
+	r.logger.Info("CCRunner: streamOutput starting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats); err != nil {
+		r.logger.Error("CCRunner: streamOutput failed", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", err)
 		if cmd.Process != nil {
 			_ = cmd.Process.Kill() //nolint:errcheck // process already terminating
 		}
 		return err
 	}
+	r.logger.Info("CCRunner: streamOutput completed successfully", "mode", cfg.Mode, "session_id", cfg.SessionID)
 
 	// Wait for command completion
 	// 等待命令完成
+	r.logger.Info("CCRunner: waiting for CLI process to exit", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	waitErr := cmd.Wait()
+	if waitErr != nil {
+		r.logger.Error("CCRunner: CLI process exited with error", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", waitErr)
+	} else {
+		r.logger.Info("CCRunner: CLI process exited successfully", "mode", cfg.Mode, "session_id", cfg.SessionID)
+	}
 	if waitErr != nil {
 		exitCode := 0
 		if cmd.ProcessState != nil {
@@ -767,6 +776,7 @@ func (r *CCRunner) streamOutput(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer r.logger.Info("CCRunner: stdout goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 		scanner := bufio.NewScanner(stdout)
 		buf := make([]byte, 0, scannerInitialBufSize)
 		scanner.Buffer(buf, scannerMaxBufSize)
@@ -844,7 +854,7 @@ func (r *CCRunner) streamOutput(
 						"mode", cfg.Mode,
 						"type", msg.Type,
 						"total_lines", lineCount)
-					return
+					break // break loop instead of return - let scanDone be sent
 				}
 
 				// Handle system message - silently consume
@@ -862,7 +872,7 @@ func (r *CCRunner) streamOutput(
 						case errCh <- err:
 						case <-streamCtx.Done():
 						}
-						return
+						break // break loop on error
 					}
 				}
 
@@ -871,7 +881,7 @@ func (r *CCRunner) streamOutput(
 					r.logger.Info("CCRunner: error completion message received, ending scanner loop",
 						"mode", cfg.Mode,
 						"total_lines", lineCount)
-					return
+					break // break loop instead of return - let scanDone be sent
 				}
 			}
 			scanDone <- true
@@ -881,9 +891,19 @@ func (r *CCRunner) streamOutput(
 		}()
 
 		// Wait for scan to complete or context to be cancelled
+		r.logger.Info("CCRunner: waiting for scanDone or streamCtx.Done()",
+			"mode", cfg.Mode,
+			"session_id", cfg.SessionID)
 		select {
 		case <-scanDone:
+			r.logger.Info("CCRunner: scanDone received, stdout scan completed",
+				"mode", cfg.Mode,
+				"session_id", cfg.SessionID)
 			if scanErr := scanner.Err(); scanErr != nil {
+				r.logger.Error("CCRunner: scanner error",
+					"mode", cfg.Mode,
+					"session_id", cfg.SessionID,
+					"error", scanErr)
 				select {
 				case errCh <- scanErr:
 				case <-streamCtx.Done():
@@ -908,34 +928,15 @@ func (r *CCRunner) streamOutput(
 		}
 	}()
 
-	// Stream stderr to log
-	// 流式处理 stderr 到日志
+	// Discard stderr to prevent blocking
+	// 丢弃 stderr 以防止阻塞
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		scanner := bufio.NewScanner(stderr)
-
-		scanDone := make(chan bool)
-		go func() {
-			for scanner.Scan() {
-				r.logger.Warn("CCRunner: stderr from Claude Code CLI",
-					"user_id", cfg.UserID,
-					"mode", cfg.Mode,
-					"line", scanner.Text())
-			}
-			scanDone <- true
-		}()
-
-		select {
-		case <-scanDone:
-			if scanErr := scanner.Err(); scanErr != nil {
-				select {
-				case errCh <- scanErr:
-				case <-streamCtx.Done():
-				}
-			}
-		case <-streamCtx.Done():
-		}
+		defer r.logger.Debug("CCRunner: stderr goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
+		// Simply discard all stderr output - errors are already logged elsewhere
+		_, _ = io.Copy(io.Discard, stderr)
+		r.logger.Debug("CCRunner: stderr fully discarded", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	}()
 
 	// Wait for completion or timeout

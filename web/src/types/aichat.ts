@@ -29,7 +29,17 @@ export interface ConversationMessage {
       inputSummary?: string;
       outputSummary?: string;
       filePath?: string;
+      duration?: number;
+      isError?: boolean;
     }>; // List of tools called by the agent
+    toolResults?: Array<{
+      name: string;
+      toolId?: string;
+      inputSummary?: string;
+      outputSummary?: string;
+      duration?: number;
+      isError?: boolean;
+    }>; // List of tool execution results
     thinking?: string;
   };
 }

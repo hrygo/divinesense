@@ -253,6 +253,9 @@ const AIChat = () => {
       inputSummary?: string;
       outputSummary?: string;
       filePath?: string;
+      duration?: number;
+      exitCode?: number;
+      isError?: boolean;
     }>
   >([]);
 
@@ -354,9 +357,32 @@ const AIChat = () => {
               });
             }
           },
-          onToolResult: (_result, _meta) => {
-            // Tool result received, metadata can be used for debugging
-            console.debug("[Geek/Evolution Mode] Tool result:", _result, _meta);
+          onToolResult: (result, meta) => {
+            console.debug("[Geek/Evolution Mode] Tool result:", result, meta);
+            // Update tool call with output result
+            if (lastAssistantMessageIdRef.current && toolCallsRef.current.length > 0) {
+              // Find the most recent tool call and update its output
+              const lastToolCall = toolCallsRef.current[toolCallsRef.current.length - 1];
+              lastToolCall.outputSummary = meta?.outputSummary || result.slice(0, 200) + (result.length > 200 ? "..." : "");
+              lastToolCall.duration = meta?.durationMs;
+              lastToolCall.exitCode = meta?.errorMsg ? -1 : 0;
+              lastToolCall.isError = !!meta?.errorMsg;
+
+              // Update message with tool results
+              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
+                metadata: {
+                  toolCalls: [...toolCallsRef.current],
+                  toolResults: toolCallsRef.current.map((tc) => ({
+                    name: tc.name,
+                    toolId: tc.toolId,
+                    inputSummary: tc.inputSummary,
+                    outputSummary: tc.outputSummary,
+                    duration: tc.duration,
+                    isError: tc.isError || false,
+                  })),
+                },
+              });
+            }
           },
           onSessionSummary: (summary) => {
             console.debug("[Geek/Evolution Mode] Session summary:", summary);
