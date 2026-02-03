@@ -51,18 +51,18 @@ IDLE ──/docs-*──▶ SCAN ──▶ ANALYZE ──▶ COMPARE ──▶ R
                                                   └─ 需补充 → SCAN
 ```
 
-| 状态           | 动作                       | 工具                                    |
-| :------------- | :------------------------- | :-------------------------------------- |
-| **SCAN**       | 发现目录结构、搜索引用     | `Glob`, `Grep`                          |
-| **ANALYZE**    | 深度分析代码实现           | `Task` + `code-explorer` agent          |
-| **COMPARE**    | 对比文档 vs 实现           | 内置比对逻辑                            |
-| **REPORT**     | 生成保鲜/健康报告          | 输出 Markdown 表格                      |
-| **UPDATE**     | 更新文档状态标记           | `Edit`                                  |
-| **PLAN**       | 构建影响图、生成变更清单   | `Read`                                  |
-| **CONFIRM**    | 展示影响、获取确认         | `AskUserQuestion`                       |
-| **EXECUTE**    | 移动文件、更新引用         | `Bash`, `Edit`                          |
-| **VERIFY**     | 验证无断链                 | `Grep`, `Glob`                          |
-| **ROLLBACK**   | 回滚变更至执行前状态       | `Bash` (`git checkout`/`git reset`)     |
+| 状态         | 动作                     | 工具                                |
+| :----------- | :----------------------- | :---------------------------------- |
+| **SCAN**     | 发现目录结构、搜索引用   | `Glob`, `Grep`                      |
+| **ANALYZE**  | 深度分析代码实现         | `Task` + `code-explorer` agent      |
+| **COMPARE**  | 对比文档 vs 实现         | 内置比对逻辑                        |
+| **REPORT**   | 生成保鲜/健康报告        | 输出 Markdown 表格                  |
+| **UPDATE**   | 更新文档状态标记         | `Edit`                              |
+| **PLAN**     | 构建影响图、生成变更清单 | `Read`                              |
+| **CONFIRM**  | 展示影响、获取确认       | `AskUserQuestion`                   |
+| **EXECUTE**  | 移动文件、更新引用       | `Bash`, `Edit`                      |
+| **VERIFY**   | 验证无断链               | `Grep`, `Glob`                      |
+| **ROLLBACK** | 回滚变更至执行前状态     | `Bash` (`git checkout`/`git reset`) |
 
 ---
 
@@ -132,10 +132,10 @@ IDLE ──/docs-*──▶ SCAN ──▶ ANALYZE ──▶ COMPARE ──▶ R
    - 功能清单 → 扫描代码中的特性实现
 3. **COMPARE**: 生成差异清单
    ```
-   | 文档 | 声明 | 实际 | 状态 |
-   |:-----|:-----|:-----|:-----|
-   | ARCHITECTURE.md | 5 个代理 | 6 个代理 | ⚠️ 过时 |
-   | BACKEND_DB.md | 支持 MySQL | 已移除 | ⚠️ 过时 |
+   | 文档            | 声明       | 实际     | 状态   |
+   | :-------------- | :--------- | :------- | :----- |
+   | ARCHITECTURE.md | 5 个代理   | 6 个代理 | ⚠️ 过时 |
+   | BACKEND_DB.md   | 支持 MySQL | 已移除   | ⚠️ 过时 |
    ```
 4. **REPORT**: 输出保鲜报告，包含：
    - 过时内容列表
@@ -149,7 +149,7 @@ IDLE ──/docs-*──▶ SCAN ──▶ ANALYZE ──▶ COMPARE ──▶ R
 
 > **保鲜状态**: ✅ 已验证 (2025-01-15)
 > **覆盖范围**: `server/router/api/v1/ai.go`
-> **最后检查**: v6.0
+> **最后检查**: <current_version> (e.g. v0.90.0)
 ```
 
 **scope 选项**:
@@ -202,6 +202,7 @@ IDLE ──/docs-*──▶ SCAN ──▶ ANALYZE ──▶ COMPARE ──▶ R
 Glob("docs/**/*.md")       → 目录结构
 Glob("docs/specs/**/*.md") → 命名模式 P{phase}-{team}{id}-{name}.md
 Grep("@docs/")             → 引用格式
+ls *.md                    → 查找最新版本号 (RELEASE_NOTES_v*.md)
 ```
 
 ---

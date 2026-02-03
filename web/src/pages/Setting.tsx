@@ -148,7 +148,7 @@ const Setting = () => {
                   <SelectContent>
                     {settingsSectionList.map((settingSection) => (
                       <SelectItem key={settingSection} value={settingSection}>
-                        {t(`setting.${settingSection}`)}
+                        {settingSection === "chat-apps" ? t(`setting.${settingSection}.title`) : t(`setting.${settingSection}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
