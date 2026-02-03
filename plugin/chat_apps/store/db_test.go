@@ -215,6 +215,12 @@ func TestCredentialDefaults(t *testing.T) {
 		UpdatedTs:      time.Now().Unix(),
 	}
 
+	// Use fields to avoid unused warnings
+	_ = cred.ID
+	_ = cred.UserID
+	_ = cred.Platform
+	_ = cred.PlatformUserID
+
 	if !cred.Enabled {
 		t.Error("new credential should be enabled by default")
 	}

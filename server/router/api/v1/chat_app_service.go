@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -412,81 +410,6 @@ func (s *APIV1Service) buildAIPrompt(msg *chat_apps.IncomingMessage) string {
 		prompt = "[用户发送了一张图片/视频，请询问用户希望我如何处理]"
 	}
 	return prompt
-}
-
-// getAIResponse gets a response from the AI service using the agent system.
-func (s *APIV1Service) getAIResponse(ctx context.Context, userID int32, prompt string) (string, error) {
-	// Ensure AI service is available
-	if s.AIService == nil {
-		return "", fmt.Errorf("AI service not available")
-	}
-	if !s.AIService.IsLLMEnabled() {
-		return "", fmt.Errorf("LLM service not enabled")
-	}
-
-	// Create agent factory
-	factory := aichat.NewAgentFactory(
-		s.AIService.LLMService,
-		s.AIService.AdaptiveRetriever,
-		s.Store,
-	)
-
-	// For chat apps, we use AUTO agent type to enable intelligent routing
-	// This allows the system to route to MEMO, SCHEDULE, or AMAZING based on intent
-	agent, err := factory.Create(ctx, &aichat.CreateConfig{
-		Type:     aichat.AgentTypeAuto,
-		UserID:   userID,
-		Timezone: "Asia/Shanghai", // Default timezone for schedule operations
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to create agent: %w", err)
-	}
-
-	// Use a callback to collect the AI response
-	var responseBuilder strings.Builder
-	var responseMu sync.Mutex
-	var execErr error
-
-	// Set timeout for agent execution
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
-	callback := func(eventType string, eventData interface{}) error {
-		responseMu.Lock()
-		defer responseMu.Unlock()
-
-		switch eventType {
-		case agentpkg.EventTypeAnswer:
-			// Collect the final answer
-			if str, ok := eventData.(string); ok {
-				responseBuilder.WriteString(str)
-			}
-		case agentpkg.EventTypeError:
-			// Capture error
-			if err, ok := eventData.(error); ok {
-				execErr = err
-			}
-		}
-		return nil
-	}
-
-	// Execute the agent with the user's message
-	// Empty history since chat apps are stateless (for now)
-	if err := agent.ExecuteWithCallback(ctx, prompt, nil, callback); err != nil {
-		return "", fmt.Errorf("agent execution failed: %w", err)
-	}
-
-	// Check if there was an execution error
-	if execErr != nil {
-		return "", fmt.Errorf("agent error: %w", execErr)
-	}
-
-	response := responseBuilder.String()
-	if response == "" {
-		return "", fmt.Errorf("agent returned empty response")
-	}
-
-	return response, nil
 }
 
 // sendSimpleResponse sends a simple text response to the chat platform.

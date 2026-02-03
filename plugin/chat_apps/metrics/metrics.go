@@ -111,7 +111,7 @@ func (r *Registry) RecordEvent(platform string, credID int64, eventType EventTyp
 		if processDuration > 0 {
 			m.totalProcessTime += int64(processDuration)
 			// Update average: new_avg = (total + new) / count
-			m.avgProcessTime = time.Duration(m.totalProcessTime / int64(m.messagesProcessed))
+			m.avgProcessTime = time.Duration(m.totalProcessTime / m.messagesProcessed)
 		}
 
 	case EventResponseSent:
