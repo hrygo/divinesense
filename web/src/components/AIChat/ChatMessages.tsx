@@ -1,4 +1,5 @@
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { cn } from "@/lib/utils";
 import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
@@ -10,7 +11,7 @@ import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
 // Event transformation utilities
-import { extractThinkingSteps, extractToolCalls, normalizeTimestamp } from "./utils/eventTransformers";
+import { extractThinkingSteps, extractToolCalls, normalizeTimestamp, type ThinkingStep } from "./utils/eventTransformers";
 
 // ============================================================================
 // Helper Hooks for ChatMessages
@@ -86,6 +87,19 @@ interface MessageBlock {
 }
 
 /**
+ * Translate i18n keys in thinking steps content
+ * @param steps - Thinking steps with possibly raw i18n keys
+ * @param t - Translation function
+ * @returns Thinking steps with translated content
+ */
+function translateThinkingSteps(steps: ThinkingStep[], t: (key: string) => string): ThinkingStep[] {
+  return steps.map((step) => ({
+    ...step,
+    content: step.content.startsWith("ai.") ? t(step.content) : step.content,
+  }));
+}
+
+/**
  * Convert AIBlock[] to MessageBlock[] format
  * Phase 4: New function to handle Block data structure
  *
@@ -96,8 +110,11 @@ interface MessageBlock {
  * - status: BlockStatus (pending/streaming/completed/error)
  * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
  * - sessionStats: SessionStats (for Geek/Evolution modes)
+ * @param blocks - Array of AIBlock objects
+ * @param hasSessionSummary - Whether session summary is available
+ * @param t - Translation function for i18n keys
  */
-function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean): MessageBlock[] {
+function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean, t: (key: string) => string): MessageBlock[] {
   const messageBlocks: MessageBlock[] = [];
 
   for (const block of blocks) {
@@ -123,6 +140,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
     };
 
     // Build assistant message from assistantContent and eventStream
+    const rawThinkingSteps = extractThinkingSteps(block.eventStream);
     const assistantMessage: ConversationMessage = {
       id: `block-${block.id}-assistant`,
       role: "assistant" as MessageRole,
@@ -131,8 +149,8 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
       error: String(block.status) === String(BLOCK_STATUS.ERROR),
       metadata: {
         mode: getBlockModeName(block.mode) as AIMode,
-        // Parse eventStream to extract metadata for UI
-        thinkingSteps: extractThinkingSteps(block.eventStream),
+        // Parse eventStream to extract metadata for UI, translating i18n keys
+        thinkingSteps: translateThinkingSteps(rawThinkingSteps, t),
         toolCalls: extractToolCalls(block.eventStream),
       },
     };
@@ -164,8 +182,11 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
 /**
  * Group messages into user-assistant pairs
  * Legacy function for ChatItem[] support (backward compatibility)
+ * @param items - Array of ChatItem objects
+ * @param hasSessionSummary - Whether session summary is available
+ * @param t - Translation function for i18n keys
  */
-function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean): MessageBlock[] {
+function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean, t: (key: string) => string): MessageBlock[] {
   const blocks: MessageBlock[] = [];
   let pendingUser: ConversationMessage | null = null;
 
@@ -377,16 +398,19 @@ const ChatMessages = memo(function ChatMessages({
     };
   }, []);
 
+  // Get translation function
+  const { t } = useTranslation();
+
   // Group messages into blocks
   // Phase 4: Use blocks if provided, otherwise fall back to items (backward compatibility)
   const messageBlocks = useMemo(() => {
     if (blocks && blocks.length > 0) {
       // Use new Block data structure
-      return convertAIBlocksToMessageBlocks(blocks, !!sessionSummary);
+      return convertAIBlocksToMessageBlocks(blocks, !!sessionSummary, t);
     }
     // Legacy: use ChatItem[] structure
-    return groupMessagesIntoBlocks(items, !!sessionSummary);
-  }, [blocks, items, sessionSummary]);
+    return groupMessagesIntoBlocks(items, !!sessionSummary, t);
+  }, [blocks, items, sessionSummary, t]);
 
   // Phase 4: Check streaming status from either blocks or props (using extracted hook)
   const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);

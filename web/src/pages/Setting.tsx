@@ -1,17 +1,18 @@
 import {
   BarChart3Icon,
-  ChevronRightIcon,
   CogIcon,
   DatabaseIcon,
   KeyIcon,
   LibraryIcon,
+  LucideIcon,
   MessageSquareIcon,
   Settings2Icon,
   UserIcon,
   UsersIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import MobileHeader from "@/components/MobileHeader";
 import ChatAppsSection from "@/components/Settings/ChatAppsSection";
 import InstanceSection from "@/components/Settings/InstanceSection";
 import MemberSection from "@/components/Settings/MemberSection";
@@ -19,12 +20,13 @@ import MemoRelatedSettings from "@/components/Settings/MemoRelatedSettings";
 import { MetricsDashboard } from "@/components/Settings/MetricsDashboard";
 import MyAccountSection from "@/components/Settings/MyAccountSection";
 import PreferencesSection from "@/components/Settings/PreferencesSection";
+import SectionMenuItem from "@/components/Settings/SectionMenuItem";
 import SSOSection from "@/components/Settings/SSOSection";
 import StorageSection from "@/components/Settings/StorageSection";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstance } from "@/contexts/InstanceContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useMediaQuery from "@/hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
 import { InstanceSetting_Key } from "@/types/proto/api/v1/instance_service_pb";
 import { User_Role } from "@/types/proto/api/v1/user_service_pb";
 import { useTranslate } from "@/utils/i18n";
@@ -35,10 +37,9 @@ interface State {
   selectedSection: SettingSection;
 }
 
-const PERSONAL_SECTIONS: SettingSection[] = ["my-account", "preference", "chat-apps"];
+const BASIC_SECTIONS: SettingSection[] = ["my-account", "preference", "chat-apps"];
 const ADMIN_SECTIONS: SettingSection[] = ["member", "system", "memo-related", "storage", "sso", "metrics"];
-
-const SECTION_ICON_MAP: Record<SettingSection, React.ElementType> = {
+const SECTION_ICON_MAP: Record<SettingSection, LucideIcon> = {
   "my-account": UserIcon,
   preference: CogIcon,
   "chat-apps": MessageSquareIcon,
@@ -48,18 +49,6 @@ const SECTION_ICON_MAP: Record<SettingSection, React.ElementType> = {
   storage: DatabaseIcon,
   sso: KeyIcon,
   metrics: BarChart3Icon,
-};
-
-const SECTION_TITLE_MAP: Record<SettingSection, string> = {
-  "my-account": "setting.my-account",
-  preference: "setting.preference",
-  "chat-apps": "setting.chat-apps.title",
-  member: "setting.member-list",
-  system: "setting.system-section.title",
-  "memo-related": "setting.memo-related-title",
-  storage: "setting.storage-section.title",
-  sso: "setting.sso-section.title",
-  metrics: "setting.metrics-title",
 };
 
 const Setting = () => {
@@ -73,9 +62,18 @@ const Setting = () => {
   });
   const isHost = user?.role === User_Role.HOST;
 
+  const settingsSectionList = useMemo(() => {
+    let settingList = [...BASIC_SECTIONS];
+    if (isHost) {
+      settingList = settingList.concat(ADMIN_SECTIONS);
+    }
+    return settingList;
+  }, [isHost]);
+
   useEffect(() => {
     let hash = location.hash.slice(1) as SettingSection;
-    if (![...PERSONAL_SECTIONS, ...ADMIN_SECTIONS].includes(hash)) {
+    // If the hash is not a valid section, redirect to the default section.
+    if (![...BASIC_SECTIONS, ...ADMIN_SECTIONS].includes(hash)) {
       hash = "my-account";
     }
     setState({
@@ -87,6 +85,8 @@ const Setting = () => {
     if (!isHost) {
       return;
     }
+
+    // Initial fetch for instance settings.
     (async () => {
       [InstanceSetting_Key.MEMO_RELATED, InstanceSetting_Key.STORAGE].forEach(async (key) => {
         await fetchSetting(key);
@@ -94,87 +94,27 @@ const Setting = () => {
     })();
   }, [isHost, fetchSetting]);
 
-  const handleSectionClick = useCallback((settingSection: SettingSection) => {
+  const handleSectionSelectorItemClick = useCallback((settingSection: SettingSection) => {
     window.location.hash = settingSection;
-    setState({ selectedSection: settingSection });
   }, []);
 
-  const renderSection = () => {
-    switch (state.selectedSection) {
-      case "my-account":
-        return <MyAccountSection />;
-      case "preference":
-        return <PreferencesSection />;
-      case "chat-apps":
-        return <ChatAppsSection />;
-      case "member":
-        return <MemberSection />;
-      case "system":
-        return <InstanceSection />;
-      case "memo-related":
-        return <MemoRelatedSettings />;
-      case "storage":
-        return <StorageSection />;
-      case "sso":
-        return <SSOSection />;
-      case "metrics":
-        return <MetricsDashboard />;
-      default:
-        return null;
-    }
-  };
-
-  const renderMobileSectionCard = (titleKey: string, sections: SettingSection[]) => (
-    <div className="mb-6">
-      {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
-      <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-4">{(t as any)(titleKey)}</h3>
-      <div className="bg-background border border-border rounded-xl overflow-hidden">
-        {sections.map((section) => {
-          const Icon = SECTION_ICON_MAP[section];
-          const titleKey = SECTION_TITLE_MAP[section];
-          return (
-            <button
-              key={section}
-              onClick={() => handleSectionClick(section)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-0",
-                "active:bg-muted/50",
-                state.selectedSection === section && "bg-muted/30",
-              )}
-            >
-              <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
-              <span className="text-sm text-foreground flex-1 text-left">
-                {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
-                {section === "chat-apps" ? (t as any)(`setting.${section}.title`) : (t as any)(titleKey)}
-              </span>
-              <ChevronRightIcon className="w-5 h-5 text-muted-foreground shrink-0" />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   return (
-    <section className="@container w-full max-w-[100rem] min-h-full flex flex-col justify-start items-start pb-8">
+    <section className="@container w-full max-w-[100rem] min-h-full flex flex-col justify-start items-start sm:pt-3 md:pt-6 pb-8">
+      {!sm && <MobileHeader />}
       <div className="w-full px-4 sm:px-6">
-        {/* Desktop Layout: Sidebar + Content */}
-        {sm && (
-          <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
+        <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
+          {sm && (
             <div className="flex flex-col justify-start items-start w-40 h-auto shrink-0 py-2">
               <span className="text-sm mt-0.5 pl-3 font-mono select-none text-muted-foreground">{t("common.basic")}</span>
               <div className="w-full flex flex-col justify-start items-start mt-1">
-                {PERSONAL_SECTIONS.map((item) => (
-                  <button
+                {BASIC_SECTIONS.map((item) => (
+                  <SectionMenuItem
                     key={item}
-                    onClick={() => handleSectionClick(item)}
-                    className={cn(
-                      "w-full text-left px-3 py-1.5 rounded-md text-sm hover:bg-muted/50 transition-colors",
-                      state.selectedSection === item && "bg-muted/30",
-                    )}
-                  >
-                    {item === "chat-apps" ? t(`setting.${item}.title`) : t(`setting.${item}`)}
-                  </button>
+                    text={item === "chat-apps" ? t(`setting.${item}.title`) : t(`setting.${item}`)}
+                    icon={SECTION_ICON_MAP[item]}
+                    isSelected={state.selectedSection === item}
+                    onClick={() => handleSectionSelectorItemClick(item)}
+                  />
                 ))}
               </div>
               {isHost ? (
@@ -182,16 +122,13 @@ const Setting = () => {
                   <span className="text-sm mt-4 pl-3 font-mono select-none text-muted-foreground">{t("common.admin")}</span>
                   <div className="w-full flex flex-col justify-start items-start mt-1">
                     {ADMIN_SECTIONS.map((item) => (
-                      <button
+                      <SectionMenuItem
                         key={item}
-                        onClick={() => handleSectionClick(item)}
-                        className={cn(
-                          "w-full text-left px-3 py-1.5 rounded-md text-sm hover:bg-muted/50 transition-colors",
-                          state.selectedSection === item && "bg-muted/30",
-                        )}
-                      >
-                        {t(`setting.${item}`)}
-                      </button>
+                        text={t(`setting.${item}`)}
+                        icon={SECTION_ICON_MAP[item]}
+                        isSelected={state.selectedSection === item}
+                        onClick={() => handleSectionSelectorItemClick(item)}
+                      />
                     ))}
                     <span className="px-3 mt-2 opacity-70 text-sm">
                       {t("setting.version")}: v{profile.version}
@@ -200,18 +137,45 @@ const Setting = () => {
                 </>
               ) : null}
             </div>
-            <div className="w-full grow sm:pl-4 overflow-x-auto">{renderSection()}</div>
+          )}
+          <div className="w-full grow sm:pl-4 overflow-x-auto">
+            {!sm && (
+              <div className="w-auto inline-block my-2">
+                <Select value={state.selectedSection} onValueChange={(value) => handleSectionSelectorItemClick(value as SettingSection)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsSectionList.map((settingSection) => (
+                      <SelectItem key={settingSection} value={settingSection}>
+                        {settingSection === "chat-apps" ? t(`setting.${settingSection}.title`) : t(`setting.${settingSection}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {state.selectedSection === "my-account" ? (
+              <MyAccountSection />
+            ) : state.selectedSection === "preference" ? (
+              <PreferencesSection />
+            ) : state.selectedSection === "chat-apps" ? (
+              <ChatAppsSection />
+            ) : state.selectedSection === "member" ? (
+              <MemberSection />
+            ) : state.selectedSection === "system" ? (
+              <InstanceSection />
+            ) : state.selectedSection === "memo-related" ? (
+              <MemoRelatedSettings />
+            ) : state.selectedSection === "storage" ? (
+              <StorageSection />
+            ) : state.selectedSection === "sso" ? (
+              <SSOSection />
+            ) : state.selectedSection === "metrics" ? (
+              <MetricsDashboard />
+            ) : null}
           </div>
-        )}
-
-        {/* Mobile Layout: Grouped card navigation + full-width content */}
-        {!sm && (
-          <>
-            {renderMobileSectionCard("setting.personal", PERSONAL_SECTIONS)}
-            {isHost && renderMobileSectionCard("setting.admin", ADMIN_SECTIONS)}
-            <div className="mt-4">{renderSection()}</div>
-          </>
-        )}
+        </div>
       </div>
     </section>
   );
