@@ -624,6 +624,8 @@ func (r *CCRunner) GetSessionStats() *SessionStats {
 		"generation_ms", totalGeneration,
 		"input_tokens", stats.InputTokens,
 		"output_tokens", stats.OutputTokens,
+		"cache_write_tokens", stats.CacheWriteTokens,
+		"cache_read_tokens", stats.CacheReadTokens,
 		"tool_calls", stats.ToolCallCount,
 		"files_modified", stats.FilesModified)
 
