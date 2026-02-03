@@ -56,7 +56,12 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
   };
 
   // Calculate totals and percentages
-  const totalTokens = (summary.totalInputTokens || 0) + (summary.totalOutputTokens || 0);
+  const totalTokens = (summary.totalInputTokens || 0) + (summary.totalOutputTokens || 0); // Billed tokens only
+  const totalProcessedTokens =
+    (summary.totalCacheReadTokens || 0) +
+    (summary.totalCacheWriteTokens || 0) +
+    (summary.totalInputTokens || 0) +
+    (summary.totalOutputTokens || 0); // All tokens including cache
   const totalDuration = summary.totalDurationMs || 0;
 
   // Duration breakdown percentages
@@ -242,67 +247,95 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <span className="text-xs font-medium text-muted-foreground">Tokens</span>
                 </div>
                 <div className="space-y-1">
-                  {/* New Input (billed) */}
-                  <div className="flex justify-between text-xs items-center">
-                    <span className="text-muted-foreground/70 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      New Input
-                    </span>
-                    <span className="font-mono">{formatNumber((summary.totalInputTokens || 0) - (summary.totalCacheReadTokens || 0))}</span>
-                  </div>
-                  {/* Cache Read (free) */}
-                  {summary.totalCacheReadTokens && summary.totalCacheReadTokens > 0 && (
+                  {/* Cache Read (discounted 90%) */}
+                  {(summary.totalCacheReadTokens || 0) > 0 && (
                     <div className="flex justify-between text-xs items-center">
                       <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        Cache Read (Free)
+                        Cache Read (90% off)
                       </span>
-                      <span className="font-mono text-green-600 dark:text-green-400">{formatNumber(summary.totalCacheReadTokens)}</span>
+                      <span className="font-mono text-green-600 dark:text-green-400">
+                        {formatNumber(summary.totalCacheReadTokens || 0)}
+                      </span>
+                    </div>
+                  )}
+                  {/* Cache Write (1.25x base price) */}
+                  {(summary.totalCacheWriteTokens || 0) > 0 && (
+                    <div className="flex justify-between text-xs items-center">
+                      <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Cache Write (1.25x)
+                      </span>
+                      <span className="font-mono text-amber-600 dark:text-amber-400">
+                        {formatNumber(summary.totalCacheWriteTokens || 0)}
+                      </span>
+                    </div>
+                  )}
+                  {/* New Input (billed at base rate) */}
+                  {(summary.totalInputTokens || 0) > 0 && (
+                    <div className="flex justify-between text-xs items-center">
+                      <span className="text-muted-foreground/70 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        New Input
+                      </span>
+                      <span className="font-mono">{formatNumber(summary.totalInputTokens || 0)}</span>
                     </div>
                   )}
                   {/* Output (billed) */}
-                  <div className="flex justify-between text-xs items-center">
-                    <span className="text-muted-foreground/70 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Output
-                    </span>
-                    <span className="font-mono">{formatNumber(summary.totalOutputTokens || 0)}</span>
-                  </div>
-                  {/* Total */}
+                  {(summary.totalOutputTokens || 0) > 0 && (
+                    <div className="flex justify-between text-xs items-center">
+                      <span className="text-muted-foreground/70 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Output
+                      </span>
+                      <span className="font-mono">{formatNumber(summary.totalOutputTokens || 0)}</span>
+                    </div>
+                  )}
+                  {/* Total Processed - always show */}
                   <div className="pt-1 border-t border-amber-200/30 dark:border-amber-700/30 flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Billed Total</span>
-                    <span className="font-mono text-amber-600 dark:text-amber-400">
-                      {formatNumber(
-                        (summary.totalInputTokens || 0) - (summary.totalCacheReadTokens || 0) + (summary.totalOutputTokens || 0),
-                      )}
-                    </span>
+                    <span className="text-muted-foreground">Total Processed</span>
+                    <span className="font-mono text-amber-600 dark:text-amber-400">{formatNumber(totalProcessedTokens)}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Cost */}
+            {/* Cost - actual cost from backend */}
             {summary.totalCostUSD !== undefined && summary.totalCostUSD >= 0 && (
               <div className="p-3 rounded-lg bg-green-50/50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-700/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-green-500" />
-                  <span className="text-xs font-medium text-muted-foreground">Cost</span>
-                </div>
-                <div className="text-center">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-500" />
+                    <span className="text-xs font-medium text-muted-foreground">Total Cost</span>
+                  </div>
                   <span className="text-2xl font-mono font-bold text-green-600 dark:text-green-400">
                     ${summary.totalCostUSD.toFixed(4)}
                   </span>
-                  {totalTokens > 0 && (
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      {((summary.totalCostUSD / totalTokens) * 1000).toFixed(2)}¢ per 1K tokens
-                    </div>
-                  )}
                 </div>
+
+                {/* Cost per 1K tokens */}
+                {totalTokens > 0 && (
+                  <div className="text-[10px] text-muted-foreground text-center">
+                    ${((summary.totalCostUSD / totalTokens) * 1000).toFixed(4)} per 1K billed tokens
+                  </div>
+                )}
+
+                {/* Cache hit rate indicator */}
+                {totalProcessedTokens > 0 && (summary.totalCacheReadTokens || 0) > 0 && (
+                  <div className="mt-2 pt-2 border-t border-green-200/30 dark:border-green-700/30">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-muted-foreground">Cache Hit Rate</span>
+                      <span className="font-mono text-green-600 dark:text-green-400">
+                        {Math.round(((summary.totalCacheReadTokens || 0) / totalProcessedTokens) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Tool Calls - always show if we have tool data */}
-            {summary.toolCallCount !== undefined && summary.toolCallCount >= 0 && (
+            {summary.toolCallCount !== undefined && summary.toolCallCount > 0 && (
               <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200/50 dark:border-purple-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Wrench className="w-4 h-4 text-purple-500" />
@@ -310,7 +343,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 </div>
                 <div className="text-center">
                   <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">{summary.toolCallCount}</span>
-                  {summary.toolDurationMs && summary.toolCallCount > 0 && (
+                  {summary.toolDurationMs && (
                     <div className="text-[10px] text-muted-foreground mt-1">
                       Avg: {formatDuration(summary.toolDurationMs / summary.toolCallCount)} per call
                     </div>
@@ -333,7 +366,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               </div>
             )}
 
-            {/* Files Modified - show when has files or explicitly 0 */}
+            {/* Files Modified - show when data available */}
             {summary.filesModified !== undefined && summary.filesModified >= 0 && (
               <div className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-700/30">
                 <div className="flex items-center gap-2 mb-2">
