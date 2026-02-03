@@ -1,6 +1,6 @@
 # 前端开发指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v6.1 (AI Core 重构)
+> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v6.1 (Chat Apps 集成)
 
 ## 技术栈
 - **框架**：React 18 + Vite 7
@@ -337,6 +337,29 @@ import {
   {/* 内容 */}
 </DialogContent>
 ```
+
+### ChatAppsSection
+
+ChatAppsSection 用于设置页面管理聊天应用接入（Telegram、钉钉、WhatsApp）：
+
+```tsx
+import ChatAppsSection from "@/components/Settings/ChatAppsSection";
+
+<ChatAppsSection />
+```
+
+**功能**：
+- 注册/列出/删除聊天平台凭证
+- 支持 Telegram Bot、钉钉群机器人
+- Webhook URL 自动生成
+- Token 加密存储（AES-256-GCM）
+
+**相关 API**：
+- `api.chatApp.listCredentials()` - 列出已注册凭证
+- `api.chatApp.registerCredential()` - 注册新凭证
+- `api.chatApp.deleteCredential()` - 删除凭证
+
+**详见**：[Chat Apps 用户指南](../guides/CHAT_APPS.md)
 
 ---
 

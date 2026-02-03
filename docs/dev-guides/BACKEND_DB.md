@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v6.1 (AI Core 重构)
+> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v6.1 (Chat Apps 集成)
 
 ## 数据库支持策略
 
@@ -266,6 +266,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 | `episodic_memory` | 长期用户记忆 | `user_id`、`summary`、`embedding`（vector） |
 | `user_preferences` | 用户沟通偏好 | `user_id`、`preferences`（JSONB） |
 | `agent_metrics` | 代理性能追踪 | `agent_type`、`prompt_version`、`success_rate`、`avg_latency` |
+| `chat_app_credential` | 聊天应用接入凭证 | `platform`、`platform_user_id`、`access_token`（AES-256-GCM 加密） |
 
 ### conversation_context 结构
 
@@ -312,6 +313,37 @@ CREATE TABLE agent_metrics (
 );
 ```
 
+### chat_app_credential 结构
+
+```sql
+CREATE TABLE chat_app_credential (
+  id               SERIAL PRIMARY KEY,
+  creator_id       INTEGER NOT NULL REFERENCES "user"(id),
+  platform         VARCHAR(20) NOT NULL,  -- 'telegram', 'whatsapp', 'dingtalk'
+  platform_user_id VARCHAR(255) NOT NULL,
+  access_token     TEXT NOT NULL,         -- AES-256-GCM 加密存储
+  app_secret       TEXT,                  -- 钉钉 AppSecret（加密）
+  created_ts       BIGINT NOT NULL,
+  updated_ts       BIGINT NOT NULL,
+  UNIQUE (creator_id, platform, platform_user_id)
+);
+
+-- 索引
+CREATE INDEX idx_chat_app_credential_creator ON chat_app_credential(creator_id);
+CREATE INDEX idx_chat_app_credential_platform ON chat_app_credential(platform);
+CREATE UNIQUE INDEX idx_chat_app_credential_unique ON chat_app_credential(creator_id, platform, platform_user_id);
+```
+
+**支持的平台**：
+- `telegram` — Telegram Bot（Bot Token）
+- `dingtalk` — 钉钉群机器人（AppKey + AppSecret）
+- `whatsapp` — WhatsApp（预留，需 Baileys Node.js 服务桥接）
+
+**安全说明**：
+- 所有敏感凭证使用 AES-256-GCM 加密存储
+- 加密密钥通过环境变量 `DIVINESENSE_CHAT_APPS_SECRET_KEY` 提供（必须 32 字节）
+- 详见：[Chat Apps 用户指南](../guides/CHAT_APPS.md#安全说明)
+
 ---
 
 ## 目录结构
@@ -326,6 +358,7 @@ CREATE TABLE agent_metrics (
 | `ai/agent/` | AI 代理（MemoParrot、ScheduleParrot、AmazingParrot） |
 | `ai/router/` | 三层意图路由 |
 | `ai/vector/` | Embedding 服务 |
+| `plugin/chat_apps/` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
 | `store/` | 数据访问层接口 |
 | `store/db/postgres/` | PostgreSQL 实现 |
 | `store/migration/postgres/` | 数据库迁移 |

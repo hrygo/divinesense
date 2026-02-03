@@ -87,6 +87,7 @@ type Credential struct {
 	PlatformUserID string
 	PlatformChatID string
 	AccessToken    string // Encrypted at rest
+	AppSecret      string // Encrypted at rest (e.g., DingTalk AppSecret)
 	WebhookURL     string // For DingTalk
 	Enabled        bool
 	CreatedTs      int64

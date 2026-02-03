@@ -41,6 +41,7 @@ docker run -d --name divinesense \
 | **日程**           | 自然语言创建、冲突检测、多视图日历、周期事件     |
 | **AI 代理**        | 五位智能代理（灰灰/时巧/折衷/极客/进化）协同工作 |
 | **搜索**           | BM25 + 向量混合检索，精准定位内容                |
+| **Chat Apps**      | Telegram/钉钉机器人接入，AI 聊天随时随地         |
 | **Geek Mode**      | Claude Code CLI 集成，自动化编码任务             |
 | **Evolution Mode** | 系统自我进化，AI 修改源代码并提交 PR             |
 
@@ -83,6 +84,7 @@ make deps-all && make start
 | [系统架构](docs/dev-guides/ARCHITECTURE.md) | AI 代理、数据流、项目结构                   |
 | [后端开发](docs/dev-guides/BACKEND_DB.md)   | API、数据库、环境配置                       |
 | [前端开发](docs/dev-guides/FRONTEND.md)     | 布局、组件、Tailwind 4                      |
+| [Chat Apps 指南](docs/guides/CHAT_APPS.md)   | Telegram/钉钉机器人接入指南                 |
 | [Git 工作流](.claude/rules/git-workflow.md) | 分支管理、PR 规范                           |
 | [AI 重构报告](docs/research/ai-core-refactor-summary.md) | AI 模块提升重构总结 (v6.0)               |
 | [贡献指南](CONTRIBUTING.md)                 | **入门必读**：环境搭建、开发规范、Checklist |

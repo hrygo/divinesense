@@ -88,7 +88,8 @@ message RegisterCredentialRequest {
   string platform_user_id = 2 [(google.api.field_behavior) = REQUIRED]; // Platform-specific user ID
   string platform_chat_id = 3; // Platform-specific chat ID (for direct messaging)
   string access_token = 4; // OAuth token or Bot token (encrypted at rest)
-  string webhook_url = 5; // Webhook URL (DingTalk only)
+  string app_secret = 5; // App secret for platforms like DingTalk (encrypted at rest)
+  string webhook_url = 6; // Webhook URL (DingTalk only)
 }
 
 // Credential represents a chat app binding.
@@ -125,7 +126,8 @@ message UpdateCredentialRequest {
   Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
   optional bool enabled = 2; // Enable or disable the integration
   optional string access_token = 3; // Update the access token
-  optional string webhook_url = 4; // Update the webhook URL (DingTalk)
+  optional string app_secret = 4; // Update the app secret (e.g., DingTalk AppSecret)
+  optional string webhook_url = 5; // Update the webhook URL (DingTalk)
 }
 
 // WebhookRequest represents an incoming webhook from a chat platform.

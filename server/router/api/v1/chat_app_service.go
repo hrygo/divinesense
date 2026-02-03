@@ -6,17 +6,30 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
+	"sync"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
+	agentpkg "github.com/hrygo/divinesense/ai/agent"
 	"github.com/hrygo/divinesense/plugin/chat_apps"
 	"github.com/hrygo/divinesense/plugin/chat_apps/channels"
-	"github.com/hrygo/divinesense/plugin/chat_apps/store"
+	chatstore "github.com/hrygo/divinesense/plugin/chat_apps/store"
+	"github.com/hrygo/divinesense/plugin/chat_apps/metrics"
+	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
+	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 )
+
+// contextKey is a typed context key to prevent collisions.
+// Using private struct type prevents other packages from colliding with our key.
+type contextKey struct{}
+
+// userIDContextKey is the context key for user ID.
+var userIDContextKey = contextKey{}
 
 // RegisterCredential binds a chat app account to the current user.
 func (s *APIV1Service) RegisterCredential(ctx context.Context, request *v1pb.RegisterCredentialRequest) (*v1pb.Credential, error) {
@@ -61,13 +74,21 @@ func (s *APIV1Service) RegisterCredential(ctx context.Context, request *v1pb.Reg
 		return nil, status.Errorf(codes.Internal, "failed to secure access token")
 	}
 
+	// Encrypt the app secret (for platforms like DingTalk)
+	encryptedAppSecret, err := s.encryptAccessToken(request.AppSecret)
+	if err != nil {
+		slog.Error("failed to encrypt app secret", "error", err)
+		return nil, status.Errorf(codes.Internal, "failed to secure app secret")
+	}
+
 	// Create credential
-	createReq := &store.CreateCredentialRequest{
+	createReq := &chatstore.CreateCredentialRequest{
 		UserID:         userID,
 		Platform:       platform,
 		PlatformUserID: request.PlatformUserId,
 		PlatformChatID: request.PlatformChatId,
 		AccessToken:    encryptedToken,
+		AppSecret:      encryptedAppSecret,
 		WebhookURL:     request.WebhookUrl,
 	}
 
@@ -178,7 +199,7 @@ func (s *APIV1Service) UpdateCredential(ctx context.Context, request *v1pb.Updat
 	}
 
 	// Prepare update request
-	updateReq := &store.UpdateCredentialRequest{
+	updateReq := &chatstore.UpdateCredentialRequest{
 		ID: cred.ID,
 	}
 
@@ -188,6 +209,14 @@ func (s *APIV1Service) UpdateCredential(ctx context.Context, request *v1pb.Updat
 			return nil, status.Errorf(codes.Internal, "failed to secure access token")
 		}
 		updateReq.AccessToken = &encryptedToken
+	}
+
+	if request.AppSecret != nil {
+		encryptedSecret, err := s.encryptAccessToken(*request.AppSecret)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to secure app secret")
+		}
+		updateReq.AppSecret = &encryptedSecret
 	}
 
 	if request.WebhookUrl != nil {
@@ -218,6 +247,8 @@ func (s *APIV1Service) UpdateCredential(ctx context.Context, request *v1pb.Updat
 
 // HandleWebhook processes incoming webhook events from chat platforms.
 func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookRequest) (*v1pb.WebhookResponse, error) {
+	startTime := time.Now()
+
 	if request.Platform == v1pb.Platform_PLATFORM_UNSPECIFIED {
 		return nil, status.Errorf(codes.InvalidArgument, "platform is required")
 	}
@@ -231,7 +262,7 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 		slog.Warn("no channel registered for platform", "platform", platform)
 		return &v1pb.WebhookResponse{
 			Success: false,
-			Message:  fmt.Sprintf("platform %s not configured", platform),
+			Message: fmt.Sprintf("platform %s not configured", platform),
 		}, nil
 	}
 
@@ -251,7 +282,7 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 		)
 		return &v1pb.WebhookResponse{
 			Success: false,
-			Message:  "webhook validation failed",
+			Message: "webhook validation failed",
 		}, nil
 	}
 
@@ -262,9 +293,11 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 			"platform", platform,
 			"error", err,
 		)
+		registry := metrics.GetRegistry()
+		registry.RecordEvent(string(platform), 0, metrics.EventWebhookParseError, 0, err)
 		return &v1pb.WebhookResponse{
 			Success: false,
-			Message:  "failed to parse message",
+			Message: "failed to parse message",
 		}, nil
 	}
 
@@ -279,7 +312,7 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 		)
 		return &v1pb.WebhookResponse{
 			Success: false,
-			Message:  "user not bound",
+			Message: "user not bound",
 		}, nil
 	}
 
@@ -290,24 +323,37 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 		)
 		return &v1pb.WebhookResponse{
 			Success: false,
-			Message:  "credential disabled",
+			Message: "credential disabled",
 		}, nil
 	}
 
+	// Record webhook received with correct credID
+	registry := metrics.GetRegistry()
+	registry.RecordEvent(string(platform), cred.ID, metrics.EventWebhookReceived, 0, nil)
+	registry.RecordEvent(string(platform), cred.ID, metrics.EventWebhookValidated, 0, nil)
+
 	// Process message asynchronously - don't block webhook response
-	go s.processChatAppMessage(context.Background(), cred, msg, platform)
+	go s.processChatAppMessage(context.Background(), cred, msg, platform, startTime, registry)
 
 	// Immediately acknowledge receipt (webhooks should respond quickly)
 	return &v1pb.WebhookResponse{
 		Success: true,
-		Message:  "message received",
+		Message: "message received",
 	}, nil
 }
 
 // processChatAppMessage handles the actual message processing and AI routing.
-func (s *APIV1Service) processChatAppMessage(ctx context.Context, cred *chat_apps.Credential, msg *chat_apps.IncomingMessage, platform chat_apps.Platform) {
+// Accepts optional metrics tracking (startTime and registry can be zero/nil).
+func (s *APIV1Service) processChatAppMessage(
+	ctx context.Context,
+	cred *chat_apps.Credential,
+	msg *chat_apps.IncomingMessage,
+	platform chat_apps.Platform,
+	startTime time.Time,
+	registry *metrics.Registry,
+) {
 	// Set the user ID in context for AI processing
-	ctx = context.WithValue(ctx, "user_id", cred.UserID)
+	ctx = context.WithValue(ctx, userIDContextKey, cred.UserID)
 
 	slog.Info("processing chat app message",
 		"user_id", cred.UserID,
@@ -316,17 +362,258 @@ func (s *APIV1Service) processChatAppMessage(ctx context.Context, cred *chat_app
 		"content", msg.Content,
 	)
 
-	// TODO: Route to AI agent and send response back
-	// This requires:
-	// 1. Creating an AI chat request with the user's credentials
-	// 2. Streaming the response
-	// 3. Calling SendMessage to deliver the response to the chat platform
+	// Get the channel for sending response
+	channelRegistry := s.getChannelRegistry()
+	channel := channelRegistry.GetChannel(platform)
+	if channel == nil {
+		slog.Warn("no channel available for response",
+			"platform", platform,
+			"user_id", cred.UserID,
+		)
+		if registry != nil {
+			registry.RecordEvent(string(platform), cred.ID, metrics.EventResponseError, time.Since(startTime), fmt.Errorf("no channel available"))
+		}
+		return
+	}
 
-	// For now, just log that we received the message
-	slog.Info("chat app message processing complete (async)",
+	// Route to AI agent and send response back with optional metrics
+	s.routeAndSendAIResponse(ctx, cred, msg, platform, channel, startTime, registry)
+}
+
+// routeAndSendAIResponse routes the message to AI and sends the response back.
+// Uses streaming for better UX with long AI responses.
+// Accepts optional metrics tracking (startTime and registry can be zero/nil).
+func (s *APIV1Service) routeAndSendAIResponse(
+	ctx context.Context,
+	cred *chat_apps.Credential,
+	msg *chat_apps.IncomingMessage,
+	platform chat_apps.Platform,
+	channel channels.ChatChannel,
+	startTime time.Time,
+	registry *metrics.Registry,
+) {
+	// Build prompt for AI
+	prompt := s.buildAIPrompt(msg)
+
+	// Use streaming response for better UX
+	s.sendStreamingResponse(ctx, cred, msg, platform, channel, prompt)
+
+	// Record metrics if registry provided
+	if registry != nil {
+		registry.RecordEvent(string(platform), cred.ID, metrics.EventResponseSent, time.Since(startTime), nil)
+	}
+}
+
+// buildAIPrompt builds a prompt for the AI based on the incoming message.
+func (s *APIV1Service) buildAIPrompt(msg *chat_apps.IncomingMessage) string {
+	// Build a simple prompt with context
+	prompt := msg.Content
+	if msg.Type == chat_apps.MessageTypePhoto || msg.Type == chat_apps.MessageTypeVideo {
+		prompt = "[用户发送了一张图片/视频，请询问用户希望我如何处理]"
+	}
+	return prompt
+}
+
+// getAIResponse gets a response from the AI service using the agent system.
+func (s *APIV1Service) getAIResponse(ctx context.Context, userID int32, prompt string) (string, error) {
+	// Ensure AI service is available
+	if s.AIService == nil {
+		return "", fmt.Errorf("AI service not available")
+	}
+	if !s.AIService.IsLLMEnabled() {
+		return "", fmt.Errorf("LLM service not enabled")
+	}
+
+	// Create agent factory
+	factory := aichat.NewAgentFactory(
+		s.AIService.LLMService,
+		s.AIService.AdaptiveRetriever,
+		s.Store,
+	)
+
+	// For chat apps, we use AUTO agent type to enable intelligent routing
+	// This allows the system to route to MEMO, SCHEDULE, or AMAZING based on intent
+	agent, err := factory.Create(ctx, &aichat.CreateConfig{
+		Type:     aichat.AgentTypeAuto,
+		UserID:   userID,
+		Timezone: "Asia/Shanghai", // Default timezone for schedule operations
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create agent: %w", err)
+	}
+
+	// Use a callback to collect the AI response
+	var responseBuilder strings.Builder
+	var responseMu sync.Mutex
+	var execErr error
+
+	// Set timeout for agent execution
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	callback := func(eventType string, eventData interface{}) error {
+		responseMu.Lock()
+		defer responseMu.Unlock()
+
+		switch eventType {
+		case agentpkg.EventTypeAnswer:
+			// Collect the final answer
+			if str, ok := eventData.(string); ok {
+				responseBuilder.WriteString(str)
+			}
+		case agentpkg.EventTypeError:
+			// Capture error
+			if err, ok := eventData.(error); ok {
+				execErr = err
+			}
+		}
+		return nil
+	}
+
+	// Execute the agent with the user's message
+	// Empty history since chat apps are stateless (for now)
+	if err := agent.ExecuteWithCallback(ctx, prompt, nil, callback); err != nil {
+		return "", fmt.Errorf("agent execution failed: %w", err)
+	}
+
+	// Check if there was an execution error
+	if execErr != nil {
+		return "", fmt.Errorf("agent error: %w", execErr)
+	}
+
+	response := responseBuilder.String()
+	if response == "" {
+		return "", fmt.Errorf("agent returned empty response")
+	}
+
+	return response, nil
+}
+
+// sendSimpleResponse sends a simple text response to the chat platform.
+func (s *APIV1Service) sendSimpleResponse(
+	ctx context.Context,
+	cred *chat_apps.Credential,
+	msg *chat_apps.IncomingMessage,
+	platform chat_apps.Platform,
+	channel channels.ChatChannel,
+	text string,
+) {
+	outgoingMsg := &chat_apps.OutgoingMessage{
+		PlatformChatID: msg.PlatformChatID,
+		Type:           chat_apps.MessageTypeText,
+		Content:        text,
+	}
+
+	if err := channel.SendMessage(ctx, outgoingMsg); err != nil {
+		slog.Error("failed to send response to chat platform",
+			"user_id", cred.UserID,
+			"platform", platform,
+			"error", err,
+		)
+		return
+	}
+
+	slog.Info("response sent to chat platform",
 		"user_id", cred.UserID,
 		"platform", platform,
+		"platform_chat_id", msg.PlatformChatID,
 	)
+}
+
+// sendStreamingResponse sends a streaming AI response to the chat platform.
+// This uses the SendChunkedMessage interface for better UX with long AI responses.
+func (s *APIV1Service) sendStreamingResponse(
+	ctx context.Context,
+	cred *chat_apps.Credential,
+	msg *chat_apps.IncomingMessage,
+	platform chat_apps.Platform,
+	channel channels.ChatChannel,
+	prompt string,
+) {
+	// Check if AI is enabled
+	if s.AIService == nil || !s.AIService.IsLLMEnabled() {
+		s.sendSimpleResponse(ctx, cred, msg, platform, channel,
+			"AI 功能未启用。请在服务器配置中启用 AI 服务。")
+		return
+	}
+
+	// Create a channel for streaming chunks
+	// Note: Channel is closed by the goroutine, not here
+	chunks := make(chan string, 10)
+
+	// Start streaming in background goroutine
+	// The goroutine owns the channel and is responsible for closing it
+	done := make(chan struct{})
+	go func() {
+		defer close(chunks)
+		defer close(done)
+
+		// Create agent factory
+		factory := aichat.NewAgentFactory(
+			s.AIService.LLMService,
+			s.AIService.AdaptiveRetriever,
+			s.Store,
+		)
+
+		// Create AUTO agent for intelligent routing
+		agent, err := factory.Create(ctx, &aichat.CreateConfig{
+			Type:     aichat.AgentTypeAuto,
+			UserID:   cred.UserID,
+			Timezone: "Asia/Shanghai",
+		})
+		if err != nil {
+			slog.Error("failed to create agent for streaming",
+				"user_id", cred.UserID,
+				"platform", platform,
+				"error", err,
+			)
+			chunks <- "抱歉，AI 服务暂时不可用。请稍后再试。"
+			return
+		}
+
+		// Create streaming callback
+		streamCallback := func(eventType string, eventData interface{}) error {
+			if eventType == agentpkg.EventTypeAnswer {
+				if chunk, ok := eventData.(string); ok {
+					select {
+					case chunks <- chunk:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				}
+			}
+			return nil
+		}
+
+		// Execute agent with streaming - use new context variable to avoid shadowing
+		agentCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+		defer cancel()
+
+		if err := agent.ExecuteWithCallback(agentCtx, prompt, nil, streamCallback); err != nil {
+			slog.Error("agent streaming failed",
+				"user_id", cred.UserID,
+				"platform", platform,
+				"error", err,
+			)
+			select {
+			case chunks <- "抱歉，AI 服务出现错误。请稍后再试。":
+			case <-agentCtx.Done():
+			}
+		}
+	}()
+
+	// Send chunks to chat platform
+	// SendChunkedMessage will consume the channel until closed
+	if err := channel.SendChunkedMessage(ctx, msg.PlatformChatID, chunks); err != nil {
+		slog.Error("failed to send streaming response",
+			"user_id", cred.UserID,
+			"platform", platform,
+			"error", err,
+		)
+	}
+
+	// Wait for goroutine to finish before returning
+	<-done
 }
 
 // SendMessage sends a message to a chat app channel.
@@ -419,67 +706,42 @@ func (s *APIV1Service) GetWebhookInfo(ctx context.Context, request *v1pb.GetWebh
 	}
 
 	return &v1pb.WebhookInfo{
-		WebhookUrl:          webhookURL,
-		SetupInstructions:   instructions,
-		Headers:             headers,
+		WebhookUrl:           webhookURL,
+		SetupInstructions:    instructions,
+		Headers:              headers,
 		RequiresVerification: requiresVerification,
 	}, nil
 }
 
 // Helper functions
 
-func (s *APIV1Service) getChatAppStore() *store.ChatAppStore {
-	// Get the underlying database connection from the Store's driver
-	// TODO: Inject ChatAppStore into APIV1Service during initialization
-	return store.NewChatAppStore(s.Store.GetDriver().GetDB())
+func (s *APIV1Service) getChatAppStore() *chatstore.ChatAppStore {
+	return s.chatAppStore
 }
 
-func (s *APIV1Service) getChannelRegistry() *channelRegistryImpl {
-	// In a real implementation, this would be a singleton service
-	// For now, return a placeholder
-	// TODO: Create and inject ChannelRegistry during service initialization
-	return &channelRegistryImpl{
-		channels: make(map[chat_apps.Platform]channels.ChatChannel),
-	}
+func (s *APIV1Service) getChannelRegistry() *channels.ChannelRouter {
+	// Return the actual channel router initialized at service startup
+	return s.chatChannelRouter
 }
 
 func (s *APIV1Service) getBaseURL() string {
-	// TODO: Get from configuration
-	return ""
+	return s.Profile.InstanceURL
 }
 
 func (s *APIV1Service) encryptAccessToken(token string) (string, error) {
 	// Get encryption key from environment
 	secretKey := os.Getenv("DIVINESENSE_CHAT_APPS_SECRET_KEY")
 	if secretKey == "" {
-		// Generate a warning - in production this should be configured
-		slog.Warn("DIVINESENSE_CHAT_APPS_SECRET_KEY not set, using insecure storage")
-		return token, nil
+		// FAIL FAST - Do not allow plaintext token storage in production
+		return "", fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be set for secure token storage")
 	}
 
-	// The key needs to be 32 bytes for AES-256
-	// If it's base64 encoded, decode it first
-	// For now, we'll assume the key is properly configured
-	return store.EncryptToken(token, secretKey)
-}
+	// Validate key length - AES-256 requires exactly 32 bytes
+	if len(secretKey) != 32 {
+		return "", fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be exactly 32 bytes, got %d bytes", len(secretKey))
+	}
 
-// ChannelRegistry manages chat channel instances.
-type ChannelRegistry interface {
-	GetChannel(platform chat_apps.Platform) channels.ChatChannel
-	Register(channel channels.ChatChannel)
-}
-
-// channelRegistryImpl is a simple in-memory channel registry.
-type channelRegistryImpl struct {
-	channels map[chat_apps.Platform]channels.ChatChannel
-}
-
-func (r *channelRegistryImpl) GetChannel(platform chat_apps.Platform) channels.ChatChannel {
-	return r.channels[platform]
-}
-
-func (r *channelRegistryImpl) Register(channel channels.ChatChannel) {
-	r.channels[channel.Name()] = channel
+	return chatstore.EncryptToken(token, secretKey)
 }
 
 // Conversion functions

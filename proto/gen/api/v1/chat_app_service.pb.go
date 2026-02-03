@@ -142,7 +142,8 @@ type RegisterCredentialRequest struct {
 	PlatformUserId string                 `protobuf:"bytes,2,opt,name=platform_user_id,json=platformUserId,proto3" json:"platform_user_id,omitempty"` // Platform-specific user ID
 	PlatformChatId string                 `protobuf:"bytes,3,opt,name=platform_chat_id,json=platformChatId,proto3" json:"platform_chat_id,omitempty"` // Platform-specific chat ID (for direct messaging)
 	AccessToken    string                 `protobuf:"bytes,4,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`            // OAuth token or Bot token (encrypted at rest)
-	WebhookUrl     string                 `protobuf:"bytes,5,opt,name=webhook_url,json=webhookUrl,proto3" json:"webhook_url,omitempty"`               // Webhook URL (DingTalk only)
+	AppSecret      string                 `protobuf:"bytes,5,opt,name=app_secret,json=appSecret,proto3" json:"app_secret,omitempty"`                   // App secret for platforms like DingTalk (encrypted at rest)
+	WebhookUrl     string                 `protobuf:"bytes,6,opt,name=webhook_url,json=webhookUrl,proto3" json:"webhook_url,omitempty"`               // Webhook URL (DingTalk only)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -201,6 +202,13 @@ func (x *RegisterCredentialRequest) GetPlatformChatId() string {
 func (x *RegisterCredentialRequest) GetAccessToken() string {
 	if x != nil {
 		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *RegisterCredentialRequest) GetAppSecret() string {
+	if x != nil {
+		return x.AppSecret
 	}
 	return ""
 }
@@ -455,7 +463,8 @@ type UpdateCredentialRequest struct {
 	Platform      Platform               `protobuf:"varint,1,opt,name=platform,proto3,enum=memos.api.v1.Platform" json:"platform,omitempty"`
 	Enabled       *bool                  `protobuf:"varint,2,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`                           // Enable or disable the integration
 	AccessToken   *string                `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3,oneof" json:"access_token,omitempty"` // Update the access token
-	WebhookUrl    *string                `protobuf:"bytes,4,opt,name=webhook_url,json=webhookUrl,proto3,oneof" json:"webhook_url,omitempty"`    // Update the webhook URL (DingTalk)
+	AppSecret    *string                `protobuf:"bytes,4,opt,name=app_secret,json=appSecret,proto3,oneof" json:"app_secret,omitempty"`      // Update the app secret (e.g., DingTalk AppSecret)
+	WebhookUrl    *string                `protobuf:"bytes,5,opt,name=webhook_url,json=webhookUrl,proto3,oneof" json:"webhook_url,omitempty"`    // Update the webhook URL (DingTalk)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -507,6 +516,13 @@ func (x *UpdateCredentialRequest) GetEnabled() bool {
 func (x *UpdateCredentialRequest) GetAccessToken() string {
 	if x != nil && x.AccessToken != nil {
 		return *x.AccessToken
+	}
+	return ""
+}
+
+func (x *UpdateCredentialRequest) GetAppSecret() string {
+	if x != nil && x.AppSecret != nil {
+		return *x.AppSecret
 	}
 	return ""
 }

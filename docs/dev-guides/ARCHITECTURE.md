@@ -67,7 +67,8 @@ divinesense/
 │   ├── idp/             # 身份提供商
 │   ├── markdown/        # Markdown 插件
 │   ├── ocr/             # OCR 插件
-│   └── webhook/         # Webhook 插件
+│   ├── webhook/         # Webhook 插件
+│   └── chat_apps/       # 聊天应用接入（Telegram/钉钉/WhatsApp）
 ├── store/               # 数据存储层
 │   ├── db/              # 数据库实现
 │   │   ├── postgres/    # PostgreSQL with pgvector
@@ -109,7 +110,7 @@ divinesense/
 
 3. **插件系统** (`plugin/`)：
    - 不再包含 AI 功能（已提升为一级模块）
-   - 包含：调度器、存储适配器、身份提供商、Markdown、OCR、Webhook 等
+   - 包含：调度器、存储适配器、身份提供商、Markdown、OCR、Webhook、聊天应用接入（Chat Apps）等
 
 4. **后台运行器** (`server/runner/`):
    - 异步生成笔记 Embedding
@@ -129,13 +130,14 @@ divinesense/
 
 ### API 服务
 
-> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v6.0
+> **保鲜状态**: ✅ 已验证 (2026-02-03) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v6.1
 
 | 服务 | Proto 文件 | 描述 |
 |:-----|:-----------|:-----|
 | **ActivityService** | `activity_service.proto` | 用户活动记录 |
 | **AttachmentService** | `attachment_service.proto` | 附件管理 |
 | **AuthService** | `auth_service.proto` | 认证授权 |
+| **ChatAppService** | `chat_app_service.proto` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
 | **IdpService** | `idp_service.proto` | 身份提供商集成 |
 | **InstanceService** | `instance_service.proto` | 实例配置 |
 | **MemoService** | `memo_service.proto` | 笔记 CRUD |

@@ -29,9 +29,9 @@ func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredenti
 	)
 	query := `
 		INSERT INTO chat_app_credential
-		(user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, created_ts, updated_ts)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
+		(user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, created_ts, updated_ts)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
 	`
 
 	now := time.Now().Unix()
@@ -41,6 +41,7 @@ func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredenti
 		req.PlatformUserID,
 		req.PlatformChatID,
 		req.AccessToken,
+		req.AppSecret,
 		req.WebhookURL,
 		now,
 		now,
@@ -54,6 +55,7 @@ func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredenti
 		&cred.PlatformUserID,
 		&cred.PlatformChatID,
 		&cred.AccessToken,
+		&cred.AppSecret,
 		&cred.WebhookURL,
 		&cred.Enabled,
 		&cred.CreatedTs,
@@ -79,7 +81,7 @@ func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredenti
 // ListCredentials lists all credentials for a user.
 func (s *ChatAppStore) ListCredentials(ctx context.Context, userID int32, platformFilter chat_apps.Platform) ([]*chat_apps.Credential, error) {
 	query := `
-		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
+		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
 		FROM chat_app_credential
 		WHERE user_id = $1
 	`
@@ -108,6 +110,7 @@ func (s *ChatAppStore) ListCredentials(ctx context.Context, userID int32, platfo
 			&cred.PlatformUserID,
 			&cred.PlatformChatID,
 			&cred.AccessToken,
+			&cred.AppSecret,
 			&cred.WebhookURL,
 			&cred.Enabled,
 			&cred.CreatedTs,
@@ -129,7 +132,7 @@ func (s *ChatAppStore) ListCredentials(ctx context.Context, userID int32, platfo
 // GetCredentialByPlatform retrieves a credential by user ID and platform.
 func (s *ChatAppStore) GetCredentialByPlatform(ctx context.Context, userID int32, platform chat_apps.Platform) (*chat_apps.Credential, error) {
 	query := `
-		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
+		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
 		FROM chat_app_credential
 		WHERE user_id = $1 AND platform = $2
 	`
@@ -144,6 +147,7 @@ func (s *ChatAppStore) GetCredentialByPlatform(ctx context.Context, userID int32
 		&cred.PlatformUserID,
 		&cred.PlatformChatID,
 		&cred.AccessToken,
+		&cred.AppSecret,
 		&cred.WebhookURL,
 		&cred.Enabled,
 		&cred.CreatedTs,
@@ -164,7 +168,7 @@ func (s *ChatAppStore) GetCredentialByPlatformUserID(ctx context.Context, platfo
 		"platform_user_id", platformUserID,
 	)
 	query := `
-		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
+		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
 		FROM chat_app_credential
 		WHERE platform = $1 AND platform_user_id = $2 AND enabled = true
 	`
@@ -179,6 +183,7 @@ func (s *ChatAppStore) GetCredentialByPlatformUserID(ctx context.Context, platfo
 		&cred.PlatformUserID,
 		&cred.PlatformChatID,
 		&cred.AccessToken,
+		&cred.AppSecret,
 		&cred.WebhookURL,
 		&cred.Enabled,
 		&cred.CreatedTs,
@@ -219,14 +224,15 @@ func (s *ChatAppStore) UpdateCredential(ctx context.Context, req *UpdateCredenti
 	query := `
 		UPDATE chat_app_credential
 		SET access_token = COALESCE($2, access_token),
-		    webhook_url = COALESCE($3, webhook_url),
-		    updated_ts = $4
+		    app_secret = COALESCE($3, app_secret),
+		    webhook_url = COALESCE($4, webhook_url),
+		    updated_ts = $5
 		WHERE id = $1
-		RETURNING id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
+		RETURNING id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
 	`
 
 	now := time.Now().Unix()
-	row := s.db.QueryRowContext(ctx, query, req.ID, req.AccessToken, req.WebhookURL, now)
+	row := s.db.QueryRowContext(ctx, query, req.ID, req.AccessToken, req.AppSecret, req.WebhookURL, now)
 
 	var cred chat_apps.Credential
 	err := row.Scan(
@@ -236,6 +242,7 @@ func (s *ChatAppStore) UpdateCredential(ctx context.Context, req *UpdateCredenti
 		&cred.PlatformUserID,
 		&cred.PlatformChatID,
 		&cred.AccessToken,
+		&cred.AppSecret,
 		&cred.WebhookURL,
 		&cred.Enabled,
 		&cred.CreatedTs,
@@ -280,11 +287,58 @@ type CreateCredentialRequest struct {
 	PlatformUserID string
 	PlatformChatID string
 	AccessToken    string // Already encrypted
+	AppSecret      string // Already encrypted
 	WebhookURL     string
 }
 
 type UpdateCredentialRequest struct {
 	ID          int64
 	AccessToken *string
+	AppSecret   *string
 	WebhookURL  *string
+}
+
+// ListAllEnabled lists all enabled credentials across all users.
+// Used during service startup to initialize chat channels.
+func (s *ChatAppStore) ListAllEnabled(ctx context.Context) ([]*chat_apps.Credential, error) {
+	query := `
+		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, app_secret, webhook_url, enabled, created_ts, updated_ts
+		FROM chat_app_credential
+		WHERE enabled = true
+		ORDER BY platform, user_id
+	`
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list enabled credentials: %w", err)
+	}
+	defer rows.Close()
+
+	var credentials []*chat_apps.Credential
+	for rows.Next() {
+		var cred chat_apps.Credential
+		err := rows.Scan(
+			&cred.ID,
+			&cred.UserID,
+			&cred.Platform,
+			&cred.PlatformUserID,
+			&cred.PlatformChatID,
+			&cred.AccessToken,
+			&cred.AppSecret,
+			&cred.WebhookURL,
+			&cred.Enabled,
+			&cred.CreatedTs,
+			&cred.UpdatedTs,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan credential: %w", err)
+		}
+		credentials = append(credentials, &cred)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+
+	return credentials, nil
 }
