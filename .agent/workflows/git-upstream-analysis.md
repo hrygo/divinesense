@@ -1,27 +1,23 @@
----
-description: A robust workflow to analyze upstream changes and generate an "Upstream Alignment Spec". Includes state management to track analyzed commits and supports incremental analysis.
----
+# Git Upstream Alignment Analysis Workflow (Updated)
 
-# Git Upstream Alignment Analysis Workflow (Incremental)
-
-This workflow helps you plan the synchronization of your local codebase with the upstream repository (`https://github.com/usememos/memos`). It uses a state file to track previously analyzed commits, ensuring you only review new changes ("Pragmatic Filter").
+This workflow helps you scientifically analyze, triage, and plan the synchronization of your local codebase with the upstream repository (`https://github.com/usememos/memos`). 
+It evolves from a simple list of changes to a **comprehensive feasibility and ROI analysis**.
 
 **Output Language**: Chinese (Simplified)
 
-## 1. Setup & State Management
+## 1. Setup & Discovery
 
-Initialize environment and determine the analysis range.
+Initialize environment and capture the diff range.
 
 1.  **Configure Temporary Remote**:
-    *Use a temporary remote to avoid polluting local config.*
     ```bash
     REMOTE_NAME="_agent_upstream_temp"
     git remote add $REMOTE_NAME https://github.com/usememos/memos 2>/dev/null || true
     git fetch $REMOTE_NAME --tags --force
     ```
 
-2.  **Determine Analysis Baseline (`START_POINT`)**:
-    *We use a local state file to remember the last analyzed commit.*
+2.  **Determine Analysis Range**:
+    *Robust logic to handle first-time runs or disconnected histories.*
     ```bash
     STATE_FILE=".agent/upstream-sync-state"
     REMOTE_NAME="_agent_upstream_temp"
@@ -29,164 +25,79 @@ Initialize environment and determine the analysis range.
     
     if [ -f "$STATE_FILE" ]; then
         START_POINT=$(cat "$STATE_FILE")
-        echo "🔄 Found last analyzed commit: $START_POINT"
+        echo "🔄 Continue from last sync: $START_POINT"
     else
-        # Optimize: Find the common ancestor as the baseline
-        START_POINT=$(git merge-base HEAD $TARGET)
-        echo "🆕 No previous state found. Using common ancestor ($START_POINT) as baseline."
+        # Try common ancestor
+        START_POINT=$(git merge-base HEAD $TARGET 2>/dev/null)
+        if [ -z "$START_POINT" ]; then
+             echo "⚠️ No common ancestor found. Defaulting to last 50 commits."
+             RANGE="-n 50"
+        else
+             echo "🆕 Using common ancestor ($START_POINT)"
+             RANGE="$START_POINT..$TARGET"
+        fi
     fi
     ```
 
-## 2. Divergence Check (Quick Scan)
+## 2. Intelligence Gathering & Triage
 
-Check the volume of new work.
+Don't just list titles. Categorize and filter.
 
-1.  **Check Commit Count**:
+1.  **Generate Raw Log**:
+    Run commands to get a categorized view of `BREAKING`, `FEAT`, and `FIX`.
     ```bash
-    COUNT=$(git rev-list --count $START_POINT..$TARGET)
-    echo "📉 New commits to analyze: $COUNT"
-    ```
-    *If count is 0, you are up-to-date.*
-
-2.  **Identify Versions**:
-    ```bash
-    echo "Base: $START_POINT"
-    echo "Target: $(git describe --tags $TARGET)"
+    # (Agent: Run 'git log' commands as previously established, filtering by type)
     ```
 
-## 3. Structured Impact Analysis
+2.  **Interactive Triage (Agent)**:
+    *   **Present** the raw list to the user.
+    *   **Ask**: "Which modules or features are we interested in?" (e.g., "Full sync", "Only Security Fixes", "Specific Feature X").
 
-Scan `START_POINT..TARGET` and categorize changes for the spec.
+## 3. Deep Dive & Feasibility Analysis (ROI)
 
-1.  **🚨 Breaking Changes (Detailed)**:
-    *Shows commit message + file stats to assess impact structure.*
+**CRITICAL STEP**: Before planning, you must understand the *cost* of synchronization.
+
+*   **For Selected Features**:
+    1.  **Code Inspection**: Use `git show --stat <commit>` to see which files changed.
+    2.  **Local Comparison**: Check if the corresponding local files exists.
+        *   *Example*: "Upstream changed `plugin/scheduler`. Do we utilize `plugin` in `server.go`?"
+    3.  **Conflict Prediction**: Identify heavily modified files (e.g., `go.mod`, `package.json`, Core UI components).
+
+*   **Output**: Generate a **Feasibility Report** (`.agent/upstream_sync_analysis.md`) containing:
+    *   **Gap Analysis**: What exists locally vs upstream?
+    *   **ROI**: Is it a simple copy-paste or a complex refactor?
+    *   **Risk**: Are there breaking changes (e.g., DB Schema, API Contracts)?
+
+## 4. External Verification
+
+*   **Security/Bug Checks**: If the upstream fixes a bug (e.g., "Fix Auth", "CSRF"), use `search_web` to verify the validity and severity of the issue (e.g., MDN docs, CVEs).
+    *   *Goal*: Confirm if it's a "Must Fix" or "Nice to have".
+
+## 5. Execution Planning
+
+Formulate the Action Plan.
+
+1.  **Draft Development Plan**:
+    Create a checklist (`.agent/upstream_sync_dev_plan.md`) separated by phases:
+    *   **Phase 1: Critical Fixes** (Blockers, Security).
+    *   **Phase 2: Backend/Core** (Dependencies, Infrastructure).
+    *   **Phase 3: Frontend/UI** (Components, Styles).
+    *   **Phase 4: Verification** (How to test).
+
+2.  **Submit Issue**:
+    Interact with the user to confirm the plan, then create/update the GitHub Issue.
     ```bash
-    echo "### 🛑 Breaking Changes"
-    git log --no-merges --grep="!" --grep="BREAKING CHANGE" --format="#### %h %s%n- **Author**: %an%n- **Date**: %cd%n%n%b" $START_POINT..$TARGET | head -n 30
-    
-    # Auto-stat key breaking commits
-    for commit in $(git log --no-merges --grep="!" --grep="BREAKING CHANGE" --format="%h" $START_POINT..$TARGET | head -n 5); do
-        echo "Stats for $commit:"
-        git show --stat $commit | head -n 10
-        echo "..."
-    done
+    gh issue create --title "🏗️ Upstream Sync: [Topic]" --body-file .agent/upstream_sync_dev_plan.md --label "maintenance"
     ```
 
-2.  **✨ New Features (Markdown List)**:
-    ```bash
-    echo "### ✨ Features"
-    git log --no-merges --grep="feat" --format="- **%h** %s" $START_POINT..$TARGET \
-        -- . ":!.github" ":!docs" ":!web/src/locales" ":!*.md" | head -n 20
-    ```
-
-3.  **🐛 Core Fixes**:
-    ```bash
-    echo "### 🐛 Fixes"
-    git log --no-merges --grep="fix" --format="- **%h** %s" $START_POINT..$TARGET \
-        -- . ":!.github" ":!docs" ":!web/src/locales" ":!*.md" | head -n 20
-    ```
-
-4.  **⚡ Performance & Refactor**:
-    ```bash
-    echo "### ⚡ Perf & Refactor"
-    git log --no-merges --grep="perf" --grep="refactor" --format="- **%h** %s" $START_POINT..$TARGET \
-        -- . ":!.github" ":!docs" ":!web/src/locales" ":!*.md" | head -n 20
-    ```
-
-## 4. Infrastructure & Data Check
-
-1.  **Critical Files**:
-    ```bash
-    echo "### 🏗️ Infrastructure Changes"
-    git diff --stat $START_POINT..$TARGET -- go.mod package.json store/migration proto/
-    ```
-
-## 5. Reasoning Framework (The Filter)
-
-**Core Principle: Pragmatism (务求实效)**.
-Evaluate every identified change against these criteria:
-
-### ✅ High Priority (Adopt)
-*   **Substantial Value**: Solves a known bug or adds a requested feature.
-*   **Major Optimization**: Measurable performance gain or security fix.
-*   **UX Enhancement**: Clear improvement to user journey.
-
-### ⚠️ Low Priority (Evaluate)
-*   **Refactoring**: Adopt only if it simplifies future work.
-*   **Minor Fixes**: Skip if the issue doesn't affect your use case.
-
-### 🚫 Ignore (Noise)
-*   **Telemetry**: Usage tracking code.
-*   **Sponsor/Commercial**: Marketing UI/logic.
-*   **Internal Tooling**: CI/CD for upstream org.
-
-## 6. Output Generation & State Update
-
-1.  **Generate Spec**:
-    Create `docs/specs/sync-[feature]-[date].md` using the template below.
-
-2.  **Update State (After Analysis)**:
-    *Run this ONLY after you have successfully generated the specs to "mark as read".*
+3.  **Update State**:
+    (Only after successful plan adoption)
     ```bash
     git rev-parse $TARGET > .agent/upstream-sync-state
-    echo "✅ Analysis state updated to $(cat .agent/upstream-sync-state)"
     ```
-    
-## 7. Cleanup
 
-Remove the temporary remote to restore the environment.
+## 6. Cleanup
 
 ```bash
 git remote remove _agent_upstream_temp 2>/dev/null
-echo "🧹 Temporary remote '_agent_upstream_temp' removed."
-```
-
-**Template**:
-
-```markdown
-# 📋 上游功能逆向与追齐规范 (Upstream Feature Specs)
-
-**分析时间**: `[YYYY-MM-DD]`
-**分析范围**: `[Start Commit]` -> `[Target Commit]`
-
-## 🎯 目标摘要
-[简述本次需要移植的核心功能或修复。]
-
-## 🚫 排除项 (Ignored)
-[列出本次分析中明确跳过的模块]
-
-## 🗺️ 功能逆向与实现细则
-
-### 1. 🛑 架构与破坏性变更 (Critical / Breaking)
-#### [变更名称]
-- **来源**: [Commit Hash]
-- **必要性**: ⭐⭐⭐⭐⭐
-- **原理解析 (Reverse Engineering)**:
-    - [分析上游变更的本质：例如将 `HOST` 角色移除，数据迁移至 `ADMIN`]
-    - [关键变动文件]: `proto/api/v1/user_service.proto`, `store/migrator.go`
-- **本地移植规范**:
-    - [指导如何在本地代码库重现此变更，例如：编写新的迁移脚本，修改鉴权中间件]
-
-### 2. ⚡ 核心逻辑与修复 (High Priority)
-#### [名称]
-- **来源**: [Commit Hash]
-- **必要性**: ⭐⭐⭐⭐
-- **逻辑分析**:
-    - [描述 Bug 原因及上游修复方案]
-    - [关键代码片段/差异分析]
-
-### 3. ✨ 有价值的新特性 (Features)
-#### [名称]
-- **来源**: [Commit Hash]
-- **实现机制**:
-    - [UI 层]: [新增组件/路由]
-    - [API 层]: [新增接口/字段]
-    - [数据层]: [Schema 变更]
-- **移植建议**:
-    - [如何适配本地架构]
-
-## ✅ 验证清单
-- [ ] 逻辑正确移植
-- [ ] 无引入冗余代码
-- [ ] 通过相关测试
 ```
