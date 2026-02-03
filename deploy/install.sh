@@ -24,6 +24,7 @@ DB_TYPE="${DB_TYPE:-docker}"
 ENABLE_AI="${ENABLE_AI:-true}"
 ENABLE_GEEK="${ENABLE_GEEK:-true}"
 ENABLE_EVOLUTION="${ENABLE_EVOLUTION:-false}"
+INSTALL_WHATSAPP="${INSTALL_WHATSAPP:-false}"
 
 # 获取项目版本（如果存在）
 get_project_version() {
@@ -98,6 +99,13 @@ run_interactive_wizard() {
     ENABLE_EVOLUTION=false
     [[ "$evo_confirm" =~ ^[Yy]$ ]] && ENABLE_EVOLUTION=true
 
+    # WhatsApp Bridge
+    echo ""
+    echo -ne "安装 WhatsApp Bridge? [y/N]: "
+    read -n 1 -r whatsapp_confirm
+    INSTALL_WHATSAPP=false
+    [[ "$whatsapp_confirm" =~ ^[Yy]$ ]] && INSTALL_WHATSAPP=true
+
     # Admin account
     echo ""
     ADMIN_USERNAME=$(prompt "管理员用户名" "admin")
@@ -108,12 +116,13 @@ run_interactive_wizard() {
     echo ""
     print_box "配置确认"
     echo ""
-    echo "  模式:    $DEPLOY_MODE"
-    echo "  端口:    $PORT"
-    echo "  数据库:  $DB_TYPE"
-    echo "  AI:      $ENABLE_AI"
-    echo "  Geek:    $ENABLE_GEEK"
-    echo "  Evolution: $ENABLE_EVOLUTION"
+    echo "  模式:        $DEPLOY_MODE"
+    echo "  端口:        $PORT"
+    echo "  数据库:      $DB_TYPE"
+    echo "  AI:          $ENABLE_AI"
+    echo "  Geek:        $ENABLE_GEEK"
+    echo "  Evolution:  $ENABLE_EVOLUTION"
+    echo "  WhatsApp:   $INSTALL_WHATSAPP"
     echo ""
     echo -ne "确认开始安装? [Y/n]: "
     read -n 1 -r confirm
@@ -166,6 +175,19 @@ EOF
         log_error "Docker compose 启动失败"
         log_info "检查日志: docker compose -f docker/compose/prod.yml logs"
         exit 1
+    fi
+
+    # WhatsApp Bridge (Docker 模式)
+    if [ "$INSTALL_WHATSAPP" = "true" ]; then
+        log_step "安装 WhatsApp Bridge..."
+
+        # 使用带 WhatsApp 的 Compose 文件
+        if [ -f docker/compose/with-whatsapp.yml ]; then
+            docker compose -f docker/compose/with-whatsapp.yml --env-file .env.prod up -d
+            log_success "WhatsApp Bridge 已启动 (Docker)"
+        else
+            log_warn "未找到 with-whatsapp.yml，跳过 WhatsApp Bridge"
+        fi
     fi
 
     log_success "安装完成"
@@ -316,6 +338,39 @@ EOF
         log_warn "bash 别名配置失败"
     fi
 
+    # ============================================================================
+    # WhatsApp Bridge 安装（可选）
+    # ============================================================================
+    if [ "$INSTALL_WHATSAPP" = "true" ]; then
+        log_step "安装 WhatsApp Bridge..."
+
+        # 检查 Node.js
+        if ! command -v node &>/dev/null; then
+            log_warn "Node.js 未安装，跳过 WhatsApp Bridge 安装"
+            log_info "手动安装命令: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -"
+        else
+            # 确保 bridge 目录存在
+            mkdir -p "${INSTALL_DIR}/plugin/chat_apps/channels/whatsapp/bridge"
+
+            # 复制 bridge 源码（如果从源码安装）
+            if [ -d "${SCRIPT_DIR}/../plugin/chat_apps/channels/whatsapp/bridge" ]; then
+                cp -r "${SCRIPT_DIR}/../plugin/chat_apps/channels/whatsapp/bridge"/* \
+                      "${INSTALL_DIR}/plugin/chat_apps/channels/whatsapp/bridge/"
+            fi
+
+            # 配置 Webhook URL
+            export DIVINESENSE_WEBHOOK_URL="http://${server_ip}:${PORT}/api/v1/chat_apps/webhook"
+            export DIVINE_INSTALL_DIR="${INSTALL_DIR}"
+
+            # 使用 baileys-bridge.sh 安装
+            if [ -f "${SCRIPT_DIR}/baileys-bridge.sh" ]; then
+                bash "${SCRIPT_DIR}/baileys-bridge.sh" install || log_warn "WhatsApp Bridge 安装失败，可稍后手动安装"
+            else
+                log_warn "未找到 baileys-bridge.sh，跳过 WhatsApp Bridge 安装"
+            fi
+        fi
+    fi
+
     log_success "安装完成"
 }
 
@@ -337,6 +392,7 @@ main() {
                 echo "  --interactive, -i     交互式配置向导"
                 echo "  --mode=MODE          部署模式 (binary|docker)"
                 echo "  --port=PORT          服务端口 (默认: 5230)"
+                echo "  --whatsapp           安装 WhatsApp Bridge"
                 echo "  --help, -h            显示此帮助"
                 echo ""
                 echo "环境变量:"
@@ -345,10 +401,12 @@ main() {
                 echo "  ENABLE_AI            启用 AI 功能 (true|false)"
                 echo "  ENABLE_GEEK          启用 Geek Mode (true|false)"
                 echo "  ENABLE_EVOLUTION     启用 Evolution Mode (true|false)"
+                echo "  INSTALL_WHATSAPP     安装 WhatsApp Bridge (true|false)"
                 echo "  DIVINE_INSTALL_DIR    安装目录 (默认: /opt/divinesense)"
                 echo "  DIVINE_CONFIG_DIR     配置目录 (默认: /etc/divinesense)"
                 exit 0
                 ;;
+            --whatsapp) INSTALL_WHATSAPP="true" ;;
         esac
         shift
     done

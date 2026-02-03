@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # DivineSense 主服务
+  divinesense:
+    image: ${DIVINESENSE_IMAGE:-ghcr.io/hrygo/divinesense:latest}
+    container_name: divinesense
+    restart: unless-stopped
+    ports:
+      - "${DIVINESENSE_PORT:-5230}:5230"
+    environment:
+      DIVINESENSE_INSTANCE_URL: ${DIVINESENSE_INSTANCE_URL:-http://localhost:5230}
+      DIVINESENSE_PORT: 5230
+      DIVINESENSE_MODE: prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - divinesense-net
+
+  # PostgreSQL 数据库
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: divinesense-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-divinesense}
+      POSTGRES_USER: ${POSTGRES_USER:-divinesense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "25432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-divinesense} -d ${POSTGRES_DB:-divinesense}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - divinesense-net
+
+  # WhatsApp Baileys Bridge
+  baileys-bridge:
+    image: ${BAILEYS_IMAGE:-ghcr.io/hrygo/baileys-bridge:latest}
+    container_name: baileys-bridge
+    restart: unless-stopped
+    ports:
+      - "${BAILEYS_PORT:-3001}:3001"
+    environment:
+      PORT: 3001
+      DIVINESENSE_WEBHOOK_URL: ${DIVINESENSE_WEBHOOK_URL:-http://divinesense:5230/api/v1/chat_apps/webhook}
+      NODE_ENV: production
+    volumes:
+      - baileys_auth:/app/.baileys
+      - baileys_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - divinesense-net
+
+volumes:
+  postgres_data:
+    driver: local
+  baileys_auth:
+    driver: local
+  baileys_logs:
+    driver: local
+
+networks:
+  divinesense-net:
+    driver: bridge

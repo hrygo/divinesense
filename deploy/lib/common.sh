@@ -324,6 +324,13 @@ divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
 divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
 divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
 divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
+# WhatsApp Bridge 管理
+divine ALL=(ALL) NOPASSWD: /opt/divinesense/deploy/baileys-bridge.sh *
+divine ALL=(ALL) NOPASSWD: /bin/systemctl status baileys-bridge.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl start baileys-bridge.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl stop baileys-bridge.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl restart baileys-bridge.service
+divine ALL=(ALL) NOPASSWD: /bin/journalctl -u baileys-bridge *
 EOF
 
     chmod 440 "$sudoers_file"
@@ -356,7 +363,7 @@ create_user_makefile() {
     fi
 
     cat > "$makefile" << 'MAKEFILE_EOF'
-.PHONY: help status start stop restart logs logs-follow health db-shell db-backup db-restore db-reset upgrade pull-source check-version clone-source source-status
+.PHONY: help status start stop restart logs logs-follow health db-shell db-backup db-restore db-reset upgrade pull-source check-version clone-source source-status whatsapp-status whatsapp-qr whatsapp-logs
 
 # ============================================================
 # 配置
@@ -406,6 +413,12 @@ help:
 	@echo "  make clone-source    - 克隆源码仓库"
 	@echo "  make pull-source     - 拉取源码更新"
 	@echo "  make source-status   - 查看源码状态"
+	@echo ""
+	@echo "WhatsApp Bridge:"
+	@echo "  make whatsapp-status  - 查看 WhatsApp Bridge 状态"
+	@echo "  make whatsapp-qr      - 显示配对 QR 码"
+	@echo "  make whatsapp-logs    - 查看 WhatsApp Bridge 日志"
+	@echo "  make whatsapp-install - 安装 WhatsApp Bridge"
 
 # ============================================================
 # 服务管理
@@ -561,6 +574,40 @@ source-status:
 	else \
 		echo "源码不存在，请先运行 'make clone-source'"; \
 	fi
+
+# ============================================================
+# WhatsApp Bridge 管理
+# ============================================================
+WHATSAPP_BRIDGE_DIR = /opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge
+WHATSAPP_SCRIPT     = /opt/divinesense/deploy/baileys-bridge.sh
+
+whatsapp-status:
+	@if [ -f "$(WHATSAPP_SCRIPT)" ]; then \
+		$(WHATSAPP_SCRIPT) status; \
+	else \
+		echo "WhatsApp Bridge 未安装"; \
+	fi
+
+whatsapp-qr:
+	@if [ -f "$(WHATSAPP_SCRIPT)" ]; then \
+		$(WHATSAPP_SCRIPT) qr; \
+	else \
+		echo "WhatsApp Bridge 未安装"; \
+	fi
+
+whatsapp-logs:
+	@if [ -f "$(WHATSAPP_SCRIPT)" ]; then \
+		$(WHATSAPP_SCRIPT) logs; \
+	else \
+		echo "WhatsApp Bridge 未安装"; \
+	fi
+
+whatsapp-install:
+	@if [ -f "$(WHATSAPP_SCRIPT)" ]; then \
+		sudo $(WHATSAPP_SCRIPT) install; \
+	else \
+		echo "找不到 baileys-bridge.sh 脚本"; \
+	fi
 MAKEFILE_EOF
 
     chown divine:divine "$makefile"
@@ -612,6 +659,9 @@ alias ds-db='make -C ${divine_home} db-shell'
 alias ds-backup='make -C ${divine_home} db-backup'
 alias ds-upgrade='make -C ${divine_home} upgrade'
 alias ds-pull='make -C ${divine_home} pull-source'
+alias ds-wa='make -C ${divine_home} whatsapp-status'
+alias ds-qr='make -C ${divine_home} whatsapp-qr'
+alias ds-wa-logs='make -C ${divine_home} whatsapp-logs'
 EOF
 
     chown divine:divine "$bashrc"

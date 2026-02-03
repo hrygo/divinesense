@@ -1,0 +1,46 @@
+[Unit]
+Description=DivineSense Baileys WhatsApp Bridge Service
+Documentation=https://github.com/hrygo/divinesense
+After=network-online.target divinesense.service
+Wants=network-online.target
+Requires=divinesense.service
+
+[Service]
+Type=simple
+User=divine
+Group=divine
+WorkingDirectory=/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge
+
+# Environment
+Environment="PATH=/usr/bin:/bin:/usr/local/bin"
+Environment="NODE_ENV=production"
+Environment="PORT=3001"
+EnvironmentFile=-/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge/.env
+
+# ExecStart
+ExecStart=/usr/bin/node src/index.js
+
+# Restart policy
+Restart=always
+RestartSec=10s
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge
+ReadWritePaths=/var/log/baileys-bridge
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=baileys-bridge
+
+[Install]
+WantedBy=multi-user.target
