@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // EventTypeRecord records an observed event type during testing.
@@ -837,7 +839,7 @@ func TestCCRunnerIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	err = runner.Execute(ctx, cfg, "say hello", recorder.Callback())
+	_ = runner.Execute(ctx, cfg, "say hello", recorder.Callback())
 
 	// The test passes if we get some events
 	uniqueTypes := recorder.GetUniqueTypes()
@@ -1305,10 +1307,7 @@ func TestSessionStatsConcurrency(t *testing.T) {
 // TestCCRunnerConfigDefaults tests CCRunnerConfig field defaults.
 func TestCCRunnerConfigDefaults(t *testing.T) {
 	cfg := &CCRunnerConfig{
-		Mode:           "geek",
-		WorkDir:        "/tmp",
 		ConversationID: 123,
-		UserID:         1,
 	}
 
 	// Generate session ID if not set
@@ -1320,17 +1319,9 @@ func TestCCRunnerConfigDefaults(t *testing.T) {
 		t.Error("Expected SessionID to be generated")
 	}
 
-	// Check default values
-	if cfg.PermissionMode == "" {
-		// Empty permission mode is valid (will use CLI default)
-	}
-
-	if len(cfg.AllowedPaths) == 0 {
-		// Empty allowed paths is valid for geek mode
-	}
-
-	if cfg.SystemPrompt == "" {
-		// Empty system prompt is valid (will use default)
+	// Verify generated session ID is a valid UUID
+	if _, err := uuid.Parse(cfg.SessionID); err != nil {
+		t.Errorf("Generated SessionID is not a valid UUID: %v", err)
 	}
 }
 
