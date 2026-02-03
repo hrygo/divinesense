@@ -778,13 +778,21 @@ func (r *CCRunner) executeWithSession(
 		return fmt.Errorf("start command: %w", err)
 	}
 
+	// Create stderr buffer to capture output for error context
+	// 创建 stderr 缓冲区以捕获输出用于错误上下文
+	stderrBuf := newStderrBuffer(100)
+
 	// Stream output with timeout
 	// 带超时流式输出
 	r.logger.Info("CCRunner: streamOutput starting", "mode", cfg.Mode, "session_id", cfg.SessionID)
-	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats); err != nil {
+	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats, stderrBuf); err != nil {
 		r.logger.Error("CCRunner: streamOutput failed", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", err)
 		if cmd.Process != nil {
 			_ = cmd.Process.Kill() //nolint:errcheck // process already terminating
+		}
+		// Include stderr context in error
+		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
+			return fmt.Errorf("stream failed: %w (last %d stderr lines: %s)", err, len(stderrLines), strings.Join(stderrLines, "; "))
 		}
 		return err
 	}
@@ -796,6 +804,14 @@ func (r *CCRunner) executeWithSession(
 	waitErr := cmd.Wait()
 	if waitErr != nil {
 		r.logger.Error("CCRunner: CLI process exited with error", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", waitErr)
+		// Include stderr context in error
+		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
+			exitCode := 0
+			if cmd.ProcessState != nil {
+				exitCode = cmd.ProcessState.ExitCode()
+			}
+			return fmt.Errorf("command exited with code %d: %w (stderr: %s)", exitCode, waitErr, strings.Join(stderrLines, "; "))
+		}
 	} else {
 		r.logger.Info("CCRunner: CLI process exited successfully", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	}
@@ -810,6 +826,51 @@ func (r *CCRunner) executeWithSession(
 	return nil
 }
 
+// stderrBuffer captures stderr output for error context.
+type stderrBuffer struct {
+	mu        sync.Mutex
+	lines     []string
+	maxLines  int
+	lineCount int
+}
+
+func newStderrBuffer(maxLines int) *stderrBuffer {
+	return &stderrBuffer{
+		lines:   make([]string, 0, maxLines),
+		maxLines: maxLines,
+	}
+}
+
+// addLine adds a line to the buffer, keeping only the last maxLines.
+func (b *stderrBuffer) addLine(line string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.lineCount++
+	if len(b.lines) >= b.maxLines {
+		b.lines = b.lines[1:]
+	}
+	b.lines = append(b.lines, line)
+}
+
+// getLines returns a copy of the captured lines.
+func (b *stderrBuffer) getLines() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	result := make([]string, len(b.lines))
+	copy(result, b.lines)
+	return result
+}
+
+// getLastN returns the last N lines (or all if fewer).
+func (b *stderrBuffer) getLastN(n int) []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.lines) <= n {
+		return b.getLines()
+	}
+	return b.lines[len(b.lines)-n:]
+}
+
 // streamOutput reads and parses stream-json output from CLI.
 // streamOutput 读取并解析 CLI 的 stream-json 输出。
 func (r *CCRunner) streamOutput(
@@ -818,6 +879,7 @@ func (r *CCRunner) streamOutput(
 	stdout, stderr io.ReadCloser,
 	callback EventCallback,
 	stats *SessionStats,
+	stderrBuf *stderrBuffer,
 ) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 2)
@@ -987,32 +1049,33 @@ func (r *CCRunner) streamOutput(
 		}
 	}()
 
-	// Stream stderr with sampling to prevent log flooding while preserving debug info.
+	// Stream stderr with sampling for logs and capture last N lines for error context.
 	// 对 stderr 进行采样以防止日志泛滥，同时保留调试信息。
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		defer r.logger.Info("CCRunner: stderr goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 
-		// Sample stderr output (10% rate) to capture CLI errors without overwhelming logs.
-		// 使用 10% 采样率捕获 CLI 错误，避免日志泛滥。
+		// Sample stderr output (10% rate) for logs, capture all for error context.
+		// 对 stderr 进行采样记录到日志，同时捕获所有内容用于错误上下文。
 		scanner := bufio.NewScanner(stderr)
-		lineCount := 0
 		sampleRate := 10 // Sample 10% of stderr lines
 		for scanner.Scan() {
-			lineCount++
+			line := scanner.Text()
+			stderrBuf.addLine(line)
+
 			if rand.Intn(100) < sampleRate {
 				r.logger.Warn("CCRunner: stderr sample",
 					"user_id", cfg.UserID,
 					"mode", cfg.Mode,
 					"session_id", cfg.SessionID,
-					"line", scanner.Text())
+					"line", line)
 			}
 		}
 		r.logger.Info("CCRunner: stderr processing complete",
 			"mode", cfg.Mode,
 			"session_id", cfg.SessionID,
-			"total_lines", lineCount)
+			"total_lines", stderrBuf.lineCount)
 	}()
 
 	// Wait for completion or timeout
