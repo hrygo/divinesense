@@ -11,6 +11,7 @@ import (
 	"database/sql"
 
 	"github.com/hrygo/divinesense/store"
+	"github.com/lib/pq"
 )
 
 // SaveSessionStats saves a session statistics record.
@@ -49,13 +50,14 @@ func (d *DB) SaveSessionStats(ctx context.Context, stats *store.AgentSessionStat
 
 	var toolsUsedArray interface{} = nil
 	if len(stats.ToolsUsed) > 0 {
-		// Convert []string to JSONB array format
-		toolsUsedArray = stats.ToolsUsed
+		// Convert []string to PostgreSQL array format
+		toolsUsedArray = pq.Array(stats.ToolsUsed)
 	}
 
-	var filePathsArray []string = nil
+	var filePathsArray interface{} = nil
 	if len(stats.FilePaths) > 0 {
-		filePathsArray = stats.FilePaths
+		// Convert []string to PostgreSQL array format
+		filePathsArray = pq.Array(stats.FilePaths)
 	}
 
 	err := d.db.QueryRowContext(ctx, query,
