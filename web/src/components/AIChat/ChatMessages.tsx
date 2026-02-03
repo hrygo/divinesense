@@ -506,6 +506,14 @@ const MessageBubble = memo(function MessageBubble({
         )}
 
         <div className={cn("flex items-start gap-2", role === "user" ? "flex-row-reverse" : "flex-row")}>
+          {/* WeChat-style timestamp - outside bubble, vertically centered */}
+          {/* 微信风格时间戳 - 气泡外部，垂直居中 */}
+          {!error && (
+            <div className={cn("flex items-center h-full px-1 text-[10px] text-muted-foreground/60 whitespace-nowrap self-center")}>
+              {formatMessageTime(message.timestamp, t)}
+            </div>
+          )}
+
           {error ? (
             <div className="min-w-[120px] max-w-[85%] md:max-w-[80%] p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 shadow-sm">
               <p className="text-sm text-red-700 dark:text-red-300">{content}</p>
@@ -596,20 +604,6 @@ const MessageBubble = memo(function MessageBubble({
                 ) : (
                   <div className="whitespace-pre-wrap break-words text-sm font-sans">{content}</div>
                 )}
-
-                {/* Message timestamp - subtle display below content */}
-                {/* 消息时间戳 - 在内容下方微妙显示 */}
-                <div
-                  className={cn(
-                    "mt-1 text-[8px]",
-                    // User messages: high contrast for visibility on dark bubble
-                    // 用户消息：深色气泡上使用高对比度
-                    role === "user" ? "text-white/70 dark:text-slate-900/60" : "text-muted-foreground/50",
-                    role === "user" ? "text-right" : "text-left",
-                  )}
-                >
-                  {formatMessageTime(message.timestamp, t)}
-                </div>
               </div>
 
               {/* Fold Mask and Button */}
