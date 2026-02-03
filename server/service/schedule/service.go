@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
+	aischedule "github.com/hrygo/divinesense/ai/schedule"
 	"github.com/hrygo/divinesense/internal/util"
-	aischedule "github.com/hrygo/divinesense/plugin/ai/schedule"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/store"
 	postgresstore "github.com/hrygo/divinesense/store/db/postgres"

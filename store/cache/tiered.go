@@ -11,7 +11,7 @@ import (
 
 	"log/slog"
 
-	"github.com/hrygo/divinesense/plugin/ai"
+	"github.com/hrygo/divinesense/ai"
 	"github.com/pkg/errors"
 )
 

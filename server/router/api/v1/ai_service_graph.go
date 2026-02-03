@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/hrygo/divinesense/plugin/ai/graph"
+	"github.com/hrygo/divinesense/ai/graph"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 )
 

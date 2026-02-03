@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	pluginai "github.com/hrygo/divinesense/plugin/ai"
-	"github.com/hrygo/divinesense/plugin/ai/memory"
-	"github.com/hrygo/divinesense/plugin/ai/router"
+	pluginai "github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/core/retrieval"
+	"github.com/hrygo/divinesense/ai/memory"
+	"github.com/hrygo/divinesense/ai/router"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/middleware"
-	"github.com/hrygo/divinesense/server/retrieval"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
 )

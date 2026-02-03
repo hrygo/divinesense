@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hrygo/divinesense/plugin/ai"
+	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/store"
 )
 

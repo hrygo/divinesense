@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/hrygo/divinesense/ai"
+	aischedule "github.com/hrygo/divinesense/ai/schedule"
 	"github.com/hrygo/divinesense/internal/util"
-	"github.com/hrygo/divinesense/plugin/ai"
-	aischedule "github.com/hrygo/divinesense/plugin/ai/schedule"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/store"

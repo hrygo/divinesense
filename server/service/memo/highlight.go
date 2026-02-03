@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hrygo/divinesense/server/retrieval"
+	"github.com/hrygo/divinesense/ai/core/retrieval"
 )
 
 // Highlight represents a highlighted match in the content.

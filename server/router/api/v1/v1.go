@@ -12,12 +12,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/sync/semaphore"
 
+	"github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/internal/profile"
-	"github.com/hrygo/divinesense/plugin/ai"
 	"github.com/hrygo/divinesense/plugin/markdown"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
-	"github.com/hrygo/divinesense/server/retrieval"
 	"github.com/hrygo/divinesense/store"
 )
 

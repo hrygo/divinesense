@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hrygo/divinesense/plugin/ai/agent"
+	"github.com/hrygo/divinesense/ai/agent"
 )
 
 func main() {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hrygo/divinesense/plugin/ai"
-	agentpkg "github.com/hrygo/divinesense/plugin/ai/agent"
+	"github.com/hrygo/divinesense/ai"
+	agentpkg "github.com/hrygo/divinesense/ai/agent"
+	"github.com/hrygo/divinesense/ai/core/retrieval"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
-	"github.com/hrygo/divinesense/server/retrieval"
 	"github.com/hrygo/divinesense/server/service/schedule"
 	"github.com/hrygo/divinesense/store"
 )

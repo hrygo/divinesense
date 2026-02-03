@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/hrygo/divinesense/plugin/ai/review"
+	"github.com/hrygo/divinesense/ai/review"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 )
 

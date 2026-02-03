@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/agent"
 	"github.com/hrygo/divinesense/internal/profile"
-	"github.com/hrygo/divinesense/plugin/ai"
-	"github.com/hrygo/divinesense/plugin/ai/agent"
 	"github.com/hrygo/divinesense/server/service/schedule"
 	"github.com/hrygo/divinesense/store"
 	"github.com/hrygo/divinesense/store/db"

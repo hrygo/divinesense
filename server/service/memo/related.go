@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hrygo/divinesense/plugin/ai/cache"
+	"github.com/hrygo/divinesense/ai/cache"
 	"github.com/hrygo/divinesense/store"
 )
 

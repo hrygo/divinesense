@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hrygo/divinesense/plugin/ai"
+	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/store"
 	"github.com/lithammer/shortuuid/v4"
 	"log/slog"

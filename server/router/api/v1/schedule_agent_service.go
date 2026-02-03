@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/agent"
 	"github.com/hrygo/divinesense/internal/profile"
-	"github.com/hrygo/divinesense/plugin/ai"
-	"github.com/hrygo/divinesense/plugin/ai/agent"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/service/schedule"

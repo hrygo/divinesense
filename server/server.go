@@ -14,8 +14,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 
+	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/internal/profile"
-	"github.com/hrygo/divinesense/plugin/ai"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	apiv1 "github.com/hrygo/divinesense/server/router/api/v1"
 	"github.com/hrygo/divinesense/server/router/fileserver"
