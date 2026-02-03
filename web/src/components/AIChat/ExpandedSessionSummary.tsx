@@ -366,8 +366,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               </div>
             )}
 
-            {/* Files Modified - show when data available */}
-            {summary.filesModified !== undefined && summary.filesModified >= 0 && (
+            {/* Files Modified - show when has files */}
+            {summary.filesModified !== undefined && summary.filesModified > 0 && (
               <div className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <FileEdit className="w-4 h-4 text-emerald-500" />
