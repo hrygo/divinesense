@@ -347,6 +347,26 @@ func (s *SessionStats) EndGeneration() {
 	}
 }
 
+// RecordFileModification records that a file was modified.
+// Checks if the path is already recorded to avoid duplicates.
+func (s *SessionStats) RecordFileModification(filePath string) {
+	if filePath == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Check if already recorded
+	for _, existingPath := range s.FilePaths {
+		if existingPath == filePath {
+			return // Already recorded
+		}
+	}
+
+	s.FilePaths = append(s.FilePaths, filePath)
+	s.FilesModified++
+}
+
 // ToSummary converts stats to a summary map for JSON serialization.
 func (s *SessionStats) ToSummary() map[string]interface{} {
 	s.mu.Lock()
@@ -1036,16 +1056,29 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			// Extract tool ID and input from content blocks
 			var toolID string
 			var inputSummary string
+			var filePath string
 			for _, block := range msg.GetContentBlocks() {
 				if block.Type == "tool_use" {
 					toolID = block.ID
 					if block.Input != nil {
 						// Create a human-readable summary of the input
 						inputSummary = summarizeInput(block.Input)
+
+						// Extract file path for Write/Edit operations
+						if msg.Name == "Write" || msg.Name == "Edit" || msg.Name == "WriteFile" || msg.Name == "EditFile" {
+							if path, ok := block.Input["path"].(string); ok {
+								filePath = path
+							}
+						}
 					}
 				}
 			}
 			stats.RecordToolUse(msg.Name, toolID)
+
+			// Record file modification for Write/Edit tools
+			if filePath != "" {
+				stats.RecordFileModification(filePath)
+			}
 
 			meta := &EventMeta{
 				ToolName:        msg.Name,
@@ -1090,6 +1123,15 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 				stats.EndGeneration()
 
 				stats.RecordToolUse(block.Name, block.ID)
+
+				// Record file modification for Write/Edit tools
+				if block.Name == "Write" || block.Name == "Edit" || block.Name == "WriteFile" || block.Name == "EditFile" {
+					if block.Input != nil {
+						if path, ok := block.Input["path"].(string); ok {
+							stats.RecordFileModification(path)
+						}
+					}
+				}
 
 				meta := &EventMeta{
 					ToolName:        block.Name,
