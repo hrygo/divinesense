@@ -27,6 +27,10 @@ function generateCodeVerifier(): string {
 
 // Generate code_challenge from code_verifier using SHA-256
 async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+  // If crypto.subtle is unavailable (insecure context), skip PKCE
+  if (!crypto.subtle) {
+    return "";
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(codeVerifier);
   const hash = await crypto.subtle.digest("SHA-256", data);
