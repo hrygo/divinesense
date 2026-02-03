@@ -1,9 +1,10 @@
-import { Brain, ChevronDown, ChevronUp, Clock, DollarSign, FileEdit, PenLine, Wrench, Zap } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, Clock, Cpu, DollarSign, FileEdit, PenLine, Terminal, Wrench, Zap } from "lucide-react";
 import { memo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface SessionSummaryData {
   sessionId?: string;
+  mode?: string; // "geek" | "evolution" | "normal"
   totalDurationMs?: number;
   thinkingDurationMs?: number;
   toolDurationMs?: number;
@@ -29,6 +30,7 @@ interface ExpandedSessionSummaryProps {
  * ExpandedSessionSummary - Detailed session summary card for Geek/Evolution modes
  *
  * Shows all metrics in an expandable card with:
+ * - Mode indicator (geek/evolution)
  * - Status and session ID
  * - Duration breakdown (thinking, tool, generation)
  * - Token breakdown (input, output, cache)
@@ -64,12 +66,24 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
   const generationPercent =
     totalDuration > 0 && summary.generationDurationMs ? Math.round((summary.generationDurationMs / totalDuration) * 100) : 0;
 
+  // Status color
   const statusColor =
     summary.status?.toLowerCase() === "error"
       ? "text-red-600 dark:text-red-400"
       : summary.status?.toLowerCase() === "cancelled"
         ? "text-amber-600 dark:text-amber-400"
         : "text-emerald-600 dark:text-emerald-400";
+
+  // Mode configuration
+  const modeConfig = {
+    geek: { label: "Geek Mode", icon: Terminal, color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300" },
+    evolution: { label: "Evolution Mode", icon: Cpu, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
+    normal: { label: "Normal", icon: Brain, color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" },
+  } as const;
+
+  const modeKey = (summary.mode?.toLowerCase() || "normal") as keyof typeof modeConfig;
+  const modeCfg = modeConfig[modeKey] || modeConfig.normal;
+  const ModeIcon = modeCfg.icon;
 
   return (
     <div
@@ -90,6 +104,12 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
+          {/* Mode indicator */}
+          <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold", modeCfg.color)}>
+            <ModeIcon className="w-3.5 h-3.5" />
+            <span>{modeCfg.label}</span>
+          </div>
+
           {/* Status indicator */}
           <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold", statusColor, "bg-current/10")}>
             {summary.status?.toLowerCase() === "error" ? (
@@ -214,8 +234,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
 
           {/* Grid layout for other metrics */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Tokens */}
-            {totalTokens > 0 && (
+            {/* Tokens - always show if we have token data */}
+            {(summary.totalInputTokens !== undefined || summary.totalOutputTokens !== undefined) && (
               <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="w-4 h-4 text-amber-500" />
@@ -245,7 +265,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
             )}
 
             {/* Cost */}
-            {summary.totalCostUSD && summary.totalCostUSD > 0 && (
+            {summary.totalCostUSD !== undefined && summary.totalCostUSD >= 0 && (
               <div className="p-3 rounded-lg bg-green-50/50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <DollarSign className="w-4 h-4 text-green-500" />
@@ -264,8 +284,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               </div>
             )}
 
-            {/* Tool Calls */}
-            {summary.toolCallCount && summary.toolCallCount > 0 && (
+            {/* Tool Calls - always show if we have tool data */}
+            {summary.toolCallCount !== undefined && summary.toolCallCount >= 0 && (
               <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200/50 dark:border-purple-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Wrench className="w-4 h-4 text-purple-500" />
@@ -273,7 +293,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 </div>
                 <div className="text-center">
                   <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">{summary.toolCallCount}</span>
-                  {summary.toolDurationMs && (
+                  {summary.toolDurationMs && summary.toolCallCount > 0 && (
                     <div className="text-[10px] text-muted-foreground mt-1">
                       Avg: {formatDuration(summary.toolDurationMs / summary.toolCallCount)} per call
                     </div>
@@ -296,8 +316,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               </div>
             )}
 
-            {/* Files Modified - only show when actually has files */}
-            {!!summary.filesModified && summary.filesModified > 0 && (
+            {/* Files Modified - show when has files or explicitly 0 */}
+            {summary.filesModified !== undefined && summary.filesModified >= 0 && (
               <div className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <FileEdit className="w-4 h-4 text-emerald-500" />

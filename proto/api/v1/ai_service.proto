@@ -666,6 +666,7 @@ message EventMetadata {
 message SessionSummary {
   // Session identification
   string session_id = 1; // Claude Code CLI session ID
+  string mode = 17; // Execution mode: "geek", "evolution", "normal"
 
   // Overall timing
   int64 total_duration_ms = 2; // Total session duration in milliseconds

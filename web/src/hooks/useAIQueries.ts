@@ -479,6 +479,7 @@ export function useChat() {
               // Convert proto SessionSummary (bigint fields) to local SessionSummary (number fields)
               const summary = {
                 sessionId: response.sessionSummary.sessionId,
+                mode: response.sessionSummary.mode, // "geek" | "evolution" | "normal"
                 totalDurationMs: response.sessionSummary.totalDurationMs ? Number(response.sessionSummary.totalDurationMs) : undefined,
                 thinkingDurationMs: response.sessionSummary.thinkingDurationMs
                   ? Number(response.sessionSummary.thinkingDurationMs)
@@ -495,6 +496,7 @@ export function useChat() {
                 toolsUsed: response.sessionSummary.toolsUsed,
                 filesModified: response.sessionSummary.filesModified,
                 filePaths: response.sessionSummary.filePaths,
+                totalCostUSD: response.sessionSummary.totalCostUsd,
                 status: response.sessionSummary.status,
                 errorMsg: response.sessionSummary.errorMsg,
               };

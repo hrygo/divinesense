@@ -3809,6 +3809,7 @@ type SessionSummary struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Session identification
 	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // Claude Code CLI session ID
+	Mode      string `protobuf:"bytes,17,opt,name=mode,proto3" json:"mode,omitempty"`                           // Execution mode: "geek", "evolution", "normal"
 	// Overall timing
 	TotalDurationMs      int64 `protobuf:"varint,2,opt,name=total_duration_ms,json=totalDurationMs,proto3" json:"total_duration_ms,omitempty"`                // Total session duration in milliseconds
 	ThinkingDurationMs   int64 `protobuf:"varint,3,opt,name=thinking_duration_ms,json=thinkingDurationMs,proto3" json:"thinking_duration_ms,omitempty"`       // Time spent in "thinking" state
@@ -3867,6 +3868,13 @@ func (*SessionSummary) Descriptor() ([]byte, []int) {
 func (x *SessionSummary) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionSummary) GetMode() string {
+	if x != nil {
+		return x.Mode
 	}
 	return ""
 }
@@ -5033,10 +5041,11 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x0eoutput_summary\x18\f \x01(\tR\routputSummary\x12\x1b\n" +
 	"\tfile_path\x18\r \x01(\tR\bfilePath\x12\x1d\n" +
 	"\n" +
-	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xa3\x05\n" +
+	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xb7\x05\n" +
 	"\x0eSessionSummary\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12*\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x12\n" +
+	"\x04mode\x18\x11 \x01(\tR\x04mode\x12*\n" +
 	"\x11total_duration_ms\x18\x02 \x01(\x03R\x0ftotalDurationMs\x120\n" +
 	"\x14thinking_duration_ms\x18\x03 \x01(\x03R\x12thinkingDurationMs\x12(\n" +
 	"\x10tool_duration_ms\x18\x04 \x01(\x03R\x0etoolDurationMs\x124\n" +

@@ -5169,6 +5169,8 @@ components:
                 sessionId:
                     type: string
                     description: Session identification
+                mode:
+                    type: string
                 totalDurationMs:
                     type: string
                     description: Overall timing

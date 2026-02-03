@@ -255,6 +255,7 @@ export interface ScheduleSummary {
  */
 export interface SessionSummary {
   sessionId?: string;
+  mode?: string; // "geek" | "evolution" | "normal"
   totalDurationMs?: number;
   thinkingDurationMs?: number;
   toolDurationMs?: number;

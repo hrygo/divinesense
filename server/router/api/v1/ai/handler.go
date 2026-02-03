@@ -521,6 +521,16 @@ func (h *ParrotHandler) executeAgent(
 		TotalCostUsd:    totalCostUsd,
 	}
 
+	// Set mode based on request parameters
+	// 根据请求参数设置模式
+	if req.EvolutionMode {
+		sessionSummary.Mode = "evolution"
+	} else if req.GeekMode {
+		sessionSummary.Mode = "geek"
+	} else {
+		sessionSummary.Mode = "normal"
+	}
+
 	// Add detailed stats if available (from GeekParrot/EvolutionParrot)
 	// 添加详细统计数据（如果可用，来自 GeekParrot/EvolutionParrot）
 	if detailedStats != nil {
