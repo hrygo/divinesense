@@ -5,21 +5,28 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hrygo/divinesense/ai/agent"
 	"github.com/hrygo/divinesense/store"
 )
 
+const (
+	duplicateSessionWindow = 5 * time.Second // Window for duplicate detection
+)
+
 // Persister handles async persistence of session statistics.
 // Persister 处理会话统计数据的异步持久化。
 type Persister struct {
-	store  store.AgentStatsStore
-	queue  chan *agent.AgentSessionStatsForStorage
-	wg     sync.WaitGroup
-	logger *slog.Logger
-	stopCh chan struct{}
-	once   sync.Once
+	store         store.AgentStatsStore
+	queue         chan *agent.AgentSessionStatsForStorage
+	wg            sync.WaitGroup
+	logger        *slog.Logger
+	stopCh        chan struct{}
+	once          sync.Once
+	seenSessions  sync.Map // map[string]int64 - session ID -> last enqueued timestamp
+	dedupEnabled atomic.Bool
 }
 
 // NewPersister creates a new async persister.
@@ -35,6 +42,7 @@ func NewPersister(store store.AgentStatsStore, queueSize int, logger *slog.Logge
 		logger: logger,
 		stopCh: make(chan struct{}),
 	}
+	p.dedupEnabled.Store(true) // Enable deduplication by default
 	p.wg.Add(1)
 	go p.processQueue()
 	return p
@@ -42,8 +50,24 @@ func NewPersister(store store.AgentStatsStore, queueSize int, logger *slog.Logge
 
 // Enqueue queues a stats record for persistence.
 // Enqueue 将统计记录排队等待持久化。
-// Returns true if successfully queued, false if queue is full.
+// Returns true if successfully queued, false if queue is full or duplicate detected.
 func (p *Persister) Enqueue(stats *agent.AgentSessionStatsForStorage) bool {
+	// Idempotency check: prevent duplicate enqueues within a time window
+	if p.dedupEnabled.Load() {
+		if lastEnqueued, ok := p.seenSessions.Load(stats.SessionID); ok {
+			lastTime := time.Unix(lastEnqueued.(int64), 0)
+			if time.Since(lastTime) < duplicateSessionWindow {
+				p.logger.Debug("Persister: ignoring duplicate stats",
+					"session_id", stats.SessionID,
+					"last_enqueued", lastTime,
+					"elapsed_ms", time.Since(lastTime).Milliseconds())
+				return false
+			}
+		}
+		// Record this session enqueue time
+		p.seenSessions.Store(stats.SessionID, time.Now().Unix())
+	}
+
 	select {
 	case p.queue <- stats:
 		p.logger.Debug("Persister: stats enqueued",

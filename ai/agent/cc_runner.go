@@ -1162,13 +1162,42 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		stats.CacheReadTokens = msg.Usage.CacheReadInputTokens
 	}
 
-	// Collect tools used
-	toolsUsed := make([]string, 0, len(stats.ToolsUsed))
+	// Collect tools used (with deduplication)
+	toolsUsedSet := make(map[string]bool, len(stats.ToolsUsed))
 	for tool := range stats.ToolsUsed {
+		toolsUsedSet[tool] = true
+	}
+	toolsUsed := make([]string, 0, len(toolsUsedSet))
+	for tool := range toolsUsedSet {
 		toolsUsed = append(toolsUsed, tool)
 	}
 
+	// Collect file paths (with deduplication)
+	filePathsSet := make(map[string]bool, len(stats.FilePaths))
+	for _, path := range stats.FilePaths {
+		if path != "" {
+			filePathsSet[path] = true
+		}
+	}
+	filePaths := make([]string, 0, len(filePathsSet))
+	for path := range filePathsSet {
+		filePaths = append(filePaths, path)
+	}
+
+	// Calculate total cost with fallback if CLI doesn't report it
+	totalCostUSD := msg.TotalCostUSD
+	if totalCostUSD == 0 && stats.InputTokens+stats.OutputTokens > 0 {
+		// DeepSeek V3 pricing (USD per million tokens)
+		const inputCostPerMillion = 0.27
+		const outputCostPerMillion = 2.25
+
+		inputCost := float64(stats.InputTokens) * inputCostPerMillion / 1_000_000
+		outputCost := float64(stats.OutputTokens) * outputCostPerMillion / 1_000_000
+		totalCostUSD = inputCost + outputCost
+	}
+
 	// Build session stats data for frontend and storage
+	// Note: TotalTokens includes cache tokens for system-wide tracking
 	sessionStatsData := &SessionStatsData{
 		SessionID:            cfg.SessionID,
 		ConversationID:       cfg.ConversationID,
@@ -1184,12 +1213,13 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		OutputTokens:         stats.OutputTokens,
 		CacheWriteTokens:     stats.CacheWriteTokens,
 		CacheReadTokens:      stats.CacheReadTokens,
-		TotalTokens:          stats.InputTokens + stats.OutputTokens + stats.CacheWriteTokens + stats.CacheReadTokens,
+		TotalTokens:          stats.InputTokens + stats.OutputTokens, // Billed tokens only
 		ToolCallCount:        stats.ToolCallCount,
 		ToolsUsed:            toolsUsed,
 		FilesModified:        stats.FilesModified,
-		FilePaths:            stats.FilePaths,
-		TotalCostUSD:         msg.TotalCostUSD,
+		FilePaths:            filePaths,
+		ModelUsed:            "claude-code", // Claude Code CLI (model not reported in stream-json)
+		TotalCostUSD:         totalCostUSD,
 		IsError:              msg.IsError,
 		ErrorMessage:         msg.Error,
 	}

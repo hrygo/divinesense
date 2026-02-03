@@ -644,9 +644,10 @@ func (d *DB) ListSecurityEventsByRisk(ctx context.Context, userID int32, riskLev
 
 // parseStringArray parses a JSONB array of strings from PostgreSQL.
 // Uses strings.Builder for O(n) performance instead of O(n²) concatenation.
+// Always returns a non-nil slice for consistency.
 func parseStringArray(data []byte) []string {
 	if len(data) == 0 || string(data) == "null" {
-		return nil
+		return []string{} // Return empty slice, not nil
 	}
 
 	// Remove surrounding brackets and quotes, split by comma
