@@ -729,8 +729,14 @@ func (r *CCRunner) executeWithSession(
 
 	// Set environment for programmatic usage
 	// 设置程序化使用环境变量
+	// CLAUDE_CONFIG_DIR isolates Geek Mode CLI config from main CLI (~/.claude/)
+	// This prevents loading large history.jsonl from main CLI sessions
+	// CLAUDE_CONFIG_DIR 隔离 Geek Mode CLI 配置，避免加载主 CLI 的大历史文件
+	homeDir, _ := os.UserHomeDir()
+	configDir := filepath.Join(homeDir, ".divinesense", "claude-geek", fmt.Sprintf("user_%d", cfg.UserID))
 	cmd.Env = append(os.Environ(),
 		"CLAUDE_DISABLE_TELEMETRY=1",
+		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
 	// Get pipes
