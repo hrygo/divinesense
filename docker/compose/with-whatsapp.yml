@@ -51,6 +51,8 @@ services:
       PORT: 3001
       DIVINESENSE_WEBHOOK_URL: ${DIVINESENSE_WEBHOOK_URL:-http://divinesense:5230/api/v1/chat_apps/webhook}
       NODE_ENV: production
+      BRIDGE_API_KEY: ${BAILEYS_API_KEY:-}
+      ALLOWED_ORIGINS: ${BAILEYS_ALLOWED_ORIGINS:-*}
     volumes:
       - baileys_auth:/app/.baileys
       - baileys_logs:/app/logs

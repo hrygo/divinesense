@@ -354,17 +354,25 @@ EOF
 
             # 复制 bridge 源码（如果从源码安装）
             if [ -d "${SCRIPT_DIR}/../plugin/chat_apps/channels/whatsapp/bridge" ]; then
+                log_info "复制 WhatsApp Bridge 文件..."
                 cp -r "${SCRIPT_DIR}/../plugin/chat_apps/channels/whatsapp/bridge"/* \
                       "${INSTALL_DIR}/plugin/chat_apps/channels/whatsapp/bridge/"
+                chown -R divine:divine "${INSTALL_DIR}/plugin/chat_apps/channels/whatsapp/bridge"
+            else
+                log_warn "未找到 Bridge 源码目录，跳过文件复制"
             fi
 
-            # 配置 Webhook URL
+            # 配置 Webhook URL（使用服务器 IP，而非 localhost）
             export DIVINESENSE_WEBHOOK_URL="http://${server_ip}:${PORT}/api/v1/chat_apps/webhook"
             export DIVINE_INSTALL_DIR="${INSTALL_DIR}"
 
             # 使用 baileys-bridge.sh 安装
             if [ -f "${SCRIPT_DIR}/baileys-bridge.sh" ]; then
-                bash "${SCRIPT_DIR}/baileys-bridge.sh" install || log_warn "WhatsApp Bridge 安装失败，可稍后手动安装"
+                if bash "${SCRIPT_DIR}/baileys-bridge.sh" install; then
+                    log_success "WhatsApp Bridge 安装成功"
+                else
+                    log_warn "WhatsApp Bridge 安装失败，可稍后手动运行: ${SCRIPT_DIR}/baileys-bridge.sh install"
+                fi
             else
                 log_warn "未找到 baileys-bridge.sh，跳过 WhatsApp Bridge 安装"
             fi

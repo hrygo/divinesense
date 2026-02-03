@@ -4,6 +4,7 @@ Documentation=https://github.com/hrygo/divinesense
 After=network-online.target divinesense.service
 Wants=network-online.target
 Requires=divinesense.service
+BindsTo=divinesense.service
 
 [Service]
 Type=simple
@@ -15,6 +16,7 @@ WorkingDirectory=/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge
 Environment="PATH=/usr/bin:/bin:/usr/local/bin"
 Environment="NODE_ENV=production"
 Environment="PORT=3001"
+Environment="ALLOWED_ORIGINS=*"
 EnvironmentFile=-/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge/.env
 
 # ExecStart

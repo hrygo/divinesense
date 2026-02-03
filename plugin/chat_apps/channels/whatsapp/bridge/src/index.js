@@ -14,6 +14,8 @@
  * - PORT: HTTP server port (default: 3001)
  * - DIVINESENSE_WEBHOOK_URL: DivineSense webhook URL
  * - BAILEYS_AUTH_FILE: Path to Baileys auth file (default: ./baileys_auth_info.json)
+ * - BRIDGE_API_KEY: Optional API key for endpoint authentication (recommended for production)
+ * - ALLOWED_ORIGINS: Comma-separated list of allowed CORS origins (default: *)
  */
 
 import express from "express";
@@ -34,6 +36,8 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3001;
 const DIVINESENSE_WEBHOOK_URL = process.env.DIVINESENSE_WEBHOOK_URL || "";
 const BAILEYS_AUTH_FILE = process.env.BAILEYS_AUTH_FILE || path.join(__dirname, "baileys_auth_info.json");
+const BRIDGE_API_KEY = process.env.BRIDGE_API_KEY || "";
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "*";
 
 // Global state
 let srv = null;
@@ -43,8 +47,29 @@ const divineSenseSessionId = null;
 
 // Express app setup
 const app = express();
-app.use(cors());
+
+// Configure CORS - restrict to specific origins if provided
+const corsOptions = {
+  origin: ALLOWED_ORIGINS === "*" ? "*" : ALLOWED_ORIGINS.split(","),
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
+
+// Optional API key middleware for sensitive endpoints
+const requireApiKey = (req, res, next) => {
+  if (!BRIDGE_API_KEY) {
+    // No API key configured, skip authentication
+    return next();
+  }
+
+  const apiKey = req.headers["x-bridge-api-key"];
+  if (apiKey !== BRIDGE_API_KEY) {
+    return res.status(401).json({ success: false, message: "Unauthorized: Invalid API key" });
+  }
+  next();
+};
 
 /**
  * Health check endpoint
@@ -104,8 +129,9 @@ app.post("/webhook", async (req, res) => {
 
 /**
  * Send message endpoint (called by DivineSense)
+ * Protected by optional API key authentication
  */
-app.post("/send", async (req, res) => {
+app.post("/send", requireApiKey, async (req, res) => {
   try {
     const { jid, type, content, media, mime_type, file_name } = req.body;
 
@@ -144,8 +170,9 @@ app.post("/send", async (req, res) => {
 
 /**
  * Download media endpoint
+ * Protected by optional API key authentication
  */
-app.get("/download", async (req, res) => {
+app.get("/download", requireApiKey, async (req, res) => {
   try {
     const { url } = req.query;
 

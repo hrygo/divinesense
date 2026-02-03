@@ -34,6 +34,8 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3001,
         DIVINESENSE_WEBHOOK_URL: process.env.DIVINESENSE_WEBHOOK_URL || 'http://localhost:5230/api/v1/chat_apps/webhook',
+        BRIDGE_API_KEY: process.env.BRIDGE_API_KEY || '',
+        ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || '*',
       },
 
       // Log configuration

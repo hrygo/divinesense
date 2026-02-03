@@ -191,7 +191,12 @@ install() {
     sleep 5
 
     # 健康检查
-    health_check
+    if health_check; then
+        log_success "健康检查通过"
+    else
+        log_warn "服务可能未成功启动，请检查日志:"
+        log_info "  $0 logs"
+    fi
 
     echo ""
     log_success "=========================================="
