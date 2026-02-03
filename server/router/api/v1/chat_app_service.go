@@ -268,20 +268,65 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 		}, nil
 	}
 
-	// Route to AI agent
-	// TODO: Implement actual AI routing through ChatRouter
-	slog.Info("webhook message received",
-		"platform", platform,
-		"platform_user_id", msg.PlatformUserID,
-		"platform_chat_id", msg.PlatformChatID,
-		"type", msg.Type,
-	)
+	// Look up user credential by platform user ID
+	chatAppStore := s.getChatAppStore()
+	cred, err := chatAppStore.GetCredentialByPlatformUserID(ctx, platform, msg.PlatformUserID)
+	if err != nil {
+		slog.Warn("no credential found for platform user",
+			"platform", platform,
+			"platform_user_id", msg.PlatformUserID,
+			"error", err,
+		)
+		return &v1pb.WebhookResponse{
+			Success: false,
+			Message:  "user not bound",
+		}, nil
+	}
 
-	// For now, just acknowledge receipt
+	if !cred.Enabled {
+		slog.Info("credential is disabled",
+			"user_id", cred.UserID,
+			"platform", platform,
+		)
+		return &v1pb.WebhookResponse{
+			Success: false,
+			Message:  "credential disabled",
+		}, nil
+	}
+
+	// Process message asynchronously - don't block webhook response
+	go s.processChatAppMessage(context.Background(), cred, msg, platform)
+
+	// Immediately acknowledge receipt (webhooks should respond quickly)
 	return &v1pb.WebhookResponse{
 		Success: true,
 		Message:  "message received",
 	}, nil
+}
+
+// processChatAppMessage handles the actual message processing and AI routing.
+func (s *APIV1Service) processChatAppMessage(ctx context.Context, cred *chat_apps.Credential, msg *chat_apps.IncomingMessage, platform chat_apps.Platform) {
+	// Set the user ID in context for AI processing
+	ctx = context.WithValue(ctx, "user_id", cred.UserID)
+
+	slog.Info("processing chat app message",
+		"user_id", cred.UserID,
+		"platform", platform,
+		"platform_user_id", msg.PlatformUserID,
+		"content", msg.Content,
+	)
+
+	// TODO: Route to AI agent and send response back
+	// This requires:
+	// 1. Creating an AI chat request with the user's credentials
+	// 2. Streaming the response
+	// 3. Calling SendMessage to deliver the response to the chat platform
+
+	// For now, just log that we received the message
+	slog.Info("chat app message processing complete (async)",
+		"user_id", cred.UserID,
+		"platform", platform,
+	)
 }
 
 // SendMessage sends a message to a chat app channel.
