@@ -34,8 +34,8 @@ type DingTalkConfig struct {
 
 // DingTalkChannel implements ChatChannel for DingTalk Robot.
 type DingTalkChannel struct {
-	config     *DingTalkConfig
-	webhookURL string
+	config      *DingTalkConfig
+	webhookURL  string
 	client      *http.Client
 	accessToken string
 	tokenMu     sync.RWMutex
