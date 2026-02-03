@@ -1,12 +1,12 @@
-import { Check, ChevronDown, ChevronUp, Copy, FileIcon, Scissors, Terminal as TerminalIcon } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy, Scissors } from "lucide-react";
 import React, { memo, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
-import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import MessageActions from "@/components/AIChat/MessageActions";
+import { SessionSummaryPanel } from "@/components/AIChat/SessionSummaryPanel";
 import { InlineToolCall } from "@/components/AIChat/ToolCallCard";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
@@ -28,19 +28,7 @@ type ToolCall =
       inputSummary?: string;
       outputSummary?: string;
       filePath?: string;
-      duration?: number;
-      isError?: boolean;
     };
-
-// Tool result type from metadata
-type ToolResult = {
-  name: string;
-  toolId?: string;
-  inputSummary?: string;
-  outputSummary?: string;
-  duration?: number;
-  isError?: boolean;
-};
 
 interface ChatMessagesProps {
   items: ChatItem[];
@@ -296,7 +284,7 @@ const ChatMessages = memo(function ChatMessages({
               {/* Spacer for avatar alignment */}
               <div className="w-9 h-9 md:w-10 md:h-10 shrink-0 invisible" />
               <div className="flex-1 min-w-0">
-                <ExpandedSessionSummary summary={sessionSummary} />
+                <SessionSummaryPanel summary={sessionSummary} />
               </div>
             </div>
           )}
@@ -429,59 +417,10 @@ const MessageBubble = memo(function MessageBubble({
                     toolName={typeof call === "string" ? call : call.name}
                     inputSummary={typeof call === "object" ? call.inputSummary : undefined}
                     filePath={typeof call === "object" ? call.filePath : undefined}
-                    isError={typeof call === "object" ? call.isError : message.error}
+                    isError={message.error}
                   />
                 ))
               : message.metadata.toolName && <InlineToolCall toolName={message.metadata.toolName} isError={message.error} />}
-          </div>
-        )}
-
-        {/* Tool Results Display - expanded cards showing output */}
-        {role === "assistant" && message.metadata?.toolResults && message.metadata.toolResults.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {message.metadata.toolResults.map((result: ToolResult, i: number) => {
-              // Only show results that have actual output
-              if (!result.outputSummary || result.outputSummary.length === 0) return null;
-
-              return (
-                <div key={i} className="relative">
-                  {/* Tool result indicator line */}
-                  <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700" />
-                  <div className="pl-8">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                        {result.name.toLowerCase().includes("bash") || result.name.toLowerCase().includes("run") ? (
-                          <TerminalIcon className="w-3 h-3" />
-                        ) : (
-                          <FileIcon className="w-3 h-3" />
-                        )}
-                      </div>
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{result.name}</span>
-                      {result.duration && (
-                        <span className="text-xs text-slate-400">
-                          {result.duration > 1000 ? `${(result.duration / 1000).toFixed(1)}s` : `${result.duration}ms`}
-                        </span>
-                      )}
-                      {result.isError && <span className="text-xs text-red-500 font-medium">Error</span>}
-                    </div>
-                    {/* Output terminal */}
-                    <div className="rounded-lg bg-slate-950 dark:bg-slate-950 border border-slate-800 dark:border-slate-800 overflow-hidden">
-                      <div className="px-3 py-1.5 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2">
-                        <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                        </div>
-                        <span className="text-xs text-slate-500 font-mono">Output</span>
-                      </div>
-                      <pre className="p-3 text-xs text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                        {result.outputSummary}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
 
