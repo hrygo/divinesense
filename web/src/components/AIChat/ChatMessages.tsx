@@ -361,7 +361,7 @@ const MessageBubble = memo(function MessageBubble({
 }: MessageBubbleProps) {
   const { role, content, error } = message;
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isFolded, setIsFolded] = useState(true);
+  const [isFolded, setIsFolded] = useState(false);
   const [shouldShowFold, setShouldShowFold] = useState(false);
   const [copied, setCopied] = useState(false);
   const { t } = useTranslation();
