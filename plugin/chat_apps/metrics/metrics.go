@@ -10,12 +10,12 @@ import (
 type EventType string
 
 const (
-	EventWebhookReceived  EventType = "webhook_received"
-	EventWebhookValidated EventType = "webhook_validated"
+	EventWebhookReceived   EventType = "webhook_received"
+	EventWebhookValidated  EventType = "webhook_validated"
 	EventWebhookParseError EventType = "webhook_parse_error"
-	EventMessageProcessed EventType = "message_processed"
-	EventResponseSent     EventType = "response_sent"
-	EventResponseError    EventType = "response_error"
+	EventMessageProcessed  EventType = "message_processed"
+	EventResponseSent      EventType = "response_sent"
+	EventResponseError     EventType = "response_error"
 )
 
 // WebhookMetrics tracks delivery metrics for webhooks.
@@ -23,18 +23,18 @@ type WebhookMetrics struct {
 	mu sync.RWMutex
 
 	// Counters
-	totalReceived    int64
-	totalValidated   int64
-	parseErrors      int64
+	totalReceived     int64
+	totalValidated    int64
+	parseErrors       int64
 	messagesProcessed int64
 	responsesSent     int64
 	responseErrors    int64
 
 	// Timing
-	lastReceived    time.Time
-	lastValidated   time.Time
-	lastError       time.Time
-	avgProcessTime  time.Duration
+	lastReceived     time.Time
+	lastValidated    time.Time
+	lastError        time.Time
+	avgProcessTime   time.Duration
 	totalProcessTime int64
 
 	// Error tracking

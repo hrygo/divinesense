@@ -92,7 +92,7 @@ func TestUpdateCredentialRequest(t *testing.T) {
 			name: "update webhook URL",
 			req: UpdateCredentialRequest{
 				ID:         2,
-				WebhookURL:  &webhookURL,
+				WebhookURL: &webhookURL,
 			},
 		},
 		{
@@ -100,7 +100,7 @@ func TestUpdateCredentialRequest(t *testing.T) {
 			req: UpdateCredentialRequest{
 				ID:          3,
 				AccessToken: &accessToken,
-				WebhookURL:   &webhookURL,
+				WebhookURL:  &webhookURL,
 			},
 		},
 	}
