@@ -472,6 +472,9 @@ func (h *ParrotHandler) executeAgent(
 	// Execute agent
 	defer close(heartbeatDone) // Ensure heartbeat stops even on panic
 	execErr := agent.ExecuteWithCallback(ctx, req.Message, req.History, callback)
+	logger.Info("Agent: ExecuteWithCallback completed",
+		slog.String("execErr", fmt.Sprintf("%v", execErr)),
+		slog.Int64("duration_ms", time.Since(sessionStartTime).Milliseconds()))
 	if execErr != nil {
 		logger.Error("Agent execution failed", execErr)
 		// Don't return here, continue to send session summary
@@ -481,12 +484,17 @@ func (h *ParrotHandler) executeAgent(
 
 	// Calculate session summary
 	sessionTotalDuration = time.Since(sessionStartTime).Milliseconds()
+	logger.Info("Agent: preparing session summary",
+		slog.Int64("duration_ms", sessionTotalDuration))
 
 	// Try to get detailed stats from agent if available (GeekParrot/EvolutionParrot)
 	// 尝试从 agent 获取详细统计数据（如果可用，如 GeekParrot/EvolutionParrot）
 	var detailedStats *agentpkg.SessionStats
 	if statsProvider, ok := agent.(agentpkg.SessionStatsProvider); ok {
 		detailedStats = statsProvider.GetSessionStats()
+		logger.Info("Agent: got detailed stats from SessionStatsProvider")
+	} else {
+		logger.Info("Agent: agent is not a SessionStatsProvider")
 	}
 
 	// Safely get tool usage stats
