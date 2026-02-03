@@ -24,17 +24,13 @@ service ChatAppService {
 
   // ListCredentials returns all registered chat app credentials for the current user.
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/chat-apps/credentials"
-    };
+    option (google.api.http) = {get: "/api/v1/chat-apps/credentials"};
   }
 
   // DeleteCredential removes a chat app binding for the current user.
   // This will revoke DivineSense's access to the user's account on that platform.
   rpc DeleteCredential(DeleteCredentialRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/api/v1/chat-apps/credentials/{platform}"
-    };
+    option (google.api.http) = {delete: "/api/v1/chat-apps/credentials/{platform}"};
   }
 
   // UpdateCredential modifies an existing credential (e.g., enable/disable).
@@ -68,18 +64,16 @@ service ChatAppService {
   // GetWebhookInfo returns webhook configuration for a platform.
   // This provides the webhook URL and setup instructions.
   rpc GetWebhookInfo(GetWebhookInfoRequest) returns (WebhookInfo) {
-    option (google.api.http) = {
-      get: "/api/v1/chat-apps/webhook-info/{platform}"
-    };
+    option (google.api.http) = {get: "/api/v1/chat-apps/webhook-info/{platform}"};
   }
 }
 
 // Platform represents the supported chat platforms.
 enum Platform {
   PLATFORM_UNSPECIFIED = 0;
-  PLATFORM_TELEGRAM = 1;   // Telegram Bot
-  PLATFORM_WHATSAPP = 2;   // WhatsApp (via Baileys bridge)
-  PLATFORM_DINGTALK = 3;   // DingTalk Robot
+  PLATFORM_TELEGRAM = 1; // Telegram Bot
+  PLATFORM_WHATSAPP = 2; // WhatsApp (via Baileys bridge)
+  PLATFORM_DINGTALK = 3; // DingTalk Robot
 }
 
 // RegisterCredentialRequest creates a new chat app credential binding.
