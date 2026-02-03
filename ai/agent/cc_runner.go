@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +28,12 @@ const (
 	// Maximum length of non-JSON output to log.
 	// 非 JSON 输出的最大日志长度。
 	maxNonJSONOutputLength = 100
+
+	// DeepSeek V3 pricing (USD per million tokens).
+	// DeepSeek V3 定价（每百万 token 美元）。
+	// Source: https://api.deepseek.com/
+	deepSeekInputCostPerMillion  = 0.27
+	deepSeekOutputCostPerMillion = 2.25
 )
 
 // UUID v5 namespace for DivineSense session mapping.
@@ -247,6 +254,7 @@ type SessionStats struct {
 	ToolsUsed            map[string]bool
 	FilesModified        int32
 	FilePaths            []string
+	filePathsSet         map[string]bool // O(1) deduplication for file paths
 
 	// Current tool tracking
 	currentToolStart time.Time
@@ -348,7 +356,7 @@ func (s *SessionStats) EndGeneration() {
 }
 
 // RecordFileModification records that a file was modified.
-// Checks if the path is already recorded to avoid duplicates.
+// Uses O(1) map lookup for deduplication instead of O(n) linear scan.
 func (s *SessionStats) RecordFileModification(filePath string) {
 	if filePath == "" {
 		return
@@ -356,13 +364,17 @@ func (s *SessionStats) RecordFileModification(filePath string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Check if already recorded
-	for _, existingPath := range s.FilePaths {
-		if existingPath == filePath {
-			return // Already recorded
-		}
+	// Initialize map if needed
+	if s.filePathsSet == nil {
+		s.filePathsSet = make(map[string]bool)
 	}
 
+	// O(1) deduplication check
+	if s.filePathsSet[filePath] {
+		return // Already recorded
+	}
+
+	s.filePathsSet[filePath] = true
 	s.FilePaths = append(s.FilePaths, filePath)
 	s.FilesModified++
 }
@@ -540,15 +552,20 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 
 	// Finalize and save session stats
 	// 完成并保存会话统计数据
-	// Only override TotalDurationMs if CLI didn't provide it (CLI value is more accurate)
-	if stats.TotalDurationMs == 0 {
-		stats.TotalDurationMs = time.Since(stats.StartTime).Milliseconds()
+	// Use CLI-reported duration if available and reasonable (> 1ms to filter out zeros/errors).
+	// Otherwise fallback to server-measured duration.
+	// 使用 CLI 报告的持续时间（如果合理），否则回退到服务器测量值。
+	if stats.TotalDurationMs <= 1 {
+		measuredDuration := time.Since(stats.StartTime).Milliseconds()
+		if measuredDuration > stats.TotalDurationMs {
+			stats.TotalDurationMs = measuredDuration
+		}
 	}
 	r.statsMu.Lock()
 	r.currentStats = stats
 	r.statsMu.Unlock()
 
-	r.logger.Debug("CCRunner: Session completed",
+	r.logger.Info("CCRunner: Session completed",
 		"session_id", stats.SessionID,
 		"total_duration_ms", stats.TotalDurationMs,
 		"tool_duration_ms", stats.ToolDurationMs,
@@ -970,15 +987,32 @@ func (r *CCRunner) streamOutput(
 		}
 	}()
 
-	// Discard stderr to prevent blocking
-	// 丢弃 stderr 以防止阻塞
+	// Stream stderr with sampling to prevent log flooding while preserving debug info.
+	// 对 stderr 进行采样以防止日志泛滥，同时保留调试信息。
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer r.logger.Debug("CCRunner: stderr goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
-		// Simply discard all stderr output - errors are already logged elsewhere
-		_, _ = io.Copy(io.Discard, stderr)
-		r.logger.Debug("CCRunner: stderr fully discarded", "mode", cfg.Mode, "session_id", cfg.SessionID)
+		defer r.logger.Info("CCRunner: stderr goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
+
+		// Sample stderr output (10% rate) to capture CLI errors without overwhelming logs.
+		// 使用 10% 采样率捕获 CLI 错误，避免日志泛滥。
+		scanner := bufio.NewScanner(stderr)
+		lineCount := 0
+		sampleRate := 10 // Sample 10% of stderr lines
+		for scanner.Scan() {
+			lineCount++
+			if rand.Intn(100) < sampleRate {
+				r.logger.Warn("CCRunner: stderr sample",
+					"user_id", cfg.UserID,
+					"mode", cfg.Mode,
+					"session_id", cfg.SessionID,
+					"line", scanner.Text())
+			}
+		}
+		r.logger.Info("CCRunner: stderr processing complete",
+			"mode", cfg.Mode,
+			"session_id", cfg.SessionID,
+			"total_lines", lineCount)
 	}()
 
 	// Wait for completion or timeout
@@ -1265,12 +1299,9 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 	// Calculate total cost with fallback if CLI doesn't report it
 	totalCostUSD := msg.TotalCostUSD
 	if totalCostUSD == 0 && stats.InputTokens+stats.OutputTokens > 0 {
-		// DeepSeek V3 pricing (USD per million tokens)
-		const inputCostPerMillion = 0.27
-		const outputCostPerMillion = 2.25
-
-		inputCost := float64(stats.InputTokens) * inputCostPerMillion / 1_000_000
-		outputCost := float64(stats.OutputTokens) * outputCostPerMillion / 1_000_000
+		// Use DeepSeek V3 pricing (defined as package-level constants)
+		inputCost := float64(stats.InputTokens) * deepSeekInputCostPerMillion / 1_000_000
+		outputCost := float64(stats.OutputTokens) * deepSeekOutputCostPerMillion / 1_000_000
 		totalCostUSD = inputCost + outputCost
 	}
 
