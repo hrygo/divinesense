@@ -18,12 +18,12 @@
 
 import express from "express";
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } from "@whiskeysockets/baileys";
-import p from "@whiskeysockets/baileys";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import path from "path";
 import { readFile, writeFile } from "fs/promises";
+import qrcodeTerminal from "qrcode-terminal";
 
 // Load environment variables
 dotenv.config();
@@ -37,7 +37,7 @@ const BAILEYS_AUTH_FILE = process.env.BAILEYS_AUTH_FILE || path.join(__dirname, 
 
 // Global state
 let srv = null;
-let qrcode = null;
+let qrCodeString = null;
 let isConnected = false;
 const divineSenseSessionId = null;
 
@@ -176,7 +176,7 @@ app.get("/download", async (req, res) => {
 app.get("/info", (req, res) => {
   res.json({
     connected: isConnected,
-    qrcode: qrcode,
+    qrcode: qrCodeString,
     phone: srv?.user?.id || null,
   });
 });
@@ -193,44 +193,49 @@ async function connectToWhatsApp() {
     version,
     defaultQueryTimeoutMs: 60000,
     printQRInTerminal: false,
-    auth: {
-      creds: state,
-      disconnectReason: DisconnectReason.badSession,
-    },
-    logger: p,
+    auth: state,
   });
 
   // Store authentication state
   srv.ev.on("creds.update", saveCreds);
 
-  // Connection events
-  srv.ev.on("connection.update", ({ update, connection }) => {
-    const status = connection;
-    if (status === "open") {
-      isConnected = true;
-      qrcode = null;
-      console.log("WhatsApp connection opened");
-    } else if (status === "close") {
-      isConnected = false;
-      console.log("WhatsApp connection closed");
+  // Connection events - handle QR code and connection status
+  srv.ev.on("connection.update", (data) => {
+    const { connection, lastDisconnect, qr } = data;
+
+    // QR code received
+    if (qr) {
+      qrCodeString = qr;
+      console.log("\n" + "=".repeat(50));
+      console.log("  QR Code - Scan with WhatsApp");
+      console.log("  Settings → Linked Devices → Link a Device");
+      console.log("=".repeat(50) + "\n");
+
+      // Display QR code in terminal
+      qrcodeTerminal.generate(qr, { small: true });
+
+      console.log("\nOr visit: http://localhost:3001/info\n");
     }
-  });
 
-  // Credential update
-  srv.ev.on("creds.update", () => {
-    console.log("Credentials updated");
-  });
+    // Connection opened
+    if (connection === "open") {
+      isConnected = true;
+      qrCodeString = null;
+      console.log("\n" + "=".repeat(50));
+      console.log("  ✅ WhatsApp connection opened successfully!");
+      console.log("=".repeat(50) + "\n");
+    }
 
-  // QR code for pairing
-  srv.ev.on("connection.open", () => {
-    console.log("Connection opened, should be connected now");
-  });
+    // Connection closed
+    if (connection === "close") {
+      isConnected = false;
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      console.log("Connection closed. Reconnect:", shouldReconnect);
 
-  srv.ev.on("connection.close", async () => {
-    console.log("Connection closed, reconnecting...");
-    isConnected = false;
-    qrcode = null;
-    setTimeout(() => connectToWhatsApp(), 5000);
+      if (shouldReconnect) {
+        setTimeout(() => connectToWhatsApp(), 5000);
+      }
+    }
   });
 
   // Message handler
@@ -247,8 +252,7 @@ async function connectToWhatsApp() {
     }
   });
 
-  // Start the server
-  await srv.connect();
+  // Baileys automatically connects when socket is created
 }
 
 /**

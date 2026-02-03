@@ -1,204 +1,437 @@
-# Chat Apps 集成用户指南
+# Chat Apps 集成开发者指南
 
-> 通过 Telegram 和钉钉机器人，随时随地与 DivineSense AI 代理对话
-
----
-
-## 概述
-
-DivineSense 支持将聊天平台（Telegram、钉钉）机器人接入到个人 AI 系统。配置后，你可以通过这些平台：
-
-- **查询笔记** - 搜索和检索个人笔记内容
-- **管理日程** - 创建、查看日程安排
-- **AI 对话** - 与智能代理进行自然语言对话
-- **获取提醒** - 接收重要事件通知
+> DivineSense 聊天应用集成模块的技术文档和开发指南
 
 ---
 
-## 支持的平台
+## 目录
 
-| 平台 | 状态 | 说明 |
+1. [架构概述](#架构概述)
+2. [数据模型](#数据模型)
+3. [API 端点](#api-端点)
+4. [平台集成](#平台集成)
+5. [安全机制](#安全机制)
+6. [开发调试](#开发调试)
+7. [部署指南](#部署指南)
+
+---
+
+## 架构概述
+
+### 系统架构图
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Frontend (React)                                 │
+│                   Settings → Chat Apps Configuration                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                                         │ REST/Connect RPC
+                                         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           DivineSense Backend (Go)                            │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────┐ │
+│  │  ChatAppService │    │  ChatRouter     │    │   Parrot Agents         │ │
+│  │  (凭证管理)      │ -> │  (消息路由)      │ -> │   (AI 处理)             │ │
+│  └─────────────────┘    └─────────────────┘    └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+         ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+         │   Telegram      │  │     WhatsApp    │  │     钉钉         │
+         │   Bot API       │  │   Baileys       │  │   Open API      │
+         │                 │  │   Bridge        │  │                 │
+         │ (webhook 推送)   │  │   (HTTP 轮询)    │  │  (webhook 推送)  │
+         └─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+### 核心组件
+
+| 组件 | 路径 | 职责 |
 |:-----|:-----|:-----|
-| **Telegram** | ✅ 完全支持 | Bot API + Webhook，支持流式响应 |
-| **钉钉** | ✅ 完全支持 | 群机器人 + Webhook，HMAC 签名验证 |
-| **WhatsApp** | ✅ 完全支持 | Baileys Node.js 桥接服务，需单独部署 |
+| **ChatAppService** | `server/service/chat_app/` | 凭证管理、消息发送 |
+| **Chat Handler** | `server/router/api/v1/chat_apps/` | Webhook 处理、请求路由 |
+| **Channel 层** | `plugin/chat_apps/channels/` | 平台适配器 |
+| **Baileys Bridge** | `plugin/chat_apps/channels/whatsapp/bridge/` | WhatsApp Node.js 桥接服务 |
 
----
-
-## 快速开始
-
-### 步骤 1：准备聊天平台凭证
-
-#### Telegram Bot
-
-1. 访问 [@BotFather](https://t.me/BotFather)
-2. 发送 `/newbot` 创建新机器人
-3. 按提示设置名称和用户名
-4. 保存生成的 **Bot Token**（格式：`1234567890:ABCDefGHIjklMNOpqrsTUVwxyz`）
-
-#### 钉钉群机器人
-
-1. 访问 [钉钉开放平台](https://open.dingtalk.com/)
-2. 登录后进入「应用开发」→「企业内部应用」
-3. 创建应用或选择现有应用
-4. 在「应用凭证」页面获取：
-   - **AppKey**（企业 ID）
-   - **AppSecret**（应用密钥）
-5. 在「消息推送」中配置：
-   - **消息接收地址**：`https://your-domain.com/api/v1/chat_apps/webhook?platform=dingtalk`
-   - 保存生成的 **AccessToken**
-
-#### WhatsApp (Baileys 桥接服务)
-
-WhatsApp 需要单独部署 Baileys Node.js 桥接服务：
-
-1. **部署桥接服务**：
-   ```bash
-   cd plugin/chat_apps/channels/whatsapp/bridge
-   npm install
-   cp .env.example .env
-   # 编辑 .env 配置 DivineSense webhook URL
-   npm start
-   ```
-
-2. **配对 WhatsApp**：
-   - 访问 `http://localhost:3001/info` 获取 QR 码
-   - 打开 WhatsApp → 设置 → 关联设备 → 关联设备
-   - 扫描 QR 码完成配对
-
-3. **获取凭证**：
-   - **Bridge URL**: 桥接服务地址（如 `http://localhost:3001`）
-   - 配置后 DivineSense 将自动与桥接服务通信
-
-**生产部署**：建议使用 PM2 或 systemd 管理桥接服务：
-```bash
-pm2 start src/index.js --name baileys-bridge
-pm2 save
-```
-
-### 步骤 2：配置 DivineSense
-
-1. 登录 DivineSense Web 界面
-2. 进入「设置」→「Chat Apps」
-3. 选择平台并填入凭证：
-
-| 字段 | Telegram | 钉钉 | WhatsApp |
-|:-----|:---------|:-----|:---------|
-| **Bot Token / AppKey** | `1234567890:ABC...` | `dingxxxxx` | - |
-| **App Secret** | - | `SEC...` | - |
-| **Webhook URL / Bridge URL** | 自动生成 | 自动生成 | `http://localhost:3001` |
-
-4. 点击「保存」
-
-### 步骤 3：配置 Webhook
-
-#### Telegram Bot
-
-1. 向 Bot 发送 `/setwebhook`
-2. 发送 webhook URL：`https://your-domain.com/api/v1/chat_apps/webhook?platform=telegram`
-
-#### 钉钉群机器人
-
-1. 在群设置中添加自定义机器人
-2. 搜索你的应用并添加
-3. 完成！
-
-#### WhatsApp
-
-1. 确保 Baileys 桥接服务正在运行
-2. 桥接服务会自动将消息转发到 DivineSense
-3. 完成！（无需额外配置）
-
----
-
-## 使用指南
-
-### Telegram Bot 使用
+### 消息流程
 
 ```
-/start          # 开始使用（可选）
-<任意消息>      # 直接发送问题
-```
-
-**示例对话**：
-```
-你: 搜索关于"Python asyncio"的笔记
-Bot: [返回相关笔记内容...]
-
-你: 创建明天下午3点的会议
-Bot: 好的，已为您创建明天15:00的会议...
-```
-
-### 钉钉群机器人使用
-
-在群中直接 @机器人：
-
-```
-@机器人 搜索上周的会议记录
-@机器人 帮我创建周五下午的提醒
-```
-
-### WhatsApp 使用
-
-直接发送消息给 DivineSense 联系的号码：
-
-```
-你: 搜索关于"Python asyncio"的笔记
-Bot: [返回相关笔记内容...]
-
-你: 创建明天下午3点的会议
-Bot: 好的，已为您创建明天15:00的会议...
+┌─────────────┐     ①发送消息      ┌─────────────┐
+│   用户      │ ──────────────────► │  聊天平台    │
+└─────────────┘                    └─────────────┘
+                                            │
+                                            │ ② Webhook 推送
+                                            ▼
+                                    ┌─────────────┐
+                                    │ DivineSense │
+                                    │   Webhook   │
+                                    └─────────────┘
+                                            │
+                         ┌──────────────────┼──────────────────┐
+                         │                  │                  │
+                         ▼                  ▼                  ▼
+                  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+                  │ 验证凭证     │   │ 解析消息     │   │ 路由到 AI    │
+                  └─────────────┘   └─────────────┘   └─────────────┘
+                                                         │
+                                                         ▼
+                                                  ┌─────────────┐
+                                                  │ Parrot      │
+                                                  │ 处理请求     │
+                                                  └─────────────┘
+                                                         │
+                                                         ▼
+                                                  ┌─────────────┐
+                                                  │ ③发送回复   │
+                                                  └─────────────┘
 ```
 
 ---
 
-## 功能详解
+## 数据模型
 
-### 1. 笔记查询
+### Platform 枚举
 
-发送关键词或自然语言查询：
+```go
+type Platform string
 
-- `"搜索关于Golang的笔记"`
-- `"查找昨天关于AI的笔记"`
-- `"有什么TODO待办事项吗"`
+const (
+    PlatformTelegram  Platform = "PLATFORM_TELEGRAM"
+    PlatformWhatsApp  Platform = "PLATFORM_WHATSAPP"
+    PlatformDingtalk  Platform = "PLATFORM_DINGTALK"
+)
+```
 
-### 2. 日程管理
+### ChatAppCredential
 
-- 自然语言创建：`明天下午3点开会`、`下周一下午提醒我`
-- 查询日程：`今天的安排`、`本周会议`
-- 冲突检测：自动检测时间冲突
+```go
+type ChatAppCredential struct {
+    ID               int64     `json:"id"`
+    CreatorID        int64     `json:"creator_id"`        // 所属用户
+    Platform         Platform  `json:"platform"`          // 平台类型
+    PlatformUserID   string    `json:"platform_user_id"`  // 平台用户 ID
+    AccessToken      string    `json:"-"`                 // 访问令牌（加密存储）
+    AppSecret        string    `json:"-"`                 // 应用密钥（加密存储）
+    BridgeURL        string    `json:"bridge_url"`        // 桥接服务 URL（WhatsApp）
+    Enabled          bool      `json:"enabled"`           // 是否启用
+    CreatedTs        int64     `json:"created_ts"`
+    UpdatedTs        int64     `json:"updated_ts"`
+}
+```
 
-### 3. AI 对话
+### Webhook 请求
 
-自动路由到合适的 AI 代理：
+```go
+type ChatAppWebhookRequest struct {
+    Platform Platform           `json:"platform"`           // 平台类型
+    Headers  map[string]string  `json:"headers"`            // 请求头（签名验证）
+    Payload  []byte             `json:"payload"`            // 消息内容
+}
+```
 
-- **灰灰**（笔记）→ 搜索和知识检索
-- **时巧**（日程）→ 日程管理
-- **折衷**（综合）→ 组合查询
+### 发送消息请求
+
+```go
+type ChatAppSendMessageRequest struct {
+    Platform   Platform `json:"platform"`             // 目标平台
+    ToUserID   string   `json:"to_user_id"`           // 接收者 ID
+    Content    string   `json:"content"`              // 消息内容
+    ParseMode  string   `json:"parse_mode,omitempty"` // 格式化（Markdown/HTML）
+}
+```
 
 ---
 
-## 安全说明
+## API 端点
 
-### Token 加密
+### 1. 注册凭证
 
-所有敏感凭证（Bot Token、App Secret）使用 **AES-256-GCM** 加密存储：
+```http
+POST /api/v1/chat_apps/credentials
+Authorization: Bearer <token>
+Content-Type: application/json
 
-- 密钥长度：必须 32 字节
-- 加密算法：AES-256-GCM（带认证）
-- 存储：数据库加密字段
+{
+  "platform": "PLATFORM_TELEGRAM",
+  "platform_user_id": "123456789",
+  "access_token": "bot_token_here",
+  "app_secret": "app_secret_here"  // 可选，钉钉需要
+}
+```
 
-### 环境变量配置
+**响应**：
+```json
+{
+  "id": 1,
+  "platform": "PLATFORM_TELEGRAM",
+  "platform_user_id": "123456789",
+  "enabled": true,
+  "created_ts": 1736809200000
+}
+```
+
+### 2. 列出凭证
+
+```http
+GET /api/v1/chat_apps/credentials
+Authorization: Bearer <token>
+```
+
+**响应**：
+```json
+{
+  "credentials": [
+    {
+      "id": 1,
+      "platform": "PLATFORM_TELEGRAM",
+      "platform_user_id": "123456789",
+      "enabled": true,
+      "bridge_url": ""
+    },
+    {
+      "id": 2,
+      "platform": "PLATFORM_WHATSAPP",
+      "platform_user_id": "",
+      "enabled": true,
+      "bridge_url": "http://localhost:3001"
+    }
+  ]
+}
+```
+
+### 3. 删除凭证
+
+```http
+DELETE /api/v1/chat_apps/credentials/{id}
+Authorization: Bearer <token>
+```
+
+### 4. Webhook 接收
+
+```http
+POST /api/v1/chat_apps/webhook?platform={platform}
+Content-Type: application/json
+
+// Telegram
+{
+  "update_id": 123456789,
+  "message": {
+    "message_id": 1,
+    "from": { "id": 123456789, "first_name": "User" },
+    "chat": { "id": 123456789, "type": "private" },
+    "text": "你好"
+  }
+}
+
+// 钉钉
+{
+  "msgtype": "text",
+  "text": { "content": "你好" },
+  "chatbotUserId": "xxx",
+  "timestamp": 1736809200000
+}
+```
+
+### 5. 发送消息
+
+```http
+POST /api/v1/chat_apps/send
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "platform": "PLATFORM_TELEGRAM",
+  "to_user_id": "123456789",
+  "content": "你好，这是 DivineSense AI 的回复",
+  "parse_mode": "Markdown"
+}
+```
+
+### 6. 切换启用状态
+
+```http
+PUT /api/v1/chat_apps/credentials/{id}/toggle
+Authorization: Bearer <token>
+```
+
+---
+
+## 平台集成
+
+### Telegram
+
+#### Webhook 验证
+
+- Bot Token 直接验证
+- 从请求中提取 `message.chat.id` 作为平台用户 ID
+
+#### 发送消息
+
+使用 Telegram Bot API：
+```go
+func sendTelegramMessage(token, chatID, content, parseMode string) error {
+    url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+    payload := map[string]interface{}{
+        "chat_id":    chatID,
+        "text":       content,
+        "parse_mode": parseMode,
+    }
+    // ... 发送 HTTP 请求
+}
+```
+
+#### 消息类型支持
+
+| 类型 | 支持 | 说明 |
+|:-----|:-----|:-----|
+| 文本消息 | ✅ | 支持 Markdown/HTML 格式 |
+| 图片 | ✅ | 通过 URL 发送 |
+| 文档 | ✅ | 支持文件上传 |
+
+### WhatsApp (Baileys)
+
+#### 架构
+
+由于 WhatsApp Web API 的特殊性，使用 Node.js 桥接服务：
+
+```
+┌──────────────┐      HTTP       ┌─────────────────┐
+│  WhatsApp    │ ◄─────────────► │  Baileys Bridge │
+│  (手机/网页)  │                 │  (Node.js)      │
+└──────────────┘                 └─────────────────┘
+                                            │
+                                            │ Webhook
+                                            ▼
+                                    ┌─────────────────┐
+                                    │  DivineSense    │
+                                    │  Backend        │
+                                    └─────────────────┘
+```
+
+#### 桥接服务 API
+
+| 端点 | 方法 | 描述 |
+|:-----|:-----|:-----|
+| `/health` | GET | 健康检查 |
+| `/info` | GET | 获取连接状态和 QR 码 |
+| `/webhook` | POST | 接收 Baileys 消息 |
+| `/send` | POST | 发送消息到 WhatsApp |
+| `/download` | GET | 下载媒体文件 |
+
+#### JID 格式
+
+WhatsApp 使用 JID（Jabber ID）标识用户：
+- 个人用户: `1234567890@s.whatsapp.net`
+- 群组: `1234567890@g.us`
+- 广播列表: `1234567890@broadcast`
+
+#### 消息类型
+
+```javascript
+// 文本消息
+{
+  jid: "1234567890@s.whatsapp.net",
+  type: "conversation",
+  content: "Hello"
+}
+
+// 图片消息
+{
+  jid: "1234567890@s.whatsapp.net",
+  type: "imageMessage",
+  media: "https://...",
+  mimetype: "image/jpeg",
+  caption: "图片说明"
+}
+```
+
+### 钉钉
+
+#### 签名验证
+
+使用 HMAC-SHA256 验证请求来源：
+
+```go
+func verifyDingtalkSignature(timestamp, secret, signature string) bool {
+    stringToSign := timestamp + "\n" + secret
+    h := hmac.New(sha256.New, []byte(secret))
+    h.Write([]byte(stringToSign))
+    computed := base64.StdEncoding.EncodeToString(h.Sum(nil))
+    return computed == signature
+}
+```
+
+#### 消息格式
+
+钉钉使用特定的消息格式：
+```json
+{
+  "msgtype": "text",
+  "text": {
+    "content": "消息内容"
+  }
+}
+```
+
+#### 支持的消息类型
+
+| 类型 | msgtype | 说明 |
+|:-----|:---------|:-----|
+| 文本 | text | 纯文本消息 |
+| Markdown | markdown | 支持 Markdown 格式 |
+| 链接 | link | 链接卡片 |
+| ActionCard | actionCard | 独立跳转卡片 |
+
+---
+
+## 安全机制
+
+### Token 加密存储
+
+所有敏感凭证使用 AES-256-GCM 加密：
+
+```go
+const (
+    keySize   = 32  // AES-256
+    nonceSize = 12  // GCM 标准大小
+)
+
+func encryptToken(plaintext, key []byte) (string, error) {
+    block, err := aes.NewCipher(key)
+    if err != nil {
+        return "", err
+    }
+
+    gcm, err := cipher.NewGCM(block)
+    if err != nil {
+        return "", err
+    }
+
+    nonce := make([]byte, nonceSize)
+    if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+        return "", err
+    }
+
+    ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+    return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+```
+
+### 环境变量
 
 ```bash
 # 必需：32字节加密密钥
 DIVINESENSE_CHAT_APPS_SECRET_KEY=<your-32-byte-key>
 
-# 实例 URL（用于 Webhook 设置）
+# 实例 URL（用于生成 Webhook URL）
 DIVINESENSE_INSTANCE_URL=https://your-domain.com
 ```
 
-**生成加密密钥**：
+### 生成加密密钥
+
 ```bash
 # Linux/Mac
 openssl rand -base64 32 | head -c 32
@@ -207,149 +440,268 @@ openssl rand -base64 32 | head -c 32
 python3 -c "import secrets; print(secrets.token_urlsafe(32)[:32])"
 ```
 
----
+### Webhook 安全
 
-## Webhook 配置说明
-
-### Telegram
-
-**Webhook URL**：
-```
-https://your-domain.com/api/v1/chat_apps/webhook?platform=telegram
-```
-
-**验证方式**：Bot Token 验证
-
-### 钉钉
-
-**Webhook URL**：
-```
-https://your-domain.com/api/v1/chat_apps/webhook?platform=dingtalk
-```
-
-**验证方式**：HMAC-SHA256 签名
-
-**签名计算**（钉钉要求）：
-```
-stringToSign = timestamp + "\n" + appSecret
-signature = base64(hmac_sha256(stringToSign))
-```
-
-### WhatsApp
-
-**架构模式**：Baileys Node.js 桥接服务
-
-**验证方式**：通过桥接服务内部验证
-
-**工作原理**：
-```
-WhatsApp ──→ Baileys Bridge ──→ DivineSense Webhook
-                     ↑
-              (Node.js 服务)
-```
-
-**桥接服务 API**：
-- `GET /health` - 健康检查
-- `GET /info` - 获取连接状态和 QR 码
-- `POST /send` - 发送消息到 WhatsApp
-- `GET /download?url=...` - 下载媒体
+| 平台 | 验证方式 |
+|:-----|:---------|
+| Telegram | Bot Token（查询数据库验证） |
+| WhatsApp | 桥接服务内部验证 |
+| 钉钉 | HMAC-SHA256 签名 |
 
 ---
 
-## API 端点
+## 开发调试
 
-### 注册凭证
+### 本地开发环境
 
-```bash
-curl -X POST https://your-domain.com/api/v1/chat_apps/credentials \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "platform": "PLATFORM_TELEGRAM",
-    "platform_user_id": "telegram_user_123",
-    "access_token": "bot_token_here"
-  }'
-```
+1. **启动 DivineSense 后端**：
+   ```bash
+   make run
+   ```
 
-### 列出凭证
+2. **启动 WhatsApp Bridge**（需要时）：
+   ```bash
+   cd plugin/chat_apps/channels/whatsapp/bridge
+   npm install
+   npm start
+   ```
 
-```bash
-curl https://your-domain.com/api/v1/chat_apps/credentials \
-  -H "Authorization: Bearer <token>"
-```
+3. **配置内网穿透**（用于 Webhook 测试）：
+   ```bash
+   # 使用 ngrok
+   ngrok http 28081
 
-### 删除凭证
-
-```bash
-curl -X DELETE https://your-domain.com/api/v1/chat_apps/credentials/123 \
-  -H "Authorization: Bearer <token>"
-```
-
----
-
-## 故障排查
-
-### 常见问题
-
-**Q: Telegram Bot 返回 "Bad Request"**
-- 检查 Bot Token 格式是否正确
-- 确认 Webhook URL 可访问
-- 查看服务器日志
-
-**Q: 钉钉签名验证失败**
-- 检查 AppSecret 是否正确
-- 确认服务器时间与钉钉服务器同步
-- 检查 Webhook URL 配置
-
-**Q: AI 无响应**
-- 确认 AI 服务已启用
-- 检查环境变量配置
-- 查看服务器日志
-
-**Q: 消息发送失败**
-- 检查聊天 ID 是否正确
-- 确认机器人有权限发送消息
-- 查看平台限制（如频率限制）
+   # 或使用 cloudflare tunnel
+   cloudflared tunnel --url http://localhost:28081
+   ```
 
 ### 调试日志
 
-查看服务器日志：
-```bash
-# 二进制模式
-sudo journalctl -u divinesense -f
+启用详细日志：
 
-# Docker 模式
-docker logs divinesense -f
+```bash
+# Go 后端
+DIVINESENSE_LOG_LEVEL=debug make run
+
+# WhatsApp Bridge
+DEBUG=* npm start
 ```
 
-相关日志标签：
-- `platform=telegram`
-- `platform=dingtalk`
-- `user_id=<your-id>`
+### 测试 Webhook
+
+使用 curl 测试：
+
+```bash
+# Telegram Webhook
+curl -X POST "http://localhost:28081/api/v1/chat_apps/webhook?platform=telegram" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "update_id": 123456789,
+    "message": {
+      "message_id": 1,
+      "from": {"id": 123456789, "first_name": "Test"},
+      "chat": {"id": 123456789, "type": "private"},
+      "text": "测试消息"
+    }
+  }'
+
+# 钉钉 Webhook
+curl -X POST "http://localhost:28081/api/v1/chat_apps/webhook?platform=dingtalk" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "msgtype": "text",
+    "text": {"content": "测试消息"},
+    "chatbotUserId": "test",
+    "timestamp": 1736809200000
+  }'
+```
+
+### 单元测试
+
+```bash
+# 运行所有测试
+make test
+
+# 运行特定包测试
+go test ./plugin/chat_apps/... -v
+
+# 运行特定测试
+go test ./plugin/chat_apps/channels/telegram/ -run TestSendMessage
+```
+
+### 集成测试
+
+```go
+// plugin/chat_apps/integration_test.go
+func TestChatAppIntegration(t *testing.T) {
+    // 1. 创建测试凭证
+    cred := &ChatAppCredential{
+        Platform:       PlatformTelegram,
+        PlatformUserID: "test_user",
+        AccessToken:    "test_token",
+    }
+
+    // 2. 测试消息发送
+    err := sendMessage(context.Background(), cred, "test message")
+    assert.NoError(t, err)
+
+    // 3. 测试 Webhook 处理
+    // ...
+}
+```
 
 ---
 
-## 隐私说明
+## 部署指南
 
-- 所有聊天消息仅在处理时临时存储
-- AI 对话上下文保留 30 天后自动清理
-- 敏感凭证加密存储，无法从日志中获取
-- 用户可随时删除关联的聊天平台
+### 生产环境检查清单
+
+- [ ] 设置 `DIVINESENSE_CHAT_APPS_SECRET_KEY`（32 字节）
+- [ ] 配置 `DIVINESENSE_INSTANCE_URL`（生成 Webhook URL）
+- [ ] 启用 HTTPS（Let's Encrypt）
+- [ ] 配置防火墙规则
+- [ ] 部署 WhatsApp Bridge（如果使用）
+
+### Docker 部署
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  divinesense:
+    image: hrygo/divinesense:latest
+    environment:
+      - DIVINESENSE_CHAT_APPS_SECRET_KEY=${SECRET_KEY}
+      - DIVINESENSE_INSTANCE_URL=https://your-domain.com
+    ports:
+      - "5230:5230"
+    depends_on:
+      - postgres
+
+  baileys-bridge:
+    build: ./plugin/chat_apps/channels/whatsapp/bridge
+    environment:
+      - PORT=3001
+      - DIVINESENSE_WEBHOOK_URL=http://divinesense:5230/api/v1/chat_apps/webhook
+    ports:
+      - "3001:3001"
+```
+
+### PM2 部署（WhatsApp Bridge）
+
+```javascript
+// ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'baileys-bridge',
+    script: './src/index.js',
+    cwd: '/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge',
+    env: {
+      PORT: 3001,
+      DIVINESENSE_WEBHOOK_URL: 'https://your-domain.com/api/v1/chat_apps/webhook',
+      NODE_ENV: 'production'
+    },
+    error_file: '/var/log/baileys-bridge/error.log',
+    out_file: '/var/log/baileys-bridge/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '500M'
+  }]
+};
+```
+
+启动：
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+
+### Systemd 服务
+
+```ini
+# /etc/systemd/system/baileys-bridge.service
+[Unit]
+Description=DivineSense Baileys WhatsApp Bridge
+After=network.target
+
+[Service]
+Type=simple
+User=divinesense
+WorkingDirectory=/opt/divinesense/plugin/chat_apps/channels/whatsapp/bridge
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=10
+Environment=PORT=3001
+Environment=DIVINESENSE_WEBHOOK_URL=https://your-domain.com/api/v1/chat_apps/webhook
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启用并启动：
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable baileys-bridge
+sudo systemctl start baileys-bridge
+```
 
 ---
 
-## 下一步
+## 扩展新平台
 
-- [ ] 配置 Telegram Bot
-- [ ] 配置钉钉群机器人
-- [ ] 测试 AI 对话功能
-- [ ] 设置日程提醒
-- [ ] 查看个人笔记
+### 添加新平台步骤
+
+1. **定义平台枚举**：
+   ```go
+   // plugin/chat_apps/types.go
+   const (
+       // ...
+       PlatformDiscord Platform = "PLATFORM_DISCORD"
+   )
+   ```
+
+2. **实现 Channel 接口**：
+   ```go
+   // plugin/chat_apps/channels/discord/discord.go
+   type DiscordChannel struct {
+       client *http.Client
+   }
+
+   func (c *DiscordChannel) SendMessage(ctx context.Context, req *SendMessageRequest) error {
+       // 实现 Discord 消息发送
+   }
+
+   func (c *DiscordChannel) ParseWebhook(r *http.Request) (*WebhookMessage, error) {
+       // 实现 Discord Webhook 解析
+   }
+   ```
+
+3. **注册 Channel**：
+   ```go
+   // plugin/chat_apps/factory.go
+   func NewChannel(platform Platform) (Channel, error) {
+       switch platform {
+       case PlatformTelegram:
+           return NewTelegramChannel(), nil
+       case PlatformDiscord:
+           return NewDiscordChannel(), nil
+       // ...
+       }
+   }
+   ```
+
+4. **添加测试**：
+   ```go
+   // plugin/chat_apps/channels/discord/discord_test.go
+   func TestDiscordSendMessage(t *testing.T) {
+       // ...
+   }
+   ```
 
 ---
 
 **最后更新**: 2026-02-03
-**相关文档**:
-- [系统架构](../dev-guides/ARCHITECTURE.md)
-- [后端开发](../dev-guides/BACKEND_DB.md)
-- [功能规格](../specs/chat-apps-integration.md)
+**相关文档**: [用户指南](../user-guides/CHAT_APPS.md) | [系统架构](../dev-guides/ARCHITECTURE.md) | [后端开发](../dev-guides/BACKEND_DB.md)
