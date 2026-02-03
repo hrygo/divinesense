@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package memos.store;
+
+option go_package = "gen/store";
+
+// ChatAppService manages chat app credentials in the database.
+// This is the store-layer interface for CRUD operations on chat app bindings.
+service ChatAppService {
+  // CreateCredential creates a new chat app credential.
+  rpc CreateCredential(CreateCredentialRequest) returns (Credential) {
+    option (google.api.http) = {};
+  }
+
+  // ListCredentials lists all credentials for a user, optionally filtered by platform.
+  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse) {
+    option (google.api.http) = {};
+  }
+
+  // GetCredentialByPlatform retrieves a credential by user ID and platform.
+  rpc GetCredentialByPlatform(GetCredentialByPlatformRequest) returns (Credential) {
+    option (google.api.http) = {};
+  }
+
+  // GetCredentialByPlatformUserID retrieves a credential by platform user ID.
+  // Used for webhook routing to find the DivineSense user associated with a chat app account.
+  rpc GetCredentialByPlatformUserID(GetCredentialByPlatformUserIDRequest) returns (Credential) {
+    option (google.api.http) = {};
+  }
+
+  // DeleteCredential deletes a credential by ID.
+  rpc DeleteCredential(DeleteCredentialRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {};
+  }
+
+  // UpdateCredential updates a credential's fields.
+  rpc UpdateCredential(UpdateCredentialRequest) returns (Credential) {
+    option (google.api.http) = {};
+  }
+
+  // SetEnabled enables or disables a credential.
+  rpc SetEnabled(SetEnabledRequest) returns (Credential) {
+    option (google.api.http) = {};
+  }
+}
+
+// CreateCredentialRequest creates a new credential.
+message CreateCredentialRequest {
+  int32 user_id = 1;
+  string platform = 2; // "telegram", "whatsapp", "dingtalk"
+  string platform_user_id = 3; // Platform-specific user ID
+  string platform_chat_id = 4; // Platform-specific chat ID for DM
+  string access_token = 5; // Encrypted access token
+  string webhook_url = 6; // Webhook URL (DingTalk)
+}
+
+// Credential represents a chat app credential in the database.
+message Credential {
+  int32 id = 1;
+  int32 user_id = 2;
+  string platform = 3;
+  string platform_user_id = 4;
+  string platform_chat_id = 5;
+  string access_token = 6; // Encrypted at rest
+  string webhook_url = 7;
+  bool enabled = 8;
+  int64 created_ts = 9;
+  int64 updated_ts = 10;
+}
+
+// ListCredentialsRequest lists credentials for a user.
+message ListCredentialsRequest {
+  int32 user_id = 1;
+  optional string platform = 2; // Optional filter by platform
+}
+
+// ListCredentialsResponse contains the list of credentials.
+message ListCredentialsResponse {
+  repeated Credential credentials = 1;
+}
+
+// GetCredentialByPlatformRequest gets a credential by user and platform.
+message GetCredentialByPlatformRequest {
+  int32 user_id = 1;
+  string platform = 2;
+}
+
+// GetCredentialByPlatformUserIDRequest gets a credential by platform user ID.
+message GetCredentialByPlatformUserIDRequest {
+  string platform = 1;
+  string platform_user_id = 2;
+}
+
+// DeleteCredentialRequest deletes a credential by ID.
+message DeleteCredentialRequest {
+  int32 id = 1;
+}
+
+// UpdateCredentialRequest updates a credential.
+message UpdateCredentialRequest {
+  int32 id = 1;
+  optional string access_token = 2;
+  optional string webhook_url = 3;
+  optional int64 updated_ts = 4;
+}
+
+// SetEnabledRequest enables or disables a credential.
+message SetEnabledRequest {
+  int32 id = 1;
+  bool enabled = 2;
+}

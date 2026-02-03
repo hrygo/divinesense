@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package memos.api.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "gen/api/v1";
+
+// ChatAppService manages chat app integrations for DivineSense.
+// This service enables users to bind and manage chat platform accounts
+// (Telegram, WhatsApp, DingTalk) for AI agent interaction.
+service ChatAppService {
+  // RegisterCredential binds a chat app account to the current user.
+  // The user must provide platform-specific credentials obtained from
+  // the chat platform (e.g., Bot Token for Telegram).
+  rpc RegisterCredential(RegisterCredentialRequest) returns (Credential) {
+    option (google.api.http) = {
+      post: "/api/v1/chat-apps/credentials"
+      body: "*"
+    };
+  }
+
+  // ListCredentials returns all registered chat app credentials for the current user.
+  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/chat-apps/credentials"
+    };
+  }
+
+  // DeleteCredential removes a chat app binding for the current user.
+  // This will revoke DivineSense's access to the user's account on that platform.
+  rpc DeleteCredential(DeleteCredentialRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/chat-apps/credentials/{platform}"
+    };
+  }
+
+  // UpdateCredential modifies an existing credential (e.g., enable/disable).
+  rpc UpdateCredential(UpdateCredentialRequest) returns (Credential) {
+    option (google.api.http) = {
+      patch: "/api/v1/chat-apps/credentials/{platform}"
+      body: "*"
+    };
+  }
+
+  // HandleWebhook processes incoming webhook events from chat platforms.
+  // This endpoint is called by the chat platforms when new messages arrive.
+  // The endpoint verifies the request signature and routes the message
+  // to the appropriate AI agent.
+  rpc HandleWebhook(WebhookRequest) returns (WebhookResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/chat-apps/webhook/{platform}"
+      body: "*"
+    };
+  }
+
+  // SendMessage sends a message to a chat app channel.
+  // This is used internally to deliver AI responses to users.
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/chat-apps/send"
+      body: "*"
+    };
+  }
+
+  // GetWebhookInfo returns webhook configuration for a platform.
+  // This provides the webhook URL and setup instructions.
+  rpc GetWebhookInfo(GetWebhookInfoRequest) returns (WebhookInfo) {
+    option (google.api.http) = {
+      get: "/api/v1/chat-apps/webhook-info/{platform}"
+    };
+  }
+}
+
+// Platform represents the supported chat platforms.
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_TELEGRAM = 1;   // Telegram Bot
+  PLATFORM_WHATSAPP = 2;   // WhatsApp (via Baileys bridge)
+  PLATFORM_DINGTALK = 3;   // DingTalk Robot
+}
+
+// RegisterCredentialRequest creates a new chat app credential binding.
+message RegisterCredentialRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+  string platform_user_id = 2 [(google.api.field_behavior) = REQUIRED]; // Platform-specific user ID
+  string platform_chat_id = 3; // Platform-specific chat ID (for direct messaging)
+  string access_token = 4; // OAuth token or Bot token (encrypted at rest)
+  string webhook_url = 5; // Webhook URL (DingTalk only)
+}
+
+// Credential represents a chat app binding.
+// The access_token is never returned in API responses for security.
+message Credential {
+  int32 id = 1;
+  int32 user_id = 2;
+  Platform platform = 3;
+  string platform_user_id = 4;
+  string platform_chat_id = 5;
+  bool enabled = 6;
+  int64 created_ts = 7;
+  int64 updated_ts = 8;
+  // Note: access_token is intentionally omitted from responses
+}
+
+// ListCredentialsRequest queries credentials with optional filtering.
+message ListCredentialsRequest {
+  Platform platform = 1; // Filter by platform (optional)
+}
+
+// ListCredentialsResponse contains the list of credentials.
+message ListCredentialsResponse {
+  repeated Credential credentials = 1;
+}
+
+// DeleteCredentialRequest removes a credential by platform.
+message DeleteCredentialRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// UpdateCredentialRequest modifies an existing credential.
+message UpdateCredentialRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+  optional bool enabled = 2; // Enable or disable the integration
+  optional string access_token = 3; // Update the access token
+  optional string webhook_url = 4; // Update the webhook URL (DingTalk)
+}
+
+// WebhookRequest represents an incoming webhook from a chat platform.
+message WebhookRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+  bytes payload = 2; // Raw webhook payload (platform-specific format)
+  map<string, string> headers = 3; // HTTP headers for signature verification
+  string query_string = 4; // Raw query string (for platform-specific params)
+}
+
+// WebhookResponse is the response to a webhook request.
+message WebhookResponse {
+  bool success = 1;
+  string message = 2; // Error message if success=false
+}
+
+// SendMessageRequest sends a message to a chat app channel.
+message SendMessageRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+  string platform_chat_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string content = 3 [(google.api.field_behavior) = REQUIRED];
+  MessageType message_type = 4; // Default: TEXT
+  bytes media_data = 5; // For media messages
+  string media_mime_type = 6; // MIME type of media
+  string file_name = 7; // Original filename for documents
+}
+
+// MessageType specifies the type of message to send.
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_TEXT = 1;
+  MESSAGE_TYPE_PHOTO = 2;
+  MESSAGE_TYPE_AUDIO = 3;
+  MESSAGE_TYPE_VIDEO = 4;
+  MESSAGE_TYPE_DOCUMENT = 5;
+}
+
+// GetWebhookInfoRequest requests webhook configuration for a platform.
+message GetWebhookInfoRequest {
+  Platform platform = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// WebhookInfo contains webhook setup information.
+message WebhookInfo {
+  string webhook_url = 1; // The webhook URL to configure in the chat platform
+  string setup_instructions = 2; // Human-readable setup instructions
+  map<string, string> headers = 3; // Required headers for verification
+  bool requires_verification = 4; // Whether the platform requires signature verification
+}
