@@ -1,7 +1,19 @@
-import { BarChart3Icon, CogIcon, DatabaseIcon, KeyIcon, LibraryIcon, LucideIcon, MessageSquareIcon, Settings2Icon, UserIcon, UsersIcon } from "lucide-react";
+import {
+  BarChart3Icon,
+  CogIcon,
+  DatabaseIcon,
+  KeyIcon,
+  LibraryIcon,
+  LucideIcon,
+  MessageSquareIcon,
+  Settings2Icon,
+  UserIcon,
+  UsersIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import MobileHeader from "@/components/MobileHeader";
+import ChatAppsSection from "@/components/Settings/ChatAppsSection";
 import InstanceSection from "@/components/Settings/InstanceSection";
 import MemberSection from "@/components/Settings/MemberSection";
 import MemoRelatedSettings from "@/components/Settings/MemoRelatedSettings";
@@ -11,7 +23,6 @@ import PreferencesSection from "@/components/Settings/PreferencesSection";
 import SectionMenuItem from "@/components/Settings/SectionMenuItem";
 import SSOSection from "@/components/Settings/SSOSection";
 import StorageSection from "@/components/Settings/StorageSection";
-import ChatAppsSection from "@/components/Settings/ChatAppsSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstance } from "@/contexts/InstanceContext";
 import useCurrentUser from "@/hooks/useCurrentUser";

@@ -917,7 +917,6 @@
       "title": "SSO",
       "type": "Type"
     },
-    "chat-apps": "Chat Apps",
     "chat-apps": {
       "title": "Chat Apps",
       "description": "Bind your chat app accounts to receive AI responses directly in Telegram, WhatsApp, or DingTalk.",
@@ -939,7 +938,6 @@
       "dingtalk-user-id-hint": "Your DingTalk staff ID or union ID.",
       "dingtalk-token-hint": "Your DingTalk App Key (not the App Secret).",
       "dingtalk-webhook-hint": "The outgoing webhook URL for your DingTalk robot.",
-      "webhook-url": "Webhook URL",
       "validation-error": "Validation Error",
       "required-fields": "Please fill in all required fields.",
       "register-success": "Chat app account connected successfully!",
@@ -948,22 +946,6 @@
       "delete-failed": "Failed to remove chat app account.",
       "update-failed": "Failed to update chat app account.",
       "fetch-failed": "Failed to fetch chat app accounts."
-    },
-    "storage": "Storage",
-    "storage-section": {
-      "identifier": "Identifier",
-      "identifier-filter": "Identifier Filter",
-      "no-sso-found": "No SSO found.",
-      "redirect-url": "Redirect URL",
-      "scopes": "Scopes",
-      "single-sign-on": "Configuring Single Sign-On (SSO) for Authentication",
-      "sso-created": "SSO {{name}} created",
-      "sso-list": "SSO List",
-      "sso-updated": "SSO {{name}} updated",
-      "template": "Template",
-      "token-endpoint": "Token endpoint",
-      "update-sso": "Update SSO",
-      "user-endpoint": "User endpoint"
     },
     "storage": "Storage",
     "storage-section": {

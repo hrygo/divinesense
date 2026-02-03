@@ -925,7 +925,6 @@
       "update-sso": "更新单点登录",
       "user-endpoint": "用户端点（User Endpoint）"
     },
-    "chat-apps": "聊天应用",
     "chat-apps": {
       "title": "聊天应用",
       "description": "绑定您的聊天应用账号，在 Telegram、WhatsApp 或钉钉中直接接收 AI 回复。",
@@ -947,7 +946,6 @@
       "dingtalk-user-id-hint": "您的钉钉员工 ID 或部门 ID。",
       "dingtalk-token-hint": "您的钉钉 App Key（不是 App Secret）。",
       "dingtalk-webhook-hint": "您的钉钉机器人的 outgoing webhook URL。",
-      "webhook-url": "Webhook 地址",
       "validation-error": "验证错误",
       "required-fields": "请填写所有必填字段。",
       "register-success": "聊天应用账号连接成功！",
