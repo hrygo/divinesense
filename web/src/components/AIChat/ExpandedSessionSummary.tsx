@@ -39,7 +39,7 @@ interface ExpandedSessionSummaryProps {
  * - Files modified
  */
 export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ summary, className }: ExpandedSessionSummaryProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Format duration in human-readable format
   const formatDuration = (ms: number) => {
