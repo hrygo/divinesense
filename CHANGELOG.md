@@ -4,7 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [v0.93.0] - 2026-02-04
 
-### 💬 Chat UI Improvements
+### 📚 规格说明书完善 (cc_runner_async_arch.md v1.3)
+
+#### 事件类型丰富
+- 添加 `session_stats` 事件类型用于会话完成统计
+- 实现 `result` 消息的统计提取（耗时、成本、token）
+- 消除 "unknown message type" 日志警告
+
+#### 可观测性增强
+- **agent_session_stats** 表：Token 使用、成本追踪、工具调用、文件操作
+- **异步持久化队列**：后台队列 (size: 100)，优雅关闭
+- **成本统计**：日成本聚合、最高消费会话、趋势分析
+
+### 💬 Chat UI 改进
 
 #### 微信风格时间戳
 - 居中显示在对话界面中央
@@ -18,25 +30,15 @@ All notable changes to this project will be documented in this file.
 - **GEEK** (极客): violet-600
 - **EVOLUTION** (进化): rose-600
 
-#### 会话摘要面板
-- 完整展示 token 使用、耗时、成本
-- 工具调用列表
-- 文件修改统计
-
-### 🔧 Build Optimizations
+### 🔧 构建优化
 - Vite 生产构建自动移除 console.log (terser drop_console)
 - 添加 rollup-plugin-visualizer 用于包分析
 - Go embed 兼容性修复 (lodash 内部模块打包)
 
-### 🐛 Bug Fixes
+### 🐛 Bug 修复
 - 修复 goroutine 泄漏和竞态条件 (cc_runner)
 - 优化日志输出，移除冗余日志
 - 修复 SessionID 显示 (使用真实 UUID 而非 conv_N 格式)
-
-### 📊 持久化验证
-- agent_session_stats 表数据验证通过
-- 异步持久化队列正常运行
-- 成本追踪统计已启用
 
 ## [v0.91.0] - 2026-02-03
 
