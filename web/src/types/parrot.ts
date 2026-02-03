@@ -2,12 +2,14 @@ import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 
 /**
  * Parrot agent types enumeration
- * 鹦鹉代理类型枚举 - 私人助手三核心能力
+ * 鹦鹉代理类型枚举 - 私人助手三核心能力 + 高级模式
  */
 export enum ParrotAgentType {
   MEMO = "MEMO", // 🦜 灰灰 - Memo Parrot
   SCHEDULE = "SCHEDULE", // 🦜 时巧 - Schedule Parrot
   AMAZING = "AMAZING", // 🦜 折衷 - Amazing Parrot (综合助手)
+  GEEK = "GEEK", // 🦜 极客 - Geek Mode (Claude Code CLI)
+  EVOLUTION = "EVOLUTION", // 🦜 进化 - Evolution Mode (系统自我进化)
 }
 
 /**
@@ -75,6 +77,20 @@ export const PARROT_SOUND_EFFECTS: Record<ParrotAgentType, Record<string, string
     analyzing: "看看这个...",
     multi_task: "同时搜索中",
   },
+  [ParrotAgentType.GEEK]: {
+    thinking: "编译中...",
+    running: "执行中",
+    done: "搞定！",
+    error: "出bug了",
+    building: "构建中",
+  },
+  [ParrotAgentType.EVOLUTION]: {
+    thinking: "进化中...",
+    analyzing: "分析代码",
+    done: "已进化",
+    error: "需要修复",
+    generating: "生成中",
+  },
 };
 
 /**
@@ -85,6 +101,8 @@ export const PARROT_CATCHPHRASES: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.MEMO]: ["让我想想...", "笔记里说...", "在记忆里找找..."],
   [ParrotAgentType.SCHEDULE]: ["安排好啦", "时间搞定", "妥妥的"],
   [ParrotAgentType.AMAZING]: ["看看这个...", "综合来看", "发现规律了"],
+  [ParrotAgentType.GEEK]: ["代码搞定", "正在编译", "这个我来写"],
+  [ParrotAgentType.EVOLUTION]: ["系统升级", "自我进化中", "代码已优化"],
 };
 
 /**
@@ -95,6 +113,8 @@ export const PARROT_BEHAVIORS: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.MEMO]: ["用翅膀翻找笔记", "在记忆森林中飞翔", "用喙精准啄取信息"],
   [ParrotAgentType.SCHEDULE]: ["用喙整理时间", "精准啄食安排", "展开羽翼规划"],
   [ParrotAgentType.AMAZING]: ["在数据树丛中穿梭", "多维飞行", "综合视野"],
+  [ParrotAgentType.GEEK]: ["敲击代码", "调试中", "重构架构"],
+  [ParrotAgentType.EVOLUTION]: ["迭代进化", "优化自身", "生成 PR"],
 };
 
 /**
@@ -183,6 +203,28 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     color: "purple",
     available: true,
     examplePrompts: ["Summarize today's memos and schedule", "Help me plan next week's work", "Search recent project-related content"],
+    backgroundImage: "/images/parrots/amazing_bg.webp",
+  },
+  [ParrotAgentType.GEEK]: {
+    id: ParrotAgentType.GEEK,
+    name: "geek",
+    icon: "/assistant-avatar.webp",
+    displayName: "Geek",
+    description: "Claude Code CLI integration for coding tasks",
+    color: "violet",
+    available: true,
+    examplePrompts: ["Help me write a React component", "Debug this function", "Refactor this code"],
+    backgroundImage: "/images/parrots/amazing_bg.webp",
+  },
+  [ParrotAgentType.EVOLUTION]: {
+    id: ParrotAgentType.EVOLUTION,
+    name: "evolution",
+    icon: "/assistant-avatar.webp",
+    displayName: "Evolution",
+    description: "System self-improvement mode for code evolution",
+    color: "rose",
+    available: true,
+    examplePrompts: ["Optimize the database queries", "Add error handling", "Improve the test coverage"],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
 };
@@ -426,6 +468,40 @@ export const PARROT_THEMES = {
     accent: "bg-emerald-500",
     accentText: "text-white",
   },
+  // 极客 - Geek Mode (Claude Code CLI)
+  GEEK: {
+    bubbleUser: "bg-violet-600 dark:bg-violet-500 text-white",
+    bubbleBg: "bg-white dark:bg-zinc-800",
+    bubbleBorder: "border-violet-200 dark:border-violet-700",
+    text: "text-slate-800 dark:text-violet-50",
+    textSecondary: "text-slate-600 dark:text-violet-200",
+    iconBg: "bg-violet-100 dark:bg-violet-900",
+    iconText: "text-violet-700 dark:text-violet-300",
+    inputBg: "bg-violet-50 dark:bg-violet-950",
+    inputBorder: "border-violet-200 dark:border-violet-700",
+    inputFocus: "focus:ring-violet-500 focus:border-violet-500",
+    cardBg: "bg-white dark:bg-zinc-800",
+    cardBorder: "border-violet-200 dark:border-violet-700",
+    accent: "bg-violet-500",
+    accentText: "text-white",
+  },
+  // 进化 - Evolution Mode (System Self-Improvement)
+  EVOLUTION: {
+    bubbleUser: "bg-rose-600 dark:bg-rose-500 text-white",
+    bubbleBg: "bg-white dark:bg-zinc-800",
+    bubbleBorder: "border-rose-200 dark:border-rose-700",
+    text: "text-slate-800 dark:text-rose-50",
+    textSecondary: "text-slate-600 dark:text-rose-200",
+    iconBg: "bg-rose-100 dark:bg-rose-900",
+    iconText: "text-rose-700 dark:text-rose-300",
+    inputBg: "bg-rose-50 dark:bg-rose-950",
+    inputBorder: "border-rose-200 dark:border-rose-700",
+    inputFocus: "focus:ring-rose-500 focus:border-rose-500",
+    cardBg: "bg-white dark:bg-zinc-800",
+    cardBorder: "border-rose-200 dark:border-rose-700",
+    accent: "bg-rose-500",
+    accentText: "text-white",
+  },
 } as const;
 
 /**
@@ -436,4 +512,6 @@ export const PARROT_ICONS: Record<string, string> = {
   MEMO: "/images/parrots/icons/memo_icon.webp",
   SCHEDULE: "/images/parrots/icons/schedule_icon.webp",
   AMAZING: "/assistant-avatar.webp",
+  GEEK: "/assistant-avatar.webp",
+  EVOLUTION: "/assistant-avatar.webp",
 };

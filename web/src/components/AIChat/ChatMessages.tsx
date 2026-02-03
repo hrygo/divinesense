@@ -601,7 +601,7 @@ const MessageBubble = memo(function MessageBubble({
                 {/* 消息时间戳 - 在内容下方微妙显示 */}
                 <div
                   className={cn(
-                    "mt-1 text-[10px",
+                    "mt-1 text-[8px]",
                     // User messages: high contrast for visibility on dark bubble
                     // 用户消息：深色气泡上使用高对比度
                     role === "user" ? "text-white/70 dark:text-slate-900/60" : "text-muted-foreground/50",
