@@ -42,6 +42,26 @@ type ToolResult = {
   isError?: boolean;
 };
 
+// Format message timestamp to relative time (e.g., "刚刚", "5分钟前")
+// 格式化消息时间戳为相对时间（如"刚刚"、"5分钟前"）
+function formatMessageTime(timestamp: number, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return t("ai.aichat.sidebar.time-just-now");
+  if (diffMins < 60) return t("ai.aichat.sidebar.time-minutes-ago", { count: diffMins });
+  if (diffHours < 24) return t("ai.aichat.sidebar.time-hours-ago", { count: diffHours });
+  if (diffDays < 7) return t("ai.aichat.sidebar.time-days-ago", { count: diffDays });
+
+  // Show full date for messages older than a week
+  // 超过一周显示完整日期
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 interface ChatMessagesProps {
   items: ChatItem[];
   isTyping?: boolean;
@@ -576,6 +596,12 @@ const MessageBubble = memo(function MessageBubble({
                 ) : (
                   <div className="whitespace-pre-wrap break-words text-sm font-sans">{content}</div>
                 )}
+
+                {/* Message timestamp - subtle display below content */}
+                {/* 消息时间戳 - 在内容下方微妙显示 */}
+                <div className={cn("mt-1 text-[10px] text-muted-foreground/50", role === "user" ? "text-right" : "text-left")}>
+                  {formatMessageTime(message.timestamp, t)}
+                </div>
               </div>
 
               {/* Fold Mask and Button */}
