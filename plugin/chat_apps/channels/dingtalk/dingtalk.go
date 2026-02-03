@@ -207,7 +207,7 @@ func (d *DingTalkChannel) DownloadMedia(ctx context.Context, downloadCode string
 	// Get access token for API call
 	token, err := d.GetAccessToken(ctx)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+		return nil, "", fmt.Errorf("%w: %w", channels.ErrMediaDownloadFailed, err)
 	}
 
 	// DingTalk media download API
@@ -224,7 +224,7 @@ func (d *DingTalkChannel) DownloadMedia(ctx context.Context, downloadCode string
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+		return nil, "", fmt.Errorf("%w: %w", channels.ErrMediaDownloadFailed, err)
 	}
 	defer resp.Body.Close()
 

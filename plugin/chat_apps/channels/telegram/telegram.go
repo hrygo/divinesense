@@ -202,7 +202,7 @@ func (t *TelegramChannel) DownloadMedia(ctx context.Context, fileID string) ([]b
 	file, err := t.bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
 	if err != nil {
 		slog.Error("telegram: failed to get file info", "file_id", fileID, "error", err)
-		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+		return nil, "", fmt.Errorf("%w: %w", channels.ErrMediaDownloadFailed, err)
 	}
 
 	// file.Link is a method that takes the bot token
@@ -220,7 +220,7 @@ func (t *TelegramChannel) DownloadMedia(ctx context.Context, fileID string) ([]b
 	resp, err := t.client.Do(req)
 	if err != nil {
 		slog.Error("telegram: failed to download file", "url", fileURL, "error", err)
-		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+		return nil, "", fmt.Errorf("%w: %w", channels.ErrMediaDownloadFailed, err)
 	}
 	defer resp.Body.Close()
 

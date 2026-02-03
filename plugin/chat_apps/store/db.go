@@ -119,6 +119,10 @@ func (s *ChatAppStore) ListCredentials(ctx context.Context, userID int32, platfo
 		credentials = append(credentials, &cred)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+
 	return credentials, nil
 }
 
