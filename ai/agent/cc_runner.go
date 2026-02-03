@@ -418,9 +418,10 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 				"reason", dangerEvent.Reason,
 				"level", dangerEvent.Level,
 			)
-			// Send danger block event to client
-			if callback != nil {
-				_ = callback(EventTypeDangerBlock, dangerEvent) //nolint:errcheck // critical notification
+			// Send danger block event to client (non-critical - error already being returned)
+			callbackSafe := SafeCallback(callback)
+			if callbackSafe != nil {
+				callbackSafe(EventTypeDangerBlock, dangerEvent)
 			}
 			return fmt.Errorf("dangerous operation blocked: %s", dangerEvent.Reason)
 		}
@@ -484,14 +485,13 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 
 	// Send thinking event
 	// 发送思考事件
-	if callback != nil {
+	callbackSafe := SafeCallback(callback)
+	if callbackSafe != nil {
 		meta := &EventMeta{
 			Status:          "running",
 			TotalDurationMs: 0,
 		}
-		if err := callback(EventTypeThinking, &EventWithMeta{EventType: EventTypeThinking, EventData: fmt.Sprintf("ai.%s_mode.thinking", cfg.Mode), Meta: meta}); err != nil {
-			return err
-		}
+		callbackSafe(EventTypeThinking, &EventWithMeta{EventType: EventTypeThinking, EventData: fmt.Sprintf("ai.%s_mode.thinking", cfg.Mode), Meta: meta})
 	}
 
 	// Execute CLI with session management
@@ -742,6 +742,10 @@ func (r *CCRunner) streamOutput(
 	streamCtx, stopStreams := context.WithCancel(context.Background())
 	defer stopStreams()
 
+	// Create safe callback once for all goroutines to reuse
+	// This avoids redundant wrapping in each goroutine
+	callbackSafe := SafeCallback(callback)
+
 	// Stream stdout
 	// 流式处理 stdout
 	wg.Add(1)
@@ -802,8 +806,8 @@ func (r *CCRunner) streamOutput(
 					r.logger.Debug("CCRunner: non-JSON output",
 						"mode", cfg.Mode,
 						"line", line)
-					if callback != nil {
-						_ = callback(EventTypeAnswer, line) //nolint:errcheck // streaming output
+					if callbackSafe != nil {
+						callbackSafe(EventTypeAnswer, line)
 					}
 					continue
 				}
@@ -1081,10 +1085,13 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			"has_error", msg.Error != "",
 			"has_output", msg.Output != "")
 
-		// Try to extract any text content
+		// Try to extract any text content (non-critical - use safe callback)
+		callbackSafe := SafeCallback(callback)
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
-				_ = callback(EventTypeAnswer, &EventWithMeta{EventType: EventTypeAnswer, EventData: block.Text, Meta: &EventMeta{TotalDurationMs: totalDuration}}) //nolint:errcheck // streaming output
+				if callbackSafe != nil {
+					callbackSafe(EventTypeAnswer, &EventWithMeta{EventType: EventTypeAnswer, EventData: block.Text, Meta: &EventMeta{TotalDurationMs: totalDuration}})
+				}
 			}
 		}
 	}

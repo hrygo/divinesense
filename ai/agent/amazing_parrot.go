@@ -124,6 +124,9 @@ func (p *AmazingParrot) ExecuteWithCallback(
 	// Get prompt version for AB testing
 	promptVersion := GetPromptVersionForUser(p.Name(), p.userID)
 
+	// Create safe callback for non-critical events (logs errors but doesn't propagate)
+	callbackSafe := SafeCallback(callback)
+
 	// Log execution start
 	slog.Info("AmazingParrot: ExecuteWithCallback started",
 		"user_id", p.userID,
@@ -137,8 +140,8 @@ func (p *AmazingParrot) ExecuteWithCallback(
 	if cachedResult, found := p.cache.Get(cacheKey); found {
 		if result, ok := cachedResult.(string); ok {
 			slog.Info("AmazingParrot: Cache hit", "user_id", p.userID)
-			if callback != nil {
-				_ = callback(EventTypeAnswer, result) //nolint:errcheck // callback error is logged internally
+			if callbackSafe != nil {
+				callbackSafe(EventTypeAnswer, result)
 			}
 			p.recordMetrics(startTime, promptVersion, true)
 			return nil
@@ -207,8 +210,9 @@ func (p *AmazingParrot) ExecuteWithCallback(
 
 // planRetrieval analyzes user input and creates a concurrent retrieval plan.
 func (p *AmazingParrot) planRetrieval(ctx context.Context, userInput string, history []string, callback EventCallback) (*retrievalPlan, error) {
-	if callback != nil {
-		_ = callback(EventTypeThinking, "正在分析您的需求...") //nolint:errcheck // progress notification
+	callbackSafe := SafeCallback(callback)
+	if callbackSafe != nil {
+		callbackSafe(EventTypeThinking, "正在分析您的需求...")
 	}
 
 	now := time.Now()
@@ -255,6 +259,9 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 	var mu sync.Mutex
 	var errorCount int32
 
+	// Create safe callback for non-critical events (logs errors but doesn't propagate)
+	callbackSafe := SafeCallback(callback)
+
 	// Check context before launching goroutines to avoid unnecessary work
 	select {
 	case <-ctx.Done():
@@ -264,9 +271,9 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 
 	// Helper function to safely call callback under mutex
 	safeCallback := func(eventType string, eventData interface{}) {
-		if callback != nil {
+		if callbackSafe != nil {
 			mu.Lock()
-			_ = callback(eventType, eventData) //nolint:errcheck // callback error is logged internally
+			callbackSafe(eventType, eventData)
 			mu.Unlock()
 		}
 	}
@@ -290,8 +297,8 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			if err != nil {
 				results["memo_search_error"] = err.Error()
 				atomic.AddInt32(&errorCount, 1)
-				if callback != nil {
-					_ = callback(EventTypeError, fmt.Sprintf("笔记搜索失败: %v", err)) //nolint:errcheck // error notification
+				if callbackSafe != nil {
+					callbackSafe(EventTypeError, fmt.Sprintf("笔记搜索失败: %v", err))
 				}
 				return
 			}
@@ -306,8 +313,8 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			results["memo_search"] = string(jsonBytes)
 
 			// Send tool result for debugging
-			if callback != nil {
-				_ = callback(EventTypeToolResult, string(jsonBytes)) //nolint:errcheck // debugging output
+			if callbackSafe != nil {
+				callbackSafe(EventTypeToolResult, string(jsonBytes))
 
 				// Send structured memo_query_result event for data tracking
 				memoQueryResult := MemoQueryResultData{
@@ -324,7 +331,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				}
 				eventData, err := json.Marshal(memoQueryResult)
 				if err == nil {
-					_ = callback(EventTypeMemoQueryResult, string(eventData)) //nolint:errcheck // data tracking event
+					callbackSafe(EventTypeMemoQueryResult, string(eventData))
 				}
 
 				// Send ui_memo_preview event for generative UI rendering
@@ -343,7 +350,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 						}
 						previewData, err := json.Marshal(memoPreview)
 						if err == nil {
-							_ = callback(EventTypeUIMemoPreview, string(previewData)) //nolint:errcheck // UI preview event
+							callbackSafe(EventTypeUIMemoPreview, string(previewData))
 						}
 					}
 				}
@@ -370,8 +377,8 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			if err != nil {
 				results["schedule_query_error"] = err.Error()
 				atomic.AddInt32(&errorCount, 1)
-				if callback != nil {
-					_ = callback(EventTypeError, fmt.Sprintf("日程查询失败: %v", err)) //nolint:errcheck // error notification
+				if callbackSafe != nil {
+					callbackSafe(EventTypeError, fmt.Sprintf("日程查询失败: %v", err))
 				}
 				return
 			}
@@ -386,8 +393,8 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			results["schedule_query"] = string(jsonBytes)
 
 			// Send tool result for debugging
-			if callback != nil {
-				_ = callback(EventTypeToolResult, string(jsonBytes)) //nolint:errcheck // debugging output
+			if callbackSafe != nil {
+				callbackSafe(EventTypeToolResult, string(jsonBytes))
 
 				// Send structured schedule_query_result event for data tracking
 				scheduleQueryResult := ScheduleQueryResultData{
@@ -410,7 +417,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				}
 				eventData, err := json.Marshal(scheduleQueryResult)
 				if err == nil {
-					_ = callback(EventTypeScheduleQueryResult, string(eventData)) //nolint:errcheck // data tracking event
+					callbackSafe(EventTypeScheduleQueryResult, string(eventData))
 				}
 
 				// Send ui_schedule_list event for generative UI rendering
@@ -435,9 +442,10 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 						TimeRange: structuredResult.TimeRangeDescription,
 						Reason:    "根据查询返回的日程",
 					}
-					//nolint:errcheck // data is controlled
-					listEventData, _ := json.Marshal(scheduleListData)
-					_ = callback(EventTypeUIScheduleList, string(listEventData)) //nolint:errcheck // UI event
+					listEventData, err := json.Marshal(scheduleListData)
+					if err == nil {
+						callbackSafe(EventTypeUIScheduleList, string(listEventData))
+					}
 				}
 			}
 		}()
@@ -460,13 +468,13 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			if err != nil {
 				results["schedule_add_error"] = err.Error()
 				atomic.AddInt32(&errorCount, 1)
-				if callback != nil {
-					_ = callback(EventTypeError, fmt.Sprintf("创建日程失败: %v", err)) //nolint:errcheck // error notification
+				if callbackSafe != nil {
+					callbackSafe(EventTypeError, fmt.Sprintf("创建日程失败: %v", err))
 				}
 			} else {
 				results["schedule_add"] = result
-				if callback != nil {
-					_ = callback(EventTypeToolResult, result) //nolint:errcheck // tool result
+				if callbackSafe != nil {
+					callbackSafe(EventTypeToolResult, result)
 				}
 			}
 		}()
@@ -491,8 +499,8 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				atomic.AddInt32(&errorCount, 1)
 			} else {
 				results["find_free_time"] = result
-				if callback != nil {
-					_ = callback(EventTypeToolResult, result) //nolint:errcheck // tool result
+				if callbackSafe != nil {
+					callbackSafe(EventTypeToolResult, result)
 				}
 			}
 		}()
@@ -554,6 +562,9 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 
 // synthesizeAnswer generates the final answer from retrieval results streaming.
 func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, history []string, retrievalResults map[string]string, callback EventCallback) (string, error) {
+	// Create safe callback for non-critical streaming events
+	callbackSafe := SafeCallback(callback)
+
 	// Build synthesis prompt with retrieved context
 	synthesisPrompt := p.buildSynthesisPrompt(retrievalResults)
 
@@ -597,7 +608,7 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 				return fullContent.String(), nil
 			}
 			fullContent.WriteString(chunk)
-			if callback != nil {
+			if callbackSafe != nil {
 				if err := callback(EventTypeAnswer, chunk); err != nil {
 					return "", err
 				}

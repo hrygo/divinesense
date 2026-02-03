@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 )
 
 // ParrotAgent is the interface for all parrot agents.
@@ -78,6 +79,40 @@ type EmotionalExpression struct {
 //
 // 返回错误将中止代理执行。
 type EventCallback func(eventType string, eventData interface{}) error
+
+// SafeCallbackFunc is a callback that logs errors instead of returning them.
+// Use SafeCallback to wrap an EventCallback for non-critical events.
+// SafeCallbackFunc 是一个记录错误而不是返回错误的回调函数。
+// 使用 SafeCallback 包装 EventCallback 用于非关键事件。
+type SafeCallbackFunc func(eventType string, eventData interface{})
+
+// SafeCallback wraps an EventCallback to log errors instead of propagating them.
+// Use this for non-critical callbacks where errors should not interrupt execution.
+// SafeCallback 包装 EventCallback 以记录错误而不是传播它们。
+// 用于错误不应中断执行的非关键回调。
+//
+// Usage:
+//
+//	callbackSafe := SafeCallback(callback)
+//	callbackSafe(EventTypeAnswer, result) // Error is logged, not returned
+func SafeCallback(callback EventCallback) SafeCallbackFunc {
+	if callback == nil {
+		return nil
+	}
+	return func(eventType string, eventData interface{}) {
+		// Execute callback and log errors instead of returning them
+		if err := callback(eventType, eventData); err != nil {
+			// Log the callback error but don't propagate it
+			// This prevents callback failures from interrupting agent execution
+			// Use Background context as this is independent logging with no deadline
+			slog.Default().LogAttrs(context.Background(), slog.LevelWarn,
+				"callback failed (non-critical)",
+				slog.String("event_type", eventType),
+				slog.Any("error", err),
+			)
+		}
+	}
+}
 
 // 常用事件类型.
 const (

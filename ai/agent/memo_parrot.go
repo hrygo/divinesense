@@ -95,6 +95,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 	ctx, cancel := context.WithTimeout(ctx, timeout.AgentExecutionTimeout)
 	defer cancel()
 
+	// Create safe callback for non-critical events (logs errors but doesn't propagate)
+	callbackSafe := SafeCallback(callback)
+
 	// Log execution start
 	slog.Info("MemoParrot: ExecuteWithCallback started",
 		"user_id", p.userID,
@@ -109,9 +112,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 	if cachedResult, found := p.cache.Get(cacheKey); found {
 		if result, ok := cachedResult.(string); ok {
 			slog.Info("MemoParrot: Cache hit", "user_id", p.userID)
-			// Send cached answer
-			if callback != nil {
-				_ = callback(EventTypeAnswer, result) //nolint:errcheck // cached result
+			// Send cached answer (non-critical - use safe callback)
+			if callbackSafe != nil {
+				callbackSafe(EventTypeAnswer, result)
 			}
 			// Record metrics for cache hit (considered success)
 			p.recordMetrics(startTime, promptVersion, true)
@@ -163,9 +166,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		default:
 		}
 
-		// Notify thinking
-		if callback != nil {
-			_ = callback(EventTypeThinking, "正在思考...") //nolint:errcheck // progress notification
+		// Notify thinking (non-critical - use safe callback)
+		if callbackSafe != nil {
+			callbackSafe(EventTypeThinking, "正在思考...")
 		}
 
 		slog.Debug("MemoParrot: LLM call (iteration)",
@@ -228,13 +231,13 @@ func (p *MemoParrot) ExecuteWithCallback(
 			"input", truncateString(toolInput, 100),
 		)
 
-		// Notify user of progress with pleasantries if present
-		if cleanText != "" && callback != nil {
-			_ = callback(EventTypeAnswer, cleanText+"\n") //nolint:errcheck // streaming output
+		// Notify user of progress with pleasantries if present (non-critical - use safe callback)
+		if cleanText != "" && callbackSafe != nil {
+			callbackSafe(EventTypeAnswer, cleanText+"\n")
 		}
 
-		if callback != nil {
-			_ = callback(EventTypeToolUse, fmt.Sprintf("正在搜索: %s", toolCall)) //nolint:errcheck // progress notification
+		if callbackSafe != nil {
+			callbackSafe(EventTypeToolUse, fmt.Sprintf("正在搜索: %s", toolCall))
 		}
 
 		var toolResult string
@@ -291,7 +294,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 				}
 				jsonData, jsonErr := json.Marshal(eventData)
 				if jsonErr == nil {
-					_ = callback(EventTypeMemoQueryResult, string(jsonData)) //nolint:errcheck // data tracking event
+					callbackSafe(EventTypeMemoQueryResult, string(jsonData))
 
 					// Also send ui_memo_preview events for generative UI rendering
 					if len(structuredResult.Memos) > 0 {
@@ -306,8 +309,10 @@ func (p *MemoParrot) ExecuteWithCallback(
 								Confidence: m.Score,
 								Reason:     fmt.Sprintf("相关度: %.0f%%", m.Score*100),
 							}
-							previewData, _ := json.Marshal(memoPreview) //nolint:errcheck // data is controlled, error is unlikely
-							_ = callback(EventTypeUIMemoPreview, string(previewData))
+							previewData, err := json.Marshal(memoPreview)
+							if err == nil {
+								callbackSafe(EventTypeUIMemoPreview, string(previewData))
+							}
 						}
 					}
 				}
@@ -323,9 +328,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 			continue
 		}
 
-		// Send tool result
-		if callback != nil {
-			_ = callback(EventTypeToolResult, toolResult) //nolint:errcheck // tool result
+		// Send tool result (non-critical - use safe callback)
+		if callbackSafe != nil {
+			callbackSafe(EventTypeToolResult, toolResult)
 		}
 
 		// Add to conversation
