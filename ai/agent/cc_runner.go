@@ -1231,9 +1231,13 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		stats.OutputTokens = msg.Usage.OutputTokens
 		stats.CacheWriteTokens = msg.Usage.CacheWriteInputTokens
 		stats.CacheReadTokens = msg.Usage.CacheReadInputTokens
+		// Log all token fields for debugging cache_read > input anomaly
 		r.logger.Info("CCRunner: handleResultMessage updated token usage from CLI",
 			"input_tokens", stats.InputTokens,
-			"output_tokens", stats.OutputTokens)
+			"output_tokens", stats.OutputTokens,
+			"cache_write_tokens", stats.CacheWriteTokens,
+			"cache_read_tokens", stats.CacheReadTokens,
+			"cache_read_gt_input", stats.CacheReadTokens > stats.InputTokens)
 	}
 
 	// Collect tools used (with deduplication)
