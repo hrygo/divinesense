@@ -84,6 +84,7 @@ make deps-all && make start
 | [后端开发](docs/dev-guides/BACKEND_DB.md)   | API、数据库、环境配置                       |
 | [前端开发](docs/dev-guides/FRONTEND.md)     | 布局、组件、Tailwind 4                      |
 | [Git 工作流](.claude/rules/git-workflow.md) | 分支管理、PR 规范                           |
+| [AI 重构报告](docs/research/ai-core-refactor-summary.md) | AI 模块提升重构总结 (v6.0)               |
 | [贡献指南](CONTRIBUTING.md)                 | **入门必读**：环境搭建、开发规范、Checklist |
 
 ---
