@@ -15,11 +15,26 @@ if ! go mod tidy -diff > /dev/null 2>&1; then
 fi
 echo "    ✓ go.mod/go.sum tidy"
 
-# Only fmt and vet for speed
-go fmt ./...
-echo "  → go fmt..."
+# Smart embed check: only verify dist/ exists if frontend files were changed
+FRONTEND_CHANGED=$(git diff --cached --name-only | grep -cE '^(server/router/frontend/|web/)' || true)
+if [ "$FRONTEND_CHANGED" -gt 0 ]; then
+    if [ ! -d "server/router/frontend/dist" ] || [ -z "$(ls -A server/router/frontend/dist 2>/dev/null)" ]; then
+        echo "  → Frontend files changed but dist/ not built"
+        echo "    Auto-building frontend..."
+        if cd web && pnpm build >/dev/null 2>&1 && mkdir -p ../server/router/frontend && cp -r dist/* ../server/router/frontend/dist/; then
+            echo "    ✓ Frontend built successfully"
+            cd ..
+        else
+            echo "    ⚠ Frontend build failed, continuing anyway (embed will fail in production)"
+            cd ..
+        fi
+    fi
+fi
 
-go vet ./...
+echo "  → go fmt..."
+go fmt ./...
+
 echo "  → go vet..."
+go vet ./...
 
 echo "✅ Pre-commit checks passed!"
