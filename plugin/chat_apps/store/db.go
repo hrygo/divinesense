@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/hrygo/divinesense/plugin/chat_apps"
@@ -22,6 +23,10 @@ func NewChatAppStore(db *sql.DB) *ChatAppStore {
 
 // CreateCredential creates a new chat app credential.
 func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredentialRequest) (*chat_apps.Credential, error) {
+	slog.Info("creating chat app credential",
+		"user_id", req.UserID,
+		"platform", req.Platform,
+	)
 	query := `
 		INSERT INTO chat_app_credential
 		(user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, created_ts, updated_ts)
@@ -55,9 +60,19 @@ func (s *ChatAppStore) CreateCredential(ctx context.Context, req *CreateCredenti
 		&cred.UpdatedTs,
 	)
 	if err != nil {
+		slog.Error("failed to create chat app credential",
+			"user_id", req.UserID,
+			"platform", req.Platform,
+			"error", err,
+		)
 		return nil, fmt.Errorf("failed to create credential: %w", err)
 	}
 
+	slog.Info("chat app credential created",
+		"id", cred.ID,
+		"user_id", cred.UserID,
+		"platform", cred.Platform,
+	)
 	return &cred, nil
 }
 
@@ -140,6 +155,10 @@ func (s *ChatAppStore) GetCredentialByPlatform(ctx context.Context, userID int32
 // GetCredentialByPlatformUserID retrieves a credential by platform user ID.
 // Used during webhook handling to find the DivineSense user.
 func (s *ChatAppStore) GetCredentialByPlatformUserID(ctx context.Context, platform chat_apps.Platform, platformUserID string) (*chat_apps.Credential, error) {
+	slog.Debug("looking up credential by platform user ID",
+		"platform", platform,
+		"platform_user_id", platformUserID,
+	)
 	query := `
 		SELECT id, user_id, platform, platform_user_id, platform_chat_id, access_token, webhook_url, enabled, created_ts, updated_ts
 		FROM chat_app_credential
@@ -170,17 +189,24 @@ func (s *ChatAppStore) GetCredentialByPlatformUserID(ctx context.Context, platfo
 
 // DeleteCredential deletes a credential by ID.
 func (s *ChatAppStore) DeleteCredential(ctx context.Context, id int64) error {
+	slog.Info("deleting chat app credential", "id", id)
 	query := `DELETE FROM chat_app_credential WHERE id = $1`
 	result, err := s.db.ExecContext(ctx, query, id)
 	if err != nil {
+		slog.Error("failed to delete chat app credential",
+			"id", id,
+			"error", err,
+		)
 		return fmt.Errorf("failed to delete credential: %w", err)
 	}
 
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
+		slog.Warn("chat app credential not found for deletion", "id", id)
 		return fmt.Errorf("credential not found")
 	}
 
+	slog.Info("chat app credential deleted", "id", id)
 	return nil
 }
 
@@ -220,6 +246,10 @@ func (s *ChatAppStore) UpdateCredential(ctx context.Context, req *UpdateCredenti
 
 // SetEnabled enables or disables a credential.
 func (s *ChatAppStore) SetEnabled(ctx context.Context, id int64, enabled bool) error {
+	slog.Info("setting chat app credential enabled state",
+		"id", id,
+		"enabled", enabled,
+	)
 	query := `
 		UPDATE chat_app_credential
 		SET enabled = $2, updated_ts = $3

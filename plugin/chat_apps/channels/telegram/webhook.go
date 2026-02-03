@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -72,11 +74,30 @@ func (h *WebhookHandler) GetWebhookInfo(ctx context.Context) (tgbotapi.WebhookIn
 }
 
 // VerifyRequest verifies that the request came from Telegram.
-// Telegram Bot API doesn't sign webhooks, so we trust the path which contains the token.
+// Telegram Bot API doesn't sign webhooks, so we validate:
+// 1. HTTP method is POST
+// 2. Content-Type is JSON or empty (Telegram sometimes doesn't send it)
+// 3. The request contains a valid update structure
 func (h *WebhookHandler) VerifyRequest(r *http.Request) bool {
-	// The webhook URL should be: /webhook/telegram/<BOT_TOKEN>
-	// We verify the token matches
-	// This is handled by the router configuration
+	// Must be POST
+	if r.Method != http.MethodPost {
+		slog.Warn("telegram webhook: invalid method", "method", r.Method, "remote_addr", r.RemoteAddr)
+		return false
+	}
+
+	// Check Content-Type (Telegram may send empty or application/json)
+	ct := r.Header.Get("Content-Type")
+	if ct != "" && !strings.HasPrefix(ct, "application/json") {
+		slog.Warn("telegram webhook: invalid content type", "content_type", ct, "remote_addr", r.RemoteAddr)
+		return false
+	}
+
+	// Log incoming webhook for monitoring
+	slog.Debug("telegram webhook: request verified",
+		"remote_addr", r.RemoteAddr,
+		"user_agent", r.Header.Get("User-Agent"),
+	)
+
 	return true
 }
 

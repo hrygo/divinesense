@@ -5,7 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -30,6 +34,7 @@ type TelegramConfig struct {
 type TelegramChannel struct {
 	bot    *tgbotapi.BotAPI
 	config *TelegramConfig
+	client *http.Client
 }
 
 // NewTelegramChannel creates a new Telegram channel.
@@ -42,6 +47,12 @@ func NewTelegramChannel(config *TelegramConfig) (*TelegramChannel, error) {
 	return &TelegramChannel{
 		bot:    bot,
 		config: config,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DisableCompression: true,
+			},
+		},
 	}, nil
 }
 
@@ -60,6 +71,7 @@ func (t *TelegramChannel) ValidateWebhook(ctx context.Context, headers map[strin
 func (t *TelegramChannel) ParseMessage(ctx context.Context, payload []byte) (*chat_apps.IncomingMessage, error) {
 	var update tgbotapi.Update
 	if err := json.Unmarshal(payload, &update); err != nil {
+		slog.Warn("telegram: failed to parse webhook payload", "error", err)
 		return nil, channels.ErrInvalidPayload
 	}
 
@@ -134,8 +146,14 @@ func (t *TelegramChannel) ParseMessage(ctx context.Context, payload []byte) (*ch
 
 // SendMessage sends a message to Telegram.
 func (t *TelegramChannel) SendMessage(ctx context.Context, msg *chat_apps.OutgoingMessage) error {
+	slog.Debug("telegram: sending message",
+		"chat_id", msg.PlatformChatID,
+		"type", msg.Type,
+	)
+
 	chatID, err := strconv.ParseInt(msg.PlatformChatID, 10, 64)
 	if err != nil {
+		slog.Error("telegram: invalid chat ID", "chat_id", msg.PlatformChatID, "error", err)
 		return fmt.Errorf("invalid chat ID: %w", err)
 	}
 
@@ -161,16 +179,17 @@ func (t *TelegramChannel) SendChunkedMessage(ctx context.Context, chatID string,
 	}
 
 	// Accumulate and send as single message
-	var fullContent string
+	var builder strings.Builder
 	for chunk := range chunks {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			fullContent += chunk
+			builder.WriteString(chunk)
 		}
 	}
 
+	fullContent := builder.String()
 	tgMsg := tgbotapi.NewMessage(id, fullContent)
 	tgMsg.ParseMode = DefaultParseMode
 	_, err = t.bot.Send(tgMsg)
@@ -180,14 +199,54 @@ func (t *TelegramChannel) SendChunkedMessage(ctx context.Context, chatID string,
 // DownloadMedia downloads a file from Telegram.
 func (t *TelegramChannel) DownloadMedia(ctx context.Context, fileID string) ([]byte, string, error) {
 	// Get file info from Telegram
-	_, err := t.bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
+	file, err := t.bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
 	if err != nil {
+		slog.Error("telegram: failed to get file info", "file_id", fileID, "error", err)
 		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
 	}
 
-	// Download file using the Link field
-	// Implementation would use http.Get(file.Link)
-	return nil, "", fmt.Errorf("download not yet implemented")
+	// file.Link is a method that takes the bot token
+	fileURL := file.Link(t.bot.Token)
+	if fileURL == "" {
+		return nil, "", fmt.Errorf("empty file link from Telegram")
+	}
+
+	// Download file using the Link method
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fileURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := t.client.Do(req)
+	if err != nil {
+		slog.Error("telegram: failed to download file", "url", fileURL, "error", err)
+		return nil, "", fmt.Errorf("%w: %v", channels.ErrMediaDownloadFailed, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("telegram: non-200 status downloading file", "status", resp.StatusCode)
+		return nil, "", fmt.Errorf("%w: status %d", channels.ErrMediaDownloadFailed, resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Detect MIME type from response
+	mimeType := resp.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+
+	slog.Debug("telegram: downloaded media",
+		"file_id", fileID,
+		"size", len(data),
+		"mime_type", mimeType,
+	)
+
+	return data, mimeType, nil
 }
 
 // Close closes the Telegram channel.

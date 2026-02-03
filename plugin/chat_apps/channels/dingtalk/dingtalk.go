@@ -8,7 +8,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/hrygo/divinesense/plugin/chat_apps"
@@ -67,6 +69,10 @@ func (d *DingTalkChannel) ValidateWebhook(ctx context.Context, headers map[strin
 	}
 
 	if timestamp == "" || sign == "" {
+		slog.Warn("dingtalk: missing signature headers",
+			"timestamp", timestamp != "",
+			"sign", sign != "",
+		)
 		return channels.ErrInvalidSignature
 	}
 
@@ -75,9 +81,14 @@ func (d *DingTalkChannel) ValidateWebhook(ctx context.Context, headers map[strin
 
 	// Constant-time comparison to prevent timing attacks
 	if !hmac.Equal([]byte(sign), []byte(expectedSign)) {
+		slog.Warn("dingtalk: signature mismatch",
+			"expected", expectedSign[:8]+"...",  // Log only prefix for security
+			"received", sign[:8]+"...",
+		)
 		return channels.ErrInvalidSignature
 	}
 
+	slog.Debug("dingtalk: webhook signature validated")
 	return nil
 }
 
@@ -96,6 +107,7 @@ func (d *DingTalkChannel) ParseMessage(ctx context.Context, payload []byte) (*ch
 
 	var dm DingTalkMessage
 	if err := json.Unmarshal(payload, &dm); err != nil {
+		slog.Warn("dingtalk: failed to parse webhook payload", "error", err)
 		return nil, channels.ErrInvalidPayload
 	}
 
@@ -160,20 +172,20 @@ func (d *DingTalkChannel) SendMessage(ctx context.Context, msg *chat_apps.Outgoi
 // DingTalk doesn't support message editing, so we send chunks as separate messages.
 func (d *DingTalkChannel) SendChunkedMessage(ctx context.Context, chatID string, chunks <-chan string) error {
 	// Accumulate and send as a single message for better UX
-	var fullContent string
+	var builder strings.Builder
 	for chunk := range chunks {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			fullContent += chunk
+			builder.WriteString(chunk)
 		}
 	}
 
 	msg := &chat_apps.OutgoingMessage{
 		PlatformChatID: chatID,
 		Type:           chat_apps.MessageTypeText,
-		Content:        fullContent,
+		Content:        builder.String(),
 	}
 
 	return d.sendText(ctx, msg)

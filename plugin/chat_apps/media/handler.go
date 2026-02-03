@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // MediaHandler processes multimedia messages.
@@ -53,9 +54,22 @@ func NewMediaHandler(config *MediaConfig) *MediaHandler {
 		config.MaxVideoSizeMB = 50
 	}
 
+	// Configure HTTP client with timeout and connection pool
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 5,
+			IdleConnTimeout:     90 * time.Second,
+			DisableCompression:  true, // Media downloads don't benefit from compression
+			// Force HTTP/2 for better performance (if supported)
+			ForceAttemptHTTP2: true,
+		},
+	}
+
 	return &MediaHandler{
 		config: config,
-		client: &http.Client{},
+		client: client,
 	}
 }
 

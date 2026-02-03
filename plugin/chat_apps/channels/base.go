@@ -4,6 +4,7 @@ package channels
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/hrygo/divinesense/plugin/chat_apps"
 )
@@ -49,7 +50,9 @@ type MediaHandler interface {
 
 // ChannelRouter routes incoming messages to the appropriate handler.
 // It verifies user credentials and forwards messages to the AI agent system.
+// Concurrent-safe for Register and GetChannel operations.
 type ChannelRouter struct {
+	mu       sync.RWMutex
 	registry map[chat_apps.Platform]ChatChannel
 	media    MediaHandler
 }
@@ -63,13 +66,20 @@ func NewChannelRouter(media MediaHandler) *ChannelRouter {
 }
 
 // Register registers a chat channel for a platform.
+// Concurrent-safe: uses write lock.
 func (r *ChannelRouter) Register(channel ChatChannel) {
+	r.mu.Lock()
 	r.registry[channel.Name()] = channel
+	r.mu.Unlock()
 }
 
 // GetChannel returns the channel for a platform, or nil if not registered.
+// Concurrent-safe: uses read lock.
 func (r *ChannelRouter) GetChannel(platform chat_apps.Platform) ChatChannel {
-	return r.registry[platform]
+	r.mu.RLock()
+	ch := r.registry[platform]
+	r.mu.RUnlock()
+	return ch
 }
 
 // HandleWebhook handles an incoming webhook request.
@@ -154,7 +164,11 @@ func (e *ChannelError) IsRetryable() bool {
 var _ io.Closer = (*ChannelRouter)(nil)
 
 // Close closes all registered channels.
+// Concurrent-safe: uses write lock.
 func (r *ChannelRouter) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	var firstErr error
 	for _, channel := range r.registry {
 		if err := channel.Close(); err != nil && firstErr == nil {
