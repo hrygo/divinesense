@@ -540,7 +540,10 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 
 	// Finalize and save session stats
 	// 完成并保存会话统计数据
-	stats.TotalDurationMs = time.Since(stats.StartTime).Milliseconds()
+	// Only override TotalDurationMs if CLI didn't provide it (CLI value is more accurate)
+	if stats.TotalDurationMs == 0 {
+		stats.TotalDurationMs = time.Since(stats.StartTime).Milliseconds()
+	}
 	r.statsMu.Lock()
 	r.currentStats = stats
 	r.statsMu.Unlock()
