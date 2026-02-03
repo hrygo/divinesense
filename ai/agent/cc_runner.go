@@ -613,6 +613,17 @@ func (r *CCRunner) GetSessionStats() *SessionStats {
 		totalGeneration += time.Since(stats.generationStart).Milliseconds()
 	}
 
+	// Log the stats being returned for debugging
+	r.logger.Info("CCRunner: GetSessionStats returning",
+		"total_duration_ms", stats.TotalDurationMs,
+		"thinking_ms", totalThinking,
+		"tool_ms", stats.ToolDurationMs,
+		"generation_ms", totalGeneration,
+		"input_tokens", stats.InputTokens,
+		"output_tokens", stats.OutputTokens,
+		"tool_calls", stats.ToolCallCount,
+		"files_modified", stats.FilesModified)
+
 	// Return a copy with finalized durations
 	// 返回包含已完成时长的副本
 	return &SessionStats{
@@ -1198,6 +1209,9 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 	// Update final duration from CLI report
 	if msg.Duration > 0 {
 		stats.TotalDurationMs = int64(msg.Duration)
+		r.logger.Info("CCRunner: handleResultMessage updated TotalDurationMs from CLI",
+			"duration_ms", msg.Duration,
+			"total_duration_ms", stats.TotalDurationMs)
 	}
 
 	// Update token usage from CLI report
@@ -1206,6 +1220,9 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		stats.OutputTokens = msg.Usage.OutputTokens
 		stats.CacheWriteTokens = msg.Usage.CacheWriteInputTokens
 		stats.CacheReadTokens = msg.Usage.CacheReadInputTokens
+		r.logger.Info("CCRunner: handleResultMessage updated token usage from CLI",
+			"input_tokens", stats.InputTokens,
+			"output_tokens", stats.OutputTokens)
 	}
 
 	// Collect tools used (with deduplication)
