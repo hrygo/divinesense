@@ -267,6 +267,7 @@ export interface SessionSummary {
   toolsUsed?: string[];
   filesModified?: number;
   filePaths?: string[];
+  totalCostUSD?: number;
   status?: string;
   errorMsg?: string;
 }

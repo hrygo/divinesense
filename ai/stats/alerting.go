@@ -14,9 +14,9 @@ import (
 // CostAlertService checks for cost threshold violations and sends alerts.
 // CostAlertService 检查成本阈值违规并发送告警。
 type CostAlertService struct {
-	store     store.AgentStatsStore
-	notifier  AlertNotifier
-	logger    *slog.Logger
+	store    store.AgentStatsStore
+	notifier AlertNotifier
+	logger   *slog.Logger
 }
 
 // AlertNotifier is an interface for sending cost alerts to users.
@@ -28,14 +28,14 @@ type AlertNotifier interface {
 // CostAlert represents a cost threshold violation.
 // CostAlert 表示成本阈值违规。
 type CostAlert struct {
-	Type             string  // "session_threshold_exceeded", "daily_budget_exceeded"
-	SessionID        string  // For session-specific alerts
-	CostUSD          float64
-	ThresholdUSD     float64
-	DailyCostUSD     float64
-	BudgetUSD        float64
-	OverByUSD        float64
-	Timestamp        time.Time
+	Type         string // "session_threshold_exceeded", "daily_budget_exceeded"
+	SessionID    string // For session-specific alerts
+	CostUSD      float64
+	ThresholdUSD float64
+	DailyCostUSD float64
+	BudgetUSD    float64
+	OverByUSD    float64
+	Timestamp    time.Time
 }
 
 // NewCostAlertService creates a new cost alert service.

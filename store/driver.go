@@ -120,4 +120,10 @@ type Driver interface {
 	UpsertToolMetrics(ctx context.Context, upsert *UpsertToolMetrics) (*ToolMetrics, error)
 	ListToolMetrics(ctx context.Context, find *FindToolMetrics) ([]*ToolMetrics, error)
 	DeleteToolMetrics(ctx context.Context, delete *DeleteToolMetrics) error
+
+	// AgentStatsStore provides session statistics persistence.
+	AgentStatsStore() AgentStatsStore
+
+	// SecurityAuditStore provides security audit logging.
+	SecurityAuditStore() SecurityAuditStore
 }

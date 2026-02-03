@@ -488,3 +488,45 @@ func (s *ConnectServiceHandler) DeleteIdentityProvider(ctx context.Context, req 
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// AIService - Session Stats methods
+
+func (s *ConnectServiceHandler) GetSessionStats(ctx context.Context, req *connect.Request[v1pb.GetSessionStatsRequest]) (*connect.Response[v1pb.SessionStats], error) {
+	resp, err := s.AIService.GetSessionStats(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) ListSessionStats(ctx context.Context, req *connect.Request[v1pb.ListSessionStatsRequest]) (*connect.Response[v1pb.ListSessionStatsResponse], error) {
+	resp, err := s.AIService.ListSessionStats(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) GetCostStats(ctx context.Context, req *connect.Request[v1pb.GetCostStatsRequest]) (*connect.Response[v1pb.CostStats], error) {
+	resp, err := s.AIService.GetCostStats(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) GetUserCostSettings(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[v1pb.UserCostSettings], error) {
+	resp, err := s.AIService.GetUserCostSettings(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) SetUserCostSettings(ctx context.Context, req *connect.Request[v1pb.SetUserCostSettingsRequest]) (*connect.Response[v1pb.UserCostSettings], error) {
+	resp, err := s.AIService.SetUserCostSettings(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}

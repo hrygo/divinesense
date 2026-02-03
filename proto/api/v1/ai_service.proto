@@ -152,6 +152,36 @@ service AIService {
       body: "*"
     };
   }
+
+  // ========== Session Statistics (Phase 2) ==========
+
+  // GetSessionStats retrieves statistics for a specific session.
+  rpc GetSessionStats(GetSessionStatsRequest) returns (SessionStats) {
+    option (google.api.http) = {get: "/api/v1/ai/sessions/{session_id}"};
+  }
+
+  // ListSessionStats retrieves session statistics with pagination.
+  rpc ListSessionStats(ListSessionStatsRequest) returns (ListSessionStatsResponse) {
+    option (google.api.http) = {get: "/api/v1/ai/sessions"};
+  }
+
+  // GetCostStats retrieves aggregated cost statistics for the user.
+  rpc GetCostStats(GetCostStatsRequest) returns (CostStats) {
+    option (google.api.http) = {get: "/api/v1/ai/cost-stats"};
+  }
+
+  // GetUserCostSettings retrieves user-specific cost control settings.
+  rpc GetUserCostSettings(google.protobuf.Empty) returns (UserCostSettings) {
+    option (google.api.http) = {get: "/api/v1/ai/cost-settings"};
+  }
+
+  // SetUserCostSettings updates user-specific cost control settings.
+  rpc SetUserCostSettings(SetUserCostSettingsRequest) returns (UserCostSettings) {
+    option (google.api.http) = {
+      patch: "/api/v1/ai/cost-settings"
+      body: "*"
+    };
+  }
 }
 
 // ScheduleAgentService provides schedule-specific AI agent functionality.
@@ -663,4 +693,95 @@ message SessionSummary {
   // Status
   string status = 14; // Final session status: "success", "error", "cancelled"
   string error_msg = 15; // Error message if status=error
+}
+
+// ========== Session Statistics Messages (Phase 2) ==========
+
+// SessionStats represents detailed statistics for a single session.
+message SessionStats {
+  int64 id = 1;
+  string session_id = 2;
+  int64 conversation_id = 3;
+  int32 user_id = 4;
+  string agent_type = 5;
+  int64 started_at = 6; // Unix timestamp in seconds
+  int64 ended_at = 7;
+  int64 total_duration_ms = 8;
+  int64 thinking_duration_ms = 9;
+  int64 tool_duration_ms = 10;
+  int64 generation_duration_ms = 11;
+  int32 input_tokens = 12;
+  int32 output_tokens = 13;
+  int32 cache_write_tokens = 14;
+  int32 cache_read_tokens = 15;
+  int32 total_tokens = 16;
+  double total_cost_usd = 17;
+  int32 tool_call_count = 18;
+  repeated string tools_used = 19;
+  int32 files_modified = 20;
+  repeated string file_paths = 21;
+  string model_used = 22;
+  bool is_error = 23;
+  string error_message = 24;
+  int64 created_at = 25;
+  int64 updated_at = 26;
+}
+
+// GetSessionStatsRequest is the request for GetSessionStats.
+message GetSessionStatsRequest {
+  string session_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ListSessionStatsRequest is the request for ListSessionStats.
+message ListSessionStatsRequest {
+  int32 limit = 1; // Default: 20, Max: 100
+  int32 offset = 2; // Default: 0
+  int32 days = 3; // Filter to last N days (optional, default: 30)
+}
+
+// ListSessionStatsResponse is the response for ListSessionStats.
+message ListSessionStatsResponse {
+  repeated SessionStats sessions = 1;
+  int64 total_count = 2;
+  double total_cost_usd = 3; // Total cost across all sessions
+}
+
+// GetCostStatsRequest is the request for GetCostStats.
+message GetCostStatsRequest {
+  int32 days = 1; // Number of days to analyze (default: 7)
+}
+
+// CostStats represents aggregated cost statistics.
+message CostStats {
+  double total_cost_usd = 1;
+  double daily_average_usd = 2;
+  int64 session_count = 3;
+  SessionStats most_expensive_session = 4;
+  repeated DailyCostData daily_breakdown = 5;
+}
+
+// DailyCostData represents cost data for a single day.
+message DailyCostData {
+  string date = 1; // YYYY-MM-DD
+  double cost_usd = 2;
+  int64 session_count = 3;
+}
+
+// UserCostSettings represents user-specific cost control settings.
+message UserCostSettings {
+  double daily_budget_usd = 1; // 0 = unlimited
+  double per_session_threshold_usd = 2;
+  bool alert_enabled = 3;
+  bool alert_email = 4;
+  bool alert_in_app = 5;
+  int64 budget_reset_at = 6; // Unix timestamp when budget resets
+}
+
+// SetUserCostSettingsRequest is the request for SetUserCostSettings.
+message SetUserCostSettingsRequest {
+  optional double daily_budget_usd = 1; // Null = unchanged, 0 = unlimited
+  optional double per_session_threshold_usd = 2;
+  optional bool alert_enabled = 3;
+  optional bool alert_email = 4;
+  optional bool alert_in_app = 5;
 }

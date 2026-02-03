@@ -9,6 +9,7 @@ import (
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/memory"
 	"github.com/hrygo/divinesense/ai/router"
+	aistats "github.com/hrygo/divinesense/ai/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/middleware"
@@ -37,6 +38,7 @@ type AIService struct {
 	contextBuilder           *aichat.ContextBuilder
 	conversationSummarizer   *aichat.ConversationSummarizer
 	EmbeddingModel           string
+	persister                *aistats.Persister // session stats async persister
 	routerServiceMu          sync.RWMutex
 	chatEventBusMu           sync.RWMutex
 	contextBuilderMu         sync.RWMutex

@@ -14,6 +14,7 @@ import (
 
 	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
+	aistats "github.com/hrygo/divinesense/ai/stats"
 	"github.com/hrygo/divinesense/internal/profile"
 	"github.com/hrygo/divinesense/plugin/chat_apps/channels"
 	chatstore "github.com/hrygo/divinesense/plugin/chat_apps/store"
@@ -91,6 +92,9 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 				// 创建自适应检索器
 				adaptiveRetriever := retrieval.NewAdaptiveRetriever(store, embeddingService, rerankerService)
 
+				// 创建 session stats 持久化器
+				persister := aistats.NewPersister(store.AgentStatsStore, 100, slog.Default())
+
 				service.AIService = &AIService{
 					Store:                  store,
 					EmbeddingService:       embeddingService,
@@ -99,6 +103,7 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					LLMService:             llmService,
 					AdaptiveRetriever:      adaptiveRetriever,
 					IntentClassifierConfig: &aiConfig.IntentClassifier,
+					persister:              persister,
 				}
 				// Initialize ScheduleService with LLM service for natural language parsing
 				service.ScheduleService = &ScheduleService{

@@ -92,3 +92,13 @@ func (d *DB) IsInitialized(ctx context.Context) (bool, error) {
 	}
 	return exists, nil
 }
+
+// AgentStatsStore returns the agent statistics store interface.
+func (d *DB) AgentStatsStore() store.AgentStatsStore {
+	return d
+}
+
+// SecurityAuditStore returns the security audit store interface.
+func (d *DB) SecurityAuditStore() store.SecurityAuditStore {
+	return d
+}

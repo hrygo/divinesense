@@ -20,6 +20,10 @@ type Store struct {
 	instanceSettingCache *cache.Cache // cache for instance settings
 	userCache            *cache.Cache // cache for users
 	userSettingCache     *cache.Cache // cache for user settings
+
+	// Store services
+	AgentStatsStore    AgentStatsStore    // session statistics persistence
+	SecurityAuditStore SecurityAuditStore // security audit logging
 }
 
 // New creates a new instance of Store.
@@ -39,6 +43,8 @@ func New(driver Driver, profile *profile.Profile) *Store {
 		instanceSettingCache: cache.New(cacheConfig),
 		userCache:            cache.New(cacheConfig),
 		userSettingCache:     cache.New(cacheConfig),
+		AgentStatsStore:      driver.AgentStatsStore(),
+		SecurityAuditStore:   driver.SecurityAuditStore(),
 	}
 
 	return store

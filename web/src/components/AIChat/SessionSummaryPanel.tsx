@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock, FileEdit, Wrench, XCircle, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, DollarSign, FileEdit, Wrench, XCircle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SessionSummaryData {
@@ -15,6 +15,7 @@ interface SessionSummaryData {
   toolsUsed?: string[];
   filesModified?: number;
   filePaths?: string[];
+  totalCostUSD?: number;
   status?: string;
 }
 
@@ -61,6 +62,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
   const totalTokens = (summary.totalInputTokens || 0) + (summary.totalOutputTokens || 0);
   const hasTiming = summary.totalDurationMs && summary.totalDurationMs > 0;
   const hasTokens = totalTokens > 0;
+  const hasCost = summary.totalCostUSD && summary.totalCostUSD > 0;
   const hasTools = summary.toolCallCount && summary.toolCallCount > 0;
   const hasFiles = summary.filesModified && summary.filesModified > 0;
 
@@ -70,7 +72,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
   const hasGenerationBreakdown = summary.generationDurationMs && summary.generationDurationMs > 0;
 
   // Don't render if no meaningful data
-  if (!hasTiming && !hasTokens && !hasTools && !hasFiles) {
+  if (!hasTiming && !hasTokens && !hasCost && !hasTools && !hasFiles) {
     return null;
   }
 
@@ -133,10 +135,21 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
         </>
       )}
 
+      {/* Cost */}
+      {hasCost && (
+        <>
+          {(hasTiming || hasTokens) && <span className="text-border/50">•</span>}
+          <div className="flex items-center gap-1.5">
+            <DollarSign className="w-3.5 h-3.5 text-green-500" />
+            <span className="font-mono font-medium">${summary.totalCostUSD!.toFixed(4)}</span>
+          </div>
+        </>
+      )}
+
       {/* Tools */}
       {hasTools && (
         <>
-          {(hasTiming || hasTokens) && <span className="text-border/50">•</span>}
+          {(hasTiming || hasTokens || hasCost) && <span className="text-border/50">•</span>}
           <div className="flex items-center gap-1.5">
             <Wrench className="w-3.5 h-3.5 text-purple-500" />
             <span className="font-mono font-medium">{summary.toolCallCount}</span>
@@ -175,6 +188,7 @@ export function CompactSessionSummary({ summary, className }: CompactSessionSumm
     <div className={cn("flex items-center gap-3 text-xs text-muted-foreground", className)}>
       {summary.totalDurationMs && summary.totalDurationMs > 0 && <span>⏱ {summary.totalDurationMs}ms</span>}
       {totalTokens > 0 && <span>⚡ {totalTokens} tokens</span>}
+      {summary.totalCostUSD && summary.totalCostUSD > 0 && <span>💰 ${summary.totalCostUSD.toFixed(4)}</span>}
       {summary.toolCallCount && summary.toolCallCount > 0 && <span>🔧 {summary.toolCallCount} calls</span>}
     </div>
   );

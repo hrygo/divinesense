@@ -324,6 +324,74 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/cost-settings:
+        get:
+            tags:
+                - AIService
+            description: GetUserCostSettings retrieves user-specific cost control settings.
+            operationId: AIService_GetUserCostSettings
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserCostSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - AIService
+            description: SetUserCostSettings updates user-specific cost control settings.
+            operationId: AIService_SetUserCostSettings
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetUserCostSettingsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserCostSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/cost-stats:
+        get:
+            tags:
+                - AIService
+            description: GetCostStats retrieves aggregated cost statistics for the user.
+            operationId: AIService_GetCostStats
+            parameters:
+                - name: days
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CostStats'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/detect-duplicates:
         post:
             tags:
@@ -579,6 +647,66 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/SemanticSearchResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/sessions:
+        get:
+            tags:
+                - AIService
+            description: ListSessionStats retrieves session statistics with pagination.
+            operationId: AIService_ListSessionStats
+            parameters:
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: offset
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: days
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSessionStatsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/sessions/{sessionId}:
+        get:
+            tags:
+                - AIService
+            description: GetSessionStats retrieves statistics for a specific session.
+            operationId: AIService_GetSessionStats
+            parameters:
+                - name: sessionId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SessionStats'
                 default:
                     description: Default error response
                     content:
@@ -3480,6 +3608,24 @@ components:
                     items:
                         $ref: '#/components/schemas/Schedule'
             description: CheckConflictResponse is the response for CheckConflict.
+        CostStats:
+            type: object
+            properties:
+                totalCostUsd:
+                    type: number
+                    format: double
+                dailyAverageUsd:
+                    type: number
+                    format: double
+                sessionCount:
+                    type: string
+                mostExpensiveSession:
+                    $ref: '#/components/schemas/SessionStats'
+                dailyBreakdown:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DailyCostData'
+            description: CostStats represents aggregated cost statistics.
         CreateAIConversationRequest:
             type: object
             properties:
@@ -3561,6 +3707,17 @@ components:
             description: |-
                 Credential represents a chat app binding.
                  The access_token is never returned in API responses for security.
+        DailyCostData:
+            type: object
+            properties:
+                date:
+                    type: string
+                costUsd:
+                    type: number
+                    format: double
+                sessionCount:
+                    type: string
+            description: DailyCostData represents cost data for a single day.
         DetectDuplicatesRequest:
             required:
                 - content
@@ -4184,6 +4341,19 @@ components:
                     type: boolean
                     description: truncated indicates whether the results were truncated due to instance limits
             description: ListSchedulesResponse is the response for ListSchedules.
+        ListSessionStatsResponse:
+            type: object
+            properties:
+                sessions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SessionStats'
+                totalCount:
+                    type: string
+                totalCostUsd:
+                    type: number
+                    format: double
+            description: ListSessionStatsResponse is the response for ListSessionStats.
         ListShortcutsResponse:
             type: object
             properties:
@@ -4691,6 +4861,8 @@ components:
                     type: string
                 accessToken:
                     type: string
+                appSecret:
+                    type: string
                 webhookUrl:
                     type: string
             description: RegisterCredentialRequest creates a new chat app credential binding.
@@ -4922,6 +5094,75 @@ components:
                 fileName:
                     type: string
             description: SendMessageRequest sends a message to a chat app channel.
+        SessionStats:
+            type: object
+            properties:
+                id:
+                    type: string
+                sessionId:
+                    type: string
+                conversationId:
+                    type: string
+                userId:
+                    type: integer
+                    format: int32
+                agentType:
+                    type: string
+                startedAt:
+                    type: string
+                endedAt:
+                    type: string
+                totalDurationMs:
+                    type: string
+                thinkingDurationMs:
+                    type: string
+                toolDurationMs:
+                    type: string
+                generationDurationMs:
+                    type: string
+                inputTokens:
+                    type: integer
+                    format: int32
+                outputTokens:
+                    type: integer
+                    format: int32
+                cacheWriteTokens:
+                    type: integer
+                    format: int32
+                cacheReadTokens:
+                    type: integer
+                    format: int32
+                totalTokens:
+                    type: integer
+                    format: int32
+                totalCostUsd:
+                    type: number
+                    format: double
+                toolCallCount:
+                    type: integer
+                    format: int32
+                toolsUsed:
+                    type: array
+                    items:
+                        type: string
+                filesModified:
+                    type: integer
+                    format: int32
+                filePaths:
+                    type: array
+                    items:
+                        type: string
+                modelUsed:
+                    type: string
+                isError:
+                    type: boolean
+                errorMessage:
+                    type: string
+                createdAt:
+                    type: string
+                updatedAt:
+                    type: string
+            description: SessionStats represents detailed statistics for a single session.
         SessionSummary:
             type: object
             properties:
@@ -5010,6 +5251,22 @@ components:
                     items:
                         $ref: '#/components/schemas/MemoRelation'
                     description: Required. The relations to set for the memo.
+        SetUserCostSettingsRequest:
+            type: object
+            properties:
+                dailyBudgetUsd:
+                    type: number
+                    format: double
+                perSessionThresholdUsd:
+                    type: number
+                    format: double
+                alertEnabled:
+                    type: boolean
+                alertEmail:
+                    type: boolean
+                alertInApp:
+                    type: boolean
+            description: SetUserCostSettingsRequest is the request for SetUserCostSettings.
         Shortcut:
             required:
                 - title
@@ -5218,6 +5475,8 @@ components:
                     type: boolean
                 accessToken:
                     type: string
+                appSecret:
+                    type: string
                 webhookUrl:
                     type: string
             description: UpdateCredentialRequest modifies an existing credential.
@@ -5305,6 +5564,24 @@ components:
                     type: string
                     description: Output only. The last update timestamp.
                     format: date-time
+        UserCostSettings:
+            type: object
+            properties:
+                dailyBudgetUsd:
+                    type: number
+                    format: double
+                perSessionThresholdUsd:
+                    type: number
+                    format: double
+                alertEnabled:
+                    type: boolean
+                alertEmail:
+                    type: boolean
+                alertInApp:
+                    type: boolean
+                budgetResetAt:
+                    type: string
+            description: UserCostSettings represents user-specific cost control settings.
         UserNotification:
             type: object
             properties:

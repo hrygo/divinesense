@@ -93,6 +93,20 @@ const (
 	AIServiceClearConversationMessagesProcedure = "/memos.api.v1.AIService/ClearConversationMessages"
 	// AIServiceStopChatProcedure is the fully-qualified name of the AIService's StopChat RPC.
 	AIServiceStopChatProcedure = "/memos.api.v1.AIService/StopChat"
+	// AIServiceGetSessionStatsProcedure is the fully-qualified name of the AIService's GetSessionStats
+	// RPC.
+	AIServiceGetSessionStatsProcedure = "/memos.api.v1.AIService/GetSessionStats"
+	// AIServiceListSessionStatsProcedure is the fully-qualified name of the AIService's
+	// ListSessionStats RPC.
+	AIServiceListSessionStatsProcedure = "/memos.api.v1.AIService/ListSessionStats"
+	// AIServiceGetCostStatsProcedure is the fully-qualified name of the AIService's GetCostStats RPC.
+	AIServiceGetCostStatsProcedure = "/memos.api.v1.AIService/GetCostStats"
+	// AIServiceGetUserCostSettingsProcedure is the fully-qualified name of the AIService's
+	// GetUserCostSettings RPC.
+	AIServiceGetUserCostSettingsProcedure = "/memos.api.v1.AIService/GetUserCostSettings"
+	// AIServiceSetUserCostSettingsProcedure is the fully-qualified name of the AIService's
+	// SetUserCostSettings RPC.
+	AIServiceSetUserCostSettingsProcedure = "/memos.api.v1.AIService/SetUserCostSettings"
 	// ScheduleAgentServiceChatProcedure is the fully-qualified name of the ScheduleAgentService's Chat
 	// RPC.
 	ScheduleAgentServiceChatProcedure = "/memos.api.v1.ScheduleAgentService/Chat"
@@ -147,6 +161,16 @@ type AIServiceClient interface {
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetSessionStats retrieves statistics for a specific session.
+	GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error)
+	// ListSessionStats retrieves session statistics with pagination.
+	ListSessionStats(context.Context, *connect.Request[v1.ListSessionStatsRequest]) (*connect.Response[v1.ListSessionStatsResponse], error)
+	// GetCostStats retrieves aggregated cost statistics for the user.
+	GetCostStats(context.Context, *connect.Request[v1.GetCostStatsRequest]) (*connect.Response[v1.CostStats], error)
+	// GetUserCostSettings retrieves user-specific cost control settings.
+	GetUserCostSettings(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error)
+	// SetUserCostSettings updates user-specific cost control settings.
+	SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error)
 }
 
 // NewAIServiceClient constructs a client for the memos.api.v1.AIService service. By default, it
@@ -292,6 +316,36 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("StopChat")),
 			connect.WithClientOptions(opts...),
 		),
+		getSessionStats: connect.NewClient[v1.GetSessionStatsRequest, v1.SessionStats](
+			httpClient,
+			baseURL+AIServiceGetSessionStatsProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("GetSessionStats")),
+			connect.WithClientOptions(opts...),
+		),
+		listSessionStats: connect.NewClient[v1.ListSessionStatsRequest, v1.ListSessionStatsResponse](
+			httpClient,
+			baseURL+AIServiceListSessionStatsProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("ListSessionStats")),
+			connect.WithClientOptions(opts...),
+		),
+		getCostStats: connect.NewClient[v1.GetCostStatsRequest, v1.CostStats](
+			httpClient,
+			baseURL+AIServiceGetCostStatsProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("GetCostStats")),
+			connect.WithClientOptions(opts...),
+		),
+		getUserCostSettings: connect.NewClient[emptypb.Empty, v1.UserCostSettings](
+			httpClient,
+			baseURL+AIServiceGetUserCostSettingsProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("GetUserCostSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		setUserCostSettings: connect.NewClient[v1.SetUserCostSettingsRequest, v1.UserCostSettings](
+			httpClient,
+			baseURL+AIServiceSetUserCostSettingsProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("SetUserCostSettings")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -319,6 +373,11 @@ type aIServiceClient struct {
 	listMessages              *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
 	clearConversationMessages *connect.Client[v1.ClearConversationMessagesRequest, emptypb.Empty]
 	stopChat                  *connect.Client[v1.StopChatRequest, emptypb.Empty]
+	getSessionStats           *connect.Client[v1.GetSessionStatsRequest, v1.SessionStats]
+	listSessionStats          *connect.Client[v1.ListSessionStatsRequest, v1.ListSessionStatsResponse]
+	getCostStats              *connect.Client[v1.GetCostStatsRequest, v1.CostStats]
+	getUserCostSettings       *connect.Client[emptypb.Empty, v1.UserCostSettings]
+	setUserCostSettings       *connect.Client[v1.SetUserCostSettingsRequest, v1.UserCostSettings]
 }
 
 // SemanticSearch calls memos.api.v1.AIService.SemanticSearch.
@@ -431,6 +490,31 @@ func (c *aIServiceClient) StopChat(ctx context.Context, req *connect.Request[v1.
 	return c.stopChat.CallUnary(ctx, req)
 }
 
+// GetSessionStats calls memos.api.v1.AIService.GetSessionStats.
+func (c *aIServiceClient) GetSessionStats(ctx context.Context, req *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error) {
+	return c.getSessionStats.CallUnary(ctx, req)
+}
+
+// ListSessionStats calls memos.api.v1.AIService.ListSessionStats.
+func (c *aIServiceClient) ListSessionStats(ctx context.Context, req *connect.Request[v1.ListSessionStatsRequest]) (*connect.Response[v1.ListSessionStatsResponse], error) {
+	return c.listSessionStats.CallUnary(ctx, req)
+}
+
+// GetCostStats calls memos.api.v1.AIService.GetCostStats.
+func (c *aIServiceClient) GetCostStats(ctx context.Context, req *connect.Request[v1.GetCostStatsRequest]) (*connect.Response[v1.CostStats], error) {
+	return c.getCostStats.CallUnary(ctx, req)
+}
+
+// GetUserCostSettings calls memos.api.v1.AIService.GetUserCostSettings.
+func (c *aIServiceClient) GetUserCostSettings(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error) {
+	return c.getUserCostSettings.CallUnary(ctx, req)
+}
+
+// SetUserCostSettings calls memos.api.v1.AIService.SetUserCostSettings.
+func (c *aIServiceClient) SetUserCostSettings(ctx context.Context, req *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error) {
+	return c.setUserCostSettings.CallUnary(ctx, req)
+}
+
 // AIServiceHandler is an implementation of the memos.api.v1.AIService service.
 type AIServiceHandler interface {
 	// SemanticSearch performs semantic search on memos.
@@ -477,6 +561,16 @@ type AIServiceHandler interface {
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetSessionStats retrieves statistics for a specific session.
+	GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error)
+	// ListSessionStats retrieves session statistics with pagination.
+	ListSessionStats(context.Context, *connect.Request[v1.ListSessionStatsRequest]) (*connect.Response[v1.ListSessionStatsResponse], error)
+	// GetCostStats retrieves aggregated cost statistics for the user.
+	GetCostStats(context.Context, *connect.Request[v1.GetCostStatsRequest]) (*connect.Response[v1.CostStats], error)
+	// GetUserCostSettings retrieves user-specific cost control settings.
+	GetUserCostSettings(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error)
+	// SetUserCostSettings updates user-specific cost control settings.
+	SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error)
 }
 
 // NewAIServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -618,6 +712,36 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("StopChat")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIServiceGetSessionStatsHandler := connect.NewUnaryHandler(
+		AIServiceGetSessionStatsProcedure,
+		svc.GetSessionStats,
+		connect.WithSchema(aIServiceMethods.ByName("GetSessionStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceListSessionStatsHandler := connect.NewUnaryHandler(
+		AIServiceListSessionStatsProcedure,
+		svc.ListSessionStats,
+		connect.WithSchema(aIServiceMethods.ByName("ListSessionStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceGetCostStatsHandler := connect.NewUnaryHandler(
+		AIServiceGetCostStatsProcedure,
+		svc.GetCostStats,
+		connect.WithSchema(aIServiceMethods.ByName("GetCostStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceGetUserCostSettingsHandler := connect.NewUnaryHandler(
+		AIServiceGetUserCostSettingsProcedure,
+		svc.GetUserCostSettings,
+		connect.WithSchema(aIServiceMethods.ByName("GetUserCostSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceSetUserCostSettingsHandler := connect.NewUnaryHandler(
+		AIServiceSetUserCostSettingsProcedure,
+		svc.SetUserCostSettings,
+		connect.WithSchema(aIServiceMethods.ByName("SetUserCostSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/memos.api.v1.AIService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIServiceSemanticSearchProcedure:
@@ -664,6 +788,16 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceClearConversationMessagesHandler.ServeHTTP(w, r)
 		case AIServiceStopChatProcedure:
 			aIServiceStopChatHandler.ServeHTTP(w, r)
+		case AIServiceGetSessionStatsProcedure:
+			aIServiceGetSessionStatsHandler.ServeHTTP(w, r)
+		case AIServiceListSessionStatsProcedure:
+			aIServiceListSessionStatsHandler.ServeHTTP(w, r)
+		case AIServiceGetCostStatsProcedure:
+			aIServiceGetCostStatsHandler.ServeHTTP(w, r)
+		case AIServiceGetUserCostSettingsProcedure:
+			aIServiceGetUserCostSettingsHandler.ServeHTTP(w, r)
+		case AIServiceSetUserCostSettingsProcedure:
+			aIServiceSetUserCostSettingsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -759,6 +893,26 @@ func (UnimplementedAIServiceHandler) ClearConversationMessages(context.Context, 
 
 func (UnimplementedAIServiceHandler) StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.StopChat is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.GetSessionStats is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) ListSessionStats(context.Context, *connect.Request[v1.ListSessionStatsRequest]) (*connect.Response[v1.ListSessionStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ListSessionStats is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) GetCostStats(context.Context, *connect.Request[v1.GetCostStatsRequest]) (*connect.Response[v1.CostStats], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.GetCostStats is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) GetUserCostSettings(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.GetUserCostSettings is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.SetUserCostSettings is not implemented"))
 }
 
 // ScheduleAgentServiceClient is a client for the memos.api.v1.ScheduleAgentService service.

@@ -215,7 +215,7 @@ func (s *AIService) createChatHandler() aichat.Handler {
 		s.AdaptiveRetriever,
 		s.Store,
 	)
-	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService)
+	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService, s.persister)
 
 	// Configure chat router for auto-routing if intent classifier is enabled
 	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {

@@ -263,6 +263,26 @@
         "searching-memos": "Searching memos...",
         "thinking": "Thinking..."
       },
+      "session-stats": {
+        "title": "Session Statistics",
+        "duration": "Duration",
+        "tokens": "Tokens",
+        "cost": "Cost",
+        "tools": "Tool Calls",
+        "files": "Files Modified",
+        "thinking": "Thinking",
+        "generation": "Generation",
+        "input-tokens": "Input",
+        "output-tokens": "Output",
+        "cache-write": "Cache Write",
+        "cache-read": "Cache Read",
+        "total-cost": "Total Cost",
+        "daily-cost": "Daily Cost",
+        "budget-remaining": "Budget Remaining",
+        "status-success": "Success",
+        "status-error": "Error",
+        "status-cancelled": "Cancelled"
+      },
       "try-asking": "Try asking"
     },
     "processing": "Processing...",

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -96,4 +97,67 @@ func (d *DB) IsInitialized(ctx context.Context) (bool, error) {
 		return false, errors.Wrap(err, "failed to check if database is initialized")
 	}
 	return exists, nil
+}
+
+// AgentStatsStore returns the agent statistics store interface.
+// SQLite does not support AI features (see #9).
+func (d *DB) AgentStatsStore() store.AgentStatsStore {
+	return &sqliteAgentStatsStore{db: d.db}
+}
+
+// SecurityAuditStore returns the security audit store interface.
+// SQLite does not support AI features (see #9).
+func (d *DB) SecurityAuditStore() store.SecurityAuditStore {
+	return &sqliteSecurityAuditStore{db: d.db}
+}
+
+// sqliteAgentStatsStore is a no-op implementation for SQLite.
+// AI features require PostgreSQL; see issue #9 for SQLite AI support research.
+type sqliteAgentStatsStore struct {
+	db *sql.DB
+}
+
+func (s *sqliteAgentStatsStore) SaveSessionStats(ctx context.Context, stats *store.AgentSessionStats) error {
+	return errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) GetSessionStats(ctx context.Context, sessionID string) (*store.AgentSessionStats, error) {
+	return nil, errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) ListSessionStats(ctx context.Context, userID int32, limit, offset int) ([]*store.AgentSessionStats, int64, error) {
+	return nil, 0, errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) GetDailyCostUsage(ctx context.Context, userID int32, startDate, endDate time.Time) (float64, error) {
+	return 0, errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) GetCostStats(ctx context.Context, userID int32, days int) (*store.CostStats, error) {
+	return nil, errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) GetUserCostSettings(ctx context.Context, userID int32) (*store.UserCostSettings, error) {
+	return nil, errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteAgentStatsStore) SetUserCostSettings(ctx context.Context, settings *store.UserCostSettings) error {
+	return errors.New("agent session stats not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+// sqliteSecurityAuditStore is a no-op implementation for SQLite.
+type sqliteSecurityAuditStore struct {
+	db *sql.DB
+}
+
+func (s *sqliteSecurityAuditStore) LogSecurityEvent(ctx context.Context, event *store.SecurityAuditEvent) error {
+	return errors.New("security audit logging not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteSecurityAuditStore) ListSecurityEvents(ctx context.Context, userID int32, limit, offset int) ([]*store.SecurityAuditEvent, int64, error) {
+	return nil, 0, errors.New("security audit logging not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (s *sqliteSecurityAuditStore) ListSecurityEventsByRisk(ctx context.Context, userID int32, riskLevel string, limit, offset int) ([]*store.SecurityAuditEvent, int64, error) {
+	return nil, 0, errors.New("security audit logging not supported in SQLite (use PostgreSQL for AI features)")
 }

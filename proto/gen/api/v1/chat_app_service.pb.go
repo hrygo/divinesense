@@ -867,13 +867,15 @@ var File_api_v1_chat_app_service_proto protoreflect.FileDescriptor
 
 const file_api_v1_chat_app_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1dapi/v1/chat_app_service.proto\x12\fmemos.api.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xf1\x01\n" +
+	"\x1dapi/v1/chat_app_service.proto\x12\fmemos.api.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x90\x02\n" +
 	"\x19RegisterCredentialRequest\x127\n" +
 	"\bplatform\x18\x01 \x01(\x0e2\x16.memos.api.v1.PlatformB\x03\xe0A\x02R\bplatform\x12-\n" +
 	"\x10platform_user_id\x18\x02 \x01(\tB\x03\xe0A\x02R\x0eplatformUserId\x12(\n" +
 	"\x10platform_chat_id\x18\x03 \x01(\tR\x0eplatformChatId\x12!\n" +
-	"\faccess_token\x18\x04 \x01(\tR\vaccessToken\x12\x1f\n" +
-	"\vwebhook_url\x18\x05 \x01(\tR\n" +
+	"\faccess_token\x18\x04 \x01(\tR\vaccessToken\x12\x1d\n" +
+	"\n" +
+	"app_secret\x18\x05 \x01(\tR\tappSecret\x12\x1f\n" +
+	"\vwebhook_url\x18\x06 \x01(\tR\n" +
 	"webhookUrl\"\x95\x02\n" +
 	"\n" +
 	"Credential\x12\x0e\n" +
@@ -892,16 +894,19 @@ const file_api_v1_chat_app_service_proto_rawDesc = "" +
 	"\x17ListCredentialsResponse\x12:\n" +
 	"\vcredentials\x18\x01 \x03(\v2\x18.memos.api.v1.CredentialR\vcredentials\"R\n" +
 	"\x17DeleteCredentialRequest\x127\n" +
-	"\bplatform\x18\x01 \x01(\x0e2\x16.memos.api.v1.PlatformB\x03\xe0A\x02R\bplatform\"\xec\x01\n" +
+	"\bplatform\x18\x01 \x01(\x0e2\x16.memos.api.v1.PlatformB\x03\xe0A\x02R\bplatform\"\x9f\x02\n" +
 	"\x17UpdateCredentialRequest\x127\n" +
 	"\bplatform\x18\x01 \x01(\x0e2\x16.memos.api.v1.PlatformB\x03\xe0A\x02R\bplatform\x12\x1d\n" +
 	"\aenabled\x18\x02 \x01(\bH\x00R\aenabled\x88\x01\x01\x12&\n" +
-	"\faccess_token\x18\x03 \x01(\tH\x01R\vaccessToken\x88\x01\x01\x12$\n" +
-	"\vwebhook_url\x18\x04 \x01(\tH\x02R\n" +
+	"\faccess_token\x18\x03 \x01(\tH\x01R\vaccessToken\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"app_secret\x18\x04 \x01(\tH\x02R\tappSecret\x88\x01\x01\x12$\n" +
+	"\vwebhook_url\x18\x05 \x01(\tH\x03R\n" +
 	"webhookUrl\x88\x01\x01B\n" +
 	"\n" +
 	"\b_enabledB\x0f\n" +
-	"\r_access_tokenB\x0e\n" +
+	"\r_access_tokenB\r\n" +
+	"\v_app_secretB\x0e\n" +
 	"\f_webhook_url\"\x87\x02\n" +
 	"\x0eWebhookRequest\x127\n" +
 	"\bplatform\x18\x01 \x01(\x0e2\x16.memos.api.v1.PlatformB\x03\xe0A\x02R\bplatform\x12\x18\n" +

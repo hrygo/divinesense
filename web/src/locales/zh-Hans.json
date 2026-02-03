@@ -258,6 +258,26 @@
         "searching-memos": "搜索笔记中...",
         "thinking": "思考中..."
       },
+      "session-stats": {
+        "title": "会话统计",
+        "duration": "持续时间",
+        "tokens": "令牌数",
+        "cost": "成本",
+        "tools": "工具调用",
+        "files": "修改文件",
+        "thinking": "思考",
+        "generation": "生成",
+        "input-tokens": "输入",
+        "output-tokens": "输出",
+        "cache-write": "缓存写入",
+        "cache-read": "缓存读取",
+        "total-cost": "总成本",
+        "daily-cost": "每日成本",
+        "budget-remaining": "剩余预算",
+        "status-success": "成功",
+        "status-error": "错误",
+        "status-cancelled": "已取消"
+      },
       "try-asking": "试着这样问"
     },
     "processing": "处理中...",

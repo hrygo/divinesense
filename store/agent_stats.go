@@ -8,32 +8,32 @@ import (
 // AgentSessionStats represents a session statistics record for storage.
 // AgentSessionStats 表示会话统计数据的存储记录。
 type AgentSessionStats struct {
-	ID                    int64
-	SessionID             string
-	ConversationID        int64
-	UserID                int32
-	AgentType             string
-	StartedAt             time.Time
-	EndedAt               time.Time
-	TotalDurationMs       int64
-	ThinkingDurationMs    int64
-	ToolDurationMs        int64
-	GenerationDurationMs   int64
-	InputTokens           int32
-	OutputTokens          int32
-	CacheWriteTokens      int32
-	CacheReadTokens       int32
-	TotalTokens           int32
-	TotalCostUSD          float64
-	ToolCallCount         int32
-	ToolsUsed             []string
-	FilesModified         int32
-	FilePaths             []string
-	ModelUsed             string
-	IsError               bool
-	ErrorMessage          string
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                   int64
+	SessionID            string
+	ConversationID       int64
+	UserID               int32
+	AgentType            string
+	StartedAt            time.Time
+	EndedAt              time.Time
+	TotalDurationMs      int64
+	ThinkingDurationMs   int64
+	ToolDurationMs       int64
+	GenerationDurationMs int64
+	InputTokens          int32
+	OutputTokens         int32
+	CacheWriteTokens     int32
+	CacheReadTokens      int32
+	TotalTokens          int32
+	TotalCostUSD         float64
+	ToolCallCount        int32
+	ToolsUsed            []string
+	FilesModified        int32
+	FilePaths            []string
+	ModelUsed            string
+	IsError              bool
+	ErrorMessage         string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // CostStats represents aggregated cost statistics for a user.
@@ -41,7 +41,7 @@ type AgentSessionStats struct {
 type CostStats struct {
 	TotalCostUSD         float64
 	DailyAverageUSD      float64
-	SessionCount          int64
+	SessionCount         int64
 	MostExpensiveSession *AgentSessionStats
 	DailyBreakdown       []*DailyCostData
 }
@@ -49,8 +49,8 @@ type CostStats struct {
 // DailyCostData represents cost data for a single day.
 // DailyCostData 表示单日的成本数据。
 type DailyCostData struct {
-	Date        string  // YYYY-MM-DD
-	CostUSD     float64
+	Date         string // YYYY-MM-DD
+	CostUSD      float64
 	SessionCount int64
 }
 

@@ -3976,6 +3976,763 @@ func (x *SessionSummary) GetErrorMsg() string {
 	return ""
 }
 
+// SessionStats represents detailed statistics for a single session.
+type SessionStats struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	SessionId            string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ConversationId       int64                  `protobuf:"varint,3,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	UserId               int32                  `protobuf:"varint,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	AgentType            string                 `protobuf:"bytes,5,opt,name=agent_type,json=agentType,proto3" json:"agent_type,omitempty"`
+	StartedAt            int64                  `protobuf:"varint,6,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"` // Unix timestamp in seconds
+	EndedAt              int64                  `protobuf:"varint,7,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	TotalDurationMs      int64                  `protobuf:"varint,8,opt,name=total_duration_ms,json=totalDurationMs,proto3" json:"total_duration_ms,omitempty"`
+	ThinkingDurationMs   int64                  `protobuf:"varint,9,opt,name=thinking_duration_ms,json=thinkingDurationMs,proto3" json:"thinking_duration_ms,omitempty"`
+	ToolDurationMs       int64                  `protobuf:"varint,10,opt,name=tool_duration_ms,json=toolDurationMs,proto3" json:"tool_duration_ms,omitempty"`
+	GenerationDurationMs int64                  `protobuf:"varint,11,opt,name=generation_duration_ms,json=generationDurationMs,proto3" json:"generation_duration_ms,omitempty"`
+	InputTokens          int32                  `protobuf:"varint,12,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens         int32                  `protobuf:"varint,13,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheWriteTokens     int32                  `protobuf:"varint,14,opt,name=cache_write_tokens,json=cacheWriteTokens,proto3" json:"cache_write_tokens,omitempty"`
+	CacheReadTokens      int32                  `protobuf:"varint,15,opt,name=cache_read_tokens,json=cacheReadTokens,proto3" json:"cache_read_tokens,omitempty"`
+	TotalTokens          int32                  `protobuf:"varint,16,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	TotalCostUsd         float64                `protobuf:"fixed64,17,opt,name=total_cost_usd,json=totalCostUsd,proto3" json:"total_cost_usd,omitempty"`
+	ToolCallCount        int32                  `protobuf:"varint,18,opt,name=tool_call_count,json=toolCallCount,proto3" json:"tool_call_count,omitempty"`
+	ToolsUsed            []string               `protobuf:"bytes,19,rep,name=tools_used,json=toolsUsed,proto3" json:"tools_used,omitempty"`
+	FilesModified        int32                  `protobuf:"varint,20,opt,name=files_modified,json=filesModified,proto3" json:"files_modified,omitempty"`
+	FilePaths            []string               `protobuf:"bytes,21,rep,name=file_paths,json=filePaths,proto3" json:"file_paths,omitempty"`
+	ModelUsed            string                 `protobuf:"bytes,22,opt,name=model_used,json=modelUsed,proto3" json:"model_used,omitempty"`
+	IsError              bool                   `protobuf:"varint,23,opt,name=is_error,json=isError,proto3" json:"is_error,omitempty"`
+	ErrorMessage         string                 `protobuf:"bytes,24,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	CreatedAt            int64                  `protobuf:"varint,25,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            int64                  `protobuf:"varint,26,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *SessionStats) Reset() {
+	*x = SessionStats{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionStats) ProtoMessage() {}
+
+func (x *SessionStats) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionStats.ProtoReflect.Descriptor instead.
+func (*SessionStats) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *SessionStats) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SessionStats) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionStats) GetConversationId() int64 {
+	if x != nil {
+		return x.ConversationId
+	}
+	return 0
+}
+
+func (x *SessionStats) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *SessionStats) GetAgentType() string {
+	if x != nil {
+		return x.AgentType
+	}
+	return ""
+}
+
+func (x *SessionStats) GetStartedAt() int64 {
+	if x != nil {
+		return x.StartedAt
+	}
+	return 0
+}
+
+func (x *SessionStats) GetEndedAt() int64 {
+	if x != nil {
+		return x.EndedAt
+	}
+	return 0
+}
+
+func (x *SessionStats) GetTotalDurationMs() int64 {
+	if x != nil {
+		return x.TotalDurationMs
+	}
+	return 0
+}
+
+func (x *SessionStats) GetThinkingDurationMs() int64 {
+	if x != nil {
+		return x.ThinkingDurationMs
+	}
+	return 0
+}
+
+func (x *SessionStats) GetToolDurationMs() int64 {
+	if x != nil {
+		return x.ToolDurationMs
+	}
+	return 0
+}
+
+func (x *SessionStats) GetGenerationDurationMs() int64 {
+	if x != nil {
+		return x.GenerationDurationMs
+	}
+	return 0
+}
+
+func (x *SessionStats) GetInputTokens() int32 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *SessionStats) GetOutputTokens() int32 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *SessionStats) GetCacheWriteTokens() int32 {
+	if x != nil {
+		return x.CacheWriteTokens
+	}
+	return 0
+}
+
+func (x *SessionStats) GetCacheReadTokens() int32 {
+	if x != nil {
+		return x.CacheReadTokens
+	}
+	return 0
+}
+
+func (x *SessionStats) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *SessionStats) GetTotalCostUsd() float64 {
+	if x != nil {
+		return x.TotalCostUsd
+	}
+	return 0
+}
+
+func (x *SessionStats) GetToolCallCount() int32 {
+	if x != nil {
+		return x.ToolCallCount
+	}
+	return 0
+}
+
+func (x *SessionStats) GetToolsUsed() []string {
+	if x != nil {
+		return x.ToolsUsed
+	}
+	return nil
+}
+
+func (x *SessionStats) GetFilesModified() int32 {
+	if x != nil {
+		return x.FilesModified
+	}
+	return 0
+}
+
+func (x *SessionStats) GetFilePaths() []string {
+	if x != nil {
+		return x.FilePaths
+	}
+	return nil
+}
+
+func (x *SessionStats) GetModelUsed() string {
+	if x != nil {
+		return x.ModelUsed
+	}
+	return ""
+}
+
+func (x *SessionStats) GetIsError() bool {
+	if x != nil {
+		return x.IsError
+	}
+	return false
+}
+
+func (x *SessionStats) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *SessionStats) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *SessionStats) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+// GetSessionStatsRequest is the request for GetSessionStats.
+type GetSessionStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSessionStatsRequest) Reset() {
+	*x = GetSessionStatsRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSessionStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSessionStatsRequest) ProtoMessage() {}
+
+func (x *GetSessionStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSessionStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetSessionStatsRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *GetSessionStatsRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+// ListSessionStatsRequest is the request for ListSessionStats.
+type ListSessionStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`   // Default: 20, Max: 100
+	Offset        int32                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"` // Default: 0
+	Days          int32                  `protobuf:"varint,3,opt,name=days,proto3" json:"days,omitempty"`     // Filter to last N days (optional, default: 30)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionStatsRequest) Reset() {
+	*x = ListSessionStatsRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionStatsRequest) ProtoMessage() {}
+
+func (x *ListSessionStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionStatsRequest.ProtoReflect.Descriptor instead.
+func (*ListSessionStatsRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *ListSessionStatsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListSessionStatsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListSessionStatsRequest) GetDays() int32 {
+	if x != nil {
+		return x.Days
+	}
+	return 0
+}
+
+// ListSessionStatsResponse is the response for ListSessionStats.
+type ListSessionStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sessions      []*SessionStats        `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	TotalCostUsd  float64                `protobuf:"fixed64,3,opt,name=total_cost_usd,json=totalCostUsd,proto3" json:"total_cost_usd,omitempty"` // Total cost across all sessions
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionStatsResponse) Reset() {
+	*x = ListSessionStatsResponse{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionStatsResponse) ProtoMessage() {}
+
+func (x *ListSessionStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionStatsResponse.ProtoReflect.Descriptor instead.
+func (*ListSessionStatsResponse) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ListSessionStatsResponse) GetSessions() []*SessionStats {
+	if x != nil {
+		return x.Sessions
+	}
+	return nil
+}
+
+func (x *ListSessionStatsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *ListSessionStatsResponse) GetTotalCostUsd() float64 {
+	if x != nil {
+		return x.TotalCostUsd
+	}
+	return 0
+}
+
+// GetCostStatsRequest is the request for GetCostStats.
+type GetCostStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Days          int32                  `protobuf:"varint,1,opt,name=days,proto3" json:"days,omitempty"` // Number of days to analyze (default: 7)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCostStatsRequest) Reset() {
+	*x = GetCostStatsRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCostStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCostStatsRequest) ProtoMessage() {}
+
+func (x *GetCostStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCostStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetCostStatsRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *GetCostStatsRequest) GetDays() int32 {
+	if x != nil {
+		return x.Days
+	}
+	return 0
+}
+
+// CostStats represents aggregated cost statistics.
+type CostStats struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	TotalCostUsd         float64                `protobuf:"fixed64,1,opt,name=total_cost_usd,json=totalCostUsd,proto3" json:"total_cost_usd,omitempty"`
+	DailyAverageUsd      float64                `protobuf:"fixed64,2,opt,name=daily_average_usd,json=dailyAverageUsd,proto3" json:"daily_average_usd,omitempty"`
+	SessionCount         int64                  `protobuf:"varint,3,opt,name=session_count,json=sessionCount,proto3" json:"session_count,omitempty"`
+	MostExpensiveSession *SessionStats          `protobuf:"bytes,4,opt,name=most_expensive_session,json=mostExpensiveSession,proto3" json:"most_expensive_session,omitempty"`
+	DailyBreakdown       []*DailyCostData       `protobuf:"bytes,5,rep,name=daily_breakdown,json=dailyBreakdown,proto3" json:"daily_breakdown,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *CostStats) Reset() {
+	*x = CostStats{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostStats) ProtoMessage() {}
+
+func (x *CostStats) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostStats.ProtoReflect.Descriptor instead.
+func (*CostStats) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *CostStats) GetTotalCostUsd() float64 {
+	if x != nil {
+		return x.TotalCostUsd
+	}
+	return 0
+}
+
+func (x *CostStats) GetDailyAverageUsd() float64 {
+	if x != nil {
+		return x.DailyAverageUsd
+	}
+	return 0
+}
+
+func (x *CostStats) GetSessionCount() int64 {
+	if x != nil {
+		return x.SessionCount
+	}
+	return 0
+}
+
+func (x *CostStats) GetMostExpensiveSession() *SessionStats {
+	if x != nil {
+		return x.MostExpensiveSession
+	}
+	return nil
+}
+
+func (x *CostStats) GetDailyBreakdown() []*DailyCostData {
+	if x != nil {
+		return x.DailyBreakdown
+	}
+	return nil
+}
+
+// DailyCostData represents cost data for a single day.
+type DailyCostData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Date          string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
+	CostUsd       float64                `protobuf:"fixed64,2,opt,name=cost_usd,json=costUsd,proto3" json:"cost_usd,omitempty"`
+	SessionCount  int64                  `protobuf:"varint,3,opt,name=session_count,json=sessionCount,proto3" json:"session_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DailyCostData) Reset() {
+	*x = DailyCostData{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DailyCostData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DailyCostData) ProtoMessage() {}
+
+func (x *DailyCostData) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DailyCostData.ProtoReflect.Descriptor instead.
+func (*DailyCostData) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *DailyCostData) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *DailyCostData) GetCostUsd() float64 {
+	if x != nil {
+		return x.CostUsd
+	}
+	return 0
+}
+
+func (x *DailyCostData) GetSessionCount() int64 {
+	if x != nil {
+		return x.SessionCount
+	}
+	return 0
+}
+
+// UserCostSettings represents user-specific cost control settings.
+type UserCostSettings struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	DailyBudgetUsd         float64                `protobuf:"fixed64,1,opt,name=daily_budget_usd,json=dailyBudgetUsd,proto3" json:"daily_budget_usd,omitempty"` // 0 = unlimited
+	PerSessionThresholdUsd float64                `protobuf:"fixed64,2,opt,name=per_session_threshold_usd,json=perSessionThresholdUsd,proto3" json:"per_session_threshold_usd,omitempty"`
+	AlertEnabled           bool                   `protobuf:"varint,3,opt,name=alert_enabled,json=alertEnabled,proto3" json:"alert_enabled,omitempty"`
+	AlertEmail             bool                   `protobuf:"varint,4,opt,name=alert_email,json=alertEmail,proto3" json:"alert_email,omitempty"`
+	AlertInApp             bool                   `protobuf:"varint,5,opt,name=alert_in_app,json=alertInApp,proto3" json:"alert_in_app,omitempty"`
+	BudgetResetAt          int64                  `protobuf:"varint,6,opt,name=budget_reset_at,json=budgetResetAt,proto3" json:"budget_reset_at,omitempty"` // Unix timestamp when budget resets
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *UserCostSettings) Reset() {
+	*x = UserCostSettings{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserCostSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserCostSettings) ProtoMessage() {}
+
+func (x *UserCostSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserCostSettings.ProtoReflect.Descriptor instead.
+func (*UserCostSettings) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *UserCostSettings) GetDailyBudgetUsd() float64 {
+	if x != nil {
+		return x.DailyBudgetUsd
+	}
+	return 0
+}
+
+func (x *UserCostSettings) GetPerSessionThresholdUsd() float64 {
+	if x != nil {
+		return x.PerSessionThresholdUsd
+	}
+	return 0
+}
+
+func (x *UserCostSettings) GetAlertEnabled() bool {
+	if x != nil {
+		return x.AlertEnabled
+	}
+	return false
+}
+
+func (x *UserCostSettings) GetAlertEmail() bool {
+	if x != nil {
+		return x.AlertEmail
+	}
+	return false
+}
+
+func (x *UserCostSettings) GetAlertInApp() bool {
+	if x != nil {
+		return x.AlertInApp
+	}
+	return false
+}
+
+func (x *UserCostSettings) GetBudgetResetAt() int64 {
+	if x != nil {
+		return x.BudgetResetAt
+	}
+	return 0
+}
+
+// SetUserCostSettingsRequest is the request for SetUserCostSettings.
+type SetUserCostSettingsRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	DailyBudgetUsd         *float64               `protobuf:"fixed64,1,opt,name=daily_budget_usd,json=dailyBudgetUsd,proto3,oneof" json:"daily_budget_usd,omitempty"` // Null = unchanged, 0 = unlimited
+	PerSessionThresholdUsd *float64               `protobuf:"fixed64,2,opt,name=per_session_threshold_usd,json=perSessionThresholdUsd,proto3,oneof" json:"per_session_threshold_usd,omitempty"`
+	AlertEnabled           *bool                  `protobuf:"varint,3,opt,name=alert_enabled,json=alertEnabled,proto3,oneof" json:"alert_enabled,omitempty"`
+	AlertEmail             *bool                  `protobuf:"varint,4,opt,name=alert_email,json=alertEmail,proto3,oneof" json:"alert_email,omitempty"`
+	AlertInApp             *bool                  `protobuf:"varint,5,opt,name=alert_in_app,json=alertInApp,proto3,oneof" json:"alert_in_app,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *SetUserCostSettingsRequest) Reset() {
+	*x = SetUserCostSettingsRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetUserCostSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetUserCostSettingsRequest) ProtoMessage() {}
+
+func (x *SetUserCostSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetUserCostSettingsRequest.ProtoReflect.Descriptor instead.
+func (*SetUserCostSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *SetUserCostSettingsRequest) GetDailyBudgetUsd() float64 {
+	if x != nil && x.DailyBudgetUsd != nil {
+		return *x.DailyBudgetUsd
+	}
+	return 0
+}
+
+func (x *SetUserCostSettingsRequest) GetPerSessionThresholdUsd() float64 {
+	if x != nil && x.PerSessionThresholdUsd != nil {
+		return *x.PerSessionThresholdUsd
+	}
+	return 0
+}
+
+func (x *SetUserCostSettingsRequest) GetAlertEnabled() bool {
+	if x != nil && x.AlertEnabled != nil {
+		return *x.AlertEnabled
+	}
+	return false
+}
+
+func (x *SetUserCostSettingsRequest) GetAlertEmail() bool {
+	if x != nil && x.AlertEmail != nil {
+		return *x.AlertEmail
+	}
+	return false
+}
+
+func (x *SetUserCostSettingsRequest) GetAlertInApp() bool {
+	if x != nil && x.AlertInApp != nil {
+		return *x.AlertInApp
+	}
+	return false
+}
+
 var File_api_v1_ai_service_proto protoreflect.FileDescriptor
 
 const file_api_v1_ai_service_proto_rawDesc = "" +
@@ -4297,7 +5054,89 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"file_paths\x18\r \x03(\tR\tfilePaths\x12$\n" +
 	"\x0etotal_cost_usd\x18\x10 \x01(\x01R\ftotalCostUsd\x12\x16\n" +
 	"\x06status\x18\x0e \x01(\tR\x06status\x12\x1b\n" +
-	"\terror_msg\x18\x0f \x01(\tR\berrorMsg*7\n" +
+	"\terror_msg\x18\x0f \x01(\tR\berrorMsg\"\xab\a\n" +
+	"\fSessionStats\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12'\n" +
+	"\x0fconversation_id\x18\x03 \x01(\x03R\x0econversationId\x12\x17\n" +
+	"\auser_id\x18\x04 \x01(\x05R\x06userId\x12\x1d\n" +
+	"\n" +
+	"agent_type\x18\x05 \x01(\tR\tagentType\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\x06 \x01(\x03R\tstartedAt\x12\x19\n" +
+	"\bended_at\x18\a \x01(\x03R\aendedAt\x12*\n" +
+	"\x11total_duration_ms\x18\b \x01(\x03R\x0ftotalDurationMs\x120\n" +
+	"\x14thinking_duration_ms\x18\t \x01(\x03R\x12thinkingDurationMs\x12(\n" +
+	"\x10tool_duration_ms\x18\n" +
+	" \x01(\x03R\x0etoolDurationMs\x124\n" +
+	"\x16generation_duration_ms\x18\v \x01(\x03R\x14generationDurationMs\x12!\n" +
+	"\finput_tokens\x18\f \x01(\x05R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\r \x01(\x05R\foutputTokens\x12,\n" +
+	"\x12cache_write_tokens\x18\x0e \x01(\x05R\x10cacheWriteTokens\x12*\n" +
+	"\x11cache_read_tokens\x18\x0f \x01(\x05R\x0fcacheReadTokens\x12!\n" +
+	"\ftotal_tokens\x18\x10 \x01(\x05R\vtotalTokens\x12$\n" +
+	"\x0etotal_cost_usd\x18\x11 \x01(\x01R\ftotalCostUsd\x12&\n" +
+	"\x0ftool_call_count\x18\x12 \x01(\x05R\rtoolCallCount\x12\x1d\n" +
+	"\n" +
+	"tools_used\x18\x13 \x03(\tR\ttoolsUsed\x12%\n" +
+	"\x0efiles_modified\x18\x14 \x01(\x05R\rfilesModified\x12\x1d\n" +
+	"\n" +
+	"file_paths\x18\x15 \x03(\tR\tfilePaths\x12\x1d\n" +
+	"\n" +
+	"model_used\x18\x16 \x01(\tR\tmodelUsed\x12\x19\n" +
+	"\bis_error\x18\x17 \x01(\bR\aisError\x12#\n" +
+	"\rerror_message\x18\x18 \x01(\tR\ferrorMessage\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x19 \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x1a \x01(\x03R\tupdatedAt\"<\n" +
+	"\x16GetSessionStatsRequest\x12\"\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tsessionId\"[\n" +
+	"\x17ListSessionStatsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x12\n" +
+	"\x04days\x18\x03 \x01(\x05R\x04days\"\x99\x01\n" +
+	"\x18ListSessionStatsResponse\x126\n" +
+	"\bsessions\x18\x01 \x03(\v2\x1a.memos.api.v1.SessionStatsR\bsessions\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x03R\n" +
+	"totalCount\x12$\n" +
+	"\x0etotal_cost_usd\x18\x03 \x01(\x01R\ftotalCostUsd\")\n" +
+	"\x13GetCostStatsRequest\x12\x12\n" +
+	"\x04days\x18\x01 \x01(\x05R\x04days\"\x9a\x02\n" +
+	"\tCostStats\x12$\n" +
+	"\x0etotal_cost_usd\x18\x01 \x01(\x01R\ftotalCostUsd\x12*\n" +
+	"\x11daily_average_usd\x18\x02 \x01(\x01R\x0fdailyAverageUsd\x12#\n" +
+	"\rsession_count\x18\x03 \x01(\x03R\fsessionCount\x12P\n" +
+	"\x16most_expensive_session\x18\x04 \x01(\v2\x1a.memos.api.v1.SessionStatsR\x14mostExpensiveSession\x12D\n" +
+	"\x0fdaily_breakdown\x18\x05 \x03(\v2\x1b.memos.api.v1.DailyCostDataR\x0edailyBreakdown\"c\n" +
+	"\rDailyCostData\x12\x12\n" +
+	"\x04date\x18\x01 \x01(\tR\x04date\x12\x19\n" +
+	"\bcost_usd\x18\x02 \x01(\x01R\acostUsd\x12#\n" +
+	"\rsession_count\x18\x03 \x01(\x03R\fsessionCount\"\x87\x02\n" +
+	"\x10UserCostSettings\x12(\n" +
+	"\x10daily_budget_usd\x18\x01 \x01(\x01R\x0edailyBudgetUsd\x129\n" +
+	"\x19per_session_threshold_usd\x18\x02 \x01(\x01R\x16perSessionThresholdUsd\x12#\n" +
+	"\ralert_enabled\x18\x03 \x01(\bR\falertEnabled\x12\x1f\n" +
+	"\valert_email\x18\x04 \x01(\bR\n" +
+	"alertEmail\x12 \n" +
+	"\falert_in_app\x18\x05 \x01(\bR\n" +
+	"alertInApp\x12&\n" +
+	"\x0fbudget_reset_at\x18\x06 \x01(\x03R\rbudgetResetAt\"\xe8\x02\n" +
+	"\x1aSetUserCostSettingsRequest\x12-\n" +
+	"\x10daily_budget_usd\x18\x01 \x01(\x01H\x00R\x0edailyBudgetUsd\x88\x01\x01\x12>\n" +
+	"\x19per_session_threshold_usd\x18\x02 \x01(\x01H\x01R\x16perSessionThresholdUsd\x88\x01\x01\x12(\n" +
+	"\ralert_enabled\x18\x03 \x01(\bH\x02R\falertEnabled\x88\x01\x01\x12$\n" +
+	"\valert_email\x18\x04 \x01(\bH\x03R\n" +
+	"alertEmail\x88\x01\x01\x12%\n" +
+	"\falert_in_app\x18\x05 \x01(\bH\x04R\n" +
+	"alertInApp\x88\x01\x01B\x13\n" +
+	"\x11_daily_budget_usdB\x1c\n" +
+	"\x1a_per_session_threshold_usdB\x10\n" +
+	"\x0e_alert_enabledB\x0e\n" +
+	"\f_alert_emailB\x0f\n" +
+	"\r_alert_in_app*7\n" +
 	"\x11ScheduleQueryMode\x12\b\n" +
 	"\x04AUTO\x10\x00\x12\f\n" +
 	"\bSTANDARD\x10\x01\x12\n" +
@@ -4314,7 +5153,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x14REVIEW_QUALITY_AGAIN\x10\x01\x12\x17\n" +
 	"\x13REVIEW_QUALITY_HARD\x10\x02\x12\x17\n" +
 	"\x13REVIEW_QUALITY_GOOD\x10\x03\x12\x17\n" +
-	"\x13REVIEW_QUALITY_EASY\x10\x042\xd2\x16\n" +
+	"\x13REVIEW_QUALITY_EASY\x10\x042\xb4\x1b\n" +
 	"\tAIService\x12y\n" +
 	"\x0eSemanticSearch\x12#.memos.api.v1.SemanticSearchRequest\x1a$.memos.api.v1.SemanticSearchResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/ai/search\x12v\n" +
 	"\vSuggestTags\x12 .memos.api.v1.SuggestTagsRequest\x1a!.memos.api.v1.SuggestTagsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/ai/suggest-tags\x12[\n" +
@@ -4338,7 +5177,12 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x13AddContextSeparator\x12(.memos.api.v1.AddContextSeparatorRequest\x1a\x16.google.protobuf.Empty\"?\x82\xd3\xe4\x93\x029:\x01*\"4/api/v1/ai/conversations/{conversation_id}/separator\x12\x92\x01\n" +
 	"\fListMessages\x12!.memos.api.v1.ListMessagesRequest\x1a\".memos.api.v1.ListMessagesResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/ai/conversations/{conversation_id}/messages\x12\xa0\x01\n" +
 	"\x19ClearConversationMessages\x12..memos.api.v1.ClearConversationMessagesRequest\x1a\x16.google.protobuf.Empty\";\x82\xd3\xe4\x93\x025*3/api/v1/ai/conversations/{conversation_id}/messages\x12b\n" +
-	"\bStopChat\x12\x1d.memos.api.v1.StopChatRequest\x1a\x16.google.protobuf.Empty\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/ai/chat/stop2\xaa\x02\n" +
+	"\bStopChat\x12\x1d.memos.api.v1.StopChatRequest\x1a\x16.google.protobuf.Empty\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/ai/chat/stop\x12}\n" +
+	"\x0fGetSessionStats\x12$.memos.api.v1.GetSessionStatsRequest\x1a\x1a.memos.api.v1.SessionStats\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/ai/sessions/{session_id}\x12~\n" +
+	"\x10ListSessionStats\x12%.memos.api.v1.ListSessionStatsRequest\x1a&.memos.api.v1.ListSessionStatsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/ai/sessions\x12i\n" +
+	"\fGetCostStats\x12!.memos.api.v1.GetCostStatsRequest\x1a\x17.memos.api.v1.CostStats\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/ai/cost-stats\x12o\n" +
+	"\x13GetUserCostSettings\x12\x16.google.protobuf.Empty\x1a\x1e.memos.api.v1.UserCostSettings\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v1/ai/cost-settings\x12\x84\x01\n" +
+	"\x13SetUserCostSettings\x12(.memos.api.v1.SetUserCostSettingsRequest\x1a\x1e.memos.api.v1.UserCostSettings\"#\x82\xd3\xe4\x93\x02\x1d:\x01*2\x18/api/v1/ai/cost-settings2\xaa\x02\n" +
 	"\x14ScheduleAgentService\x12\x7f\n" +
 	"\x04Chat\x12&.memos.api.v1.ScheduleAgentChatRequest\x1a'.memos.api.v1.ScheduleAgentChatResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/schedule-agent/chat\x12\x90\x01\n" +
 	"\n" +
@@ -4358,7 +5202,7 @@ func file_api_v1_ai_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_v1_ai_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 65)
 var file_api_v1_ai_service_proto_goTypes = []any{
 	(ScheduleQueryMode)(0),                   // 0: memos.api.v1.ScheduleQueryMode
 	(AgentType)(0),                           // 1: memos.api.v1.AgentType
@@ -4419,7 +5263,16 @@ var file_api_v1_ai_service_proto_goTypes = []any{
 	(*GetReviewStatsResponse)(nil),           // 56: memos.api.v1.GetReviewStatsResponse
 	(*EventMetadata)(nil),                    // 57: memos.api.v1.EventMetadata
 	(*SessionSummary)(nil),                   // 58: memos.api.v1.SessionSummary
-	(*emptypb.Empty)(nil),                    // 59: google.protobuf.Empty
+	(*SessionStats)(nil),                     // 59: memos.api.v1.SessionStats
+	(*GetSessionStatsRequest)(nil),           // 60: memos.api.v1.GetSessionStatsRequest
+	(*ListSessionStatsRequest)(nil),          // 61: memos.api.v1.ListSessionStatsRequest
+	(*ListSessionStatsResponse)(nil),         // 62: memos.api.v1.ListSessionStatsResponse
+	(*GetCostStatsRequest)(nil),              // 63: memos.api.v1.GetCostStatsRequest
+	(*CostStats)(nil),                        // 64: memos.api.v1.CostStats
+	(*DailyCostData)(nil),                    // 65: memos.api.v1.DailyCostData
+	(*UserCostSettings)(nil),                 // 66: memos.api.v1.UserCostSettings
+	(*SetUserCostSettingsRequest)(nil),       // 67: memos.api.v1.SetUserCostSettingsRequest
+	(*emptypb.Empty)(nil),                    // 68: google.protobuf.Empty
 }
 var file_api_v1_ai_service_proto_depIdxs = []int32{
 	8,  // 0: memos.api.v1.SemanticSearchResponse.results:type_name -> memos.api.v1.SearchResult
@@ -4449,59 +5302,72 @@ var file_api_v1_ai_service_proto_depIdxs = []int32{
 	50, // 24: memos.api.v1.GetKnowledgeGraphResponse.stats:type_name -> memos.api.v1.GraphStats
 	53, // 25: memos.api.v1.GetDueReviewsResponse.items:type_name -> memos.api.v1.ReviewItem
 	2,  // 26: memos.api.v1.RecordReviewRequest.quality:type_name -> memos.api.v1.ReviewQuality
-	6,  // 27: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
-	9,  // 28: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
-	11, // 29: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
-	30, // 30: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
-	33, // 31: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
-	35, // 32: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
-	38, // 33: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
-	42, // 34: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
-	44, // 35: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
-	46, // 36: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
-	51, // 37: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
-	54, // 38: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
-	55, // 39: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
-	14, // 40: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
-	16, // 41: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
-	17, // 42: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
-	18, // 43: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
-	19, // 44: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
-	20, // 45: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
-	21, // 46: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
-	23, // 47: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
-	24, // 48: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
-	3,  // 49: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	3,  // 50: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	7,  // 51: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
-	10, // 52: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
-	26, // 53: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
-	31, // 54: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
-	34, // 55: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
-	36, // 56: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
-	39, // 57: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
-	43, // 58: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
-	45, // 59: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
-	47, // 60: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
-	52, // 61: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
-	59, // 62: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
-	56, // 63: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
-	15, // 64: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
-	12, // 65: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
-	12, // 66: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
-	12, // 67: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
-	59, // 68: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
-	59, // 69: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
-	22, // 70: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
-	59, // 71: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
-	59, // 72: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
-	4,  // 73: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
-	5,  // 74: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
-	51, // [51:75] is the sub-list for method output_type
-	27, // [27:51] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	59, // 27: memos.api.v1.ListSessionStatsResponse.sessions:type_name -> memos.api.v1.SessionStats
+	59, // 28: memos.api.v1.CostStats.most_expensive_session:type_name -> memos.api.v1.SessionStats
+	65, // 29: memos.api.v1.CostStats.daily_breakdown:type_name -> memos.api.v1.DailyCostData
+	6,  // 30: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
+	9,  // 31: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
+	11, // 32: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
+	30, // 33: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
+	33, // 34: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
+	35, // 35: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
+	38, // 36: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
+	42, // 37: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
+	44, // 38: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
+	46, // 39: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
+	51, // 40: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
+	54, // 41: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
+	55, // 42: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
+	14, // 43: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
+	16, // 44: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
+	17, // 45: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
+	18, // 46: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
+	19, // 47: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
+	20, // 48: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
+	21, // 49: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
+	23, // 50: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
+	24, // 51: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
+	60, // 52: memos.api.v1.AIService.GetSessionStats:input_type -> memos.api.v1.GetSessionStatsRequest
+	61, // 53: memos.api.v1.AIService.ListSessionStats:input_type -> memos.api.v1.ListSessionStatsRequest
+	63, // 54: memos.api.v1.AIService.GetCostStats:input_type -> memos.api.v1.GetCostStatsRequest
+	68, // 55: memos.api.v1.AIService.GetUserCostSettings:input_type -> google.protobuf.Empty
+	67, // 56: memos.api.v1.AIService.SetUserCostSettings:input_type -> memos.api.v1.SetUserCostSettingsRequest
+	3,  // 57: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	3,  // 58: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	7,  // 59: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
+	10, // 60: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
+	26, // 61: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
+	31, // 62: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
+	34, // 63: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
+	36, // 64: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
+	39, // 65: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
+	43, // 66: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
+	45, // 67: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
+	47, // 68: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
+	52, // 69: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
+	68, // 70: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
+	56, // 71: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
+	15, // 72: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
+	12, // 73: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
+	12, // 74: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
+	12, // 75: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
+	68, // 76: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
+	68, // 77: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
+	22, // 78: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
+	68, // 79: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
+	68, // 80: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
+	59, // 81: memos.api.v1.AIService.GetSessionStats:output_type -> memos.api.v1.SessionStats
+	62, // 82: memos.api.v1.AIService.ListSessionStats:output_type -> memos.api.v1.ListSessionStatsResponse
+	64, // 83: memos.api.v1.AIService.GetCostStats:output_type -> memos.api.v1.CostStats
+	66, // 84: memos.api.v1.AIService.GetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	66, // 85: memos.api.v1.AIService.SetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	4,  // 86: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
+	5,  // 87: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
+	59, // [59:88] is the sub-list for method output_type
+	30, // [30:59] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_ai_service_proto_init() }
@@ -4510,13 +5376,14 @@ func file_api_v1_ai_service_proto_init() {
 		return
 	}
 	file_api_v1_ai_service_proto_msgTypes[15].OneofWrappers = []any{}
+	file_api_v1_ai_service_proto_msgTypes[64].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_ai_service_proto_rawDesc), len(file_api_v1_ai_service_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   56,
+			NumMessages:   65,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

@@ -42,6 +42,11 @@ const (
 	AIService_ListMessages_FullMethodName              = "/memos.api.v1.AIService/ListMessages"
 	AIService_ClearConversationMessages_FullMethodName = "/memos.api.v1.AIService/ClearConversationMessages"
 	AIService_StopChat_FullMethodName                  = "/memos.api.v1.AIService/StopChat"
+	AIService_GetSessionStats_FullMethodName           = "/memos.api.v1.AIService/GetSessionStats"
+	AIService_ListSessionStats_FullMethodName          = "/memos.api.v1.AIService/ListSessionStats"
+	AIService_GetCostStats_FullMethodName              = "/memos.api.v1.AIService/GetCostStats"
+	AIService_GetUserCostSettings_FullMethodName       = "/memos.api.v1.AIService/GetUserCostSettings"
+	AIService_SetUserCostSettings_FullMethodName       = "/memos.api.v1.AIService/SetUserCostSettings"
 )
 
 // AIServiceClient is the client API for AIService service.
@@ -94,6 +99,16 @@ type AIServiceClient interface {
 	ClearConversationMessages(ctx context.Context, in *ClearConversationMessagesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(ctx context.Context, in *StopChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// GetSessionStats retrieves statistics for a specific session.
+	GetSessionStats(ctx context.Context, in *GetSessionStatsRequest, opts ...grpc.CallOption) (*SessionStats, error)
+	// ListSessionStats retrieves session statistics with pagination.
+	ListSessionStats(ctx context.Context, in *ListSessionStatsRequest, opts ...grpc.CallOption) (*ListSessionStatsResponse, error)
+	// GetCostStats retrieves aggregated cost statistics for the user.
+	GetCostStats(ctx context.Context, in *GetCostStatsRequest, opts ...grpc.CallOption) (*CostStats, error)
+	// GetUserCostSettings retrieves user-specific cost control settings.
+	GetUserCostSettings(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserCostSettings, error)
+	// SetUserCostSettings updates user-specific cost control settings.
+	SetUserCostSettings(ctx context.Context, in *SetUserCostSettingsRequest, opts ...grpc.CallOption) (*UserCostSettings, error)
 }
 
 type aIServiceClient struct {
@@ -333,6 +348,56 @@ func (c *aIServiceClient) StopChat(ctx context.Context, in *StopChatRequest, opt
 	return out, nil
 }
 
+func (c *aIServiceClient) GetSessionStats(ctx context.Context, in *GetSessionStatsRequest, opts ...grpc.CallOption) (*SessionStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionStats)
+	err := c.cc.Invoke(ctx, AIService_GetSessionStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) ListSessionStats(ctx context.Context, in *ListSessionStatsRequest, opts ...grpc.CallOption) (*ListSessionStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSessionStatsResponse)
+	err := c.cc.Invoke(ctx, AIService_ListSessionStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) GetCostStats(ctx context.Context, in *GetCostStatsRequest, opts ...grpc.CallOption) (*CostStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CostStats)
+	err := c.cc.Invoke(ctx, AIService_GetCostStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) GetUserCostSettings(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserCostSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserCostSettings)
+	err := c.cc.Invoke(ctx, AIService_GetUserCostSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) SetUserCostSettings(ctx context.Context, in *SetUserCostSettingsRequest, opts ...grpc.CallOption) (*UserCostSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserCostSettings)
+	err := c.cc.Invoke(ctx, AIService_SetUserCostSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AIServiceServer is the server API for AIService service.
 // All implementations must embed UnimplementedAIServiceServer
 // for forward compatibility.
@@ -383,6 +448,16 @@ type AIServiceServer interface {
 	ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error)
+	// GetSessionStats retrieves statistics for a specific session.
+	GetSessionStats(context.Context, *GetSessionStatsRequest) (*SessionStats, error)
+	// ListSessionStats retrieves session statistics with pagination.
+	ListSessionStats(context.Context, *ListSessionStatsRequest) (*ListSessionStatsResponse, error)
+	// GetCostStats retrieves aggregated cost statistics for the user.
+	GetCostStats(context.Context, *GetCostStatsRequest) (*CostStats, error)
+	// GetUserCostSettings retrieves user-specific cost control settings.
+	GetUserCostSettings(context.Context, *emptypb.Empty) (*UserCostSettings, error)
+	// SetUserCostSettings updates user-specific cost control settings.
+	SetUserCostSettings(context.Context, *SetUserCostSettingsRequest) (*UserCostSettings, error)
 	mustEmbedUnimplementedAIServiceServer()
 }
 
@@ -458,6 +533,21 @@ func (UnimplementedAIServiceServer) ClearConversationMessages(context.Context, *
 }
 func (UnimplementedAIServiceServer) StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopChat not implemented")
+}
+func (UnimplementedAIServiceServer) GetSessionStats(context.Context, *GetSessionStatsRequest) (*SessionStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSessionStats not implemented")
+}
+func (UnimplementedAIServiceServer) ListSessionStats(context.Context, *ListSessionStatsRequest) (*ListSessionStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSessionStats not implemented")
+}
+func (UnimplementedAIServiceServer) GetCostStats(context.Context, *GetCostStatsRequest) (*CostStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCostStats not implemented")
+}
+func (UnimplementedAIServiceServer) GetUserCostSettings(context.Context, *emptypb.Empty) (*UserCostSettings, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserCostSettings not implemented")
+}
+func (UnimplementedAIServiceServer) SetUserCostSettings(context.Context, *SetUserCostSettingsRequest) (*UserCostSettings, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetUserCostSettings not implemented")
 }
 func (UnimplementedAIServiceServer) mustEmbedUnimplementedAIServiceServer() {}
 func (UnimplementedAIServiceServer) testEmbeddedByValue()                   {}
@@ -869,6 +959,96 @@ func _AIService_StopChat_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_GetSessionStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).GetSessionStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_GetSessionStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).GetSessionStats(ctx, req.(*GetSessionStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_ListSessionStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSessionStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).ListSessionStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_ListSessionStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).ListSessionStats(ctx, req.(*ListSessionStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_GetCostStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCostStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).GetCostStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_GetCostStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).GetCostStats(ctx, req.(*GetCostStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_GetUserCostSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).GetUserCostSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_GetUserCostSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).GetUserCostSettings(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_SetUserCostSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserCostSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).SetUserCostSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_SetUserCostSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).SetUserCostSettings(ctx, req.(*SetUserCostSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AIService_ServiceDesc is the grpc.ServiceDesc for AIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -959,6 +1139,26 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StopChat",
 			Handler:    _AIService_StopChat_Handler,
+		},
+		{
+			MethodName: "GetSessionStats",
+			Handler:    _AIService_GetSessionStats_Handler,
+		},
+		{
+			MethodName: "ListSessionStats",
+			Handler:    _AIService_ListSessionStats_Handler,
+		},
+		{
+			MethodName: "GetCostStats",
+			Handler:    _AIService_GetCostStats_Handler,
+		},
+		{
+			MethodName: "GetUserCostSettings",
+			Handler:    _AIService_GetUserCostSettings_Handler,
+		},
+		{
+			MethodName: "SetUserCostSettings",
+			Handler:    _AIService_SetUserCostSettings_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
