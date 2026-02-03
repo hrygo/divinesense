@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import { polyfillsPlugin } from "./vite-plugin-polyfills";
+import { visualizer } from "rollup-plugin-visualizer";
 
 let devProxyServer = "http://localhost:28081";
 if (process.env.DEV_PROXY_SERVER && process.env.DEV_PROXY_SERVER.length > 0) {
@@ -11,9 +12,20 @@ if (process.env.DEV_PROXY_SERVER && process.env.DEV_PROXY_SERVER.length > 0) {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [polyfillsPlugin(), react(), tailwindcss()],
-  server: {
+export default defineConfig(({ mode }) => {
+  return {
+    plugins: [
+      polyfillsPlugin(),
+      react(),
+      tailwindcss(),
+      // Bundle analyzer for production builds (optional)
+      mode === 'production' && visualizer({
+        filename: './dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+      }),
+    ].filter(Boolean),
+    server: {
     host: "0.0.0.0",
     port: 25173,
     proxy: {
@@ -38,6 +50,14 @@ export default defineConfig({
   },
   build: {
     target: "es2020", // Modern browsers: Chrome 80+, Safari 13.1+, Firefox 72+
+    // Remove console.log in production builds
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       output: {
         // Sanitize chunk names to avoid leading underscores (Go embed ignores them)
@@ -84,4 +104,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['core-js/actual', 'cytoscape', 'lodash-es', 'fuse.js', 'dayjs'],
   },
+  };
 });

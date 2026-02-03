@@ -513,12 +513,21 @@ func (h *ParrotHandler) executeAgent(
 	// Build session summary with available data
 	// 使用可用数据构建会话摘要
 	sessionSummary := &v1pb.SessionSummary{
-		SessionId:       fmt.Sprintf("conv_%d", req.ConversationID),
 		TotalDurationMs: sessionTotalDuration,
 		Status:          status,
 		ToolCallCount:   finalToolCallCount,
 		ToolsUsed:       finalToolsUsed,
 		TotalCostUsd:    totalCostUsd,
+	}
+
+	// Set SessionId from detailedStats (Geek/Evolution modes use real UUID session IDs)
+	// If no detailed stats available, fall back to conversation ID format for backward compatibility
+	// 从 detailedStats 设置 SessionId（Geek/Evolution 模式使用真实的 UUID session ID）
+	// 如果没有详细统计数据，回退到 conversation ID 格式以保持向后兼容
+	if detailedStats != nil && detailedStats.SessionID != "" {
+		sessionSummary.SessionId = detailedStats.SessionID
+	} else {
+		sessionSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
 	}
 
 	// Set mode based on request parameters

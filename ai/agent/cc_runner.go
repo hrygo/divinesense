@@ -781,7 +781,6 @@ func (r *CCRunner) executeWithSession(
 
 	// Stream output with timeout
 	// 带超时流式输出
-	r.logger.Info("CCRunner: streamOutput starting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats, stderrBuf); err != nil {
 		r.logger.Error("CCRunner: streamOutput failed", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", err)
 		if cmd.Process != nil {
@@ -793,11 +792,9 @@ func (r *CCRunner) executeWithSession(
 		}
 		return err
 	}
-	r.logger.Info("CCRunner: streamOutput completed successfully", "mode", cfg.Mode, "session_id", cfg.SessionID)
 
 	// Wait for command completion
 	// 等待命令完成
-	r.logger.Info("CCRunner: waiting for CLI process to exit", "mode", cfg.Mode, "session_id", cfg.SessionID)
 	waitErr := cmd.Wait()
 	if waitErr != nil {
 		r.logger.Error("CCRunner: CLI process exited with error",
@@ -818,10 +815,6 @@ func (r *CCRunner) executeWithSession(
 		}
 		return fmt.Errorf("command exited with code %d: %w", exitCode, waitErr)
 	}
-
-	r.logger.Info("CCRunner: CLI process exited successfully",
-		"mode", cfg.Mode,
-		"session_id", cfg.SessionID)
 
 	return nil
 }
@@ -898,17 +891,12 @@ func (r *CCRunner) streamOutput(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer r.logger.Info("CCRunner: stdout goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 		scanner := bufio.NewScanner(stdout)
 		buf := make([]byte, 0, scannerInitialBufSize)
 		scanner.Buffer(buf, scannerMaxBufSize)
 
 		scanDone := make(chan bool)
 		go func() {
-			r.logger.Info("CCRunner: scanner loop started",
-				"mode", cfg.Mode,
-				"session_id", cfg.SessionID)
-
 			lineCount := 0
 			lastValidDataTime := time.Now() // Track last time we received valid data
 
@@ -948,17 +936,6 @@ func (r *CCRunner) streamOutput(
 				// Update last activity time when we receive non-empty line
 				lastValidDataTime = time.Now()
 
-				// Log raw line for debugging (truncate if too long)
-				logLine := line
-				if len(logLine) > 200 {
-					logLine = logLine[:200] + "..."
-				}
-				// Use Info level for visibility in production
-				r.logger.Info("CCRunner: raw line",
-					"mode", cfg.Mode,
-					"line_number", lineCount,
-					"line", logLine)
-
 				var msg StreamMessage
 				if err := json.Unmarshal([]byte(line), &msg); err != nil {
 					// Not JSON, treat as plain text
@@ -974,22 +951,9 @@ func (r *CCRunner) streamOutput(
 					continue
 				}
 
-				// Log message type for debugging (Info level for production visibility)
-				r.logger.Info("CCRunner: received message",
-					"mode", cfg.Mode,
-					"line_number", lineCount,
-					"type", msg.Type,
-					"name", msg.Name,
-					"has_output", msg.Output != "",
-					"has_error", msg.Error != "")
-
 				// Handle result message - extract and send session statistics
 				if msg.Type == "result" {
 					r.handleResultMessage(msg, stats, cfg, callback)
-					r.logger.Info("CCRunner: completion message received, ending scanner loop",
-						"mode", cfg.Mode,
-						"type", msg.Type,
-						"total_lines", lineCount)
 					break // break loop instead of return - let scanDone be sent
 				}
 
@@ -1014,27 +978,15 @@ func (r *CCRunner) streamOutput(
 
 				// Check for error completion
 				if msg.Type == "error" {
-					r.logger.Info("CCRunner: error completion message received, ending scanner loop",
-						"mode", cfg.Mode,
-						"total_lines", lineCount)
 					break // break loop instead of return - let scanDone be sent
 				}
 			}
 			scanDone <- true
-			r.logger.Info("CCRunner: scanner loop ended",
-				"mode", cfg.Mode,
-				"total_lines", lineCount)
 		}()
 
 		// Wait for scan to complete or context to be cancelled
-		r.logger.Info("CCRunner: waiting for scanDone or streamCtx.Done()",
-			"mode", cfg.Mode,
-			"session_id", cfg.SessionID)
 		select {
 		case <-scanDone:
-			r.logger.Info("CCRunner: scanDone received, stdout scan completed",
-				"mode", cfg.Mode,
-				"session_id", cfg.SessionID)
 			if scanErr := scanner.Err(); scanErr != nil {
 				r.logger.Error("CCRunner: scanner error",
 					"mode", cfg.Mode,
@@ -1069,7 +1021,6 @@ func (r *CCRunner) streamOutput(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer r.logger.Info("CCRunner: stderr goroutine exiting", "mode", cfg.Mode, "session_id", cfg.SessionID)
 
 		// Sample stderr output (10% rate) for logs, capture all for error context.
 		// 对 stderr 进行采样记录到日志，同时捕获所有内容用于错误上下文。
@@ -1088,10 +1039,6 @@ func (r *CCRunner) streamOutput(
 					"line", line)
 			}
 		}
-		r.logger.Info("CCRunner: stderr processing complete",
-			"mode", cfg.Mode,
-			"session_id", cfg.SessionID,
-			"total_lines", stderrBuf.lineCount)
 	}()
 
 	// Wait for completion or timeout
@@ -1275,7 +1222,6 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 					TotalDurationMs: totalDuration,
 					InputSummary:    summarizeInput(block.Input),
 				}
-				r.logger.Info("CCRunner: found nested tool_use", "tool_name", block.Name, "id", block.ID)
 				if err := callback(EventTypeToolUse, &EventWithMeta{EventType: EventTypeToolUse, EventData: block.Name, Meta: meta}); err != nil {
 					return err
 				}
@@ -1293,7 +1239,6 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 					TotalDurationMs: totalDuration,
 					OutputSummary:   truncateString(block.Content, 500),
 				}
-				r.logger.Info("CCRunner: found nested tool_result", "content_length", len(block.Content), "duration_ms", durationMs)
 				if err := callback(EventTypeToolResult, &EventWithMeta{EventType: EventTypeToolResult, EventData: block.Content, Meta: meta}); err != nil {
 					return err
 				}
@@ -1333,9 +1278,6 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 	// Update final duration from CLI report
 	if msg.Duration > 0 {
 		stats.TotalDurationMs = int64(msg.Duration)
-		r.logger.Info("CCRunner: handleResultMessage updated TotalDurationMs from CLI",
-			"duration_ms", msg.Duration,
-			"total_duration_ms", stats.TotalDurationMs)
 	}
 
 	// Update token usage from CLI report
@@ -1344,13 +1286,6 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		stats.OutputTokens = msg.Usage.OutputTokens
 		stats.CacheWriteTokens = msg.Usage.CacheWriteInputTokens
 		stats.CacheReadTokens = msg.Usage.CacheReadInputTokens
-		// Log all token fields for debugging cache_read > input anomaly
-		r.logger.Info("CCRunner: handleResultMessage updated token usage from CLI",
-			"input_tokens", stats.InputTokens,
-			"output_tokens", stats.OutputTokens,
-			"cache_write_tokens", stats.CacheWriteTokens,
-			"cache_read_tokens", stats.CacheReadTokens,
-			"cache_read_gt_input", stats.CacheReadTokens > stats.InputTokens)
 	}
 
 	// Collect tools used (convert map to slice)
