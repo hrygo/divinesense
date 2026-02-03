@@ -39,6 +39,8 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [webhookInfo, setWebhookInfo] = useState<{ webhook_url: string; setup_instructions: string } | null>(null);
+
   // Form state
   const [newPlatform, setNewPlatform] = useState<Platform>(Platform.TELEGRAM);
   const [newPlatformUserId, setNewPlatformUserId] = useState("");
@@ -75,7 +77,7 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
 
   // Register credential
   const handleRegister = async () => {
-    if (!newPlatformUserId || !newAccessToken) {
+    if (!newPlatformUserId || (!newAccessToken && newPlatform !== Platform.WHATSAPP)) {
       setErrorMessage(t("setting.chat-apps.validation-error"));
       return;
     }
@@ -186,7 +188,10 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
       }
 
       const data = await response.json();
-      alert(`${t("setting.chat-apps.webhook-url")}: ${data.webhook_url}`);
+      setWebhookInfo({
+        webhook_url: data.webhook_url,
+        setup_instructions: data.setup_instructions,
+      });
     } catch (error) {
       console.error("Failed to get webhook info:", error);
     }
@@ -298,9 +303,9 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
 
             {/* Access Token */}
             <div className="space-y-2">
-              <Label htmlFor="accessToken">{
-                 newPlatform === Platform.WHATSAPP ? "Bridge API Key (Optional)" : t("setting.chat-apps.access-token")
-              }</Label>
+              <Label htmlFor="accessToken">
+                {newPlatform === Platform.WHATSAPP ? "Bridge API Key (Optional)" : t("setting.chat-apps.access-token")}
+              </Label>
               <Input
                 id="accessToken"
                 type="password"
@@ -318,17 +323,17 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
             {/* Webhook URL (WhatsApp and DingTalk) */}
             {(newPlatform === Platform.DINGTALK || newPlatform === Platform.WHATSAPP) && (
               <div className="space-y-2">
-                <Label htmlFor="webhookUrl">{
-                    newPlatform === Platform.WHATSAPP ? "Bridge URL" : t("setting.chat-apps.webhook-url")
-                }</Label>
+                <Label htmlFor="webhookUrl">{newPlatform === Platform.WHATSAPP ? "Bridge URL" : t("setting.chat-apps.webhook-url")}</Label>
                 <Input
                   id="webhookUrl"
                   value={newWebhookUrl}
                   onChange={(e) => setNewWebhookUrl(e.target.value)}
-                  placeholder={newPlatform === Platform.WHATSAPP ? "http://localhost:3001" : "https://oapi.dingtalk.com/robot/send?access_token=..."}
+                  placeholder={
+                    newPlatform === Platform.WHATSAPP ? "http://localhost:3001" : "https://oapi.dingtalk.com/robot/send?access_token=..."
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
-                    {newPlatform === Platform.WHATSAPP ? "URL of the Baileys Bridge service" : t("setting.chat-apps.dingtalk-webhook-hint")}
+                  {newPlatform === Platform.WHATSAPP ? "URL of the Baileys Bridge service" : t("setting.chat-apps.dingtalk-webhook-hint")}
                 </p>
               </div>
             )}
@@ -353,32 +358,34 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
             <DialogTitle>{t("setting.chat-apps.webhook-info")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-             {webhookInfo && (
-                 <>
-                    <div className="space-y-2">
-                        <Label>Webhook URL</Label>
-                        <div className="flex gap-2">
-                            <Input readOnly value={webhookInfo.webhook_url} />
-                            <Button variant="outline" size="icon" onClick={() => {
-                                navigator.clipboard.writeText(webhookInfo.webhook_url);
-                            }}>
-                                <CheckIcon className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </div>
-                    {webhookInfo.setup_instructions && (
-                        <div className="space-y-2">
-                            <Label>Instructions</Label>
-                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
-                                {webhookInfo.setup_instructions}
-                            </pre>
-                        </div>
-                    )}
-                 </>
-             )}
+            {webhookInfo && (
+              <>
+                <div className="space-y-2">
+                  <Label>Webhook URL</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={webhookInfo.webhook_url} />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhookInfo.webhook_url);
+                      }}
+                    >
+                      <CheckIcon className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {webhookInfo.setup_instructions && (
+                  <div className="space-y-2">
+                    <Label>Instructions</Label>
+                    <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">{webhookInfo.setup_instructions}</pre>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
-             <Button onClick={() => setWebhookInfo(null)}>{t("common.close")}</Button>
+            <Button onClick={() => setWebhookInfo(null)}>{t("common.close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
