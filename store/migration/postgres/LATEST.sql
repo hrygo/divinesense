@@ -281,7 +281,7 @@ CREATE TRIGGER trigger_ai_conversation_updated_ts
 CREATE TABLE agent_session_stats (
     id BIGSERIAL PRIMARY KEY,
     session_id VARCHAR(64) NOT NULL UNIQUE,
-    conversation_id BIGINT NOT NULL,
+    conversation_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     agent_type VARCHAR(20) NOT NULL,
     started_at TIMESTAMPTZ NOT NULL,
@@ -314,6 +314,8 @@ CREATE INDEX idx_session_stats_user_date ON agent_session_stats(user_id, started
 CREATE INDEX idx_session_stats_conv ON agent_session_stats(conversation_id);
 CREATE INDEX idx_session_stats_agent ON agent_session_stats(agent_type, started_at DESC);
 CREATE INDEX idx_session_stats_cost ON agent_session_stats(total_cost_usd) WHERE total_cost_usd > 0;
+-- Partial index for successful sessions (is_error=false) - optimizes cost queries
+CREATE INDEX idx_session_stats_user_success ON agent_session_stats(user_id, started_at DESC) WHERE is_error = false;
 
 CREATE OR REPLACE FUNCTION update_agent_session_stats_updated_at()
 RETURNS TRIGGER AS $$

@@ -23,8 +23,7 @@ CREATE TABLE user_cost_settings (
     CONSTRAINT fk_cost_settings_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
 );
 
--- Index for user queries
-CREATE INDEX idx_cost_settings_user ON user_cost_settings(user_id);
+-- Note: No separate index needed on user_id - UNIQUE constraint provides automatic indexing
 
 -- Trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_user_cost_settings_updated_at()

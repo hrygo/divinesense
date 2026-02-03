@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"database/sql"
@@ -278,7 +280,14 @@ func (d *DB) GetCostStats(ctx context.Context, userID int32, days int) (*store.C
 	// Get most expensive session
 	var mostExpensive *store.AgentSessionStats
 	if maxCost > 0 {
-		mostExpensive, _ = d.GetMostExpensiveSession(ctx, userID, startDate)
+		var err error
+		mostExpensive, err = d.GetMostExpensiveSession(ctx, userID, startDate)
+		if err != nil {
+			// Log but don't fail - mostExpensive will be nil
+			slog.Warn("Failed to get most expensive session for cost stats",
+				"user_id", userID,
+				"error", err)
+		}
 	}
 
 	// Get daily breakdown
@@ -619,6 +628,7 @@ func (d *DB) ListSecurityEventsByRisk(ctx context.Context, userID int32, riskLev
 }
 
 // parseStringArray parses a JSONB array of strings from PostgreSQL.
+// Uses strings.Builder for O(n) performance instead of O(n²) concatenation.
 func parseStringArray(data []byte) []string {
 	if len(data) == 0 || string(data) == "null" {
 		return nil
@@ -634,7 +644,7 @@ func parseStringArray(data []byte) []string {
 	// Simple JSON array parsing
 	str = str[1 : len(str)-1] // Remove [ ]
 	var result []string
-	current := ""
+	var builder strings.Builder
 	inQuotes := false
 
 	for _, c := range str {
@@ -643,21 +653,21 @@ func parseStringArray(data []byte) []string {
 			inQuotes = !inQuotes
 		case ',':
 			if inQuotes {
-				current += string(c)
+				builder.WriteRune(c)
 			} else {
-				result = append(result, current)
-				current = ""
+				result = append(result, builder.String())
+				builder.Reset()
 			}
 		case ' ', '\t', '\n':
 			if inQuotes {
-				current += string(c)
+				builder.WriteRune(c)
 			}
 		default:
-			current += string(c)
+			builder.WriteRune(c)
 		}
 	}
-	if current != "" {
-		result = append(result, current)
+	if builder.Len() > 0 {
+		result = append(result, builder.String())
 	}
 
 	return result
