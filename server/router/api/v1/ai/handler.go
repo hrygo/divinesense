@@ -470,8 +470,8 @@ func (h *ParrotHandler) executeAgent(
 	}()
 
 	// Execute agent
+	defer close(heartbeatDone) // Ensure heartbeat stops even on panic
 	execErr := agent.ExecuteWithCallback(ctx, req.Message, req.History, callback)
-	close(heartbeatDone) // Stop heartbeat immediately after execution finishes
 	if execErr != nil {
 		logger.Error("Agent execution failed", execErr)
 		// Don't return here, continue to send session summary

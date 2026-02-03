@@ -100,6 +100,11 @@ func (s *AIService) ListSessionStats(ctx context.Context, req *v1pb.ListSessionS
 	if offset < 0 {
 		offset = 0
 	}
+	// Prevent unbounded offset queries
+	const maxOffset = 10000
+	if offset > maxOffset {
+		offset = maxOffset
+	}
 
 	// Get session stats from store
 	sessions, total, err := s.Store.AgentStatsStore.ListSessionStats(ctx, userID, int(limit), int(offset))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
@@ -43,6 +44,27 @@ type AIService struct {
 	chatEventBusMu           sync.RWMutex
 	contextBuilderMu         sync.RWMutex
 	conversationSummarizerMu sync.RWMutex
+	mu                       sync.RWMutex
+}
+
+// Close gracefully shuts down the AI service, including the persister.
+func (s *AIService) Close(timeout time.Duration) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var errs []error
+
+	if s.persister != nil {
+		if err := s.persister.Close(timeout); err != nil {
+			errs = append(errs, fmt.Errorf("persister close failed: %w", err))
+		}
+		s.persister = nil
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("AIService close errors: %v", errs)
+	}
+	return nil
 }
 
 // IsEnabled returns whether AI features are enabled.
