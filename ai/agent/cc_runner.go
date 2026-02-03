@@ -889,6 +889,9 @@ func (r *CCRunner) streamOutput(
 				case <-streamCtx.Done():
 				}
 			}
+			// stdout scan completed - signal stderr goroutine to stop
+			// This prevents deadlock where stderr goroutine waits forever
+			stopStreams()
 		case <-streamCtx.Done():
 			// Force close pipes to interrupt any blocked scanner
 			// This prevents goroutine leak when scanner is blocked on I/O
