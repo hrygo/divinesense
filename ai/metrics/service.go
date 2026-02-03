@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/hrygo/divinesense/store"
@@ -140,7 +141,8 @@ func (s *Service) GetStats(ctx context.Context, timeRange TimeRange) (*AgentMetr
 		totalReqs := agentStat.Count
 		if totalReqs > 0 {
 			// Recalculate success rate based on combined totals
-			memSuccess := int64(agentStat.SuccessRate * float32(agentStat.Count-agg.totalRequests))
+			// Use Round to avoid floating point precision loss
+			memSuccess := int64(math.Round(float64(agentStat.SuccessRate) * float64(agentStat.Count-agg.totalRequests)))
 			agentStat.SuccessRate = float32(memSuccess+agg.totalSuccess) / float32(totalReqs)
 			// Average latency from DB only (memory stats have their own calculation)
 			if agg.latencySum > 0 && agg.totalRequests > 0 {

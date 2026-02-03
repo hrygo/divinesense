@@ -205,7 +205,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 			if callback != nil {
 				// Simulate streaming by sending chunks of the response
 				// This provides better UX without the overhead of another LLM call
-				chunkSize := 20 // Send in chunks of 20 characters for streaming feel
+				chunkSize := 80 // Send in chunks of 80 characters for streaming feel
 				runes := []rune(response)
 				for i := 0; i < len(runes); i += chunkSize {
 					end := i + chunkSize

@@ -98,7 +98,7 @@ func (r *ChatRouter) Route(ctx context.Context, input string) (*ChatRouteResult,
 
 	// Step 2: Try rule-based matching (fast path, for backward compatibility)
 	if result := r.routeByRules(input); result != nil {
-		slog.Debug("chat routed by rules",
+		slog.Info("chat routed by rules",
 			"input", truncateString(input, 30),
 			"route", result.Route,
 			"confidence", result.Confidence)
@@ -108,9 +108,10 @@ func (r *ChatRouter) Route(ctx context.Context, input string) (*ChatRouteResult,
 	// Step 3: Use LLM for uncertain cases
 	result, err := r.routeByLLM(ctx, input)
 	if err != nil {
-		slog.Warn("LLM routing failed, defaulting to amazing",
+		slog.Error("LLM routing failed, defaulting to amazing",
 			"error", err,
-			"input", truncateString(input, 30))
+			"input", truncateString(input, 100),
+			"model", r.model)
 		return &ChatRouteResult{
 			Route:      RouteTypeAmazing,
 			Confidence: 0.5,

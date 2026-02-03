@@ -689,13 +689,15 @@ func (r *CCRunner) executeWithSession(
 	if err != nil {
 		return fmt.Errorf("stdout pipe: %w", err)
 	}
-	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on error path
+	defer stdout.Close() //nolint:errcheck // cleanup on error path
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		// Close stdout immediately since we won't reach the normal defer
+		_ = stdout.Close() //nolint:errcheck // cleanup on error path
 		return fmt.Errorf("stderr pipe: %w", err)
 	}
-	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on error path
+	defer stderr.Close() //nolint:errcheck // cleanup on error path
 
 	// Start command
 	// 启动命令
@@ -857,7 +859,18 @@ func (r *CCRunner) streamOutput(
 				}
 			}
 		case <-streamCtx.Done():
-			// Scanner will be interrupted when stdout is closed externally
+			// Force close pipes to interrupt any blocked scanner
+			// This prevents goroutine leak when scanner is blocked on I/O
+			_ = stdout.Close() //nolint:errcheck // force close to unblock scanner
+			_ = stderr.Close() //nolint:errcheck // force close to unblock scanner
+			// Wait for scanner to exit (with timeout to prevent indefinite blocking)
+			select {
+			case <-scanDone:
+			case <-time.After(1 * time.Second):
+				r.logger.Warn("CCRunner: scanner did not exit after pipe close",
+					"mode", cfg.Mode,
+					"session_id", cfg.SessionID)
+			}
 		}
 	}()
 

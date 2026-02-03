@@ -17,6 +17,21 @@ import (
 	"github.com/hrygo/divinesense/server/service/schedule"
 )
 
+// Constants for AmazingParrot configuration.
+const (
+	// concurrentRetrievalTimeout is the maximum time to wait for concurrent retrievals.
+	concurrentRetrievalTimeout = 45 * time.Second
+
+	// uiPreviewCardLimit is the maximum number of preview cards to send for UI rendering.
+	uiPreviewCardLimit = 5
+
+	// casualChatShortThreshold is the character length below which input is considered casual chat.
+	casualChatShortThreshold = 30
+
+	// casualChatModerateThreshold is the character length below which non-search input is considered casual.
+	casualChatModerateThreshold = 100
+)
+
 // AmazingParrot is the comprehensive assistant parrot (🦜 折衷).
 // AmazingParrot 是综合助手鹦鹉（🦜 折衷）。
 // It combines memo and schedule capabilities for integrated assistance.
@@ -338,7 +353,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				if len(structuredResult.Memos) > 0 {
 					// Create memo preview cards for each result
 					for i, m := range structuredResult.Memos {
-						if i >= 5 { // Limit to 5 cards to avoid overwhelming UI
+						if i >= uiPreviewCardLimit { // Limit to avoid overwhelming UI
 							break
 						}
 						memoPreview := UIMemoPreviewData{
@@ -521,11 +536,14 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 	case <-ctx.Done():
 		// Context cancelled, but goroutines may still be running
 		// Return partial results instead of waiting forever
+		mu.Lock()
+		partialResults := len(results)
+		mu.Unlock()
 		slog.Warn("amazing_parrot: concurrent retrieval context cancelled",
-			"partial_results", len(results))
-	case <-time.After(45 * time.Second): // Increase timeout for write operations
+			"partial_results", partialResults)
+	case <-time.After(concurrentRetrievalTimeout):
 		// Hard timeout: something is stuck
-		return nil, fmt.Errorf("concurrent retrieval hard timeout after 45s")
+		return nil, fmt.Errorf("concurrent retrieval hard timeout after %ds", concurrentRetrievalTimeout/time.Second)
 	}
 
 	// If all tools failed, return an error
@@ -708,8 +726,8 @@ func (p *AmazingParrot) parseRetrievalPlan(response string, userInput string, no
 // isCasualChatInput detects if the input looks like casual chat that doesn't need retrieval.
 // This helps avoid unnecessary memo searches for conversational inputs.
 func (p *AmazingParrot) isCasualChatInput(input string) bool {
-	// Very short responses (less than 30 chars) are likely casual
-	if len(input) < 30 {
+	// Very short responses are likely casual
+	if len(input) < casualChatShortThreshold {
 		return true
 	}
 
@@ -729,7 +747,7 @@ func (p *AmazingParrot) isCasualChatInput(input string) bool {
 	}
 
 	// If input is moderately short and doesn't contain search keywords, treat as casual
-	return len(input) < 100
+	return len(input) < casualChatModerateThreshold
 }
 
 // buildPlanningPrompt builds the prompt for retrieval planning.

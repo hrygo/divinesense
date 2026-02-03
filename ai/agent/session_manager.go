@@ -417,7 +417,15 @@ func (s *Session) WriteInput(msg map[string]any) error {
 	// Reset existing timer if any (prevents goroutine accumulation)
 	// 重置现有定时器（防止 goroutine 累积）
 	if s.statusResetTimer != nil {
-		s.statusResetTimer.Stop()
+		// Check if timer was already stopped/fired
+		if !s.statusResetTimer.Stop() {
+			// Timer already fired, wait a moment for callback to complete
+			// This prevents race condition where old callback interferes with new state
+			select {
+			case <-time.After(10 * time.Millisecond):
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
 	}
 
 	// Schedule status recovery to Ready after a short delay
