@@ -56,6 +56,16 @@ All notable changes to this project will be documented in this file.
 - SQL injection fix in getDailyCostBreakdown (parameterized query)
 - rows.Err() checks after all QueryContext iterations
 - Proper sql.ErrNoRows vs actual error distinction
+- MaxOffset limit (10000) to prevent unbounded pagination
+
+#### Performance Optimizations
+- parseStringArray: O(n) performance using strings.Builder
+- Partial index `idx_session_stats_user_success` for is_error=false queries
+- Removed redundant index on user_cost_settings.user_id
+
+#### Database Improvements
+- conversation_id type: INTEGER (matches ai_conversation.id, was BIGINT)
+- Constraint name standardized: chk_agent_session_stats_type
 
 #### Documentation
 - CC Runner optimization plan specification
