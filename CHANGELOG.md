@@ -23,12 +23,12 @@ All notable changes to this project will be documented in this file.
 - 仅当与上一条消息间隔 > 3 分钟时显示
 - 灰色胶囊样式 (bg-muted/50)
 
-#### 6 个鹦鹉主题
+#### 5 个鹦鹉主题
 - **MEMO** (灰灰): slate-800
 - **SCHEDULE** (时巧): cyan-600
 - **AMAZING** (折衷): emerald-600
-- **GEEK** (极客): violet-600
-- **EVOLUTION** (进化): rose-600
+- **GEEK** (极客): violet-600 ← 新增
+- **EVOLUTION** (进化): rose-600 ← 新增
 
 ### 🔧 构建优化
 - Vite 生产构建自动移除 console.log (terser drop_console)
