@@ -5,8 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
+import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import MessageActions from "@/components/AIChat/MessageActions";
-import { SessionSummaryPanel } from "@/components/AIChat/SessionSummaryPanel";
 import { InlineToolCall } from "@/components/AIChat/ToolCallCard";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
@@ -296,7 +296,7 @@ const ChatMessages = memo(function ChatMessages({
               {/* Spacer for avatar alignment */}
               <div className="w-9 h-9 md:w-10 md:h-10 shrink-0 invisible" />
               <div className="flex-1 min-w-0">
-                <SessionSummaryPanel summary={sessionSummary} />
+                <ExpandedSessionSummary summary={sessionSummary} />
               </div>
             </div>
           )}

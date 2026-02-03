@@ -12,7 +12,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 项目根目录
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# 项目根目录
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT_DIR"
 
 # PID 文件目录
@@ -283,13 +284,30 @@ verify_backend_process() {
     # macOS 不支持 ps -o cwd，使用 lsof 代替
     local cwd=$(lsof -p "$pid" 2>/dev/null | grep cwd | awk '{print $NF}' | tr -d ' ')
 
-    # 安全验证：必须同时满足以下条件
-    # 1. 命令行包含 divinesense 特征（精确匹配）
-    # 2. 进程的工作目录是当前项目目录
+    # 调试信息 (如果需要调试打开注释)
+    # echo "Debug verify_backend: PID=$pid CWD=$cwd ROOT=$ROOT_DIR CMD=$cmdline" >> "$LOG_DIR/debug.lock"
+
+    # 策略 1: 严格匹配 - CWD 匹配且命令行包含特征
     if [ -n "$cmdline" ] && [ "$cwd" = "$ROOT_DIR" ]; then
-        # 精确匹配：确保是我们启动的后端进程
         if echo "$cmdline" | grep -qE "(go run.*cmd/divinesense|divinesense.*--mode dev|divinesense.*--port $BACKEND_PORT)"; then
             return 0
+        fi
+    fi
+
+    # 策略 2: 宽松匹配 - 针对 go run 产生的临时二进制文件 (CWD 可能不匹配)
+    if [ -n "$cmdline" ]; then
+        # 必须满足以下强特征之一，防止误杀：
+        
+        # 特征 A: 命令行包含项目名 "divinesense" 且包含开发模式参数 "--mode dev"
+        # (覆盖 go run 产生的 /tmp/.../exe/divinesense --mode dev ... 情况)
+        if echo "$cmdline" | grep -q "divinesense" && echo "$cmdline" | grep -q "\-\-mode dev"; then
+             return 0
+        fi
+        
+        # 特征 B: 命令行包含端口参数 且 包含开发模式参数
+        # (覆盖二进制文件名不含 divinesense 但参数完全匹配的情况)
+        if echo "$cmdline" | grep -q "\-\-port $BACKEND_PORT" && echo "$cmdline" | grep -q "\-\-mode dev"; then
+             return 0
         fi
     fi
 
@@ -336,8 +354,11 @@ stop_backend() {
                     fi
                     log_success "已清理端口 $BACKEND_PORT 的 divinesense 进程"
                 else
-                    log_warn "端口 $BACKEND_PORT 被其他进程占用 (PID: $port_pid)，跳过终止"
-                    log_warn "如需终止该进程，请手动执行: kill $port_pid"
+                    log_warn "端口 $BACKEND_PORT 被其他进程占用 (PID: $port_pid)"
+                    local proc_cmd=$(ps -p "$port_pid" -o command=)
+                    log_warn "  Command: $proc_cmd" 
+                    log_warn "  (未匹配到 divinesense 特征，为防止误杀，跳过处理)"
+                    log_warn "  如需终止该进程，请手动执行: kill $port_pid"
                 fi
             done
         fi
@@ -360,14 +381,22 @@ verify_frontend_process() {
     local cmdline=$(ps -p "$pid" -o command= 2>/dev/null)
     # macOS 不支持 ps -o cwd，使用 lsof 代替
     local cwd=$(lsof -p "$pid" 2>/dev/null | grep cwd | awk '{print $NF}' | tr -d ' ')
-
-    # 安全验证：必须同时满足以下条件
-    # 1. 命令行包含前端开发服务器特征
-    # 2. 进程的工作目录是项目 web 目录
     local web_dir="$ROOT_DIR/web"
+    
+    # Debug info
+    # echo "Debug verify_frontend: PID=$pid CWD=$cwd WEB_DIR=$web_dir CMD=$cmdline" >> "$LOG_DIR/debug.lock"
+
+    # 策略 1: 严格匹配
     if [ -n "$cmdline" ] && [ "$cwd" = "$web_dir" ]; then
-        # 精确匹配：确保是我们启动的前端开发服务器
         if echo "$cmdline" | grep -qE "(pnpm dev|vite|node.*vite.*dev)"; then
+            return 0
+        fi
+    fi
+
+    # 策略 2: 宽松匹配 - 只要包含 vite/pnpm 且监听了端口 (caller logic ensures listening)
+    # 结合端口占用检查，这足够精准
+    if [ -n "$cmdline" ]; then
+        if echo "$cmdline" | grep -qE "(vite|pnpm)"; then
             return 0
         fi
     fi
