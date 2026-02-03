@@ -37,9 +37,10 @@ divinesense/
 
 | 功能模块     | 路径                              |
 | :----------- | :-------------------------------- |
-| **AI 代理**  | `plugin/ai/agent/`                |
-| **工具系统** | `plugin/ai/agent/tools/`         |
-| **意图路由** | `plugin/ai/agent/chat_router.go` |
+| **AI 代理**  | `ai/agent/`                |
+| **AI 核心**  | `ai/core/`                |
+| **工具系统** | `ai/agent/tools/`         |
+| **意图路由** | `ai/agent/chat_router.go` |
 | **笔记服务** | `server/service/memo/`            |
 | **日程服务** | `server/service/schedule/`        |
 | **聊天服务** | `server/service/chat/`            |

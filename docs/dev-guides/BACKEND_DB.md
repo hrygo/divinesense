@@ -111,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyu
 |:-----|:-----|:-----|
 | Go 文件 | `snake_case.go` | `memo_embedding.go` |
 | 测试文件 | `*_test.go` | `memo_parrot_test.go` |
-| Go 包 | 简单小写 | `plugin/ai`（非 `plugin/ai_service`） |
+| Go 包 | 简单小写 | `ai`（例如 `ai/agent`，非 `ai_service`） |
 | 脚本 | `kebab-case.sh` | `dev.sh` |
 | 常量 | `PascalCase` | `DefaultCacheTTL` |
 
@@ -224,7 +224,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 ### AI 代理系统
 
-所有 AI 聊天逻辑通过 `plugin/ai/agent/` 中的 `ChatRouter` 路由：
+所有 AI 聊天逻辑通过 `ai/agent/` 中的 `ChatRouter` 路由：
 
 | 代理 | 文件 | 用途 | 工具 |
 |:-----|:-----|:-----|:-----|
@@ -248,7 +248,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 ### 检索系统
 
-位于 `server/retrieval/`：
+位于 `ai/core/retrieval/`：
 - 混合 BM25 + 向量搜索（`AdaptiveRetriever`）
 - 重排管道
 - 查询结果的 LRU 缓存层
@@ -321,11 +321,11 @@ CREATE TABLE agent_metrics (
 | `cmd/divinesense/` | 主程序入口 |
 | `server/router/api/v1/` | REST/Connect RPC API 处理器 |
 | `server/service/` | 业务逻辑层 |
-| `server/retrieval/` | 混合搜索（BM25 + 向量） |
+| `ai/core/retrieval/` | 混合搜索（BM25 + 向量） |
 | `server/queryengine/` | 查询分析和路由 |
-| `plugin/ai/agent/` | AI 代理（MemoParrot、ScheduleParrot、AmazingParrot） |
-| `plugin/ai/router/` | 三层意图路由 |
-| `plugin/ai/vector/` | Embedding 服务 |
+| `ai/agent/` | AI 代理（MemoParrot、ScheduleParrot、AmazingParrot） |
+| `ai/router/` | 三层意图路由 |
+| `ai/vector/` | Embedding 服务 |
 | `store/` | 数据访问层接口 |
 | `store/db/postgres/` | PostgreSQL 实现 |
 | `store/migration/postgres/` | 数据库迁移 |

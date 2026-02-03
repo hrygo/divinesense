@@ -65,7 +65,7 @@ make migration-up
 make logs | grep -i parrot
 
 # 单独运行测试
-go test -v ./server/ai/parrot/... -run TestYourCase
+go test -v ./ai/agent/... -run TestYourCase
 ```
 
 ---
