@@ -420,6 +420,44 @@ func encryptToken(plaintext, key []byte) (string, error) {
 }
 ```
 
+### 启动时验证
+
+服务启动时会验证加密密钥配置：
+
+```go
+func validateChatAppsConfig() error {
+    secretKey := os.Getenv("DIVINESENSE_CHAT_APPS_SECRET_KEY")
+    if secretKey == "" {
+        return fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be set")
+    }
+    if len(secretKey) != 32 {
+        return fmt.Errorf("DIVINESENSE_CHAT_APPS_SECRET_KEY must be exactly 32 bytes")
+    }
+    return nil
+}
+```
+
+### 输入验证
+
+所有用户输入在存储前都会验证：
+
+| 字段 | 最大长度 | 验证规则 |
+|:-----|:---------|:---------|
+| `platform_user_id` | 255 字符 | 平台白名单验证 |
+| `access_token` | 2048 字符 | 长度限制 |
+| `app_secret` | 2048 字符 | 长度限制（可选） |
+| `webhook_url` | 2048 字符 | URL 格式验证（可选） |
+
+```go
+func validateCreateCredentialRequest(req *CreateCredentialRequest) error {
+    // 验证平台是否支持
+    if !req.Platform.IsValid() {
+        return fmt.Errorf("invalid platform: %s", req.Platform)
+    }
+    // ... 长度验证
+}
+```
+
 ### 环境变量
 
 ```bash
@@ -442,11 +480,41 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32)[:32])"
 
 ### Webhook 安全
 
-| 平台 | 验证方式 |
-|:-----|:---------|
-| Telegram | Bot Token（查询数据库验证） |
-| WhatsApp | 桥接服务内部验证 |
-| 钉钉 | HMAC-SHA256 签名 |
+| 平台 | 验证方式 | 防护措施 |
+|:-----|:---------|:---------|
+| Telegram | Bot Token（查询数据库验证） | Token 匹配 + 用户绑定 |
+| WhatsApp | 桥接服务内部验证 | 连接状态检查 + 请求源验证 |
+| 钉钉 | HMAC-SHA256 签名 + 时间戳 | 签名验证 + 重放攻击防护 |
+
+**钉钉重放攻击防护**：
+
+```go
+// 验证时间戳（5分钟窗口）
+ts, err := strconv.ParseInt(timestamp, 10, 64)
+timeDiff := now - ts/1000
+if timeDiff < 0 {
+    timeDiff = -timeDiff
+}
+if timeDiff > int64(MaxTimestampSkew.Seconds()) {
+    return channels.ErrInvalidSignature
+}
+
+// 常量时间比较防止时序攻击
+if !hmac.Equal([]byte(sign), []byte(expectedSign)) {
+    return channels.ErrInvalidSignature
+}
+```
+
+**并发安全**：
+
+Token 缓存使用单一 Mutex 代替 RWMutex，避免竞态条件：
+
+```go
+type DingTalkChannel struct {
+    tokenMu sync.Mutex  // 使用单一 Mutex 防止竞态
+    // ...
+}
+```
 
 ---
 

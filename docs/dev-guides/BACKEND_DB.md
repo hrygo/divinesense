@@ -342,6 +342,12 @@ CREATE UNIQUE INDEX idx_chat_app_credential_unique ON chat_app_credential(creato
 **安全说明**：
 - 所有敏感凭证使用 AES-256-GCM 加密存储
 - 加密密钥通过环境变量 `DIVINESENSE_CHAT_APPS_SECRET_KEY` 提供（必须 32 字节）
+- **启动验证**：服务启动时验证密钥存在性和长度，失败则快速报错
+- **输入验证**：平台白名单验证 + 字段长度限制（user_id: 255, token: 2048）
+- **Webhook 安全**：
+  - 钉钉：HMAC-SHA256 签名 + 时间戳验证（5分钟窗口，防重放攻击）
+  - Telegram：Bot Token 匹配验证
+  - WhatsApp：桥接服务连接状态检查
 - 详见：[Chat Apps 用户指南](../guides/CHAT_APPS.md#安全说明)
 
 ---

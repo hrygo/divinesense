@@ -112,6 +112,88 @@ divinesense/
    - 不再包含 AI 功能（已提升为一级模块）
    - 包含：调度器、存储适配器、身份提供商、Markdown、OCR、Webhook、聊天应用接入（Chat Apps）等
 
+### 聊天应用集成 (Chat Apps)
+
+> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v6.1
+
+**架构概览**：将 DivineSense AI 连接到 Telegram、WhatsApp、钉钉等聊天平台，实现多渠道智能助手服务。
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Chat Apps Gateway                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐ │
+│  │   Telegram   │  │   WhatsApp   │  │         DingTalk             │ │
+│  │   Channel    │  │   Bridge     │  │         Channel              │ │
+│  │              │  │              │  │                              │ │
+│  │ BotToken     │  │ Baileys      │  │ HMAC-SHA256 + Timestamp      │ │
+│  │ Webhook      │  │ HTTP API     │  │ Webhook                      │ │
+│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────────────┘ │
+└─────────┼──────────────────┼───────────────────────┼────────────────────┘
+          │                  │                       │
+          └──────────────────┼───────────────────────┘
+                             ▼
+                  ┌─────────────────────┐
+                  │  ChatChannel Router  │
+                  │  (user verification) │
+                  └──────────┬──────────┘
+                             ▼
+                  ┌─────────────────────┐
+                  │  AI Agent Router     │
+                  │  (AUTO: memo/schedule)│
+                  └──────────┬──────────┘
+                             ▼
+                  ┌─────────────────────┐
+                  │   Parrot Agents      │
+                  │  (灰灰/时巧/折衷)     │
+                  └─────────────────────┘
+```
+
+**目录结构**：
+```
+plugin/chat_apps/
+├── channels/
+│   ├── base.go                    # ChatChannel 接口定义
+│   ├── router.go                  # 通道路由器（用户验证）
+│   ├── telegram/
+│   │   ├── telegram.go            # Telegram Bot 实现
+│   │   └── webhook.go             # Webhook 处理
+│   ├── whatsapp/
+│   │   └── bridge.go              # Baileys 桥接客户端
+│   └── dingtalk/
+│       ├── dingtalk.go            # 钉钉机器人实现
+│       └── crypto.go              # 签名验证
+├── store/
+│   ├── db.go                      # 数据库操作
+│   └── crypto.go                  # Token 加密（AES-256-GCM）
+├── metrics/
+│   └── metrics.go                 # Webhook 指标收集
+└── types.go                       # 通用类型定义
+```
+
+**安全机制**：
+- Token 加密：AES-256-GCM，32 字节密钥
+- 输入验证：平台白名单 + 长度限制
+- Webhook 签名：HMAC-SHA256 + 时间戳（5分钟窗口，防重放）
+- 并发安全：单一 Mutex 防止 Token 缓存竞态
+
+**数据库表**：`chat_app_credential`
+
+| 字段 | 类型 | 描述 |
+|:-----|:-----|:-----|
+| `id` | SERIAL | 主键 |
+| `user_id` | INTEGER | 所属用户（外键） |
+| `platform` | TEXT | 平台名称（telegram/whatsapp/dingtalk） |
+| `platform_user_id` | TEXT | 平台用户 ID |
+| `access_token` | TEXT | 加密存储的访问令牌 |
+| `app_secret` | TEXT | 加密存储的应用密钥（钉钉） |
+| `webhook_url` | TEXT | Webhook URL |
+| `enabled` | BOOLEAN | 启用状态 |
+
+**详细文档**：
+- [用户指南](../user-guides/CHAT_APPS.md)
+- [开发者指南](../guides/CHAT_APPS.md)
+- [技术规格](../specs/chat-apps-integration.md)
+
 4. **后台运行器** (`server/runner/`):
    - 异步生成笔记 Embedding
    - AI 操作任务队列
