@@ -833,7 +833,7 @@ type stderrBuffer struct {
 
 func newStderrBuffer(maxLines int) *stderrBuffer {
 	return &stderrBuffer{
-		lines:   make([]string, 0, maxLines),
+		lines:    make([]string, 0, maxLines),
 		maxLines: maxLines,
 	}
 }

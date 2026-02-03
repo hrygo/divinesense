@@ -242,23 +242,40 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <span className="text-xs font-medium text-muted-foreground">Tokens</span>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground/70">Input</span>
-                    <span className="font-mono">{formatNumber(summary.totalInputTokens || 0)}</span>
+                  {/* New Input (billed) */}
+                  <div className="flex justify-between text-xs items-center">
+                    <span className="text-muted-foreground/70 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      New Input
+                    </span>
+                    <span className="font-mono">{formatNumber((summary.totalInputTokens || 0) - (summary.totalCacheReadTokens || 0))}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground/70">Output</span>
-                    <span className="font-mono">{formatNumber(summary.totalOutputTokens || 0)}</span>
-                  </div>
+                  {/* Cache Read (free) */}
                   {summary.totalCacheReadTokens && summary.totalCacheReadTokens > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground/70">Cache Read</span>
-                      <span className="font-mono">{formatNumber(summary.totalCacheReadTokens)}</span>
+                    <div className="flex justify-between text-xs items-center">
+                      <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        Cache Read (Free)
+                      </span>
+                      <span className="font-mono text-green-600 dark:text-green-400">{formatNumber(summary.totalCacheReadTokens)}</span>
                     </div>
                   )}
+                  {/* Output (billed) */}
+                  <div className="flex justify-between text-xs items-center">
+                    <span className="text-muted-foreground/70 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Output
+                    </span>
+                    <span className="font-mono">{formatNumber(summary.totalOutputTokens || 0)}</span>
+                  </div>
+                  {/* Total */}
                   <div className="pt-1 border-t border-amber-200/30 dark:border-amber-700/30 flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Total</span>
-                    <span className="font-mono text-amber-600 dark:text-amber-400">{formatNumber(totalTokens)}</span>
+                    <span className="text-muted-foreground">Billed Total</span>
+                    <span className="font-mono text-amber-600 dark:text-amber-400">
+                      {formatNumber(
+                        (summary.totalInputTokens || 0) - (summary.totalCacheReadTokens || 0) + (summary.totalOutputTokens || 0),
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
