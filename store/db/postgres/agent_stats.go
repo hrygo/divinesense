@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -48,15 +49,19 @@ func (d *DB) SaveSessionStats(ctx context.Context, stats *store.AgentSessionStat
 		RETURNING id, created_at, updated_at
 	`
 
-	var toolsUsedArray interface{} = nil
+	// tools_used is JSONB - encode as JSON
+	var toolsUsedJSON []byte = nil
 	if len(stats.ToolsUsed) > 0 {
-		// Convert []string to PostgreSQL array format
-		toolsUsedArray = pq.Array(stats.ToolsUsed)
+		var err error
+		toolsUsedJSON, err = json.Marshal(stats.ToolsUsed)
+		if err != nil {
+			return fmt.Errorf("failed to marshal tools_used: %w", err)
+		}
 	}
 
+	// file_paths is TEXT[] - use pq.Array
 	var filePathsArray interface{} = nil
 	if len(stats.FilePaths) > 0 {
-		// Convert []string to PostgreSQL array format
 		filePathsArray = pq.Array(stats.FilePaths)
 	}
 
@@ -78,7 +83,7 @@ func (d *DB) SaveSessionStats(ctx context.Context, stats *store.AgentSessionStat
 		stats.TotalTokens,
 		stats.TotalCostUSD,
 		stats.ToolCallCount,
-		toolsUsedArray,
+		toolsUsedJSON,
 		stats.FilesModified,
 		filePathsArray,
 		stats.ModelUsed,
