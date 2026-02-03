@@ -266,23 +266,45 @@ const ChatMessages = memo(function ChatMessages({
             const isLastMessage = index === items.length - 1;
             const isNew = Date.now() - msg.timestamp < 1000; // Animation for recent messages
 
+            // WeChat-style timestamp: show when there's a gap of > 3 minutes from previous message
+            // 微信风格时间戳：与上一条消息间隔超过 3 分钟时显示
+            const shouldShowTimestamp =
+              index === 0 ||
+              (() => {
+                const prevItem = items[index - 1];
+                if ("type" in prevItem && prevItem.type === "context-separator") return true;
+                const prevMsg = prevItem as ConversationMessage;
+                return msg.timestamp - prevMsg.timestamp > 3 * 60 * 1000; // 3 minutes
+              })();
+
             return (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                theme={theme}
-                icon={msg.role === "user" ? undefined : currentIcon}
-                isLastAssistant={msg.role === "assistant" && isLastMessage}
-                isNew={isNew}
-                isTyping={isTyping}
-                onCopy={() => onCopyMessage?.(msg.content)}
-                onRegenerate={onRegenerate}
-                onDelete={() => onDeleteMessage?.(index)}
-              >
-                {msg.role === "assistant" && isTyping && isLastMessage && !msg.error && (
-                  <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
+              <React.Fragment key={msg.id}>
+                {/* WeChat-style centered timestamp */}
+                {/* 微信风格居中时间戳 */}
+                {shouldShowTimestamp && (
+                  <div className="flex items-center justify-center py-2">
+                    <span className="text-xs text-muted-foreground/60 bg-muted/50 px-2.5 py-1 rounded">
+                      {formatMessageTime(msg.timestamp, t)}
+                    </span>
+                  </div>
                 )}
-              </MessageBubble>
+
+                <MessageBubble
+                  message={msg}
+                  theme={theme}
+                  icon={msg.role === "user" ? undefined : currentIcon}
+                  isLastAssistant={msg.role === "assistant" && isLastMessage}
+                  isNew={isNew}
+                  isTyping={isTyping}
+                  onCopy={() => onCopyMessage?.(msg.content)}
+                  onRegenerate={onRegenerate}
+                  onDelete={() => onDeleteMessage?.(index)}
+                >
+                  {msg.role === "assistant" && isTyping && isLastMessage && !msg.error && (
+                    <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
+                  )}
+                </MessageBubble>
+              </React.Fragment>
             );
           })}
 
@@ -506,14 +528,6 @@ const MessageBubble = memo(function MessageBubble({
         )}
 
         <div className={cn("flex items-start gap-2", role === "user" ? "flex-row-reverse" : "flex-row")}>
-          {/* WeChat-style timestamp - outside bubble, vertically centered */}
-          {/* 微信风格时间戳 - 气泡外部，垂直居中 */}
-          {!error && (
-            <div className={cn("flex items-center h-full px-1 text-[10px] text-muted-foreground/60 whitespace-nowrap self-center")}>
-              {formatMessageTime(message.timestamp, t)}
-            </div>
-          )}
-
           {error ? (
             <div className="min-w-[120px] max-w-[85%] md:max-w-[80%] p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 shadow-sm">
               <p className="text-sm text-red-700 dark:text-red-300">{content}</p>
