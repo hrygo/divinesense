@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.93.0] - 2026-02-04
+
+### 💬 Chat UI Improvements
+
+#### 微信风格时间戳
+- 居中显示在对话界面中央
+- 仅当与上一条消息间隔 > 3 分钟时显示
+- 灰色胶囊样式 (bg-muted/50)
+
+#### 6 个鹦鹉主题
+- **MEMO** (灰灰): slate-800
+- **SCHEDULE** (时巧): cyan-600
+- **AMAZING** (折衷): emerald-600
+- **GEEK** (极客): violet-600
+- **EVOLUTION** (进化): rose-600
+
+#### 会话摘要面板
+- 完整展示 token 使用、耗时、成本
+- 工具调用列表
+- 文件修改统计
+
+### 🔧 Build Optimizations
+- Vite 生产构建自动移除 console.log (terser drop_console)
+- 添加 rollup-plugin-visualizer 用于包分析
+- Go embed 兼容性修复 (lodash 内部模块打包)
+
+### 🐛 Bug Fixes
+- 修复 goroutine 泄漏和竞态条件 (cc_runner)
+- 优化日志输出，移除冗余日志
+- 修复 SessionID 显示 (使用真实 UUID 而非 conv_N 格式)
+
+### 📊 持久化验证
+- agent_session_stats 表数据验证通过
+- 异步持久化队列正常运行
+- 成本追踪统计已启用
+
 ## [v0.91.0] - 2026-02-03
 
 ### 🤖 CC Runner Session Stats & Cost Tracking
