@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.81.0] - 2026-02-03
+## [v0.91.0] - 2026-02-03
 
 ### 🤖 CC Runner Session Stats & Cost Tracking
 
