@@ -110,7 +110,7 @@ const Setting = () => {
                 {BASIC_SECTIONS.map((item) => (
                   <SectionMenuItem
                     key={item}
-                    text={t(`setting.${item}`)}
+                    text={item === "chat-apps" ? t(`setting.${item}.title`) : t(`setting.${item}`)}
                     icon={SECTION_ICON_MAP[item]}
                     isSelected={state.selectedSection === item}
                     onClick={() => handleSectionSelectorItemClick(item)}
