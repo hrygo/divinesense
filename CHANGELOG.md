@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.81.0] - 2026-02-03
+
+### 🤖 CC Runner Session Stats & Cost Tracking
+
+#### Database Schema (PostgreSQL)
+- **agent_session_stats**: Full session tracking table
+  - Token usage breakdown (input/output/cache read/cache write)
+  - Duration metrics (thinking/tool/generation)
+  - Cost tracking (total_cost_usd)
+  - Tool usage and file operations
+  - Error status tracking
+- **user_cost_settings**: Budget management table
+  - Daily budget limits
+  - Per-session cost thresholds
+  - Alert preferences (email/in-app)
+- **agent_security_audit**: Security audit log table
+  - Risk level tracking (low/medium/high/critical)
+  - Command pattern matching
+  - Action taken logging
+
+#### Backend API
+- **GetSessionStats**: Retrieve single session by session_id
+- **ListSessionStats**: List sessions with pagination (limit/offset)
+- **GetCostStats**: Aggregated N-day cost statistics with daily breakdown
+- **GetUserCostSettings**: User budget and alert preferences
+- **SetUserCostSettings**: Update cost control settings
+- All handlers include user authentication and ownership verification
+
+#### Frontend Components
+- **CostTrendChart**: Visualize cost trends over time with daily breakdown
+- **SessionSummaryPanel**: Enhanced with cost display and stats
+- i18n support for cost tracking UI (en/zh-Hans)
+
+#### Async Persistence
+- **Persister**: Background queue-based stats persistence
+  - Configurable queue size (default 100)
+  - Graceful shutdown with data loss tracking
+  - 5-second save timeout per record
+
+#### Testing
+- **cc_event_test.go**: 69 comprehensive test cases
+  - All CLI message types (11 types)
+  - Content block extraction (direct/nested)
+  - Result message stats extraction
+  - Event dispatch coverage
+  - UUID v5 deterministic mapping
+  - Session stats collection
+  - Edge case handling
+  - Concurrent safety
+
+#### Security Fixes
+- SQL injection fix in getDailyCostBreakdown (parameterized query)
+- rows.Err() checks after all QueryContext iterations
+- Proper sql.ErrNoRows vs actual error distinction
+
+#### Documentation
+- CC Runner optimization plan specification
+- Message handling research report
+- Test coverage documentation
+
 ## [v0.80.5] - 2026-02-01
 
 ### 🔧 Development Workflow
