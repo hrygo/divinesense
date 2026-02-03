@@ -50,19 +50,27 @@ func (d *DB) SaveSessionStats(ctx context.Context, stats *store.AgentSessionStat
 	`
 
 	// tools_used is JSONB - encode as JSON
-	var toolsUsedJSON []byte = nil
+	// Always provide valid JSON (empty array [] when no tools used)
+	// 始终提供有效的 JSON（没有工具时使用空数组 []）
+	var toolsUsedJSON []byte
 	if len(stats.ToolsUsed) > 0 {
 		var err error
 		toolsUsedJSON, err = json.Marshal(stats.ToolsUsed)
 		if err != nil {
 			return fmt.Errorf("failed to marshal tools_used: %w", err)
 		}
+	} else {
+		toolsUsedJSON = []byte("[]") // Empty JSON array for no tools
 	}
 
 	// file_paths is TEXT[] - use pq.Array
-	var filePathsArray interface{} = nil
+	// Always provide a valid array (empty array when no files)
+	// 始终提供有效的数组（没有文件时使用空数组）
+	var filePathsArray interface{}
 	if len(stats.FilePaths) > 0 {
 		filePathsArray = pq.Array(stats.FilePaths)
+	} else {
+		filePathsArray = pq.Array([]string{}) // Empty PostgreSQL array
 	}
 
 	err := d.db.QueryRowContext(ctx, query,
