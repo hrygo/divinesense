@@ -17,13 +17,15 @@ import (
 // BaileysBridgeClient communicates with the Node.js Baileys bridge service.
 type BaileysBridgeClient struct {
 	baseURL    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 // NewBaileysBridgeClient creates a new client for the Baileys bridge.
-func NewBaileysBridgeClient(bridgeURL string) *BaileysBridgeClient {
+func NewBaileysBridgeClient(bridgeURL, apiKey string) *BaileysBridgeClient {
 	return &BaileysBridgeClient{
 		baseURL: bridgeURL,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: 0, // No timeout for streaming connections
 		},
@@ -51,8 +53,8 @@ type WhatsAppChannel struct {
 }
 
 // NewWhatsAppChannel creates a new WhatsApp channel.
-func NewWhatsAppChannel(bridgeURL string) (*WhatsAppChannel, error) {
-	bridge := NewBaileysBridgeClient(bridgeURL)
+func NewWhatsAppChannel(bridgeURL, apiKey string) (*WhatsAppChannel, error) {
+	bridge := NewBaileysBridgeClient(bridgeURL, apiKey)
 
 	// Verify bridge is running
 	if err := bridge.HealthCheck(context.Background()); err != nil {
@@ -161,6 +163,10 @@ func (b *BaileysBridgeClient) HealthCheck(ctx context.Context) error {
 		return err
 	}
 
+	if b.apiKey != "" {
+		req.Header.Set("x-bridge-api-key", b.apiKey)
+	}
+
 	resp, err := b.httpClient.Do(req)
 	if err != nil {
 		return err
@@ -204,6 +210,9 @@ func (b *BaileysBridgeClient) SendMessage(ctx context.Context, req *SendMessageR
 		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if b.apiKey != "" {
+		httpReq.Header.Set("x-bridge-api-key", b.apiKey)
+	}
 	httpReq.Body = io.NopCloser(strings.NewReader(string(data)))
 
 	resp, err := b.httpClient.Do(httpReq)
@@ -232,6 +241,10 @@ func (b *BaileysBridgeClient) DownloadMedia(ctx context.Context, url string) ([]
 	req, err := http.NewRequestWithContext(ctx, "GET", b.baseURL+"/download?url="+url, nil)
 	if err != nil {
 		return nil, "", err
+	}
+
+	if b.apiKey != "" {
+		req.Header.Set("x-bridge-api-key", b.apiKey)
 	}
 
 	resp, err := b.httpClient.Do(req)

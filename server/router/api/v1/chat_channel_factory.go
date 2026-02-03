@@ -107,7 +107,7 @@ func (s *APIV1Service) createChannelForCredential(cred *chat_apps.Credential) (c
 		return ch, nil
 
 	case chat_apps.PlatformWhatsApp:
-		ch, err := whatsapp.NewWhatsAppChannel(cred.WebhookURL)
+		ch, err := whatsapp.NewWhatsAppChannel(cred.WebhookURL, accessToken)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create whatsapp channel: %w", err)
 		}

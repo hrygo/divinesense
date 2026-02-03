@@ -331,6 +331,9 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 	registry.RecordEvent(string(platform), cred.ID, metrics.EventWebhookValidated, 0, nil)
 
 	// Process message asynchronously - don't block webhook response
+	// NOTE: This uses an in-memory goroutine without persistence.
+	// If the server restarts, pending messages will be lost.
+	// For production, this should be replaced with a persistent task queue (e.g. Redis/Postgres).
 	go s.processChatAppMessage(context.Background(), cred, msg, platform, startTime, registry)
 
 	// Immediately acknowledge receipt (webhooks should respond quickly)

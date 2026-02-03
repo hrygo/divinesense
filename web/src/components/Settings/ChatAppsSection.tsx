@@ -298,7 +298,9 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
 
             {/* Access Token */}
             <div className="space-y-2">
-              <Label htmlFor="accessToken">{t("setting.chat-apps.access-token")}</Label>
+              <Label htmlFor="accessToken">{
+                 newPlatform === Platform.WHATSAPP ? "Bridge API Key (Optional)" : t("setting.chat-apps.access-token")
+              }</Label>
               <Input
                 id="accessToken"
                 type="password"
@@ -309,20 +311,25 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
               <p className="text-xs text-muted-foreground">
                 {newPlatform === Platform.TELEGRAM && t("setting.chat-apps.telegram-token-hint")}
                 {newPlatform === Platform.DINGTALK && t("setting.chat-apps.dingtalk-token-hint")}
+                {newPlatform === Platform.WHATSAPP && "Leave empty if bridge does not require API key"}
               </p>
             </div>
 
-            {/* Webhook URL (DingTalk only) */}
-            {newPlatform === Platform.DINGTALK && (
+            {/* Webhook URL (WhatsApp and DingTalk) */}
+            {(newPlatform === Platform.DINGTALK || newPlatform === Platform.WHATSAPP) && (
               <div className="space-y-2">
-                <Label htmlFor="webhookUrl">{t("setting.chat-apps.webhook-url")}</Label>
+                <Label htmlFor="webhookUrl">{
+                    newPlatform === Platform.WHATSAPP ? "Bridge URL" : t("setting.chat-apps.webhook-url")
+                }</Label>
                 <Input
                   id="webhookUrl"
                   value={newWebhookUrl}
                   onChange={(e) => setNewWebhookUrl(e.target.value)}
-                  placeholder="https://oapi.dingtalk.com/robot/send?access_token=..."
+                  placeholder={newPlatform === Platform.WHATSAPP ? "http://localhost:3001" : "https://oapi.dingtalk.com/robot/send?access_token=..."}
                 />
-                <p className="text-xs text-muted-foreground">{t("setting.chat-apps.dingtalk-webhook-hint")}</p>
+                <p className="text-xs text-muted-foreground">
+                    {newPlatform === Platform.WHATSAPP ? "URL of the Baileys Bridge service" : t("setting.chat-apps.dingtalk-webhook-hint")}
+                </p>
               </div>
             )}
           </div>
@@ -335,6 +342,43 @@ const ChatAppsSection = ({ className }: ChatAppsSectionProps) => {
               {isSubmitting && <Loader2Icon className="w-4 h-4 mr-2 animate-spin" />}
               {t("common.confirm")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Webhook Info Dialog */}
+      <Dialog open={!!webhookInfo} onOpenChange={(open) => !open && setWebhookInfo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("setting.chat-apps.webhook-info")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+             {webhookInfo && (
+                 <>
+                    <div className="space-y-2">
+                        <Label>Webhook URL</Label>
+                        <div className="flex gap-2">
+                            <Input readOnly value={webhookInfo.webhook_url} />
+                            <Button variant="outline" size="icon" onClick={() => {
+                                navigator.clipboard.writeText(webhookInfo.webhook_url);
+                            }}>
+                                <CheckIcon className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    {webhookInfo.setup_instructions && (
+                        <div className="space-y-2">
+                            <Label>Instructions</Label>
+                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
+                                {webhookInfo.setup_instructions}
+                            </pre>
+                        </div>
+                    )}
+                 </>
+             )}
+          </div>
+          <DialogFooter>
+             <Button onClick={() => setWebhookInfo(null)}>{t("common.close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
