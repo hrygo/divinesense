@@ -383,13 +383,13 @@ function BlockHeader({
           </div>
         )}
 
-        <div className={cn("hidden sm:flex items-center gap-1 text-xs", theme.badgeText)}>
+        <div className={cn("flex items-center gap-1 text-xs", theme.badgeText)}>
           <Clock className="w-3 h-3" />
           <span>{formatTime(userMessage.timestamp, t)}</span>
         </div>
 
         {(parrotId === "GEEK" || parrotId === "EVOLUTION" || parrotId === "AMAZING") && (
-          <span className={cn("hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
+          <span className={cn("inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
             {parrotId === "GEEK" ? t("ai.mode.geek") : parrotId === "EVOLUTION" ? t("ai.mode.evolution") : t("ai.mode.normal")}
           </span>
         )}
@@ -1012,7 +1012,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
         <button
           type="button"
           className={cn(
-            "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-60 hover:opacity-100",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-60 hover:opacity-100",
             "hover:bg-black/10 dark:hover:bg-white/10",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
             theme.badgeText,
