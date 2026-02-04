@@ -697,5 +697,6 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 // Optimized: Uses database trigger for round_number, eliminating the separate
 // getNextRoundNumber query. This function now delegates to CreateAIBlock.
 func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIBlock) (*store.AIBlock, error) {
+}
 	return d.CreateAIBlock(ctx, create)
 }
