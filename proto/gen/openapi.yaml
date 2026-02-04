@@ -69,6 +69,138 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}:
+        get:
+            tags:
+                - AIService
+            description: GetBlock retrieves a specific block.
+            operationId: AIService_GetBlock
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Block'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        delete:
+            tags:
+                - AIService
+            description: DeleteBlock deletes a block.
+            operationId: AIService_DeleteBlock
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - AIService
+            description: UpdateBlock updates a block.
+            operationId: AIService_UpdateBlock
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateBlockRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Block'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}/events:
+        post:
+            tags:
+                - AIService
+            description: AppendEvent appends an event to the block's event stream.
+            operationId: AIService_AppendEvent
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AppendEventRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}/inputs:
+        post:
+            tags:
+                - AIService
+            description: AppendUserInput appends a user input to an existing block.
+            operationId: AIService_AppendUserInput
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AppendUserInputRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/chat:
         post:
             tags:
@@ -153,6 +285,88 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AIConversation'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/conversations/{conversationId}/blocks:
+        get:
+            tags:
+                - AIService
+            description: ListBlocks retrieves blocks for a conversation.
+            operationId: AIService_ListBlocks
+            parameters:
+                - name: conversationId
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: int32
+                - name: status
+                  in: query
+                  schema:
+                    enum:
+                        - BLOCK_STATUS_UNSPECIFIED
+                        - BLOCK_STATUS_PENDING
+                        - BLOCK_STATUS_STREAMING
+                        - BLOCK_STATUS_COMPLETED
+                        - BLOCK_STATUS_ERROR
+                    type: string
+                    format: enum
+                - name: mode
+                  in: query
+                  schema:
+                    enum:
+                        - BLOCK_MODE_UNSPECIFIED
+                        - BLOCK_MODE_NORMAL
+                        - BLOCK_MODE_GEEK
+                        - BLOCK_MODE_EVOLUTION
+                    type: string
+                    format: enum
+                - name: ccSessionId
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListBlocksResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        post:
+            tags:
+                - AIService
+            description: CreateBlock creates a new conversation block.
+            operationId: AIService_CreateBlock
+            parameters:
+                - name: conversationId
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: int32
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateBlockRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Block'
                 default:
                     description: Default error response
                     content:
@@ -318,6 +532,74 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AIConversation'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/cost-settings:
+        get:
+            tags:
+                - AIService
+            description: GetUserCostSettings retrieves user-specific cost control settings.
+            operationId: AIService_GetUserCostSettings
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserCostSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - AIService
+            description: SetUserCostSettings updates user-specific cost control settings.
+            operationId: AIService_SetUserCostSettings
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetUserCostSettingsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserCostSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/cost-stats:
+        get:
+            tags:
+                - AIService
+            description: GetCostStats retrieves aggregated cost statistics for the user.
+            operationId: AIService_GetCostStats
+            parameters:
+                - name: days
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CostStats'
                 default:
                     description: Default error response
                     content:
@@ -579,6 +861,66 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/SemanticSearchResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/sessions:
+        get:
+            tags:
+                - AIService
+            description: ListSessionStats retrieves session statistics with pagination.
+            operationId: AIService_ListSessionStats
+            parameters:
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: offset
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: days
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSessionStatsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/sessions/{sessionId}:
+        get:
+            tags:
+                - AIService
+            description: GetSessionStats retrieves statistics for a specific session.
+            operationId: AIService_GetSessionStats
+            parameters:
+                - name: sessionId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SessionStats'
                 default:
                     description: Default error response
                     content:
@@ -3256,6 +3598,28 @@ components:
                 label:
                     type: string
             description: AlternativeSlot represents an available time slot.
+        AppendEventRequest:
+            required:
+                - id
+                - event
+            type: object
+            properties:
+                id:
+                    type: string
+                event:
+                    $ref: '#/components/schemas/BlockEvent'
+            description: AppendEventRequest is the request for AppendEvent.
+        AppendUserInputRequest:
+            required:
+                - id
+                - input
+            type: object
+            properties:
+                id:
+                    type: string
+                input:
+                    $ref: '#/components/schemas/UserInput'
+            description: AppendUserInputRequest is the request for AppendUserInput.
         Attachment:
             required:
                 - filename
@@ -3388,6 +3752,92 @@ components:
                     type: integer
                     format: int32
             description: BatchScheduleInfo contains parsed batch schedule information.
+        Block:
+            type: object
+            properties:
+                id:
+                    type: string
+                uid:
+                    type: string
+                conversationId:
+                    type: integer
+                    format: int32
+                roundNumber:
+                    type: integer
+                    format: int32
+                blockType:
+                    enum:
+                        - BLOCK_TYPE_UNSPECIFIED
+                        - BLOCK_TYPE_MESSAGE
+                        - BLOCK_TYPE_CONTEXT_SEPARATOR
+                    type: string
+                    description: Block type and mode
+                    format: enum
+                mode:
+                    enum:
+                        - BLOCK_MODE_UNSPECIFIED
+                        - BLOCK_MODE_NORMAL
+                        - BLOCK_MODE_GEEK
+                        - BLOCK_MODE_EVOLUTION
+                    type: string
+                    format: enum
+                userInputs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UserInput'
+                    description: User inputs (may be multiple if user adds more during AI response)
+                assistantContent:
+                    type: string
+                    description: AI response
+                assistantTimestamp:
+                    type: string
+                eventStream:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BlockEvent'
+                    description: Event stream (chronological order)
+                sessionStats:
+                    allOf:
+                        - $ref: '#/components/schemas/SessionStats'
+                    description: Session statistics (for Geek/Evolution modes)
+                ccSessionId:
+                    type: string
+                    description: CC session mapping (for Geek/Evolution modes)
+                status:
+                    enum:
+                        - BLOCK_STATUS_UNSPECIFIED
+                        - BLOCK_STATUS_PENDING
+                        - BLOCK_STATUS_STREAMING
+                        - BLOCK_STATUS_COMPLETED
+                        - BLOCK_STATUS_ERROR
+                    type: string
+                    description: Block status
+                    format: enum
+                metadata:
+                    type: string
+                    description: Extension metadata
+                createdTs:
+                    type: string
+                updatedTs:
+                    type: string
+            description: |-
+                Block represents a single conversation block (round).
+                 A block contains user inputs and the AI's response, along with
+                 an event stream tracking the AI's thinking process.
+        BlockEvent:
+            type: object
+            properties:
+                type:
+                    type: string
+                content:
+                    type: string
+                timestamp:
+                    type: string
+                meta:
+                    type: string
+            description: |-
+                BlockEvent represents an event in the event stream.
+                 Events are stored chronologically and track the AI's process.
         ChatRequest:
             required:
                 - message
@@ -3480,6 +3930,24 @@ components:
                     items:
                         $ref: '#/components/schemas/Schedule'
             description: CheckConflictResponse is the response for CheckConflict.
+        CostStats:
+            type: object
+            properties:
+                totalCostUsd:
+                    type: number
+                    format: double
+                dailyAverageUsd:
+                    type: number
+                    format: double
+                sessionCount:
+                    type: string
+                mostExpensiveSession:
+                    $ref: '#/components/schemas/SessionStats'
+                dailyBreakdown:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DailyCostData'
+            description: CostStats represents aggregated cost statistics.
         CreateAIConversationRequest:
             type: object
             properties:
@@ -3494,6 +3962,38 @@ components:
                         - AGENT_TYPE_CREATIVE
                     type: string
                     format: enum
+        CreateBlockRequest:
+            required:
+                - conversationId
+            type: object
+            properties:
+                conversationId:
+                    type: integer
+                    format: int32
+                blockType:
+                    enum:
+                        - BLOCK_TYPE_UNSPECIFIED
+                        - BLOCK_TYPE_MESSAGE
+                        - BLOCK_TYPE_CONTEXT_SEPARATOR
+                    type: string
+                    format: enum
+                mode:
+                    enum:
+                        - BLOCK_MODE_UNSPECIFIED
+                        - BLOCK_MODE_NORMAL
+                        - BLOCK_MODE_GEEK
+                        - BLOCK_MODE_EVOLUTION
+                    type: string
+                    format: enum
+                userInputs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UserInput'
+                metadata:
+                    type: string
+                ccSessionId:
+                    type: string
+            description: CreateBlockRequest is the request for CreateBlock.
         CreatePersonalAccessTokenRequest:
             required:
                 - parent
@@ -3561,6 +4061,17 @@ components:
             description: |-
                 Credential represents a chat app binding.
                  The access_token is never returned in API responses for security.
+        DailyCostData:
+            type: object
+            properties:
+                date:
+                    type: string
+                costUsd:
+                    type: number
+                    format: double
+                sessionCount:
+                    type: string
+            description: DailyCostData represents cost data for a single day.
         DetectDuplicatesRequest:
             required:
                 - content
@@ -4050,6 +4561,14 @@ components:
                     type: integer
                     description: The total count of attachments (may be approximate).
                     format: int32
+        ListBlocksResponse:
+            type: object
+            properties:
+                blocks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Block'
+            description: ListBlocksResponse is the response for ListBlocks.
         ListCredentialsResponse:
             type: object
             properties:
@@ -4184,6 +4703,19 @@ components:
                     type: boolean
                     description: truncated indicates whether the results were truncated due to instance limits
             description: ListSchedulesResponse is the response for ListSchedules.
+        ListSessionStatsResponse:
+            type: object
+            properties:
+                sessions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SessionStats'
+                totalCount:
+                    type: string
+                totalCostUsd:
+                    type: number
+                    format: double
+            description: ListSessionStatsResponse is the response for ListSessionStats.
         ListShortcutsResponse:
             type: object
             properties:
@@ -4691,6 +5223,8 @@ components:
                     type: string
                 accessToken:
                     type: string
+                appSecret:
+                    type: string
                 webhookUrl:
                     type: string
             description: RegisterCredentialRequest creates a new chat app credential binding.
@@ -4922,12 +5456,83 @@ components:
                 fileName:
                     type: string
             description: SendMessageRequest sends a message to a chat app channel.
+        SessionStats:
+            type: object
+            properties:
+                id:
+                    type: string
+                sessionId:
+                    type: string
+                conversationId:
+                    type: string
+                userId:
+                    type: integer
+                    format: int32
+                agentType:
+                    type: string
+                startedAt:
+                    type: string
+                endedAt:
+                    type: string
+                totalDurationMs:
+                    type: string
+                thinkingDurationMs:
+                    type: string
+                toolDurationMs:
+                    type: string
+                generationDurationMs:
+                    type: string
+                inputTokens:
+                    type: integer
+                    format: int32
+                outputTokens:
+                    type: integer
+                    format: int32
+                cacheWriteTokens:
+                    type: integer
+                    format: int32
+                cacheReadTokens:
+                    type: integer
+                    format: int32
+                totalTokens:
+                    type: integer
+                    format: int32
+                totalCostUsd:
+                    type: number
+                    format: double
+                toolCallCount:
+                    type: integer
+                    format: int32
+                toolsUsed:
+                    type: array
+                    items:
+                        type: string
+                filesModified:
+                    type: integer
+                    format: int32
+                filePaths:
+                    type: array
+                    items:
+                        type: string
+                modelUsed:
+                    type: string
+                isError:
+                    type: boolean
+                errorMessage:
+                    type: string
+                createdAt:
+                    type: string
+                updatedAt:
+                    type: string
+            description: SessionStats represents detailed statistics for a single session.
         SessionSummary:
             type: object
             properties:
                 sessionId:
                     type: string
                     description: Session identification
+                mode:
+                    type: string
                 totalDurationMs:
                     type: string
                     description: Overall timing
@@ -4966,6 +5571,10 @@ components:
                     type: array
                     items:
                         type: string
+                totalCostUsd:
+                    type: number
+                    description: Cost tracking (from Claude Code CLI)
+                    format: double
                 status:
                     type: string
                     description: Status
@@ -5006,6 +5615,22 @@ components:
                     items:
                         $ref: '#/components/schemas/MemoRelation'
                     description: Required. The relations to set for the memo.
+        SetUserCostSettingsRequest:
+            type: object
+            properties:
+                dailyBudgetUsd:
+                    type: number
+                    format: double
+                perSessionThresholdUsd:
+                    type: number
+                    format: double
+                alertEnabled:
+                    type: boolean
+                alertEmail:
+                    type: boolean
+                alertInApp:
+                    type: boolean
+            description: SetUserCostSettingsRequest is the request for SetUserCostSettings.
         Shortcut:
             required:
                 - title
@@ -5197,6 +5822,35 @@ components:
                     type: string
                 pinned:
                     type: boolean
+        UpdateBlockRequest:
+            required:
+                - id
+            type: object
+            properties:
+                id:
+                    type: string
+                assistantContent:
+                    type: string
+                eventStream:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BlockEvent'
+                sessionStats:
+                    $ref: '#/components/schemas/SessionStats'
+                ccSessionId:
+                    type: string
+                status:
+                    enum:
+                        - BLOCK_STATUS_UNSPECIFIED
+                        - BLOCK_STATUS_PENDING
+                        - BLOCK_STATUS_STREAMING
+                        - BLOCK_STATUS_COMPLETED
+                        - BLOCK_STATUS_ERROR
+                    type: string
+                    format: enum
+                metadata:
+                    type: string
+            description: UpdateBlockRequest is the request for UpdateBlock.
         UpdateCredentialRequest:
             required:
                 - platform
@@ -5213,6 +5867,8 @@ components:
                 enabled:
                     type: boolean
                 accessToken:
+                    type: string
+                appSecret:
                     type: string
                 webhookUrl:
                     type: string
@@ -5301,6 +5957,34 @@ components:
                     type: string
                     description: Output only. The last update timestamp.
                     format: date-time
+        UserCostSettings:
+            type: object
+            properties:
+                dailyBudgetUsd:
+                    type: number
+                    format: double
+                perSessionThresholdUsd:
+                    type: number
+                    format: double
+                alertEnabled:
+                    type: boolean
+                alertEmail:
+                    type: boolean
+                alertInApp:
+                    type: boolean
+                budgetResetAt:
+                    type: string
+            description: UserCostSettings represents user-specific cost control settings.
+        UserInput:
+            type: object
+            properties:
+                content:
+                    type: string
+                timestamp:
+                    type: string
+                metadata:
+                    type: string
+            description: UserInput represents a single user input within a block.
         UserNotification:
             type: object
             properties:

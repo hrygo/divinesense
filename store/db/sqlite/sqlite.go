@@ -217,6 +217,7 @@ func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIB
 	return nil, errors.New("AIBlock not supported in SQLite (use PostgreSQL for AI features)")
 }
 
+
 func (d *DB) CompleteBlock(ctx context.Context, blockID int64, assistantContent string, sessionStats *store.SessionStats) error {
 	return errors.New("AIBlock not supported in SQLite (use PostgreSQL for AI features)")
 }
