@@ -145,6 +145,9 @@ type AIBlockStore interface {
 	// AppendEvent appends an event to the event stream
 	AppendEvent(ctx context.Context, blockID int64, event BlockEvent) error
 
+	// AppendEventsBatch appends multiple events to the event stream in a single query
+	AppendEventsBatch(ctx context.Context, blockID int64, events []BlockEvent) error
+
 	// UpdateStatus updates the block status
 	UpdateStatus(ctx context.Context, blockID int64, status AIBlockStatus) error
 

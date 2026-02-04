@@ -120,6 +120,10 @@ func (s *Store) AppendEvent(ctx context.Context, blockID int64, event BlockEvent
 	return s.driver.AppendEvent(ctx, blockID, event)
 }
 
+func (s *Store) AppendEventsBatch(ctx context.Context, blockID int64, events []BlockEvent) error {
+	return s.driver.AppendEventsBatch(ctx, blockID, events)
+}
+
 func (s *Store) UpdateAIBlockStatus(ctx context.Context, blockID int64, status AIBlockStatus) error {
 	return s.driver.UpdateAIBlockStatus(ctx, blockID, status)
 }
@@ -134,6 +138,10 @@ func (s *Store) GetPendingAIBlocks(ctx context.Context) ([]*AIBlock, error) {
 
 func (s *Store) CreateAIBlockWithRound(ctx context.Context, create *CreateAIBlock) (*AIBlock, error) {
 	return s.driver.CreateAIBlockWithRound(ctx, create)
+}
+
+func (s *Store) CompleteBlock(ctx context.Context, blockID int64, assistantContent string, sessionStats *SessionStats) error {
+	return s.driver.CompleteBlock(ctx, blockID, assistantContent, sessionStats)
 }
 
 func (s *Store) CreateEpisodicMemory(ctx context.Context, create *EpisodicMemory) (*EpisodicMemory, error) {

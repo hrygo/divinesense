@@ -57,10 +57,11 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查端口是否被占用
+# 检查端口是否被占用（只检查 LISTEN 状态，忽略 CLOSE_WAIT 等连接状态）
 check_port() {
     local port=$1
-    if lsof -i ":$port" &>/dev/null; then
+    # 使用 -sTCP:LISTEN 只检查监听状态的端口，避免误判 ESTABLISHED/CLOSE_WAIT 等连接
+    if lsof -i ":$port" -sTCP:LISTEN &>/dev/null; then
         return 0
     fi
     return 1
@@ -198,13 +199,21 @@ start_backend() {
     nohup go run -tags=noui ./cmd/divinesense --mode dev --port $BACKEND_PORT \
         > "$BACKEND_LOG" 2>&1 &
 
-    local pid=$!
-    echo $pid > "$BACKEND_PID_FILE"
+    local shell_pid=$!
+    echo $shell_pid > "$BACKEND_PID_FILE"
 
     # 等待后端启动
     echo -n "等待后端启动"
     if wait_for_port $BACKEND_PORT "后端" 30; then
-        log_success "后端已启动 (PID: $pid, http://localhost:$BACKEND_PORT)"
+        # 获取实际监听端口的进程 PID（go run 可能产生子进程）
+        local actual_pid=$(lsof -ti ":$BACKEND_PORT" -sTCP:LISTEN 2>/dev/null | head -1)
+        if [ -n "$actual_pid" ]; then
+            echo $actual_pid > "$BACKEND_PID_FILE"
+            log_success "后端已启动 (PID: $actual_pid, http://localhost:$BACKEND_PORT)"
+        else
+            # 如果找不到监听进程，保留 shell PID
+            log_success "后端已启动 (PID: $shell_pid, http://localhost:$BACKEND_PORT)"
+        fi
         return 0
     else
         log_error "后端启动失败，查看日志: $BACKEND_LOG"
@@ -233,13 +242,21 @@ start_frontend() {
     nohup pnpm dev > "$FRONTEND_LOG" 2>&1 &
     cd ..
 
-    local pid=$!
-    echo $pid > "$FRONTEND_PID_FILE"
+    local shell_pid=$!
+    echo $shell_pid > "$FRONTEND_PID_FILE"
 
     # 等待前端启动
     echo -n "等待前端启动"
     if wait_for_port $FRONTEND_PORT "前端" 60; then
-        log_success "前端已启动 (PID: $pid, http://localhost:$FRONTEND_PORT)"
+        # 获取实际监听端口的进程 PID（pnpm dev 可能产生子进程）
+        local actual_pid=$(lsof -ti ":$FRONTEND_PORT" -sTCP:LISTEN 2>/dev/null | head -1)
+        if [ -n "$actual_pid" ]; then
+            echo $actual_pid > "$FRONTEND_PID_FILE"
+            log_success "前端已启动 (PID: $actual_pid, http://localhost:$FRONTEND_PORT)"
+        else
+            # 如果找不到监听进程，保留 shell PID
+            log_success "前端已启动 (PID: $shell_pid, http://localhost:$FRONTEND_PORT)"
+        fi
         return 0
     else
         log_error "前端启动失败，查看日志: $FRONTEND_LOG"
@@ -338,8 +355,8 @@ stop_backend() {
     if check_port $BACKEND_PORT; then
         log_warn "端口 $BACKEND_PORT 仍被占用，检查进程..."
 
-        # 获取占用端口的进程列表
-        local port_pids=$(lsof -ti ":$BACKEND_PORT" 2>/dev/null)
+        # 获取占用端口的进程列表（只检查 LISTEN 状态）
+        local port_pids=$(lsof -ti ":$BACKEND_PORT" -sTCP:LISTEN 2>/dev/null)
 
         if [ -n "$port_pids" ]; then
             for port_pid in $port_pids; do
@@ -428,8 +445,8 @@ stop_frontend() {
     if check_port $FRONTEND_PORT; then
         log_warn "端口 $FRONTEND_PORT 仍被占用，检查进程..."
 
-        # 获取占用端口的进程列表
-        local port_pids=$(lsof -ti ":$FRONTEND_PORT" 2>/dev/null)
+        # 获取占用端口的进程列表（只检查 LISTEN 状态）
+        local port_pids=$(lsof -ti ":$FRONTEND_PORT" -sTCP:LISTEN 2>/dev/null)
 
         if [ -n "$port_pids" ]; then
             for port_pid in $port_pids; do

@@ -142,6 +142,44 @@ func (m *BlockManager) AppendUserInput(
 	return nil
 }
 
+// AppendEventsBatch appends multiple events to the block's event stream in a single query.
+//
+// This is more efficient than calling AppendEvent multiple times,
+// especially for streaming responses with many events.
+func (m *BlockManager) AppendEventsBatch(
+	ctx context.Context,
+	blockID int64,
+	events []store.BlockEvent,
+) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	// Add timestamps to all events
+	now := time.Now().Unix()
+	for i := range events {
+		if events[i].Timestamp == 0 {
+			events[i].Timestamp = now
+		}
+	}
+
+	if err := m.store.AppendEventsBatch(ctx, blockID, events); err != nil {
+		slog.Error("Failed to append events batch",
+			"block_id", blockID,
+			"event_count", len(events),
+			"error", err,
+		)
+		return err
+	}
+
+	slog.Debug("Appended events batch to block",
+		"block_id", blockID,
+		"event_count", len(events),
+	)
+
+	return nil
+}
+
 // UpdateBlockStatus updates the status of a block.
 //
 // This should be called when streaming completes or fails.
