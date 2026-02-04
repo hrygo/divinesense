@@ -9,7 +9,7 @@
  * ## 架构
  * ```
  * ┌─────────────────────────────────────────────────────────┐
- * │  Block Header (用户消息 + 时间戳 + 状态)                │
+ * │  Block Header (用户消息 + 时间戳 + 状态)                │ ← 固定显示
  * ├─────────────────────────────────────────────────────────┤
  * │  Block Body (可折叠)                                    │
  * │  ├── ThinkingSection (思考过程)                        │
@@ -17,14 +17,14 @@
  * │  ├── AnswerSection (最终回答)                          │
  * │  └── SummarySection (会话统计)                          │
  * ├─────────────────────────────────────────────────────────┤
- * │  Block Footer (操作栏)                                  │
+ * │  Block Footer (操作栏：折叠/展开/复制/删除)             │ ← 固定显示
  * └─────────────────────────────────────────────────────────┘
  * ```
  *
  * ## 主题适配
  * - Normal: border-zinc-200/300
- * - Geek: border-green-500/30
- * - Evolution: border-purple-500/30
+ * - Geek: border-violet-500/30
+ * - Evolution: border-rose-500/30
  *
  * ## 折叠策略
  * - 新 Block（流式中）→ 展开
@@ -84,8 +84,8 @@ export interface UnifiedMessageBlockProps {
 // ============================================================================
 
 /**
- * Block theme configuration - extends PARROT_THEMES with Block-specific styles
- * 使用与 PARROT_THEMES 一致的颜色系统，GEEK 使用 violet 色系
+ * Block theme configuration - 使用与 PARROT_THEMES 一致的颜色系统
+ * GEEK 使用 violet 色系，EVOLUTION 使用 rose 色系
  */
 const BLOCK_THEMES: Record<
   ParrotAgentType | "default",
@@ -164,10 +164,8 @@ function formatTime(timestamp: number, t: (key: string, options?: Record<string,
  * Extract user initial from content for avatar
  */
 function extractUserInitial(content: string): string {
-  // Remove leading whitespace and get first character
   const trimmed = content.trim();
   if (trimmed.length === 0) return "U";
-  // Get first visible character (skip special chars)
   const match = trimmed.match(/[a-zA-Z\u4e00-\u9fa5]/);
   return match ? match[0].toUpperCase() : "U";
 }
@@ -176,9 +174,7 @@ function extractUserInitial(content: string): string {
  * Determine default collapse state based on block status
  */
 function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boolean {
-  // New or streaming blocks are always expanded
   if (isStreaming || isLatest) return false;
-  // Historical blocks are collapsed by default
   return true;
 }
 
@@ -189,27 +185,15 @@ function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boole
 interface BlockHeaderProps {
   userMessage: ConversationMessage;
   parrotId?: ParrotAgentType;
-  isCollapsed: boolean;
-  onToggle: () => void;
   theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
 }
 
-function BlockHeader({ userMessage, parrotId, isCollapsed, onToggle, theme }: BlockHeaderProps) {
+function BlockHeader({ userMessage, parrotId, theme }: BlockHeaderProps) {
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
 
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between px-4 py-2.5 cursor-pointer select-none",
-        "hover:bg-black/5 dark:hover:bg-white/5",
-        "transition-colors duration-200",
-        theme.headerBg,
-        "border-b",
-        theme.border,
-      )}
-      onClick={onToggle}
-    >
+    <div className={cn("flex items-center justify-between px-4 py-2.5 select-none", theme.headerBg)}>
       {/* Left: User message preview */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* User avatar with initial */}
@@ -225,7 +209,7 @@ function BlockHeader({ userMessage, parrotId, isCollapsed, onToggle, theme }: Bl
         </div>
       </div>
 
-      {/* Right: Timestamp + Toggle */}
+      {/* Right: Timestamp + Status Badge */}
       <div className="flex items-center gap-3 shrink-0">
         {/* Timestamp */}
         <div className={cn("flex items-center gap-1 text-xs", theme.badgeText)}>
@@ -239,18 +223,6 @@ function BlockHeader({ userMessage, parrotId, isCollapsed, onToggle, theme }: Bl
             {parrotId === "GEEK" ? "Geek" : "Evolution"}
           </span>
         )}
-
-        {/* Toggle icon */}
-        <button
-          type="button"
-          className={cn("p-1 rounded transition-colors", "hover:bg-black/10 dark:hover:bg-white/10", theme.badgeText)}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-        >
-          {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </button>
       </div>
     </div>
   );
@@ -274,13 +246,13 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, parrotId, th
   const hasToolResults = assistantMessage?.metadata?.toolResults && assistantMessage.metadata.toolResults.length > 0;
   const hasAnswer = assistantMessage?.content;
 
+  // When collapsed, render minimal placeholder
+  if (isCollapsed) {
+    return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.collapsed") || "Click expand to view details"}</div>;
+  }
+
   return (
-    <div
-      className={cn(
-        "px-4 py-3 space-y-4 transition-all duration-300 ease-in-out",
-        isCollapsed ? "max-h-0 opacity-50 overflow-hidden py-0" : "max-h-none opacity-100",
-      )}
-    >
+    <div className="px-4 py-3 space-y-4">
       {/* Thinking Section */}
       {hasThinking && (
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -368,13 +340,14 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, parrotId, th
 
 interface BlockFooterProps {
   isCollapsed: boolean;
+  onToggle: () => void;
   onCopy: () => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
   theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
 }
 
-function BlockFooter({ isCollapsed, onCopy, onRegenerate, onDelete, theme }: BlockFooterProps) {
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, theme }: BlockFooterProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -383,19 +356,16 @@ function BlockFooter({ isCollapsed, onCopy, onRegenerate, onDelete, theme }: Blo
     onCopy();
     setCopied(true);
 
-    // Clear previous timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Set new timeout and store reference
     timeoutRef.current = setTimeout(() => {
       setCopied(false);
       timeoutRef.current = null;
     }, 2000);
   }, [onCopy]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -404,51 +374,64 @@ function BlockFooter({ isCollapsed, onCopy, onRegenerate, onDelete, theme }: Blo
     };
   }, []);
 
-  if (isCollapsed) {
-    return null;
-  }
-
   return (
-    <div className={cn("flex items-center justify-end gap-2 px-4 py-2 border-t", theme.border, theme.headerBg)}>
-      {onRegenerate && (
-        <button
-          type="button"
-          onClick={onRegenerate}
-          className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-            "hover:bg-black/10 dark:hover:bg-white/10",
-            theme.badgeText,
-          )}
-        >
-          {t("ai.regenerate") || "Regenerate"}
-        </button>
-      )}
+    <div className={cn("flex items-center justify-between px-4 py-2 border-t", theme.border, theme.headerBg)}>
+      {/* Left: Collapse/Expand Toggle */}
       <button
         type="button"
-        onClick={handleCopy}
+        onClick={onToggle}
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
           "hover:bg-black/10 dark:hover:bg-white/10",
-          copied && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
-          !copied && theme.badgeText,
+          theme.badgeText,
         )}
       >
-        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-        {copied ? t("common.copied") || "Copied" : t("common.copy") || "Copy"}
+        {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        {isCollapsed ? t("common.expand") || "Expand" : t("common.collapse") || "Collapse"}
       </button>
-      {onDelete && (
+
+      {/* Right: Action Buttons */}
+      <div className="flex items-center gap-2">
+        {onRegenerate && (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              "hover:bg-black/10 dark:hover:bg-white/10",
+              theme.badgeText,
+            )}
+          >
+            {t("ai.regenerate") || "Regenerate"}
+          </button>
+        )}
         <button
           type="button"
-          onClick={onDelete}
+          onClick={handleCopy}
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-            "hover:bg-red-100 dark:hover:bg-red-900/30",
-            "text-red-600 dark:text-red-400",
+            "hover:bg-black/10 dark:hover:bg-white/10",
+            copied && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+            !copied && theme.badgeText,
           )}
         >
-          {t("common.delete") || "Delete"}
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? t("common.copied") || "Copied" : t("common.copy") || "Copy"}
         </button>
-      )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              "hover:bg-red-100 dark:hover:bg-red-900/30",
+              "text-red-600 dark:text-red-400",
+            )}
+          >
+            {t("common.delete") || "Delete"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -488,13 +471,10 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   children,
   className,
 }: UnifiedMessageBlockProps) {
-  // Get theme for block styling
   const blockTheme = (parrotId && BLOCK_THEMES[parrotId]) || BLOCK_THEMES.default;
 
-  // Collapse state with automatic behavior based on block status
   const [collapsed, setCollapsed] = useState(() => getDefaultCollapseState(isLatest, isStreaming));
 
-  // Update collapse state when isLatest or isStreaming changes
   useEffect(() => {
     setCollapsed(getDefaultCollapseState(isLatest, isStreaming));
   }, [isLatest, isStreaming]);
@@ -503,7 +483,6 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     setCollapsed((prev) => !prev);
   }, []);
 
-  // Build content for copying - memoized to avoid recreating on every render
   const contentForCopy = useMemo(
     () =>
       [`User: ${userMessage.content}`, assistantMessage?.content ? `Assistant: ${assistantMessage.content}` : ""]
@@ -525,10 +504,12 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         className,
       )}
     >
-      {/* Block Header */}
-      <BlockHeader userMessage={userMessage} parrotId={parrotId} isCollapsed={collapsed} onToggle={toggleCollapse} theme={blockTheme} />
+      {/* Block Header - 始终显示 */}
+      <div className={cn("border-b", blockTheme.border)}>
+        <BlockHeader userMessage={userMessage} parrotId={parrotId} theme={blockTheme} />
+      </div>
 
-      {/* Block Body (collapsible) */}
+      {/* Block Body - 可折叠内容 */}
       <BlockBody
         assistantMessage={assistantMessage}
         sessionSummary={sessionSummary}
@@ -539,36 +520,27 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         {children}
       </BlockBody>
 
-      {/* Block Footer */}
-      <BlockFooter isCollapsed={collapsed} onCopy={handleCopy} onRegenerate={onRegenerate} onDelete={onDelete} theme={blockTheme} />
+      {/* Block Footer - 始终显示 */}
+      <div className={cn("border-t", blockTheme.border)}>
+        <BlockFooter
+          isCollapsed={collapsed}
+          onToggle={toggleCollapse}
+          onCopy={handleCopy}
+          onRegenerate={onRegenerate}
+          onDelete={onDelete}
+          theme={blockTheme}
+        />
+      </div>
     </div>
   );
 });
 
-// Add display name for debugging
 UnifiedMessageBlock.displayName = "UnifiedMessageBlock";
 
 // ============================================================================
 // Hook for Block State Management
 // ============================================================================
 
-/**
- * useBlockState - Manages collapse state for multiple message blocks
- *
- * @example
- * ```tsx
- * const blockStates = useBlockState(messages);
- *
- * {messages.map((msg, i) => (
- *   <UnifiedMessageBlock
- *     key={msg.id}
- *     isLatest={i === messages.length - 1}
- *     isCollapsed={blockStates.get(msg.id)?.collapsed ?? false}
- *     ...
- *   />
- * ))}
- * ```
- */
 export function useBlockState(messages: ConversationMessage[]) {
   const [blockStates, setBlockStates] = useState<Record<string, BlockState>>(() => {
     const initial: Record<string, BlockState> = {};
@@ -583,17 +555,13 @@ export function useBlockState(messages: ConversationMessage[]) {
     return initial;
   });
 
-  // Sync block states when messages array changes
-  // Use message IDs for stable dependency comparison
   const messageIds = useMemo(() => messages.map((m) => m.id).join(","), [messages]);
   useEffect(() => {
     setBlockStates((prev) => {
       const currentIds = new Set(messages.map((m) => m.id));
       const prevIds = new Set(Object.keys(prev));
 
-      // Skip if IDs are identical (no structural change)
       if (currentIds.size === prevIds.size && [...currentIds].every((id) => prevIds.has(id))) {
-        // Just update isLatest flags
         let hasChanges = false;
         const updated: Record<string, BlockState> = { ...prev };
         messages.forEach((msg, i) => {
@@ -606,7 +574,6 @@ export function useBlockState(messages: ConversationMessage[]) {
         return hasChanges ? updated : prev;
       }
 
-      // Full rebuild when messages structure changes
       const updated: Record<string, BlockState> = {};
       messages.forEach((msg, i) => {
         const isLatest = i === messages.length - 1;
