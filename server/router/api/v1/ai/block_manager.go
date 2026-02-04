@@ -235,4 +235,3 @@ func convertBlockModeToStore(mode BlockMode) store.AIBlockMode {
 		return store.AIBlockModeNormal
 	}
 }
-

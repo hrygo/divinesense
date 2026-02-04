@@ -9,25 +9,27 @@
  */
 
 // Re-export proto types for convenience
+// Re-export SessionStats since it's used by Block
 export type {
+  AppendEventRequest,
+  AppendUserInputRequest,
   Block,
-  BlockType,
+  BlockEvent,
   BlockMode,
   BlockStatus,
-  UserInput,
-  BlockEvent,
+  BlockType,
+  CreateBlockRequest,
+  DeleteBlockRequest,
+  GetBlockRequest,
   ListBlocksRequest,
   ListBlocksResponse,
-  GetBlockRequest,
-  CreateBlockRequest,
+  SessionStats,
   UpdateBlockRequest,
-  DeleteBlockRequest,
-  AppendUserInputRequest,
-  AppendEventRequest,
+  UserInput,
 } from "./proto/api/v1/ai_service_pb";
 
-// Re-export SessionStats since it's used by Block
-export type { SessionStats } from "./proto/api/v1/ai_service_pb";
+// Import enum types for type guards
+import { BlockMode as BlockModeEnum, BlockStatus as BlockStatusEnum, BlockType as BlockTypeEnum } from "./proto/api/v1/ai_service_pb";
 
 /**
  * Block type constants (for type guards and comparisons)
@@ -73,25 +75,28 @@ export const EVENT_TYPE = {
 /**
  * Type guard for checking if a status is terminal (completed or error)
  */
-export function isTerminalStatus(status: string): boolean {
-  return status === BLOCK_STATUS.COMPLETED || status === BLOCK_STATUS.ERROR;
+export function isTerminalStatus(status: BlockStatusEnum | string): boolean {
+  const statusStr = typeof status === "string" ? status : String(status);
+  return statusStr === String(BLOCK_STATUS.COMPLETED) || statusStr === String(BLOCK_STATUS.ERROR);
 }
 
 /**
  * Type guard for checking if a status is active (pending or streaming)
  */
-export function isActiveStatus(status: string): boolean {
-  return status === BLOCK_STATUS.PENDING || status === BLOCK_STATUS.STREAMING;
+export function isActiveStatus(status: BlockStatusEnum | string): boolean {
+  const statusStr = typeof status === "string" ? status : String(status);
+  return statusStr === String(BLOCK_STATUS.PENDING) || statusStr === String(BLOCK_STATUS.STREAMING);
 }
 
 /**
  * Get display name for block type
  */
-export function getBlockTypeName(type: string): string {
-  switch (type) {
-    case BLOCK_TYPE.MESSAGE:
+export function getBlockTypeName(type: BlockTypeEnum | string): string {
+  const typeStr = typeof type === "string" ? type : String(type);
+  switch (typeStr) {
+    case String(BLOCK_TYPE.MESSAGE):
       return "message";
-    case BLOCK_TYPE.CONTEXT_SEPARATOR:
+    case String(BLOCK_TYPE.CONTEXT_SEPARATOR):
       return "context_separator";
     default:
       return "unspecified";
@@ -101,13 +106,14 @@ export function getBlockTypeName(type: string): string {
 /**
  * Get display name for block mode
  */
-export function getBlockModeName(mode: string): string {
-  switch (mode) {
-    case BLOCK_MODE.NORMAL:
+export function getBlockModeName(mode: BlockModeEnum | string): string {
+  const modeStr = typeof mode === "string" ? mode : String(mode);
+  switch (modeStr) {
+    case String(BLOCK_MODE.NORMAL):
       return "normal";
-    case BLOCK_MODE.GEEK:
+    case String(BLOCK_MODE.GEEK):
       return "geek";
-    case BLOCK_MODE.EVOLUTION:
+    case String(BLOCK_MODE.EVOLUTION):
       return "evolution";
     default:
       return "unspecified";
@@ -117,15 +123,16 @@ export function getBlockModeName(mode: string): string {
 /**
  * Get display name for block status
  */
-export function getBlockStatusName(status: string): string {
-  switch (status) {
-    case BLOCK_STATUS.PENDING:
+export function getBlockStatusName(status: BlockStatusEnum | string): string {
+  const statusStr = typeof status === "string" ? status : String(status);
+  switch (statusStr) {
+    case String(BLOCK_STATUS.PENDING):
       return "pending";
-    case BLOCK_STATUS.STREAMING:
+    case String(BLOCK_STATUS.STREAMING):
       return "streaming";
-    case BLOCK_STATUS.COMPLETED:
+    case String(BLOCK_STATUS.COMPLETED):
       return "completed";
-    case BLOCK_STATUS.ERROR:
+    case String(BLOCK_STATUS.ERROR):
       return "error";
     default:
       return "unspecified";
@@ -150,9 +157,7 @@ export interface BlockWithMetadata {
 /**
  * Create a BlockWithMetadata from a Block
  */
-export function createBlockWithMetadata(
-  block: import("./proto/api/v1/ai_service_pb").Block
-): BlockWithMetadata {
+export function createBlockWithMetadata(block: import("./proto/api/v1/ai_service_pb").Block): BlockWithMetadata {
   const status = block.status;
   return {
     block,
@@ -172,19 +177,4 @@ export interface BlockListFilters {
   status?: string;
   mode?: string;
   ccSessionId?: string;
-}
-
-/**
- * Create a ListBlocksRequest from filters
- */
-export function createListBlocksRequest(
-  conversationId: number,
-  filters?: BlockListFilters
-): import("./proto/api/v1/ai_service_pb").ListBlocksRequest {
-  return {
-    conversationId,
-    status: filters?.status ?? ("" as any),
-    mode: filters?.mode ?? ("" as any),
-    ccSessionId: filters?.ccSessionId ?? "",
-  };
 }
