@@ -235,19 +235,22 @@ function BlockHeader({
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
 
-  // 计算用户输入预览文本 (支持追加输入)
+  // 计算用户输入预览文本 (固定字符截取)
+  const HEADER_MAX_CHARS = 20;
   const userInputPreview = useMemo(() => {
     const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
-    if (inputs.length === 1) {
-      return inputs[0];
-    }
     // 多个输入时显示摘要
     const firstLine = inputs[0].split("\n")[0];
-    if (inputs.length === 2) {
-      return `${firstLine} + 1 ${t("ai.unified_block.more_input") || "追加"}`;
+    if (inputs.length === 1) {
+      return firstLine.length > HEADER_MAX_CHARS ? firstLine.slice(0, HEADER_MAX_CHARS) + "..." : firstLine;
     }
-    return `${firstLine} + ${inputs.length - 1} ${t("ai.unified_block.more_inputs") || "追加"}`;
-  }, [userMessage.content, additionalUserInputs, t]);
+    // 多输入时：第一个输入截取 + 追加数量
+    const truncated = firstLine.length > HEADER_MAX_CHARS ? firstLine.slice(0, HEADER_MAX_CHARS) + "..." : firstLine;
+    if (inputs.length === 2) {
+      return `${truncated} +1`;
+    }
+    return `${truncated} +${inputs.length - 1}`;
+  }, [userMessage.content, additionalUserInputs]);
 
   // 计算追加输入的总数
   const totalInputCount = useMemo(() => 1 + additionalUserInputs.length, [additionalUserInputs.length]);
@@ -298,8 +301,8 @@ function BlockHeader({
             </div>
           )}
         </div>
-        <div className="min-w-0 flex-1" title={userMessage.content}>
-          <p className="text-sm font-medium text-foreground line-clamp-2 hover:line-clamp-none transition-all cursor-help">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground truncate" title={userMessage.content}>
             {userInputPreview}
           </p>
         </div>
@@ -390,9 +393,9 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
   if (isCollapsed) return null;
 
   return (
-    <div className="relative group mb-6">
+    <div className="relative group">
       {/* Timeline Node */}
-      <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-500 flex items-center justify-center shrink-0 z-10">
+      <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60">
         <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
       </div>
       {/* Content with pl-8 for timeline alignment */}
@@ -861,7 +864,7 @@ function BlockBody({
           {/* 4. Error Section */}
           {hasError && (
             <div className="relative group">
-              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10">
+              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-red-200 dark:group-hover:bg-red-900/50">
                 <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
               </div>
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
