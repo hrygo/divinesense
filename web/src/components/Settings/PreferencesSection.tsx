@@ -9,7 +9,7 @@ import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { UserSetting_GeneralSetting, UserSetting_GeneralSettingSchema } from "@/types/proto/api/v1/user_service_pb";
 import { loadLocale, useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString, convertVisibilityToString } from "@/utils/memo";
-import { loadTheme } from "@/utils/theme";
+import { loadTheme, THEME_OPTIONS } from "@/utils/theme";
 import LocaleSelect from "../LocaleSelect";
 import ThemeSelect from "../ThemeSelect";
 import VisibilityIcon from "../VisibilityIcon";
@@ -18,14 +18,9 @@ import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
 import WebhookSection from "./WebhookSection";
 import useIsMobile from "@/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
 
 const LOCALE_OPTIONS: Locale[] = ["en", "zh-Hans", "zh-Hant"];
-
-const THEME_OPTIONS = [
-  { value: "system", labelKey: "theme.system" },
-  { value: "light", labelKey: "theme.light" },
-  { value: "dark", labelKey: "theme.dark" },
-];
 
 const VISIBILITY_OPTIONS = [
   { value: Visibility.PRIVATE, labelKey: "memo.visibility.private" },
@@ -128,7 +123,7 @@ const PreferencesSection = () => {
           <SheetTitle>{t("setting.preference-section.theme")}</SheetTitle>
         </SheetHeader>
         <div className="mt-4">
-          {THEME_OPTIONS.map((theme) => (
+          {THEME_OPTIONS.filter((opt) => ["system", "light", "dark"].includes(opt.value)).map((theme) => (
             <button
               key={theme.value}
               onClick={() => handleThemeChange(theme.value)}
@@ -138,7 +133,7 @@ const PreferencesSection = () => {
                 setting.theme === theme.value && "bg-muted/30"
               )}
             >
-              <span className="text-sm">{t(theme.labelKey)}</span>
+              <span className="text-sm">{theme.label}</span>
               {setting.theme === theme.value && <CheckIcon className="w-5 h-5 text-green-600" />}
             </button>
           ))}
@@ -182,30 +177,55 @@ const PreferencesSection = () => {
   return (
     <SettingSection>
       <SettingGroup title={t("common.basic")}>
-        <SettingRow
-          label={t("common.language")}
-          value={!isMobile ? setting.locale : undefined}
-          onClick={isMobile ? () => setShowLocaleSheet(true) : undefined}
-        >
-          {!isMobile && <LocaleSelect value={setting.locale} onChange={handleLocaleSelectChange} />}
-        </SettingRow>
+        {isMobile ? (
+          <div
+            className="w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0 active:bg-muted/50"
+            onClick={() => setShowLocaleSheet(true)}
+          >
+            <span className="text-sm">{t("common.language")}</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              {setting.locale}
+              <ChevronRightIcon className="w-4 h-4" />
+            </span>
+          </div>
+        ) : (
+          <SettingRow label={t("common.language")}>
+            <LocaleSelect value={setting.locale} onChange={handleLocaleSelectChange} />
+          </SettingRow>
+        )}
 
-        <SettingRow
-          label={t("setting.preference-section.theme")}
-          value={!isMobile ? setting.theme : undefined}
-          onClick={isMobile ? () => setShowThemeSheet(true) : undefined}
-        >
-          {!isMobile && <ThemeSelect value={setting.theme} onValueChange={handleThemeChange} />}
-        </SettingRow>
+        {isMobile ? (
+          <div
+            className="w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0 active:bg-muted/50"
+            onClick={() => setShowThemeSheet(true)}
+          >
+            <span className="text-sm">{t("setting.preference-section.theme")}</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              {THEME_OPTIONS.find((opt) => opt.value === setting.theme)?.label || setting.theme}
+              <ChevronRightIcon className="w-4 h-4" />
+            </span>
+          </div>
+        ) : (
+          <SettingRow label={t("setting.preference-section.theme")}>
+            <ThemeSelect value={setting.theme} onValueChange={handleThemeChange} />
+          </SettingRow>
+        )}
       </SettingGroup>
 
       <SettingGroup title={t("setting.preference")} showSeparator>
-        <SettingRow
-          label={t("setting.preference-section.default-memo-visibility")}
-          value={!isMobile ? setting.memoVisibility : undefined}
-          onClick={isMobile ? () => setShowVisibilitySheet(true) : undefined}
-        >
-          {!isMobile && (
+        {isMobile ? (
+          <div
+            className="w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0 active:bg-muted/50"
+            onClick={() => setShowVisibilitySheet(true)}
+          >
+            <span className="text-sm">{t("setting.preference-section.default-memo-visibility")}</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <VisibilityIcon visibility={convertVisibilityFromString(setting.memoVisibility)} />
+              <ChevronRightIcon className="w-4 h-4" />
+            </span>
+          </div>
+        ) : (
+          <SettingRow label={t("setting.preference-section.default-memo-visibility")}>
             <Select value={setting.memoVisibility || "PRIVATE"} onValueChange={handleDefaultMemoVisibilityChanged}>
               <SelectTrigger className="min-w-fit">
                 <div className="flex items-center gap-2">
@@ -223,8 +243,8 @@ const PreferencesSection = () => {
                   ))}
               </SelectContent>
             </Select>
-          )}
-        </SettingRow>
+          </SettingRow>
+        )}
       </SettingGroup>
 
       {/* Hide Webhook section on mobile - dev tool */}

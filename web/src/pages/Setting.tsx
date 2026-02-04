@@ -6,10 +6,11 @@ import {
   KeyIcon,
   LibraryIcon,
   MessageSquareIcon,
+  Settings2Icon,
   UserIcon,
   UsersIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import MobileHeader from "@/components/MobileHeader";
 import ChatAppsSection from "@/components/Settings/ChatAppsSection";
@@ -72,14 +73,6 @@ const Setting = () => {
     selectedSection: "my-account",
   });
   const isHost = user?.role === User_Role.HOST;
-
-  const settingsSectionList = useMemo(() => {
-    let settingList = [...PERSONAL_SECTIONS];
-    if (isHost) {
-      settingList = settingList.concat(ADMIN_SECTIONS);
-    }
-    return settingList;
-  }, [isHost]);
 
   useEffect(() => {
     let hash = location.hash.slice(1) as SettingSection;
@@ -151,7 +144,7 @@ const Setting = () => {
             >
               <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
               <span className="text-sm text-foreground flex-1 text-left">
-                {section === "chat-apps" ? t(`setting.${section}.title`) : t(titleKey)}
+                {section === "chat-apps" ? (t as any)(`setting.${section}.title`) : t(titleKey)}
               </span>
               <ChevronRightIcon className="w-5 h-5 text-muted-foreground shrink-0" />
             </button>

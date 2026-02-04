@@ -26,7 +26,7 @@ const DesktopOnlyBanner = ({ messageKey, description, title }: DesktopOnlyBanner
         {title || t("setting.mobile.desktop-required-title")}
       </h3>
       <p className="text-sm text-muted-foreground max-w-[28rem]">
-        {messageKey ? t(`setting.mobile.${messageKey}`) : description || t("setting.mobile.desktop-required-description")}
+        {messageKey ? (t as any)(`setting.mobile.${messageKey}`) : description || t("setting.mobile.desktop-required-description")}
       </p>
     </div>
   );
