@@ -682,3 +682,82 @@ func (s *ConnectServiceHandler) SearchWithHighlight(ctx context.Context, req *co
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// AIBlock (Unified Block Model) wrappers for Connect
+
+func (s *ConnectServiceHandler) ListBlocks(ctx context.Context, req *connect.Request[v1pb.ListBlocksRequest]) (*connect.Response[v1pb.ListBlocksResponse], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.ListBlocks(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) GetBlock(ctx context.Context, req *connect.Request[v1pb.GetBlockRequest]) (*connect.Response[v1pb.Block], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.GetBlock(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) CreateBlock(ctx context.Context, req *connect.Request[v1pb.CreateBlockRequest]) (*connect.Response[v1pb.Block], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.CreateBlock(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) UpdateBlock(ctx context.Context, req *connect.Request[v1pb.UpdateBlockRequest]) (*connect.Response[v1pb.Block], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.UpdateBlock(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) DeleteBlock(ctx context.Context, req *connect.Request[v1pb.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.DeleteBlock(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) AppendUserInput(ctx context.Context, req *connect.Request[v1pb.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.AppendUserInput(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) AppendEvent(ctx context.Context, req *connect.Request[v1pb.AppendEventRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.AppendEvent(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}

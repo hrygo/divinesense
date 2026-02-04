@@ -47,6 +47,13 @@ const (
 	AIService_GetCostStats_FullMethodName              = "/memos.api.v1.AIService/GetCostStats"
 	AIService_GetUserCostSettings_FullMethodName       = "/memos.api.v1.AIService/GetUserCostSettings"
 	AIService_SetUserCostSettings_FullMethodName       = "/memos.api.v1.AIService/SetUserCostSettings"
+	AIService_ListBlocks_FullMethodName                = "/memos.api.v1.AIService/ListBlocks"
+	AIService_GetBlock_FullMethodName                  = "/memos.api.v1.AIService/GetBlock"
+	AIService_CreateBlock_FullMethodName               = "/memos.api.v1.AIService/CreateBlock"
+	AIService_UpdateBlock_FullMethodName               = "/memos.api.v1.AIService/UpdateBlock"
+	AIService_DeleteBlock_FullMethodName               = "/memos.api.v1.AIService/DeleteBlock"
+	AIService_AppendUserInput_FullMethodName           = "/memos.api.v1.AIService/AppendUserInput"
+	AIService_AppendEvent_FullMethodName               = "/memos.api.v1.AIService/AppendEvent"
 )
 
 // AIServiceClient is the client API for AIService service.
@@ -109,6 +116,20 @@ type AIServiceClient interface {
 	GetUserCostSettings(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserCostSettings, error)
 	// SetUserCostSettings updates user-specific cost control settings.
 	SetUserCostSettings(ctx context.Context, in *SetUserCostSettingsRequest, opts ...grpc.CallOption) (*UserCostSettings, error)
+	// ListBlocks retrieves blocks for a conversation.
+	ListBlocks(ctx context.Context, in *ListBlocksRequest, opts ...grpc.CallOption) (*ListBlocksResponse, error)
+	// GetBlock retrieves a specific block.
+	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*Block, error)
+	// CreateBlock creates a new conversation block.
+	CreateBlock(ctx context.Context, in *CreateBlockRequest, opts ...grpc.CallOption) (*Block, error)
+	// UpdateBlock updates a block.
+	UpdateBlock(ctx context.Context, in *UpdateBlockRequest, opts ...grpc.CallOption) (*Block, error)
+	// DeleteBlock deletes a block.
+	DeleteBlock(ctx context.Context, in *DeleteBlockRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// AppendUserInput appends a user input to an existing block.
+	AppendUserInput(ctx context.Context, in *AppendUserInputRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// AppendEvent appends an event to the block's event stream.
+	AppendEvent(ctx context.Context, in *AppendEventRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type aIServiceClient struct {
@@ -398,6 +419,76 @@ func (c *aIServiceClient) SetUserCostSettings(ctx context.Context, in *SetUserCo
 	return out, nil
 }
 
+func (c *aIServiceClient) ListBlocks(ctx context.Context, in *ListBlocksRequest, opts ...grpc.CallOption) (*ListBlocksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBlocksResponse)
+	err := c.cc.Invoke(ctx, AIService_ListBlocks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*Block, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Block)
+	err := c.cc.Invoke(ctx, AIService_GetBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) CreateBlock(ctx context.Context, in *CreateBlockRequest, opts ...grpc.CallOption) (*Block, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Block)
+	err := c.cc.Invoke(ctx, AIService_CreateBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) UpdateBlock(ctx context.Context, in *UpdateBlockRequest, opts ...grpc.CallOption) (*Block, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Block)
+	err := c.cc.Invoke(ctx, AIService_UpdateBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) DeleteBlock(ctx context.Context, in *DeleteBlockRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_DeleteBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) AppendUserInput(ctx context.Context, in *AppendUserInputRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_AppendUserInput_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) AppendEvent(ctx context.Context, in *AppendEventRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_AppendEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AIServiceServer is the server API for AIService service.
 // All implementations must embed UnimplementedAIServiceServer
 // for forward compatibility.
@@ -458,6 +549,20 @@ type AIServiceServer interface {
 	GetUserCostSettings(context.Context, *emptypb.Empty) (*UserCostSettings, error)
 	// SetUserCostSettings updates user-specific cost control settings.
 	SetUserCostSettings(context.Context, *SetUserCostSettingsRequest) (*UserCostSettings, error)
+	// ListBlocks retrieves blocks for a conversation.
+	ListBlocks(context.Context, *ListBlocksRequest) (*ListBlocksResponse, error)
+	// GetBlock retrieves a specific block.
+	GetBlock(context.Context, *GetBlockRequest) (*Block, error)
+	// CreateBlock creates a new conversation block.
+	CreateBlock(context.Context, *CreateBlockRequest) (*Block, error)
+	// UpdateBlock updates a block.
+	UpdateBlock(context.Context, *UpdateBlockRequest) (*Block, error)
+	// DeleteBlock deletes a block.
+	DeleteBlock(context.Context, *DeleteBlockRequest) (*emptypb.Empty, error)
+	// AppendUserInput appends a user input to an existing block.
+	AppendUserInput(context.Context, *AppendUserInputRequest) (*emptypb.Empty, error)
+	// AppendEvent appends an event to the block's event stream.
+	AppendEvent(context.Context, *AppendEventRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAIServiceServer()
 }
 
@@ -548,6 +653,27 @@ func (UnimplementedAIServiceServer) GetUserCostSettings(context.Context, *emptyp
 }
 func (UnimplementedAIServiceServer) SetUserCostSettings(context.Context, *SetUserCostSettingsRequest) (*UserCostSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetUserCostSettings not implemented")
+}
+func (UnimplementedAIServiceServer) ListBlocks(context.Context, *ListBlocksRequest) (*ListBlocksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBlocks not implemented")
+}
+func (UnimplementedAIServiceServer) GetBlock(context.Context, *GetBlockRequest) (*Block, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBlock not implemented")
+}
+func (UnimplementedAIServiceServer) CreateBlock(context.Context, *CreateBlockRequest) (*Block, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateBlock not implemented")
+}
+func (UnimplementedAIServiceServer) UpdateBlock(context.Context, *UpdateBlockRequest) (*Block, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBlock not implemented")
+}
+func (UnimplementedAIServiceServer) DeleteBlock(context.Context, *DeleteBlockRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBlock not implemented")
+}
+func (UnimplementedAIServiceServer) AppendUserInput(context.Context, *AppendUserInputRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendUserInput not implemented")
+}
+func (UnimplementedAIServiceServer) AppendEvent(context.Context, *AppendEventRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendEvent not implemented")
 }
 func (UnimplementedAIServiceServer) mustEmbedUnimplementedAIServiceServer() {}
 func (UnimplementedAIServiceServer) testEmbeddedByValue()                   {}
@@ -1049,6 +1175,132 @@ func _AIService_SetUserCostSettings_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_ListBlocks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBlocksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).ListBlocks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_ListBlocks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).ListBlocks(ctx, req.(*ListBlocksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).GetBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_GetBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).GetBlock(ctx, req.(*GetBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_CreateBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).CreateBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_CreateBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).CreateBlock(ctx, req.(*CreateBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_UpdateBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).UpdateBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_UpdateBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).UpdateBlock(ctx, req.(*UpdateBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_DeleteBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).DeleteBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_DeleteBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).DeleteBlock(ctx, req.(*DeleteBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_AppendUserInput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendUserInputRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).AppendUserInput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_AppendUserInput_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).AppendUserInput(ctx, req.(*AppendUserInputRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_AppendEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).AppendEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_AppendEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).AppendEvent(ctx, req.(*AppendEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AIService_ServiceDesc is the grpc.ServiceDesc for AIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1159,6 +1411,34 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetUserCostSettings",
 			Handler:    _AIService_SetUserCostSettings_Handler,
+		},
+		{
+			MethodName: "ListBlocks",
+			Handler:    _AIService_ListBlocks_Handler,
+		},
+		{
+			MethodName: "GetBlock",
+			Handler:    _AIService_GetBlock_Handler,
+		},
+		{
+			MethodName: "CreateBlock",
+			Handler:    _AIService_CreateBlock_Handler,
+		},
+		{
+			MethodName: "UpdateBlock",
+			Handler:    _AIService_UpdateBlock_Handler,
+		},
+		{
+			MethodName: "DeleteBlock",
+			Handler:    _AIService_DeleteBlock_Handler,
+		},
+		{
+			MethodName: "AppendUserInput",
+			Handler:    _AIService_AppendUserInput_Handler,
+		},
+		{
+			MethodName: "AppendEvent",
+			Handler:    _AIService_AppendEvent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

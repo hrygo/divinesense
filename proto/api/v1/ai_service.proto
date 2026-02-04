@@ -182,6 +182,55 @@ service AIService {
       body: "*"
     };
   }
+
+  // ========== Unified Block Model (Phase 2) ==========
+
+  // ListBlocks retrieves blocks for a conversation.
+  rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
+    option (google.api.http) = {get: "/api/v1/ai/conversations/{conversation_id}/blocks"};
+  }
+
+  // GetBlock retrieves a specific block.
+  rpc GetBlock(GetBlockRequest) returns (Block) {
+    option (google.api.http) = {get: "/api/v1/ai/blocks/{id}"};
+  }
+
+  // CreateBlock creates a new conversation block.
+  rpc CreateBlock(CreateBlockRequest) returns (Block) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/conversations/{conversation_id}/blocks"
+      body: "*"
+    };
+  }
+
+  // UpdateBlock updates a block.
+  rpc UpdateBlock(UpdateBlockRequest) returns (Block) {
+    option (google.api.http) = {
+      patch: "/api/v1/ai/blocks/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteBlock deletes a block.
+  rpc DeleteBlock(DeleteBlockRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/ai/blocks/{id}"};
+  }
+
+  // AppendUserInput appends a user input to an existing block.
+  rpc AppendUserInput(AppendUserInputRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/blocks/{id}/inputs"
+      body: "*"
+    };
+  }
+
+  // AppendEvent appends an event to the block's event stream.
+  rpc AppendEvent(AppendEventRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/blocks/{id}/events"
+      body: "*"
+    };
+  }
 }
 
 // ScheduleAgentService provides schedule-specific AI agent functionality.
@@ -785,4 +834,141 @@ message SetUserCostSettingsRequest {
   optional bool alert_enabled = 3;
   optional bool alert_email = 4;
   optional bool alert_in_app = 5;
+}
+
+// ========== Unified Block Model Messages ==========
+
+// Block represents a single conversation block (round).
+// A block contains user inputs and the AI's response, along with
+// an event stream tracking the AI's thinking process.
+message Block {
+  int64 id = 1;
+  string uid = 2;
+  int32 conversation_id = 3;
+  int32 round_number = 4;
+
+  // Block type and mode
+  BlockType block_type = 5;
+  BlockMode mode = 6;
+
+  // User inputs (may be multiple if user adds more during AI response)
+  repeated UserInput user_inputs = 7;
+
+  // AI response
+  string assistant_content = 8;
+  int64 assistant_timestamp = 9;
+
+  // Event stream (chronological order)
+  repeated BlockEvent event_stream = 10;
+
+  // Session statistics (for Geek/Evolution modes)
+  SessionStats session_stats = 11;
+
+  // CC session mapping (for Geek/Evolution modes)
+  string cc_session_id = 12;
+
+  // Block status
+  BlockStatus status = 13;
+
+  // Extension metadata
+  string metadata = 14; // JSON string
+
+  int64 created_ts = 15;
+  int64 updated_ts = 16;
+}
+
+// UserInput represents a single user input within a block.
+message UserInput {
+  string content = 1;
+  int64 timestamp = 2;
+  string metadata = 3; // JSON string
+}
+
+// BlockEvent represents an event in the event stream.
+// Events are stored chronologically and track the AI's process.
+message BlockEvent {
+  string type = 1; // "thinking", "tool_use", "tool_result", "answer", "error"
+  string content = 2;
+  int64 timestamp = 3;
+  string meta = 4; // JSON string with event-specific metadata
+}
+
+// BlockType represents the type of block.
+enum BlockType {
+  BLOCK_TYPE_UNSPECIFIED = 0;
+  BLOCK_TYPE_MESSAGE = 1;          // User-AI conversation round
+  BLOCK_TYPE_CONTEXT_SEPARATOR = 2; // Context separator marker
+}
+
+// BlockMode represents the AI mode used for this block.
+enum BlockMode {
+  BLOCK_MODE_UNSPECIFIED = 0;
+  BLOCK_MODE_NORMAL = 1;     // Normal AI assistant mode
+  BLOCK_MODE_GEEK = 2;       // Geek mode (Claude Code CLI)
+  BLOCK_MODE_EVOLUTION = 3;  // Evolution mode (self-improvement)
+}
+
+// BlockStatus represents the current status of a block.
+enum BlockStatus {
+  BLOCK_STATUS_UNSPECIFIED = 0;
+  BLOCK_STATUS_PENDING = 1;    // Waiting for AI response
+  BLOCK_STATUS_STREAMING = 2;  // AI is currently responding
+  BLOCK_STATUS_COMPLETED = 3;  // Response completed
+  BLOCK_STATUS_ERROR = 4;      // Error occurred
+}
+
+// ListBlocksRequest is the request for ListBlocks.
+message ListBlocksRequest {
+  int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
+  BlockStatus status = 2; // Optional filter by status
+  BlockMode mode = 3;     // Optional filter by mode
+  string cc_session_id = 4; // Optional filter by CC session
+}
+
+// ListBlocksResponse is the response for ListBlocks.
+message ListBlocksResponse {
+  repeated Block blocks = 1;
+}
+
+// GetBlockRequest is the request for GetBlock.
+message GetBlockRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// CreateBlockRequest is the request for CreateBlock.
+message CreateBlockRequest {
+  int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
+  BlockType block_type = 2; // Default: MESSAGE
+  BlockMode mode = 3;       // Default: NORMAL
+  repeated UserInput user_inputs = 4;
+  string metadata = 5; // JSON string
+  string cc_session_id = 6; // For Geek/Evolution modes
+}
+
+// UpdateBlockRequest is the request for UpdateBlock.
+message UpdateBlockRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED];
+  optional string assistant_content = 2;
+  repeated BlockEvent event_stream = 3; // Replace entire event stream
+  SessionStats session_stats = 4;
+  optional string cc_session_id = 5;
+  optional BlockStatus status = 6;
+  string metadata = 7; // Merge into existing metadata (JSON string)
+}
+
+// DeleteBlockRequest is the request for DeleteBlock.
+message DeleteBlockRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// AppendUserInputRequest is the request for AppendUserInput.
+message AppendUserInputRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Block ID
+  UserInput input = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// AppendEventRequest is the request for AppendEvent.
+message AppendEventRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Block ID
+  BlockEvent event = 2 [(google.api.field_behavior) = REQUIRED];
 }
