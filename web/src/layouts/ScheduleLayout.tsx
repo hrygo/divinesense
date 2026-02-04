@@ -26,6 +26,19 @@ const ScheduleSidebar = () => {
   );
 };
 
+/**
+ * ScheduleLayout - Layout for schedule/calendar pages
+ *
+ * === SPACING DEVIATION NOTES ===
+ * This layout intentionally deviates from the standard spacing specification:
+ * - Sidebar width: w-80 (320px) instead of w-72 (288px) - needs more space for calendar
+ * - Sidebar padding: py-4 px-3 instead of px-3 py-6 - adjusted for calendar widget
+ * - NO top padding (pt-6) on main content - calendar views manage their own spacing
+ *
+ * These deviations are by design to accommodate the FullCalendar widget.
+ *
+ * @see docs/research/layout-spacing-unification.md
+ */
 const ScheduleLayout = () => {
   const lg = useMediaQuery("lg");
   const { setFilteredSchedules, setHasSearchFilter } = useScheduleContext();
