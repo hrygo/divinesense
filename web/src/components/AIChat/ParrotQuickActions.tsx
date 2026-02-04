@@ -55,7 +55,7 @@ export function ParrotQuickActions({ currentParrot, onParrotChange, disabled = f
                 </div>
                 <div
                   className={cn(
-                    "text-[10px] opacity-60 truncate font-medium",
+                    "text-[11px] opacity-60 truncate font-medium",
                     isSelected ? "text-current" : "text-zinc-400 dark:text-zinc-500",
                   )}
                 >

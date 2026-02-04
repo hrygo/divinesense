@@ -6,6 +6,10 @@
  * 避免在组件中重复注入 style 标签
  */
 
+/* ============================================
+   基础动画 - Parrot 特效
+   ============================================ */
+
 /* Wave animation for typing indicator */
 @keyframes wave {
   0%,
@@ -91,4 +95,314 @@
 
 .animate-block-pulse {
   animation: breatheShadow 2s infinite;
+}
+
+/* ============================================
+   极客模式动画 - Geek Mode Animations
+   ============================================ */
+
+/* 扫描线效果 - CRT scanlines */
+@keyframes scanlineMove {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* 数据流动画 - Data flow for borders */
+@keyframes dataFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* 终端光标闪烁 - Terminal cursor blink */
+@keyframes terminalCursor {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 数字雨效果 - Matrix rain (simplified CSS-only) */
+@keyframes matrixDrop {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* 故障闪烁效果 - Glitch flicker */
+@keyframes glitchFlicker {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  41% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  42% {
+    opacity: 0.8;
+    transform: translateX(-2px);
+  }
+  43% {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+  45% {
+    opacity: 0.3;
+    transform: translateX(-1px);
+  }
+  46% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 数据传输脉冲 - Data transmission pulse */
+@keyframes dataPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 20px currentColor;
+  }
+  50% {
+    box-shadow:
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 40px currentColor;
+  }
+}
+
+/* ============================================
+   进化模式动画 - Evolution Mode Animations
+   ============================================ */
+
+/* DNA 双螺旋旋转 - DNA helix rotation */
+@keyframes dnaHelix {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* DNA 波浪 - DNA wave motion */
+@keyframes dnaWave {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  25% {
+    transform: translateY(-5px) scaleY(1.1);
+  }
+  50% {
+    transform: translateY(0) scaleY(0.9);
+  }
+  75% {
+    transform: translateY(5px) scaleY(1.1);
+  }
+}
+
+/* 细胞呼吸 - Cell breathing */
+@keyframes cellBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* 有机脉冲 - Organic pulse */
+@keyframes organicPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(168, 85, 247, 0.4),
+      0 0 0 0 rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(168, 85, 247, 0),
+      0 0 0 20px rgba(168, 85, 247, 0);
+  }
+}
+
+/* 突变效果 - Mutation shimmer */
+@keyframes mutation {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* 粒子上升 - Particle rise */
+@keyframes particleRise {
+  0% {
+    transform: translateY(100%) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) scale(1);
+    opacity: 0;
+  }
+}
+
+/* 有机边界流动 - Organic border flow */
+@keyframes organicFlow {
+  0% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+/* ============================================
+   AI Native 流式响应动画
+   ============================================ */
+
+/* 思考阶段脉冲 - Thinking phase pulse */
+@keyframes thinkingPulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+/* 工具执行闪光 - Tool execution flash */
+@keyframes toolFlash {
+  0% {
+    background-color: transparent;
+  }
+  10% {
+    background-color: rgba(34, 197, 94, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* 生成阶段光晕 - Generation glow */
+@keyframes generationGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  }
+}
+
+/* 流式文本光标 - Streaming cursor */
+@keyframes streamingCursor {
+  0%,
+  100% {
+    border-right-color: transparent;
+  }
+  50% {
+    border-right-color: currentColor;
+  }
+}
+
+/* ============================================
+   模式过渡动画
+   ============================================ */
+
+/* 模式切换淡入 - Mode fade in */
+@keyframes modeFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 模式切换淡出 - Mode fade out */
+@keyframes modeFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+/* ============================================
+   辅助类
+   ============================================ */
+
+.geek-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.3), transparent);
+  animation: scanlineMove 3s linear infinite;
+  pointer-events: none;
+}
+
+.evo-dna-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.8), transparent);
+  border-radius: 50%;
+  animation: particleRise 8s linear infinite;
+  pointer-events: none;
+}
+
+.streaming-text {
+  border-right: 2px solid currentColor;
+  animation: streamingCursor 0.8s step-end infinite;
 }

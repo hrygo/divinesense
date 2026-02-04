@@ -321,7 +321,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 {/* Cache hit rate indicator */}
                 {totalProcessedTokens > 0 && (summary.totalCacheReadTokens || 0) > 0 && (
                   <div className="mt-2 pt-2 border-t border-green-200/30 dark:border-green-700/30">
-                    <div className="flex items-center justify-between text-[10px]">
+                    <div className="flex items-center justify-between text-[11px]">
                       <span className="text-muted-foreground">{t("ai.session_stats.cache_hit_rate")}</span>
                       <span className="font-mono text-green-600 dark:text-green-400">
                         {Math.round(((summary.totalCacheReadTokens || 0) / totalProcessedTokens) * 100)}
@@ -343,7 +343,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 <div className="text-center">
                   <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">{summary.toolCallCount}</span>
                   {summary.toolDurationMs && (
-                    <div className="text-[10px] text-muted-foreground mt-1">
+                    <div className="text-[11px] text-muted-foreground mt-1">
                       {t("ai.session_stats.avg")}: {formatDuration(summary.toolDurationMs / summary.toolCallCount)}{" "}
                       {t("ai.session_stats.per_call")}
                     </div>
@@ -355,7 +355,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                       {summary.toolsUsed.map((tool) => (
                         <span
                           key={tool}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                          className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
                         >
                           {tool}
                         </span>

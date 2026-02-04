@@ -180,7 +180,7 @@ export function ChatInput({
 
         {/* Toolbar - 工具栏 */}
         {(onNewChat || onClearContext || onClearChat || onModeChange) && (
-          <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             {/* Left side buttons */}
             {onNewChat && (
               <Button
@@ -188,10 +188,10 @@ export function ChatInput({
                 size="sm"
                 onClick={() => onNewChat && onNewChat()}
                 aria-label={t("ai.aichat.sidebar.new-chat")}
-                className="group/btn h-7 w-7 hover:w-auto px-0 hover:px-2 text-xs text-primary hover:text-primary hover:bg-accent transition-all overflow-hidden"
+                className="group/btn h-9 w-9 md:h-8 md:w-8 hover:w-auto px-0 hover:px-2 text-xs text-primary hover:text-primary hover:bg-accent transition-all overflow-hidden"
                 title="⌘N"
               >
-                <MessageSquarePlus className="w-3.5 h-3.5 shrink-0" />
+                <MessageSquarePlus className="w-4 h-4 shrink-0" />
                 <span className="hidden group-hover/btn:inline ml-1 whitespace-nowrap">
                   {t("ai.aichat.sidebar.new-chat")}
                   <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-accent rounded">⌘N</kbd>
@@ -204,10 +204,10 @@ export function ChatInput({
                 size="sm"
                 onClick={() => onClearContext && onClearContext()}
                 aria-label={t("ai.clear-context")}
-                className="group/btn h-7 w-7 hover:w-auto px-0 hover:px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-all overflow-hidden"
+                className="group/btn h-9 w-9 md:h-8 md:w-8 hover:w-auto px-0 hover:px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-all overflow-hidden"
                 title="⌘K"
               >
-                <Scissors className="w-3.5 h-3.5 shrink-0" />
+                <Scissors className="w-4 h-4 shrink-0" />
                 <span className="hidden group-hover/btn:inline ml-1 whitespace-nowrap">
                   {t("ai.clear-context")}
                   <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-muted rounded">⌘K</kbd>
@@ -220,10 +220,10 @@ export function ChatInput({
                 size="sm"
                 onClick={() => onClearChat && onClearChat()}
                 aria-label={t("ai.clear-chat")}
-                className="group/btn h-7 w-7 hover:w-auto px-0 hover:px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all overflow-hidden"
+                className="group/btn h-9 w-9 md:h-8 md:w-8 hover:w-auto px-0 hover:px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all overflow-hidden"
                 title="⌘L"
               >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <Trash2 className="w-4 h-4 shrink-0" />
                 <span className="hidden group-hover/btn:inline ml-1 whitespace-nowrap">
                   {t("ai.clear-chat")}
                   <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-destructive/20 rounded">⌘L</kbd>

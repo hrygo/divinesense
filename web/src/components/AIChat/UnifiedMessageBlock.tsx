@@ -259,8 +259,8 @@ function BlockHeader({
       <div className="flex items-center gap-3 shrink-0 ml-2">
         {/* Geek/Evolution Summary stats - Compact View */}
         {geekSummary && (
-          <div className="hidden lg:flex items-center gap-3 text-[10px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
-            <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[9px]">
+          <div className="hidden lg:flex items-center gap-3 text-[11px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
+            <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[11px]">
               {t("ai.unified_block.session")}
             </span>
             {geekSummary.time && (
@@ -518,13 +518,13 @@ function BlockBody({
                         {callName}
                       </span>
                       {typeof call === "object" && call.duration && (
-                        <span className="text-[10px] text-muted-foreground bg-background/50 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] text-muted-foreground bg-background/50 px-1.5 py-0.5 rounded">
                           {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
                         </span>
                       )}
                     </div>
                     {typeof call === "object" && call.filePath && (
-                      <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[150px]" title={call.filePath}>
+                      <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={call.filePath}>
                         {call.filePath}
                       </span>
                     )}
@@ -533,7 +533,7 @@ function BlockBody({
                   {/* Tool Input Preview (Argument) */}
                   {typeof call === "object" && call.inputSummary && (
                     <div className="px-3 py-2 border-t border-border/30 bg-background/50">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold mb-0.5">{t("ai.unified_block.input")}</div>
+                      <div className="text-[11px] uppercase text-muted-foreground font-semibold mb-0.5">{t("ai.unified_block.input")}</div>
                       <code className="text-xs text-muted-foreground/80 font-mono break-all line-clamp-2 hover:line-clamp-none transition-all">
                         {call.inputSummary}
                       </code>
@@ -544,11 +544,11 @@ function BlockBody({
                   {result && result.outputSummary && (
                     <div className="px-3 py-2 border-t border-border/30 bg-muted/10">
                       <div className="flex items-center justify-between mb-1">
-                        <div className="text-[10px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
+                        <div className="text-[11px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
                           <Terminal className="w-3 h-3" /> {t("ai.unified_block.output")}
                         </div>
                         {result.isError && (
-                          <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded font-medium">{t("ai.events.error")}</span>
+                          <span className="text-[11px] bg-red-100 text-red-600 px-1.5 rounded font-medium">{t("ai.events.error")}</span>
                         )}
                       </div>
                       <pre

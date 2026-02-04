@@ -37,7 +37,7 @@ const SIZE_CLASSES = {
 } as const;
 
 const TEXT_SIZE_CLASSES = {
-  sm: "text-[10px]",
+  sm: "text-[11px]",
   md: "text-xs",
   lg: "text-sm",
 } as const;
@@ -147,7 +147,7 @@ export function MoodBadge({ mood, parrotId, className }: MoodBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
         theme.iconBg,
         theme.iconText,
         "border border-transparent",

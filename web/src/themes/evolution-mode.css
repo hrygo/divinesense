@@ -511,6 +511,128 @@
 /* 删除 evo-mutation，filter 动画性能较差 */
 
 /* ============================================================
+   Evolution Mode DNA Helix Animation - DNA 双螺旋动画
+   ============================================================ */
+.evolution-mode .evo-dna-helix {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.evolution-mode .evo-dna-helix::before,
+.evolution-mode .evo-dna-helix::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: evo-dna-spin 3s linear infinite;
+}
+
+.evolution-mode .evo-dna-helix::before {
+  border-top-color: var(--evo-primary);
+  border-right-color: var(--evo-blue);
+  animation-duration: 2s;
+}
+
+.evolution-mode .evo-dna-helix::after {
+  border-bottom-color: var(--evo-blue);
+  border-left-color: var(--evo-primary);
+  animation-duration: 3s;
+  animation-direction: reverse;
+}
+
+@keyframes evo-dna-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   Evolution Mode Organic Border - 有机边界
+   ============================================================ */
+.evolution-mode .evo-organic-border {
+  position: relative;
+  border: 1px solid var(--evo-primary-dim);
+  animation: organicFlow 8s ease-in-out infinite;
+}
+
+/* ============================================================
+   Evolution Mode Particle Effect - 粒子效果
+   ============================================================ */
+.evolution-mode .evo-particles {
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-particles::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--evo-glow) 0%, transparent 1px),
+    radial-gradient(circle at 70% 60%, var(--evo-blue) 0%, transparent 1px),
+    radial-gradient(circle at 40% 80%, var(--evo-glow) 0%, transparent 1px);
+  background-size:
+    60px 60px,
+    80px 80px,
+    50px 50px;
+  animation: evo-particle-float 20s linear infinite;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+@keyframes evo-particle-float {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      60px 60px,
+      80px 80px,
+      50px 50px;
+  }
+}
+
+/* ============================================================
+   Evolution Mode Morphing Shape - 变形效果
+   ============================================================ */
+.evolution-mode .evo-morph {
+  animation: organicFlow 6s ease-in-out infinite;
+}
+
+/* ============================================================
+   Evolution Mode Neural Network - 神经网络效果
+   ============================================================ */
+.evolution-mode .evo-neural-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.evolution-mode .evo-neural-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0%, transparent 50%), linear-gradient(0deg, var(--evo-glow) 1px, transparent 1px),
+    linear-gradient(90deg, var(--evo-glow) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    30px 30px,
+    30px 30px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* ============================================================
    Evolution Mode Input Focus
    ============================================================ */
 .evolution-mode input:focus,

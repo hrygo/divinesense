@@ -102,7 +102,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
           <span className="font-mono font-medium">{formatDuration(summary.totalDurationMs!)}</span>
           {/* Breakdown with space separators - only show non-zero values */}
           {(hasThinkingBreakdown || hasToolBreakdown || hasGenerationBreakdown) && (
-            <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
+            <span className="text-[11px] text-muted-foreground/70 hidden sm:inline">
               (
               {[
                 (summary.thinkingDurationMs || 0) > 0 && `💭${formatDuration(summary.thinkingDurationMs!)}`,
@@ -124,10 +124,10 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-amber-500" />
             <span className="font-mono font-medium">{formatNumber(totalTokens)}</span>
-            <span className="text-[10px]">token</span>
+            <span className="text-[11px]">token</span>
             {/* Input/Output breakdown */}
             {(summary.totalInputTokens || summary.totalOutputTokens) && (
-              <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
+              <span className="text-[11px] text-muted-foreground/70 hidden sm:inline">
                 (in:{formatNumber(summary.totalInputTokens || 0)}/out:{formatNumber(summary.totalOutputTokens || 0)})
               </span>
             )}
@@ -153,7 +153,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
           <div className="flex items-center gap-1.5">
             <Wrench className="w-3.5 h-3.5 text-purple-500" />
             <span className="font-mono font-medium">{summary.toolCallCount}</span>
-            <span className="text-[10px]">calls</span>
+            <span className="text-[11px]">calls</span>
           </div>
         </>
       )}
@@ -165,7 +165,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
           <div className="flex items-center gap-1.5">
             <FileEdit className="w-3.5 h-3.5 text-green-500" />
             <span className="font-mono font-medium">{summary.filesModified}</span>
-            <span className="text-[10px]">files</span>
+            <span className="text-[11px]">files</span>
           </div>
         </>
       )}

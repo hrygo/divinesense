@@ -51,7 +51,7 @@ export function AmazingInsightCard({ memos, schedules, insight, onMemoClick, onS
           <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           {t("ai.aichat.amazing-insight.title")}
         </h3>
-        <span className="text-[10px] uppercase tracking-wider text-purple-400 font-medium">
+        <span className="text-[11px] uppercase tracking-wider text-purple-400 font-medium">
           {t("ai.aichat.amazing-insight.auto_generated")}
         </span>
       </div>
