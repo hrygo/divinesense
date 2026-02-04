@@ -694,10 +694,18 @@ function BlockBody({
                   onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
                   className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
-                  <span>
-                    {streamingPhase === "thinking"
-                      ? t("ai.states.thinking") || "Thinking..."
-                      : t("ai.unified_block.thinking_process") || "Thinking Process"}
+                  <span className="flex items-center gap-2">
+                    {streamingPhase === "thinking" ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        {t("ai.states.thinking") || "思考中..."}
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-3.5 h-3.5" />
+                        {t("ai.unified_block.thought") || "思考过程"}
+                      </>
+                    )}
                   </span>
                   <span className="ml-auto">
                     {isThinkingExpanded ? (
