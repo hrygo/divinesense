@@ -631,7 +631,7 @@ function BlockBody({
             />
           )}
 
-          {/* 1. Thinking Section - Collapsible Accordion Style */}
+          {/* 1. Thinking Section - Simplified Collapsible Style */}
           {allThinkingContent.length > 0 && (
             <div className="relative group">
               <div
@@ -648,32 +648,21 @@ function BlockBody({
               <div className="flex flex-col">
                 <button
                   onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   <span>
                     {streamingPhase === "thinking"
                       ? t("ai.states.thinking") || "Thinking..."
                       : t("ai.unified_block.thinking_process") || "Thinking Process"}
                   </span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {isThinkingExpanded ? `(${t("common.collapse")})` : `(${t("common.expand")})`}
+                  <span className="ml-auto">
+                    {isThinkingExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
                   </span>
-                  {isThinkingExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5 opacity-50" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                  )}
                 </button>
-
-                {/* Condensed View (When collapsed) */}
-                {!isThinkingExpanded && (
-                  <p
-                    className="text-xs text-muted-foreground mt-1 line-clamp-1 italic opacity-80 cursor-pointer"
-                    onClick={() => setIsThinkingExpanded(true)}
-                  >
-                    {allThinkingContent.split("\n")[0]}...
-                  </p>
-                )}
 
                 {/* Expanded View */}
                 {isThinkingExpanded && (
