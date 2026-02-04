@@ -93,6 +93,7 @@ const SSOSection = () => {
       {isMobile ? (
         <DesktopOnlyBanner messageKey="sso-desktop-only" />
       ) : (
+        <>
       <SettingTable
         columns={[
           {
@@ -150,6 +151,7 @@ const SSOSection = () => {
         onConfirm={confirmDeleteIdentityProvider}
         confirmVariant="destructive"
       />
+        </>
       )}
     </SettingSection>
   );
