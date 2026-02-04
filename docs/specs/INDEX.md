@@ -333,6 +333,18 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 ---
 
+## 架构规格 (Architecture Specs)
+
+独立规格文档，不属于 Sprint 迭代计划：
+
+| Spec ID | 功能 | 状态 |
+|:---|:---|:---:|
+| [cc_runner_async_arch](./cc_runner_async_arch.md) | CC Runner 异步架构 | ✅ Published |
+| [chat-apps-integration](./chat-apps-integration.md) | 聊天应用集成 (Telegram/钉钉) | ✅ Published |
+| [unified-block-model](./unified-block-model.md) | 统一 Block 模型 | 🔄 PRD |
+
+---
+
 > **纲领来源**: [00-master-roadmap.md](../archived/research_20250202/00-master-roadmap.md) (已归档)
-> **版本**: v1.1
-> **更新时间**: 2025-02-02
+> **版本**: v1.2
+> **更新时间**: 2026-02-04
