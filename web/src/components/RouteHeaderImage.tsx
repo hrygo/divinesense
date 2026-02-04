@@ -30,7 +30,8 @@ const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
   else if (path.startsWith(Routes.KNOWLEDGE_GRAPH)) headerName = "knowledge";
   else if (path.startsWith(Routes.ATTACHMENTS)) headerName = "files";
   else if (path.startsWith(Routes.INBOX)) headerName = "inbox";
-  else if (path.startsWith(Routes.SETTING)) headerName = "memos";
+  // Setting page has its own header structure, don't show RouteHeaderImage
+  else if (path.startsWith(Routes.SETTING)) return null;
   else if (path.startsWith("/memos/")) headerName = "memos"; // Detail
 
   if (!headerName) return null;
