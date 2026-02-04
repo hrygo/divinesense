@@ -1,9 +1,9 @@
 import { Activity, AlertTriangle, BarChart3, Clock, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
+import useIsMobile from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { type MetricsOverview, metricsService } from "@/services/metrics";
 import { useTranslate } from "@/utils/i18n";
-import useIsMobile from "@/hooks/useIsMobile";
 
 export { MetricsDashboard };
 
@@ -78,9 +78,7 @@ function MetricsDashboard() {
               onClick={() => setTimeRange(range.value)}
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-colors",
-                timeRange === range.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+                timeRange === range.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80",
               )}
             >
               {range.label}
@@ -96,22 +94,13 @@ function MetricsDashboard() {
       )}
 
       {isLoading ? (
-        <div className={cn(
-          "grid gap-4",
-          isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-4"
-        )}>
+        <div className={cn("grid gap-4", isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-4")}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className={cn(
-              "bg-muted/30 rounded-xl animate-pulse",
-              isMobile ? "h-24" : "h-28"
-            )} />
+            <div key={i} className={cn("bg-muted/30 rounded-xl animate-pulse", isMobile ? "h-24" : "h-28")} />
           ))}
         </div>
       ) : (
-        <div className={cn(
-          "grid gap-4",
-          isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-4"
-        )}>
+        <div className={cn("grid gap-4", isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-4")}>
           <MetricCard
             title={tRequests}
             value={metrics?.total_requests ?? 0}
@@ -144,10 +133,7 @@ function MetricsDashboard() {
       )}
 
       {metrics && metrics.error_count > 0 && (
-        <div className={cn(
-          "flex items-start gap-3 rounded-xl border",
-          "bg-destructive/10 border-destructive/20"
-        )}>
+        <div className={cn("flex items-start gap-3 rounded-xl border", "bg-destructive/10 border-destructive/20")}>
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-destructive font-medium">{tErrors}</p>
@@ -157,10 +143,7 @@ function MetricsDashboard() {
       )}
 
       {metrics && metrics.is_mock && (
-        <div className={cn(
-          "flex items-start gap-3 rounded-xl border p-3",
-          "bg-amber-500/10 border-amber-500/20"
-        )}>
+        <div className={cn("flex items-start gap-3 rounded-xl border p-3", "bg-amber-500/10 border-amber-500/20")}>
           <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-600 dark:text-amber-400">Mock data - Metrics service not yet implemented</p>
         </div>
@@ -181,20 +164,14 @@ function MetricCard({ title, value, icon, color, bgColor }: MetricCardProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className={cn(
-      "bg-card border border-border rounded-xl transition-shadow",
-      isMobile ? "p-3" : "p-4 hover:shadow-md"
-    )}>
+    <div className={cn("bg-card border border-border rounded-xl transition-shadow", isMobile ? "p-3" : "p-4 hover:shadow-md")}>
       <div className="flex items-center justify-between mb-2">
         <span className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{title}</span>
         <div className={cn("p-1.5 rounded-lg", bgColor, isMobile && "p-1")}>
           <div className={cn(color, isMobile && "w-3.5 h-3.5")}>{icon}</div>
         </div>
       </div>
-      <p className={cn(
-        "font-semibold text-foreground",
-        isMobile ? "text-lg" : "text-2xl"
-      )}>{value}</p>
+      <p className={cn("font-semibold text-foreground", isMobile ? "text-lg" : "text-2xl")}>{value}</p>
     </div>
   );
 }

@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import useIsMobile from "@/hooks/useIsMobile";
 import { useUpdateUserGeneralSetting } from "@/hooks/useUserQueries";
+import { cn } from "@/lib/utils";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { UserSetting_GeneralSetting, UserSetting_GeneralSettingSchema } from "@/types/proto/api/v1/user_service_pb";
 import { loadLocale, useTranslate } from "@/utils/i18n";
@@ -17,8 +19,6 @@ import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
 import WebhookSection from "./WebhookSection";
-import useIsMobile from "@/hooks/useIsMobile";
-import { cn } from "@/lib/utils";
 
 const LOCALE_OPTIONS: Locale[] = ["en", "zh-Hans", "zh-Hant"];
 
@@ -101,12 +101,10 @@ const PreferencesSection = () => {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0",
                 "active:bg-muted/50",
-                setting.locale === locale && "bg-muted/30"
+                setting.locale === locale && "bg-muted/30",
               )}
             >
-              <span className="text-sm">
-                {locale === "en" ? "English" : locale === "zh-Hans" ? "简体中文" : "繁體中文"}
-              </span>
+              <span className="text-sm">{locale === "en" ? "English" : locale === "zh-Hans" ? "简体中文" : "繁體中文"}</span>
               {setting.locale === locale && <CheckIcon className="w-5 h-5 text-green-600" />}
             </button>
           ))}
@@ -130,7 +128,7 @@ const PreferencesSection = () => {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0",
                 "active:bg-muted/50",
-                setting.theme === theme.value && "bg-muted/30"
+                setting.theme === theme.value && "bg-muted/30",
               )}
             >
               <span className="text-sm">{theme.label}</span>
@@ -157,16 +155,15 @@ const PreferencesSection = () => {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 border-b border-border last:border-0",
                 "active:bg-muted/50",
-                setting.memoVisibility === convertVisibilityToString(option.value) && "bg-muted/30"
+                setting.memoVisibility === convertVisibilityToString(option.value) && "bg-muted/30",
               )}
             >
               <div className="flex items-center gap-2">
                 <VisibilityIcon visibility={option.value} />
+                {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
                 <span className="text-sm">{(t as any)(option.labelKey)}</span>
               </div>
-              {setting.memoVisibility === convertVisibilityToString(option.value) && (
-                <CheckIcon className="w-5 h-5 text-green-600" />
-              )}
+              {setting.memoVisibility === convertVisibilityToString(option.value) && <CheckIcon className="w-5 h-5 text-green-600" />}
             </button>
           ))}
         </div>

@@ -22,10 +22,9 @@ const DesktopOnlyBanner = ({ messageKey, description, title }: DesktopOnlyBanner
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <MonitorIcon className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold mb-2">
-        {title || t("setting.mobile.desktop-required-title")}
-      </h3>
+      <h3 className="text-lg font-semibold mb-2">{title || t("setting.mobile.desktop-required-title")}</h3>
       <p className="text-sm text-muted-foreground max-w-[28rem]">
+        {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
         {messageKey ? (t as any)(`setting.mobile.${messageKey}`) : description || t("setting.mobile.desktop-required-description")}
       </p>
     </div>

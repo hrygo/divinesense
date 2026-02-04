@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { identityProviderServiceClient } from "@/connect";
 import { useInstance } from "@/contexts/InstanceContext";
 import useDialog from "@/hooks/useDialog";
+import useIsMobile from "@/hooks/useIsMobile";
 import { handleError } from "@/lib/error";
 import { IdentityProvider } from "@/types/proto/api/v1/idp_service_pb";
 import {
@@ -19,11 +20,10 @@ import {
 } from "@/types/proto/api/v1/instance_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import UpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
 import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
-import DesktopOnlyBanner from "./DesktopOnlyBanner";
-import useIsMobile from "@/hooks/useIsMobile";
 
 const InstanceSection = () => {
   const isMobile = useIsMobile();
@@ -86,103 +86,106 @@ const InstanceSection = () => {
         <DesktopOnlyBanner messageKey="system-desktop-only" />
       ) : (
         <>
-      <SettingGroup title={t("common.basic")}>
-        <SettingRow label={t("setting.system-section.server-name")} description={instanceGeneralSetting.customProfile?.title || "Memos"}>
-          <Button variant="outline" onClick={handleUpdateCustomizedProfileButtonClick}>
-            {t("common.edit")}
-          </Button>
-        </SettingRow>
-      </SettingGroup>
+          <SettingGroup title={t("common.basic")}>
+            <SettingRow
+              label={t("setting.system-section.server-name")}
+              description={instanceGeneralSetting.customProfile?.title || "Memos"}
+            >
+              <Button variant="outline" onClick={handleUpdateCustomizedProfileButtonClick}>
+                {t("common.edit")}
+              </Button>
+            </SettingRow>
+          </SettingGroup>
 
-      <SettingGroup title={t("setting.system-section.title")} showSeparator>
-        <SettingRow label={t("setting.system-section.additional-style")} vertical>
-          <Textarea
-            className="font-mono w-full"
-            rows={3}
-            placeholder={t("setting.system-section.additional-style-placeholder")}
-            value={instanceGeneralSetting.additionalStyle}
-            onChange={(event) => updatePartialSetting({ additionalStyle: event.target.value })}
-          />
-        </SettingRow>
+          <SettingGroup title={t("setting.system-section.title")} showSeparator>
+            <SettingRow label={t("setting.system-section.additional-style")} vertical>
+              <Textarea
+                className="font-mono w-full"
+                rows={3}
+                placeholder={t("setting.system-section.additional-style-placeholder")}
+                value={instanceGeneralSetting.additionalStyle}
+                onChange={(event) => updatePartialSetting({ additionalStyle: event.target.value })}
+              />
+            </SettingRow>
 
-        <SettingRow label={t("setting.system-section.additional-script")} vertical>
-          <Textarea
-            className="font-mono w-full"
-            rows={3}
-            placeholder={t("setting.system-section.additional-script-placeholder")}
-            value={instanceGeneralSetting.additionalScript}
-            onChange={(event) => updatePartialSetting({ additionalScript: event.target.value })}
-          />
-        </SettingRow>
-      </SettingGroup>
+            <SettingRow label={t("setting.system-section.additional-script")} vertical>
+              <Textarea
+                className="font-mono w-full"
+                rows={3}
+                placeholder={t("setting.system-section.additional-script-placeholder")}
+                value={instanceGeneralSetting.additionalScript}
+                onChange={(event) => updatePartialSetting({ additionalScript: event.target.value })}
+              />
+            </SettingRow>
+          </SettingGroup>
 
-      <SettingGroup>
-        <SettingRow label={t("setting.instance-section.disallow-user-registration")}>
-          <Switch
-            disabled={profile.mode === "demo"}
-            checked={instanceGeneralSetting.disallowUserRegistration}
-            onCheckedChange={(checked) => updatePartialSetting({ disallowUserRegistration: checked })}
-          />
-        </SettingRow>
+          <SettingGroup>
+            <SettingRow label={t("setting.instance-section.disallow-user-registration")}>
+              <Switch
+                disabled={profile.mode === "demo"}
+                checked={instanceGeneralSetting.disallowUserRegistration}
+                onCheckedChange={(checked) => updatePartialSetting({ disallowUserRegistration: checked })}
+              />
+            </SettingRow>
 
-        <SettingRow label={t("setting.instance-section.disallow-password-auth")}>
-          <Switch
-            disabled={profile.mode === "demo" || (identityProviderList.length === 0 && !instanceGeneralSetting.disallowPasswordAuth)}
-            checked={instanceGeneralSetting.disallowPasswordAuth}
-            onCheckedChange={(checked) => updatePartialSetting({ disallowPasswordAuth: checked })}
-          />
-        </SettingRow>
+            <SettingRow label={t("setting.instance-section.disallow-password-auth")}>
+              <Switch
+                disabled={profile.mode === "demo" || (identityProviderList.length === 0 && !instanceGeneralSetting.disallowPasswordAuth)}
+                checked={instanceGeneralSetting.disallowPasswordAuth}
+                onCheckedChange={(checked) => updatePartialSetting({ disallowPasswordAuth: checked })}
+              />
+            </SettingRow>
 
-        <SettingRow label={t("setting.instance-section.disallow-change-username")}>
-          <Switch
-            checked={instanceGeneralSetting.disallowChangeUsername}
-            onCheckedChange={(checked) => updatePartialSetting({ disallowChangeUsername: checked })}
-          />
-        </SettingRow>
+            <SettingRow label={t("setting.instance-section.disallow-change-username")}>
+              <Switch
+                checked={instanceGeneralSetting.disallowChangeUsername}
+                onCheckedChange={(checked) => updatePartialSetting({ disallowChangeUsername: checked })}
+              />
+            </SettingRow>
 
-        <SettingRow label={t("setting.instance-section.disallow-change-nickname")}>
-          <Switch
-            checked={instanceGeneralSetting.disallowChangeNickname}
-            onCheckedChange={(checked) => updatePartialSetting({ disallowChangeNickname: checked })}
-          />
-        </SettingRow>
+            <SettingRow label={t("setting.instance-section.disallow-change-nickname")}>
+              <Switch
+                checked={instanceGeneralSetting.disallowChangeNickname}
+                onCheckedChange={(checked) => updatePartialSetting({ disallowChangeNickname: checked })}
+              />
+            </SettingRow>
 
-        <SettingRow label={t("setting.instance-section.week-start-day")}>
-          <Select
-            value={instanceGeneralSetting.weekStartDayOffset.toString()}
-            onValueChange={(value) => {
-              updatePartialSetting({ weekStartDayOffset: parseInt(value) || 0 });
-            }}
-          >
-            <SelectTrigger className="min-w-fit">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="-1">{t("setting.instance-section.saturday")}</SelectItem>
-              <SelectItem value="0">{t("setting.instance-section.sunday")}</SelectItem>
-              <SelectItem value="1">{t("setting.instance-section.monday")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </SettingRow>
-      </SettingGroup>
+            <SettingRow label={t("setting.instance-section.week-start-day")}>
+              <Select
+                value={instanceGeneralSetting.weekStartDayOffset.toString()}
+                onValueChange={(value) => {
+                  updatePartialSetting({ weekStartDayOffset: parseInt(value) || 0 });
+                }}
+              >
+                <SelectTrigger className="min-w-fit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-1">{t("setting.instance-section.saturday")}</SelectItem>
+                  <SelectItem value="0">{t("setting.instance-section.sunday")}</SelectItem>
+                  <SelectItem value="1">{t("setting.instance-section.monday")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingRow>
+          </SettingGroup>
 
-      <div className="w-full flex justify-end">
-        <Button disabled={isEqual(instanceGeneralSetting, originalSetting)} onClick={handleSaveGeneralSetting}>
-          {t("common.save")}
-        </Button>
-      </div>
+          <div className="w-full flex justify-end">
+            <Button disabled={isEqual(instanceGeneralSetting, originalSetting)} onClick={handleSaveGeneralSetting}>
+              {t("common.save")}
+            </Button>
+          </div>
 
-      {!isMobile && (
-        <UpdateCustomizedProfileDialog
-          open={customizeDialog.isOpen}
-          onOpenChange={customizeDialog.setOpen}
-          onSuccess={() => {
-            // Refresh instance settings if needed
-            toast.success("Profile updated successfully!");
-          }}
-        />
-      )}
-      </>
+          {!isMobile && (
+            <UpdateCustomizedProfileDialog
+              open={customizeDialog.isOpen}
+              onOpenChange={customizeDialog.setOpen}
+              onSuccess={() => {
+                // Refresh instance settings if needed
+                toast.success("Profile updated successfully!");
+              }}
+            />
+          )}
+        </>
       )}
     </SettingSection>
   );

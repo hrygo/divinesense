@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { useInstance } from "@/contexts/InstanceContext";
+import useIsMobile from "@/hooks/useIsMobile";
 import { handleError } from "@/lib/error";
 import {
   InstanceSetting_Key,
@@ -19,11 +20,10 @@ import {
   InstanceSettingSchema,
 } from "@/types/proto/api/v1/instance_service_pb";
 import { useTranslate } from "@/utils/i18n";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
 import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
-import DesktopOnlyBanner from "./DesktopOnlyBanner";
-import useIsMobile from "@/hooks/useIsMobile";
 
 const StorageSection = () => {
   const isMobile = useIsMobile();
@@ -158,96 +158,96 @@ const StorageSection = () => {
         <DesktopOnlyBanner messageKey="storage-desktop-only" />
       ) : (
         <>
-      <SettingGroup title={t("setting.storage-section.current-storage")}>
-        <div className="w-full">
-          <RadioGroup
-            value={String(instanceStorageSetting.storageType)}
-            onValueChange={(value) => {
-              handleStorageTypeChanged(Number(value) as InstanceSetting_StorageSetting_StorageType);
-            }}
-            className="flex flex-row gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.DATABASE)} id="database" />
-              <Label htmlFor="database">{t("setting.storage-section.type-database")}</Label>
+          <SettingGroup title={t("setting.storage-section.current-storage")}>
+            <div className="w-full">
+              <RadioGroup
+                value={String(instanceStorageSetting.storageType)}
+                onValueChange={(value) => {
+                  handleStorageTypeChanged(Number(value) as InstanceSetting_StorageSetting_StorageType);
+                }}
+                className="flex flex-row gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.DATABASE)} id="database" />
+                  <Label htmlFor="database">{t("setting.storage-section.type-database")}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.LOCAL)} id="local" />
+                  <Label htmlFor="local">{t("setting.storage-section.type-local")}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.S3)} id="s3" />
+                  <Label htmlFor="s3">S3</Label>
+                </div>
+              </RadioGroup>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.LOCAL)} id="local" />
-              <Label htmlFor="local">{t("setting.storage-section.type-local")}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value={String(InstanceSetting_StorageSetting_StorageType.S3)} id="s3" />
-              <Label htmlFor="s3">S3</Label>
-            </div>
-          </RadioGroup>
-        </div>
 
-        <SettingRow label={t("setting.system-section.max-upload-size")} tooltip={t("setting.system-section.max-upload-size-hint")}>
-          <Input
-            className="w-24 font-mono"
-            value={String(instanceStorageSetting.uploadSizeLimitMb)}
-            onChange={handleMaxUploadSizeChanged}
-          />
-        </SettingRow>
+            <SettingRow label={t("setting.system-section.max-upload-size")} tooltip={t("setting.system-section.max-upload-size-hint")}>
+              <Input
+                className="w-24 font-mono"
+                value={String(instanceStorageSetting.uploadSizeLimitMb)}
+                onChange={handleMaxUploadSizeChanged}
+              />
+            </SettingRow>
 
-        {instanceStorageSetting.storageType !== InstanceSetting_StorageSetting_StorageType.DATABASE && (
-          <SettingRow label={t("setting.storage-section.filepath-template")}>
-            <Input
-              className="w-64"
-              value={instanceStorageSetting.filepathTemplate}
-              placeholder="assets/{timestamp}_{filename}"
-              onChange={handleFilepathTemplateChanged}
-            />
-          </SettingRow>
-        )}
-      </SettingGroup>
+            {instanceStorageSetting.storageType !== InstanceSetting_StorageSetting_StorageType.DATABASE && (
+              <SettingRow label={t("setting.storage-section.filepath-template")}>
+                <Input
+                  className="w-64"
+                  value={instanceStorageSetting.filepathTemplate}
+                  placeholder="assets/{timestamp}_{filename}"
+                  onChange={handleFilepathTemplateChanged}
+                />
+              </SettingRow>
+            )}
+          </SettingGroup>
 
-      {instanceStorageSetting.storageType === InstanceSetting_StorageSetting_StorageType.S3 && (
-        <SettingGroup title="S3 Configuration" showSeparator>
-          <SettingRow label="Access key id">
-            <Input className="w-64" value={instanceStorageSetting.s3Config?.accessKeyId} onChange={handleS3ConfigAccessKeyIdChanged} />
-          </SettingRow>
+          {instanceStorageSetting.storageType === InstanceSetting_StorageSetting_StorageType.S3 && (
+            <SettingGroup title="S3 Configuration" showSeparator>
+              <SettingRow label="Access key id">
+                <Input className="w-64" value={instanceStorageSetting.s3Config?.accessKeyId} onChange={handleS3ConfigAccessKeyIdChanged} />
+              </SettingRow>
 
-          <SettingRow label="Access key secret">
-            <Input
-              className="w-64"
-              type="password"
-              value={instanceStorageSetting.s3Config?.accessKeySecret}
-              onChange={handleS3ConfigAccessKeySecretChanged}
-            />
-          </SettingRow>
+              <SettingRow label="Access key secret">
+                <Input
+                  className="w-64"
+                  type="password"
+                  value={instanceStorageSetting.s3Config?.accessKeySecret}
+                  onChange={handleS3ConfigAccessKeySecretChanged}
+                />
+              </SettingRow>
 
-          <SettingRow label="Endpoint">
-            <Input className="w-64" value={instanceStorageSetting.s3Config?.endpoint} onChange={handleS3ConfigEndpointChanged} />
-          </SettingRow>
+              <SettingRow label="Endpoint">
+                <Input className="w-64" value={instanceStorageSetting.s3Config?.endpoint} onChange={handleS3ConfigEndpointChanged} />
+              </SettingRow>
 
-          <SettingRow label="Region">
-            <Input className="w-64" value={instanceStorageSetting.s3Config?.region} onChange={handleS3ConfigRegionChanged} />
-          </SettingRow>
+              <SettingRow label="Region">
+                <Input className="w-64" value={instanceStorageSetting.s3Config?.region} onChange={handleS3ConfigRegionChanged} />
+              </SettingRow>
 
-          <SettingRow label="Bucket">
-            <Input className="w-64" value={instanceStorageSetting.s3Config?.bucket} onChange={handleS3ConfigBucketChanged} />
-          </SettingRow>
+              <SettingRow label="Bucket">
+                <Input className="w-64" value={instanceStorageSetting.s3Config?.bucket} onChange={handleS3ConfigBucketChanged} />
+              </SettingRow>
 
-          <SettingRow label="Use Path Style">
-            <Switch
-              checked={instanceStorageSetting.s3Config?.usePathStyle}
-              onCheckedChange={(checked) =>
-                handleS3ConfigUsePathStyleChanged({ target: { checked } } as React.ChangeEvent<HTMLInputElement> & {
-                  target: { checked: boolean };
-                })
-              }
-            />
-          </SettingRow>
-        </SettingGroup>
-      )}
+              <SettingRow label="Use Path Style">
+                <Switch
+                  checked={instanceStorageSetting.s3Config?.usePathStyle}
+                  onCheckedChange={(checked) =>
+                    handleS3ConfigUsePathStyleChanged({ target: { checked } } as React.ChangeEvent<HTMLInputElement> & {
+                      target: { checked: boolean };
+                    })
+                  }
+                />
+              </SettingRow>
+            </SettingGroup>
+          )}
 
-      <div className="w-full flex justify-end">
-        <Button disabled={!allowSaveStorageSetting} onClick={saveInstanceStorageSetting}>
-          {t("common.save")}
-        </Button>
-      </div>
-      </>
+          <div className="w-full flex justify-end">
+            <Button disabled={!allowSaveStorageSetting} onClick={saveInstanceStorageSetting}>
+              {t("common.save")}
+            </Button>
+          </div>
+        </>
       )}
     </SettingSection>
   );

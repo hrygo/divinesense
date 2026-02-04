@@ -1,7 +1,7 @@
 import {
   BarChart3Icon,
-  CogIcon,
   ChevronRightIcon,
+  CogIcon,
   DatabaseIcon,
   KeyIcon,
   LibraryIcon,
@@ -25,10 +25,10 @@ import StorageSection from "@/components/Settings/StorageSection";
 import { useInstance } from "@/contexts/InstanceContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { cn } from "@/lib/utils";
 import { InstanceSetting_Key } from "@/types/proto/api/v1/instance_service_pb";
 import { User_Role } from "@/types/proto/api/v1/user_service_pb";
 import { useTranslate } from "@/utils/i18n";
-import { cn } from "@/lib/utils";
 
 type SettingSection = "my-account" | "preference" | "member" | "system" | "memo-related" | "storage" | "sso" | "metrics" | "chat-apps";
 
@@ -53,14 +53,14 @@ const SECTION_ICON_MAP: Record<SettingSection, React.ElementType> = {
 
 const SECTION_TITLE_MAP: Record<SettingSection, string> = {
   "my-account": "setting.my-account",
-  "preference": "setting.preference",
+  preference: "setting.preference",
   "chat-apps": "setting.chat-apps.title",
-  "member": "setting.member-list",
-  "system": "setting.system-section.title",
+  member: "setting.member-list",
+  system: "setting.system-section.title",
   "memo-related": "setting.memo-related.title",
-  "storage": "setting.storage-section.title",
-  "sso": "setting.sso-section.title",
-  "metrics": "setting.metrics.title",
+  storage: "setting.storage-section.title",
+  sso: "setting.sso-section.title",
+  metrics: "setting.metrics.title",
 };
 
 const Setting = () => {
@@ -127,6 +127,7 @@ const Setting = () => {
 
   const renderMobileSectionCard = (titleKey: string, sections: SettingSection[]) => (
     <div className="mb-6">
+      {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
       <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-4">{(t as any)(titleKey)}</h3>
       <div className="bg-background border border-border rounded-xl overflow-hidden">
         {sections.map((section) => {
@@ -139,11 +140,12 @@ const Setting = () => {
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-0",
                 "active:bg-muted/50",
-                state.selectedSection === section && "bg-muted/30"
+                state.selectedSection === section && "bg-muted/30",
               )}
             >
               <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
               <span className="text-sm text-foreground flex-1 text-left">
+                {/* biome-ignore lint/suspicious/noExplicitAny: i18n dynamic key access */}
                 {section === "chat-apps" ? (t as any)(`setting.${section}.title`) : (t as any)(titleKey)}
               </span>
               <ChevronRightIcon className="w-5 h-5 text-muted-foreground shrink-0" />
@@ -169,7 +171,7 @@ const Setting = () => {
                     onClick={() => handleSectionClick(item)}
                     className={cn(
                       "w-full text-left px-3 py-1.5 rounded-md text-sm hover:bg-muted/50 transition-colors",
-                      state.selectedSection === item && "bg-muted/30"
+                      state.selectedSection === item && "bg-muted/30",
                     )}
                   >
                     {item === "chat-apps" ? t(`setting.${item}.title`) : t(`setting.${item}`)}
@@ -186,7 +188,7 @@ const Setting = () => {
                         onClick={() => handleSectionClick(item)}
                         className={cn(
                           "w-full text-left px-3 py-1.5 rounded-md text-sm hover:bg-muted/50 transition-colors",
-                          state.selectedSection === item && "bg-muted/30"
+                          state.selectedSection === item && "bg-muted/30",
                         )}
                       >
                         {t(`setting.${item}`)}
