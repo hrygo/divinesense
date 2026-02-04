@@ -687,13 +687,13 @@ function BlockBody({
                   <span className="flex items-center gap-2">
                     {streamingPhase === "thinking" ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        {t("ai.states.thinking") || "思考中..."}
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                        <span className="text-blue-600 dark:text-blue-400">{t("ai.states.thinking") || "思考中..."}</span>
                       </>
                     ) : (
                       <>
-                        <Brain className="w-3.5 h-3.5" />
-                        {t("ai.unified_block.thought") || "思考过程"}
+                        <Brain className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">{t("ai.unified_block.thinking_process") || "思考过程"}</span>
                       </>
                     )}
                   </span>
