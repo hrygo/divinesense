@@ -1043,6 +1043,7 @@
       "title": "备忘录相关设置"
     },
     "my-account": "我的账号",
+    "personal": "个人",
     "preference": "偏好设置",
     "preference-section": {
       "default-memo-sort-option": "备忘录显示时间",
@@ -1214,5 +1215,3 @@
     "select-location": "位置"
   }
 }
-["个人"]
-["个人"]

@@ -1048,6 +1048,7 @@
       "title": "Memo related settings"
     },
     "my-account": "My Account",
+    "personal": "Personal",
     "preference": "Preferences",
     "preference-section": {
       "default-memo-sort-option": "Memo display time",
@@ -1219,4 +1220,3 @@
     "select-location": "Location"
   }
 }
-["personal"]
