@@ -91,51 +91,6 @@ func (s *Store) DeleteAIMessage(ctx context.Context, delete *DeleteAIMessage) er
 	return s.driver.DeleteAIMessage(ctx, delete)
 }
 
-// AIBlock methods (Unified Block Model).
-func (s *Store) CreateAIBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error) {
-	return s.driver.CreateAIBlock(ctx, create)
-}
-
-func (s *Store) GetAIBlock(ctx context.Context, id int64) (*AIBlock, error) {
-	return s.driver.GetAIBlock(ctx, id)
-}
-
-func (s *Store) ListAIBlocks(ctx context.Context, find *FindAIBlock) ([]*AIBlock, error) {
-	return s.driver.ListAIBlocks(ctx, find)
-}
-
-func (s *Store) UpdateAIBlock(ctx context.Context, update *UpdateAIBlock) (*AIBlock, error) {
-	return s.driver.UpdateAIBlock(ctx, update)
-}
-
-func (s *Store) DeleteAIBlock(ctx context.Context, id int64) error {
-	return s.driver.DeleteAIBlock(ctx, id)
-}
-
-func (s *Store) AppendUserInput(ctx context.Context, blockID int64, input UserInput) error {
-	return s.driver.AppendUserInput(ctx, blockID, input)
-}
-
-func (s *Store) AppendEvent(ctx context.Context, blockID int64, event BlockEvent) error {
-	return s.driver.AppendEvent(ctx, blockID, event)
-}
-
-func (s *Store) UpdateAIBlockStatus(ctx context.Context, blockID int64, status AIBlockStatus) error {
-	return s.driver.UpdateAIBlockStatus(ctx, blockID, status)
-}
-
-func (s *Store) GetLatestAIBlock(ctx context.Context, conversationID int32) (*AIBlock, error) {
-	return s.driver.GetLatestAIBlock(ctx, conversationID)
-}
-
-func (s *Store) GetPendingAIBlocks(ctx context.Context) ([]*AIBlock, error) {
-	return s.driver.GetPendingAIBlocks(ctx)
-}
-
-func (s *Store) CreateAIBlockWithRound(ctx context.Context, create *CreateAIBlock) (*AIBlock, error) {
-	return s.driver.CreateAIBlockWithRound(ctx, create)
-}
-
 func (s *Store) CreateEpisodicMemory(ctx context.Context, create *EpisodicMemory) (*EpisodicMemory, error) {
 	return s.driver.CreateEpisodicMemory(ctx, create)
 }

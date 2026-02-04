@@ -101,19 +101,6 @@ type Driver interface {
 	ListAIMessages(ctx context.Context, find *FindAIMessage) ([]*AIMessage, error)
 	DeleteAIMessage(ctx context.Context, delete *DeleteAIMessage) error
 
-	// AIBlock model related methods (Unified Block Model).
-	CreateAIBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error)
-	GetAIBlock(ctx context.Context, id int64) (*AIBlock, error)
-	ListAIBlocks(ctx context.Context, find *FindAIBlock) ([]*AIBlock, error)
-	UpdateAIBlock(ctx context.Context, update *UpdateAIBlock) (*AIBlock, error)
-	DeleteAIBlock(ctx context.Context, id int64) error
-	AppendUserInput(ctx context.Context, blockID int64, input UserInput) error
-	AppendEvent(ctx context.Context, blockID int64, event BlockEvent) error
-	UpdateAIBlockStatus(ctx context.Context, blockID int64, status AIBlockStatus) error
-	GetLatestAIBlock(ctx context.Context, conversationID int32) (*AIBlock, error)
-	GetPendingAIBlocks(ctx context.Context) ([]*AIBlock, error)
-	CreateAIBlockWithRound(ctx context.Context, create *CreateAIBlock) (*AIBlock, error)
-
 	// EpisodicMemory model related methods.
 	CreateEpisodicMemory(ctx context.Context, create *EpisodicMemory) (*EpisodicMemory, error)
 	ListEpisodicMemories(ctx context.Context, find *FindEpisodicMemory) ([]*EpisodicMemory, error)

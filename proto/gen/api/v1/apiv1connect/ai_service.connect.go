@@ -107,21 +107,6 @@ const (
 	// AIServiceSetUserCostSettingsProcedure is the fully-qualified name of the AIService's
 	// SetUserCostSettings RPC.
 	AIServiceSetUserCostSettingsProcedure = "/memos.api.v1.AIService/SetUserCostSettings"
-	// AIServiceListBlocksProcedure is the fully-qualified name of the AIService's ListBlocks RPC.
-	AIServiceListBlocksProcedure = "/memos.api.v1.AIService/ListBlocks"
-	// AIServiceGetBlockProcedure is the fully-qualified name of the AIService's GetBlock RPC.
-	AIServiceGetBlockProcedure = "/memos.api.v1.AIService/GetBlock"
-	// AIServiceCreateBlockProcedure is the fully-qualified name of the AIService's CreateBlock RPC.
-	AIServiceCreateBlockProcedure = "/memos.api.v1.AIService/CreateBlock"
-	// AIServiceUpdateBlockProcedure is the fully-qualified name of the AIService's UpdateBlock RPC.
-	AIServiceUpdateBlockProcedure = "/memos.api.v1.AIService/UpdateBlock"
-	// AIServiceDeleteBlockProcedure is the fully-qualified name of the AIService's DeleteBlock RPC.
-	AIServiceDeleteBlockProcedure = "/memos.api.v1.AIService/DeleteBlock"
-	// AIServiceAppendUserInputProcedure is the fully-qualified name of the AIService's AppendUserInput
-	// RPC.
-	AIServiceAppendUserInputProcedure = "/memos.api.v1.AIService/AppendUserInput"
-	// AIServiceAppendEventProcedure is the fully-qualified name of the AIService's AppendEvent RPC.
-	AIServiceAppendEventProcedure = "/memos.api.v1.AIService/AppendEvent"
 	// ScheduleAgentServiceChatProcedure is the fully-qualified name of the ScheduleAgentService's Chat
 	// RPC.
 	ScheduleAgentServiceChatProcedure = "/memos.api.v1.ScheduleAgentService/Chat"
@@ -186,20 +171,6 @@ type AIServiceClient interface {
 	GetUserCostSettings(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error)
 	// SetUserCostSettings updates user-specific cost control settings.
 	SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error)
-	// ListBlocks retrieves blocks for a conversation.
-	ListBlocks(context.Context, *connect.Request[v1.ListBlocksRequest]) (*connect.Response[v1.ListBlocksResponse], error)
-	// GetBlock retrieves a specific block.
-	GetBlock(context.Context, *connect.Request[v1.GetBlockRequest]) (*connect.Response[v1.Block], error)
-	// CreateBlock creates a new conversation block.
-	CreateBlock(context.Context, *connect.Request[v1.CreateBlockRequest]) (*connect.Response[v1.Block], error)
-	// UpdateBlock updates a block.
-	UpdateBlock(context.Context, *connect.Request[v1.UpdateBlockRequest]) (*connect.Response[v1.Block], error)
-	// DeleteBlock deletes a block.
-	DeleteBlock(context.Context, *connect.Request[v1.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error)
-	// AppendUserInput appends a user input to an existing block.
-	AppendUserInput(context.Context, *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error)
-	// AppendEvent appends an event to the block's event stream.
-	AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceClient constructs a client for the memos.api.v1.AIService service. By default, it
@@ -375,48 +346,6 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("SetUserCostSettings")),
 			connect.WithClientOptions(opts...),
 		),
-		listBlocks: connect.NewClient[v1.ListBlocksRequest, v1.ListBlocksResponse](
-			httpClient,
-			baseURL+AIServiceListBlocksProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("ListBlocks")),
-			connect.WithClientOptions(opts...),
-		),
-		getBlock: connect.NewClient[v1.GetBlockRequest, v1.Block](
-			httpClient,
-			baseURL+AIServiceGetBlockProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("GetBlock")),
-			connect.WithClientOptions(opts...),
-		),
-		createBlock: connect.NewClient[v1.CreateBlockRequest, v1.Block](
-			httpClient,
-			baseURL+AIServiceCreateBlockProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("CreateBlock")),
-			connect.WithClientOptions(opts...),
-		),
-		updateBlock: connect.NewClient[v1.UpdateBlockRequest, v1.Block](
-			httpClient,
-			baseURL+AIServiceUpdateBlockProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("UpdateBlock")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteBlock: connect.NewClient[v1.DeleteBlockRequest, emptypb.Empty](
-			httpClient,
-			baseURL+AIServiceDeleteBlockProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("DeleteBlock")),
-			connect.WithClientOptions(opts...),
-		),
-		appendUserInput: connect.NewClient[v1.AppendUserInputRequest, emptypb.Empty](
-			httpClient,
-			baseURL+AIServiceAppendUserInputProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("AppendUserInput")),
-			connect.WithClientOptions(opts...),
-		),
-		appendEvent: connect.NewClient[v1.AppendEventRequest, emptypb.Empty](
-			httpClient,
-			baseURL+AIServiceAppendEventProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("AppendEvent")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
@@ -449,13 +378,6 @@ type aIServiceClient struct {
 	getCostStats              *connect.Client[v1.GetCostStatsRequest, v1.CostStats]
 	getUserCostSettings       *connect.Client[emptypb.Empty, v1.UserCostSettings]
 	setUserCostSettings       *connect.Client[v1.SetUserCostSettingsRequest, v1.UserCostSettings]
-	listBlocks                *connect.Client[v1.ListBlocksRequest, v1.ListBlocksResponse]
-	getBlock                  *connect.Client[v1.GetBlockRequest, v1.Block]
-	createBlock               *connect.Client[v1.CreateBlockRequest, v1.Block]
-	updateBlock               *connect.Client[v1.UpdateBlockRequest, v1.Block]
-	deleteBlock               *connect.Client[v1.DeleteBlockRequest, emptypb.Empty]
-	appendUserInput           *connect.Client[v1.AppendUserInputRequest, emptypb.Empty]
-	appendEvent               *connect.Client[v1.AppendEventRequest, emptypb.Empty]
 }
 
 // SemanticSearch calls memos.api.v1.AIService.SemanticSearch.
@@ -593,41 +515,6 @@ func (c *aIServiceClient) SetUserCostSettings(ctx context.Context, req *connect.
 	return c.setUserCostSettings.CallUnary(ctx, req)
 }
 
-// ListBlocks calls memos.api.v1.AIService.ListBlocks.
-func (c *aIServiceClient) ListBlocks(ctx context.Context, req *connect.Request[v1.ListBlocksRequest]) (*connect.Response[v1.ListBlocksResponse], error) {
-	return c.listBlocks.CallUnary(ctx, req)
-}
-
-// GetBlock calls memos.api.v1.AIService.GetBlock.
-func (c *aIServiceClient) GetBlock(ctx context.Context, req *connect.Request[v1.GetBlockRequest]) (*connect.Response[v1.Block], error) {
-	return c.getBlock.CallUnary(ctx, req)
-}
-
-// CreateBlock calls memos.api.v1.AIService.CreateBlock.
-func (c *aIServiceClient) CreateBlock(ctx context.Context, req *connect.Request[v1.CreateBlockRequest]) (*connect.Response[v1.Block], error) {
-	return c.createBlock.CallUnary(ctx, req)
-}
-
-// UpdateBlock calls memos.api.v1.AIService.UpdateBlock.
-func (c *aIServiceClient) UpdateBlock(ctx context.Context, req *connect.Request[v1.UpdateBlockRequest]) (*connect.Response[v1.Block], error) {
-	return c.updateBlock.CallUnary(ctx, req)
-}
-
-// DeleteBlock calls memos.api.v1.AIService.DeleteBlock.
-func (c *aIServiceClient) DeleteBlock(ctx context.Context, req *connect.Request[v1.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteBlock.CallUnary(ctx, req)
-}
-
-// AppendUserInput calls memos.api.v1.AIService.AppendUserInput.
-func (c *aIServiceClient) AppendUserInput(ctx context.Context, req *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.appendUserInput.CallUnary(ctx, req)
-}
-
-// AppendEvent calls memos.api.v1.AIService.AppendEvent.
-func (c *aIServiceClient) AppendEvent(ctx context.Context, req *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.appendEvent.CallUnary(ctx, req)
-}
-
 // AIServiceHandler is an implementation of the memos.api.v1.AIService service.
 type AIServiceHandler interface {
 	// SemanticSearch performs semantic search on memos.
@@ -684,20 +571,6 @@ type AIServiceHandler interface {
 	GetUserCostSettings(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.UserCostSettings], error)
 	// SetUserCostSettings updates user-specific cost control settings.
 	SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error)
-	// ListBlocks retrieves blocks for a conversation.
-	ListBlocks(context.Context, *connect.Request[v1.ListBlocksRequest]) (*connect.Response[v1.ListBlocksResponse], error)
-	// GetBlock retrieves a specific block.
-	GetBlock(context.Context, *connect.Request[v1.GetBlockRequest]) (*connect.Response[v1.Block], error)
-	// CreateBlock creates a new conversation block.
-	CreateBlock(context.Context, *connect.Request[v1.CreateBlockRequest]) (*connect.Response[v1.Block], error)
-	// UpdateBlock updates a block.
-	UpdateBlock(context.Context, *connect.Request[v1.UpdateBlockRequest]) (*connect.Response[v1.Block], error)
-	// DeleteBlock deletes a block.
-	DeleteBlock(context.Context, *connect.Request[v1.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error)
-	// AppendUserInput appends a user input to an existing block.
-	AppendUserInput(context.Context, *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error)
-	// AppendEvent appends an event to the block's event stream.
-	AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -869,48 +742,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("SetUserCostSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aIServiceListBlocksHandler := connect.NewUnaryHandler(
-		AIServiceListBlocksProcedure,
-		svc.ListBlocks,
-		connect.WithSchema(aIServiceMethods.ByName("ListBlocks")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceGetBlockHandler := connect.NewUnaryHandler(
-		AIServiceGetBlockProcedure,
-		svc.GetBlock,
-		connect.WithSchema(aIServiceMethods.ByName("GetBlock")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceCreateBlockHandler := connect.NewUnaryHandler(
-		AIServiceCreateBlockProcedure,
-		svc.CreateBlock,
-		connect.WithSchema(aIServiceMethods.ByName("CreateBlock")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceUpdateBlockHandler := connect.NewUnaryHandler(
-		AIServiceUpdateBlockProcedure,
-		svc.UpdateBlock,
-		connect.WithSchema(aIServiceMethods.ByName("UpdateBlock")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceDeleteBlockHandler := connect.NewUnaryHandler(
-		AIServiceDeleteBlockProcedure,
-		svc.DeleteBlock,
-		connect.WithSchema(aIServiceMethods.ByName("DeleteBlock")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceAppendUserInputHandler := connect.NewUnaryHandler(
-		AIServiceAppendUserInputProcedure,
-		svc.AppendUserInput,
-		connect.WithSchema(aIServiceMethods.ByName("AppendUserInput")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIServiceAppendEventHandler := connect.NewUnaryHandler(
-		AIServiceAppendEventProcedure,
-		svc.AppendEvent,
-		connect.WithSchema(aIServiceMethods.ByName("AppendEvent")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/memos.api.v1.AIService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIServiceSemanticSearchProcedure:
@@ -967,20 +798,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceGetUserCostSettingsHandler.ServeHTTP(w, r)
 		case AIServiceSetUserCostSettingsProcedure:
 			aIServiceSetUserCostSettingsHandler.ServeHTTP(w, r)
-		case AIServiceListBlocksProcedure:
-			aIServiceListBlocksHandler.ServeHTTP(w, r)
-		case AIServiceGetBlockProcedure:
-			aIServiceGetBlockHandler.ServeHTTP(w, r)
-		case AIServiceCreateBlockProcedure:
-			aIServiceCreateBlockHandler.ServeHTTP(w, r)
-		case AIServiceUpdateBlockProcedure:
-			aIServiceUpdateBlockHandler.ServeHTTP(w, r)
-		case AIServiceDeleteBlockProcedure:
-			aIServiceDeleteBlockHandler.ServeHTTP(w, r)
-		case AIServiceAppendUserInputProcedure:
-			aIServiceAppendUserInputHandler.ServeHTTP(w, r)
-		case AIServiceAppendEventProcedure:
-			aIServiceAppendEventHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1096,34 +913,6 @@ func (UnimplementedAIServiceHandler) GetUserCostSettings(context.Context, *conne
 
 func (UnimplementedAIServiceHandler) SetUserCostSettings(context.Context, *connect.Request[v1.SetUserCostSettingsRequest]) (*connect.Response[v1.UserCostSettings], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.SetUserCostSettings is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) ListBlocks(context.Context, *connect.Request[v1.ListBlocksRequest]) (*connect.Response[v1.ListBlocksResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ListBlocks is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) GetBlock(context.Context, *connect.Request[v1.GetBlockRequest]) (*connect.Response[v1.Block], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.GetBlock is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) CreateBlock(context.Context, *connect.Request[v1.CreateBlockRequest]) (*connect.Response[v1.Block], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.CreateBlock is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) UpdateBlock(context.Context, *connect.Request[v1.UpdateBlockRequest]) (*connect.Response[v1.Block], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.UpdateBlock is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) DeleteBlock(context.Context, *connect.Request[v1.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.DeleteBlock is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) AppendUserInput(context.Context, *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.AppendUserInput is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.AppendEvent is not implemented"))
 }
 
 // ScheduleAgentServiceClient is a client for the memos.api.v1.ScheduleAgentService service.

@@ -1,6 +1,6 @@
 # Spec: Unified Block Model
 
-> **Status**: ✅ Implemented (2025-02-04) | **Version**: 1.2 | **Issue**: [#71](https://github.com/hrygo/divinesense/issues/71)
+> **Status**: [In Development](https://github.com/hrygo/divinesense/issues/71) | **Version**: 1.1
 > **Priority**: P0 (Core) | **Sprint**: Backend Refactoring
 
 > **Phase 规格**: 本规格已拆分为 6 个独立 Phase 文档，详见 [实施计划](#6-实施计划-implementation-plan)
