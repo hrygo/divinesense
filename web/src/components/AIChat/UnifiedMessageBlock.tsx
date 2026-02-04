@@ -199,6 +199,51 @@ function extractUserInitial(content: string): string {
   return match ? match[0].toUpperCase() : "U";
 }
 
+/**
+ * 计算字符串的视觉宽度
+ * - ASCII 字符（英文字母、数字、半角符号）= 1
+ * - 中文字符、全角符号、Emoji = 2
+ */
+function getVisualWidth(str: string): number {
+  let width = 0;
+  for (const char of str) {
+    const code = char.codePointAt(0) || 0;
+    // ASCII: 0-127
+    if (code < 128) {
+      width += 1;
+    } else {
+      // CJK 统一汉字、Emoji、全角符号等
+      width += 2;
+    }
+  }
+  return width;
+}
+
+/**
+ * 按视觉宽度截取字符串
+ * @param str 原字符串
+ * @param maxVisualWidth 最大视觉宽度
+ * @returns 截取后的字符串
+ */
+function truncateByVisualWidth(str: string, maxVisualWidth: number): string {
+  let currentWidth = 0;
+  let result = "";
+
+  for (const char of str) {
+    const code = char.codePointAt(0) || 0;
+    const charWidth = code < 128 ? 1 : 2;
+
+    if (currentWidth + charWidth > maxVisualWidth) {
+      return result + "...";
+    }
+
+    result += char;
+    currentWidth += charWidth;
+  }
+
+  return result;
+}
+
 function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boolean {
   if (isStreaming || isLatest) return false;
   return true;
@@ -235,17 +280,21 @@ function BlockHeader({
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
 
-  // 计算用户输入预览文本 (固定字符截取)
-  const HEADER_MAX_CHARS = 12;
+  // 计算用户输入预览文本 (按视觉宽度截取)
+  // 24 视觉宽度 ≈ 12 个中文字符 或 24 个英文字符
+  const HEADER_VISUAL_WIDTH = 24;
   const userInputPreview = useMemo(() => {
     const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
-    // 多个输入时显示摘要
     const firstLine = inputs[0].split("\n")[0];
+
+    // 单个输入直接截取
     if (inputs.length === 1) {
-      return firstLine.length > HEADER_MAX_CHARS ? firstLine.slice(0, HEADER_MAX_CHARS) + "..." : firstLine;
+      const visualWidth = getVisualWidth(firstLine);
+      return visualWidth > HEADER_VISUAL_WIDTH ? truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH) : firstLine;
     }
+
     // 多输入时：第一个输入截取 + 追加数量
-    const truncated = firstLine.length > HEADER_MAX_CHARS ? firstLine.slice(0, HEADER_MAX_CHARS) + "..." : firstLine;
+    const truncated = truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH - 4); // 预留 " +N" 空间
     if (inputs.length === 2) {
       return `${truncated} +1`;
     }
