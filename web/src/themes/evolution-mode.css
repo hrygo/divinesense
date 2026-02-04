@@ -244,7 +244,6 @@
   opacity: 0.1;
   animation: evo-bio-grow 20s ease-in-out infinite alternate;
   pointer-events: none;
-  will-change: transform, opacity;
 }
 
 /* 删除 ::after 伪元素，减少一层渲染 */
@@ -269,7 +268,6 @@
   opacity: 0;
   animation: evo-cell-divide 4s ease-in-out infinite;
   pointer-events: none;
-  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -287,7 +285,6 @@
   opacity: 0.2;
   animation: evo-breathe 5s ease-in-out infinite;
   pointer-events: none;
-  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -315,7 +312,6 @@
   opacity: 0.5;
   animation: evo-rotate 8s linear infinite;
   pointer-events: none;
-  will-change: opacity, transform;
 }
 
 /* ============================================================
@@ -323,7 +319,6 @@
    ============================================================ */
 .evolution-mode .evo-float {
   animation: evo-float 6s ease-in-out infinite;
-  will-change: transform;
 }
 
 /* ============================================================
@@ -396,7 +391,6 @@
   opacity: 0.15;
   animation: evo-flow-pulse 10s ease-in-out infinite;
   pointer-events: none;
-  will-change: opacity, transform;
 }
 
 /* ============================================================

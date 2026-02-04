@@ -399,7 +399,6 @@
   opacity: 0.08;
   animation: geek-rain-fall 30s linear infinite;
   pointer-events: none;
-  will-change: background-position;
 }
 
 /* Intense matrix rain for hero sections (性能优化版) */
@@ -424,7 +423,6 @@
   opacity: 0.12;
   animation: geek-rain-fall 20s linear infinite;
   pointer-events: none;
-  will-change: background-position;
 }
 
 /* Matrix grid overlay - 网格叠加 (轻量版) */

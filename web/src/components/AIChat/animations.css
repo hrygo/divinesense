@@ -7,6 +7,75 @@
  */
 
 /* ============================================
+   无障碍支持 - 减少动画偏好
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* 禁用所有动画，保留静态状态 */
+  @keyframes wave {
+    from,
+    to {
+      transform: scaleY(0.5);
+    }
+  }
+  @keyframes memoFloat {
+    from,
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes scheduleTick {
+    from,
+    to {
+      transform: rotate(-5deg);
+    }
+  }
+  @keyframes creativeSpark {
+    from,
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes amazingSpin {
+    from,
+    to {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+  @keyframes defaultPulse {
+    from,
+    to {
+      opacity: 0.5;
+    }
+  }
+  @keyframes breatheShadow {
+    from,
+    to {
+      box-shadow: 0 0 0 1px var(--tw-ring-color);
+    }
+  }
+
+  .animate-block-pulse {
+    animation: none !important;
+  }
+
+  .geek-scanline,
+  .evo-dna-particle,
+  .streaming-text {
+    animation: none !important;
+  }
+
+  /* 保留静态状态 */
+  .animate-avatar-breathe,
+  .animate-avatar-pulse,
+  .animate-avatar-wave,
+  .animate-avatar-tilt,
+  .animate-avatar-float,
+  .animate-avatar-bounce {
+    animation: none !important;
+  }
+}
+
+/* ============================================
    基础动画 - Parrot 特效
    ============================================ */
 
@@ -82,19 +151,22 @@
   }
 }
 
-/* Breathing Ring Animation for Active Blocks */
+/* Breathing Ring Animation for Active Blocks (GPU-accelerated) */
 @keyframes breatheShadow {
   0%,
   100% {
-    box-shadow: 0 0 0 1px var(--tw-ring-color);
+    opacity: 0.5;
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 3px var(--tw-ring-color);
+    opacity: 0.8;
+    transform: scale(1.02);
   }
 }
 
 .animate-block-pulse {
   animation: breatheShadow 2s infinite;
+  will-change: opacity, transform;
 }
 
 /* ============================================
@@ -151,32 +223,29 @@
   }
 }
 
-/* 故障闪烁效果 - Glitch flicker */
+/* 故障闪烁效果 - Glitch flicker (性能优化版) */
 @keyframes glitchFlicker {
   0%,
   100% {
     opacity: 1;
     transform: translateX(0);
   }
-  41% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  42% {
+  50% {
     opacity: 0.8;
     transform: translateX(-2px);
   }
-  43% {
+}
+
+/* 故障淡入淡出 - 分离透明度动画 */
+@keyframes glitchFade {
+  0%,
+  40%,
+  60%,
+  100% {
     opacity: 1;
-    transform: translateX(2px);
   }
-  45% {
+  50% {
     opacity: 0.3;
-    transform: translateX(-1px);
-  }
-  46% {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 

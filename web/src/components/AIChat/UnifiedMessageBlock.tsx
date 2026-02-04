@@ -294,7 +294,12 @@ function BlockHeader({
 
         <button
           type="button"
-          className={cn("p-1 rounded transition-colors", "hover:bg-black/10 dark:hover:bg-white/10", theme.badgeText)}
+          className={cn(
+            "p-1 rounded transition-colors",
+            "hover:bg-black/10 dark:hover:bg-white/10",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            theme.badgeText,
+          )}
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
@@ -429,7 +434,7 @@ function BlockBody({
               <div className="flex flex-col">
                 <button
                   onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full group/btn"
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   <span>
                     {streamingPhase === "thinking"
@@ -598,7 +603,7 @@ function BlockBody({
                         navigator.clipboard.writeText(assistantMessage.content);
                       }
                     }}
-                    className="p-1.5 rounded-md bg-background/50 hover:bg-background border border-border/50 text-muted-foreground shadow-sm transition-all"
+                    className="p-1.5 rounded-md bg-background/50 hover:bg-background border border-border/50 text-muted-foreground shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={t("common.copy")}
                   >
                     <Copy className="w-3.5 h-3.5" />
@@ -755,6 +760,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
           "hover:bg-black/10 dark:hover:bg-white/10",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           theme.badgeText,
         )}
       >
@@ -771,6 +777,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
               "hover:bg-black/10 dark:hover:bg-white/10",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               theme.badgeText,
             )}
           >
@@ -783,6 +790,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
           className={cn(
             "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-60 hover:opacity-100",
             "hover:bg-black/10 dark:hover:bg-white/10",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
             theme.badgeText,
           )}
           title={t("ai.unified_block.forget_tooltip")}
@@ -797,6 +805,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
             "hover:bg-black/10 dark:hover:bg-white/10",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             copied && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
             !copied && theme.badgeText,
           )}
@@ -811,6 +820,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
               "hover:bg-red-100 dark:hover:bg-red-900/30",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-red-500",
               "text-red-600 dark:text-red-400",
             )}
           >
