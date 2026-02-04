@@ -40,6 +40,8 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+// Import constants
+import { BADGE_WIDTH_OFFSET, HEADER_VISUAL_WIDTH, TOOL_CALL_OFFSET_MS, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
@@ -68,11 +70,7 @@ type ToolCall =
 /** Timestamp multiplier for calculating round-based timestamps */
 const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
 
-/** Offset in milliseconds between tool calls in the same round */
-const TOOL_CALL_OFFSET_MS = 1000;
-
-/** User inputs expand threshold (字符数阈值) */
-const USER_INPUTS_EXPAND_THRESHOLD = 300;
+// Note: TOOL_CALL_OFFSET_MS and USER_INPUTS_EXPAND_THRESHOLD imported from constants.ts
 
 // ============================================================================
 // Types
@@ -199,19 +197,43 @@ function extractUserInitial(content: string): string {
 }
 
 /**
- * 计算字符串的视觉宽度
+ * 计算字符串的视觉宽度（改进版）
  * - ASCII 字符（英文字母、数字、半角符号）= 1
  * - 中文字符、全角符号、Emoji = 2
+ * - 某些组合字符（如皮肤修饰符）不计入宽度
  */
 function getVisualWidth(str: string): number {
   let width = 0;
-  for (const char of str) {
+  // 使用 [...str] 而不是 for...of 来正确处理代理对（surrogate pairs）
+  const chars = [...str];
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
     const code = char.codePointAt(0) || 0;
+
+    // 跳过零宽连接符和变体选择器
+    if (code === 0x200b || code === 0xfe0e || code === 0xfe0f || (code >= 0x1f3fb && code <= 0x1f3ff)) {
+      continue;
+    }
+
     // ASCII: 0-127
     if (code < 128) {
       width += 1;
+    } else if (
+      code >= 0x1100 &&
+      // Hangul Jamo
+      (code <= 0x11ff ||
+        // CJK Radicals Supplement
+        (code >= 0x2e80 && code <= 0x9fff) ||
+        // CJK Ideographs
+        (code >= 0x3400 && code <= 0x4dbf) ||
+        // CJK Unified Ideographs Extension A
+        (code >= 0x20000 && code <= 0x2ebef))
+    ) {
+      // CJK 字符统一为 2
+      width += 2;
     } else {
-      // CJK 统一汉字、Emoji、全角符号等
+      // 其他字符（包括 emoji）默认为 2
+      // 对于复杂的 emoji 序列，这只是一个近似值
       width += 2;
     }
   }
@@ -281,7 +303,6 @@ function BlockHeader({
 
   // 计算用户输入预览文本 (按视觉宽度截取)
   // 24 视觉宽度 ≈ 12 个中文字符 或 24 个英文字符
-  const HEADER_VISUAL_WIDTH = 24;
   const userInputPreview = useMemo(() => {
     const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
     const firstLine = inputs[0].split("\n")[0];
@@ -293,7 +314,7 @@ function BlockHeader({
     }
 
     // 多输入时：第一个输入截取 + 追加数量
-    const truncated = truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH - 4); // 预留 " +N" 空间
+    const truncated = truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH - BADGE_WIDTH_OFFSET); // 预留 " +N" 空间
     if (inputs.length === 2) {
       return `${truncated} +1`;
     }
@@ -357,29 +378,42 @@ function BlockHeader({
       </div>
 
       {/* Right: Timestamp + Badge + Geek Summary + Toggle */}
-      <div className="flex items-center gap-3 shrink-0 ml-2">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1 sm:ml-2">
         {/* Geek/Evolution Summary stats - Compact View */}
         {geekSummary && (
-          <div className="hidden lg:flex items-center gap-3 text-[11px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
-            <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[11px]">
-              {t("ai.unified_block.session")}
-            </span>
-            {geekSummary.time && (
-              <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
-                <Clock className="w-3 h-3" /> {geekSummary.time}
+          <>
+            {/* Desktop: Full stats */}
+            <div className="hidden lg:flex items-center gap-3 text-[11px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
+              <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[11px]">
+                {t("ai.unified_block.session")}
               </span>
-            )}
-            {geekSummary.tokens && (
-              <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
-                <Brain className="w-3 h-3" /> {geekSummary.tokens}
-              </span>
-            )}
-            {geekSummary.cost && (
-              <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
-                <span className="font-bold">$</span> {geekSummary.cost}
-              </span>
-            )}
-          </div>
+              {geekSummary.time && (
+                <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
+                  <Clock className="w-3 h-3" /> {geekSummary.time}
+                </span>
+              )}
+              {geekSummary.tokens && (
+                <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
+                  <Brain className="w-3 h-3" /> {geekSummary.tokens}
+                </span>
+              )}
+              {geekSummary.cost && (
+                <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
+                  <span className="font-bold">$</span> {geekSummary.cost}
+                </span>
+              )}
+            </div>
+            {/* Mobile: Simplified cost indicator */}
+            <div className="lg:hidden flex items-center gap-1 text-[10px] font-mono opacity-80">
+              {geekSummary.cost && (
+                <span className="flex items-center gap-0.5 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">
+                  <span className="font-bold">$</span>
+                  {geekSummary.cost}
+                </span>
+              )}
+              {!geekSummary.cost && geekSummary.tokens && <span className="text-muted-foreground">{geekSummary.tokens}</span>}
+            </div>
+          </>
         )}
 
         <div className={cn("flex items-center gap-1 text-xs", theme.badgeText)}>
@@ -1057,10 +1091,19 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   const blockTheme = (parrotId && BLOCK_THEMES[parrotId]) || BLOCK_THEMES.default;
   const themeColors = PARROT_THEMES[parrotId || "AMAZING"] || PARROT_THEMES.AMAZING;
 
+  // P1 Fix: Use ref for latest values to avoid closure traps in fast succession
+  const isLatestRef = useRef(isLatest);
+  const isStreamingRef = useRef(isStreaming);
+
+  useEffect(() => {
+    isLatestRef.current = isLatest;
+    isStreamingRef.current = isStreaming;
+  }, [isLatest, isStreaming]);
+
   const [collapsed, setCollapsed] = useState(() => getDefaultCollapseState(isLatest, isStreaming));
 
   useEffect(() => {
-    setCollapsed(getDefaultCollapseState(isLatest, isStreaming));
+    setCollapsed(getDefaultCollapseState(isLatestRef.current, isStreamingRef.current));
   }, [isLatest, isStreaming]);
 
   const toggleCollapse = useCallback(() => {

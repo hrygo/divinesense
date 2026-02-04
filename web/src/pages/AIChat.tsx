@@ -3,6 +3,16 @@ import { X } from "lucide-react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+
+// ============================================================
+// Debug logger - only logs in development mode
+// ============================================================
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.debug("[AIChat]", ...args);
+  }
+};
+
 import { AmazingInsightCard } from "@/components/AIChat/AmazingInsightCard";
 import { ChatHeader } from "@/components/AIChat/ChatHeader";
 import { ChatInput } from "@/components/AIChat/ChatInput";
@@ -210,7 +220,7 @@ function CapabilityPanelView({ currentCapability, capabilityStatus, onCapability
             <X className="w-4 h-4" />
             <span className="text-xs font-medium">{t("common.close") || "Close"}</span>
           </button>
-          <span className="text-sm font-medium text-foreground">{t("ai.capability.title") || "我的能力"}</span>
+          <span className="text-sm font-medium text-foreground">{t("ai.capability.title")}</span>
           <div className="w-16" />
         </header>
       )}
@@ -356,7 +366,7 @@ const AIChat = () => {
             }
           },
           onToolUse: (toolName, meta) => {
-            console.debug("[Geek/Evolution Mode] Tool use event:", toolName, meta);
+            debugLog("[Geek/Evolution Mode] Tool use event:", toolName, meta);
             setCapabilityStatus("processing");
             // Accumulate tool calls for this message
             toolCallsRef.current.push({
@@ -376,7 +386,7 @@ const AIChat = () => {
             }
           },
           onToolResult: (result, meta) => {
-            console.debug("[Geek/Evolution Mode] Tool result:", result, meta);
+            debugLog("[Geek/Evolution Mode] Tool result:", result, meta);
             // Update tool call with output result
             if (lastAssistantMessageIdRef.current && toolCallsRef.current.length > 0) {
               // Find the most recent tool call and update its output
@@ -404,7 +414,7 @@ const AIChat = () => {
             }
           },
           onSessionSummary: (summary) => {
-            console.debug("[Geek/Evolution Mode] Session summary:", summary);
+            debugLog("[Geek/Evolution Mode] Session summary:", summary);
             setSessionSummary(summary);
           },
           onMemoQueryResult: (result) => {

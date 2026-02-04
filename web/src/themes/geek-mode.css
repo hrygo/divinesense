@@ -85,6 +85,7 @@
     0 0 0 1px var(--geek-glow),
     0 0 20px -5px var(--geek-glow);
   transition: box-shadow 0.3s ease;
+  will-change: box-shadow;
 }
 
 .geek-mode .geek-border:hover,
@@ -126,6 +127,7 @@
   letter-spacing: 0.1em;
   overflow: hidden;
   transition: all 0.2s ease;
+  will-change: transform, box-shadow;
 }
 
 .geek-mode button.geek-btn::before {
@@ -137,6 +139,7 @@
   height: 100%;
   background: linear-gradient(90deg, transparent, var(--geek-glow), transparent);
   transition: left 0.5s ease;
+  will-change: left;
 }
 
 .geek-mode button.geek-btn:hover::before {
@@ -325,7 +328,10 @@
   box-shadow:
     0 4px 12px oklch(0 0 0 / 0.3),
     0 0 20px -5px var(--geek-glow);
-  transition: all 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+  will-change: transform, box-shadow;
 }
 
 .geek-mode .geek-fab:hover {
