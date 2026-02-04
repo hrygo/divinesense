@@ -1,5 +1,6 @@
-import { Brain, ChevronDown, ChevronUp, Clock, Cpu, DollarSign, FileEdit, PenLine, Terminal, Wrench, Zap } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, Clock, DollarSign, FileEdit, PenLine, Wrench, Zap } from "lucide-react";
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface SessionSummaryData {
@@ -39,6 +40,7 @@ interface ExpandedSessionSummaryProps {
  * - Files modified
  */
 export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ summary, className }: ExpandedSessionSummaryProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Format duration in human-readable format
@@ -79,17 +81,6 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
         ? "text-amber-600 dark:text-amber-400"
         : "text-emerald-600 dark:text-emerald-400";
 
-  // Mode configuration
-  const modeConfig = {
-    geek: { label: "Geek Mode", icon: Terminal, color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300" },
-    evolution: { label: "Evolution Mode", icon: Cpu, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
-    normal: { label: "Normal", icon: Brain, color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" },
-  } as const;
-
-  const modeKey = (summary.mode?.toLowerCase() || "normal") as keyof typeof modeConfig;
-  const modeCfg = modeConfig[modeKey] || modeConfig.normal;
-  const ModeIcon = modeCfg.icon;
-
   return (
     <div
       className={cn(
@@ -109,12 +100,6 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          {/* Mode indicator */}
-          <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold", modeCfg.color)}>
-            <ModeIcon className="w-3.5 h-3.5" />
-            <span>{modeCfg.label}</span>
-          </div>
-
           {/* Status indicator */}
           <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold", statusColor, "bg-current/10")}>
             {summary.status?.toLowerCase() === "error" ? (
@@ -124,7 +109,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
             ) : (
               <span>✓</span>
             )}
-            <span className="capitalize">{summary.status || "Success"}</span>
+            <span className="capitalize">{summary.status || t("ai.session_stats.status-success")}</span>
           </div>
 
           {/* Quick stats - single line */}
@@ -169,7 +154,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
           {/* Session ID */}
           {summary.sessionId && (
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Session ID</span>
+              <span className="text-muted-foreground">{t("ai.session_stats.session_id")}</span>
               <span className="font-mono text-muted-foreground/70 select-all break-all">{summary.sessionId}</span>
             </div>
           )}
@@ -178,8 +163,10 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
           {totalDuration > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Duration Breakdown</span>
-                <span className="font-mono text-muted-foreground">{formatDuration(totalDuration)} total</span>
+                <span className="text-muted-foreground font-medium">{t("ai.session_stats.duration_breakdown")}</span>
+                <span className="font-mono text-muted-foreground">
+                  {formatDuration(totalDuration)} {t("ai.session_stats.total")}
+                </span>
               </div>
 
               {/* Progress bar visualization */}
@@ -188,7 +175,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <div
                     className="bg-blue-500/80 flex items-center justify-center text-[10px] text-white font-medium"
                     style={{ width: `${thinkingPercent}%` }}
-                    title={`Thinking: ${formatDuration(summary.thinkingDurationMs)}`}
+                    title={`${t("ai.session_stats.thinking")}: ${formatDuration(summary.thinkingDurationMs)}`}
                   >
                     {thinkingPercent >= 10 && <Brain className="w-3 h-3" />}
                   </div>
@@ -197,7 +184,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <div
                     className="bg-purple-500/80 flex items-center justify-center text-[10px] text-white font-medium"
                     style={{ width: `${toolPercent}%` }}
-                    title={`Tool Execution: ${formatDuration(summary.toolDurationMs)}`}
+                    title={`${t("ai.session_stats.tool_execution")}: ${formatDuration(summary.toolDurationMs)}`}
                   >
                     {toolPercent >= 10 && <Wrench className="w-3 h-3" />}
                   </div>
@@ -206,7 +193,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <div
                     className="bg-emerald-500/80 flex items-center justify-center text-[10px] text-white font-medium"
                     style={{ width: `${generationPercent}%` }}
-                    title={`Generation: ${formatDuration(summary.generationDurationMs)}`}
+                    title={`${t("ai.session_stats.generation")}: ${formatDuration(summary.generationDurationMs)}`}
                   >
                     {generationPercent >= 10 && <PenLine className="w-3 h-3" />}
                   </div>
@@ -218,19 +205,25 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 {summary.thinkingDurationMs && summary.thinkingDurationMs > 0 && (
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-blue-500/80" />
-                    <span className="text-muted-foreground">Thinking: {formatDuration(summary.thinkingDurationMs)}</span>
+                    <span className="text-muted-foreground">
+                      {t("ai.session_stats.thinking")}: {formatDuration(summary.thinkingDurationMs)}
+                    </span>
                   </div>
                 )}
                 {summary.toolDurationMs && summary.toolDurationMs > 0 && (
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-purple-500/80" />
-                    <span className="text-muted-foreground">Tools: {formatDuration(summary.toolDurationMs)}</span>
+                    <span className="text-muted-foreground">
+                      {t("ai.session_stats.tools")}: {formatDuration(summary.toolDurationMs)}
+                    </span>
                   </div>
                 )}
                 {summary.generationDurationMs && summary.generationDurationMs > 0 && (
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500/80" />
-                    <span className="text-muted-foreground">Generation: {formatDuration(summary.generationDurationMs)}</span>
+                    <span className="text-muted-foreground">
+                      {t("ai.session_stats.generation")}: {formatDuration(summary.generationDurationMs)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -244,7 +237,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="w-4 h-4 text-amber-500" />
-                  <span className="text-xs font-medium text-muted-foreground">Tokens</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t("ai.session_stats.tokens")}</span>
                 </div>
                 <div className="space-y-1">
                   {/* Cache Read (discounted 90%) */}
@@ -252,7 +245,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <div className="flex justify-between text-xs items-center">
                       <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        Cache Read (90% off)
+                        {t("ai.session_stats.cache_read_discount")}
                       </span>
                       <span className="font-mono text-green-600 dark:text-green-400">
                         {formatNumber(summary.totalCacheReadTokens || 0)}
@@ -264,7 +257,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <div className="flex justify-between text-xs items-center">
                       <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        Cache Write (1.25x)
+                        {t("ai.session_stats.cache_write_premium")}
                       </span>
                       <span className="font-mono text-amber-600 dark:text-amber-400">
                         {formatNumber(summary.totalCacheWriteTokens || 0)}
@@ -276,7 +269,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <div className="flex justify-between text-xs items-center">
                       <span className="text-muted-foreground/70 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        New Input
+                        {t("ai.session_stats.new_input")}
                       </span>
                       <span className="font-mono">{formatNumber(summary.totalInputTokens || 0)}</span>
                     </div>
@@ -286,14 +279,14 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <div className="flex justify-between text-xs items-center">
                       <span className="text-muted-foreground/70 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        Output
+                        {t("ai.session_stats.output")}
                       </span>
                       <span className="font-mono">{formatNumber(summary.totalOutputTokens || 0)}</span>
                     </div>
                   )}
                   {/* Total Processed - always show */}
                   <div className="pt-1 border-t border-amber-200/30 dark:border-amber-700/30 flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Total Processed</span>
+                    <span className="text-muted-foreground">{t("ai.session_stats.total_processed")}</span>
                     <span className="font-mono text-amber-600 dark:text-amber-400">{formatNumber(totalProcessedTokens)}</span>
                   </div>
                 </div>
@@ -306,7 +299,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-green-500" />
-                    <span className="text-xs font-medium text-muted-foreground">Total Cost</span>
+                    <span className="text-xs font-medium text-muted-foreground">{t("ai.session_stats.total_cost")}</span>
                   </div>
                   <span className="text-2xl font-mono font-bold text-green-600 dark:text-green-400">
                     ${summary.totalCostUSD.toFixed(4)}
@@ -316,7 +309,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 {/* Cost per 1K tokens */}
                 {totalTokens > 0 && (
                   <div className="text-[10px] text-muted-foreground text-center">
-                    ${((summary.totalCostUSD / totalTokens) * 1000).toFixed(4)} per 1K billed tokens
+                    ${((summary.totalCostUSD / totalTokens) * 1000).toFixed(4)} {t("ai.session_stats.per_1k_tokens")}
                   </div>
                 )}
 
@@ -324,7 +317,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                 {totalProcessedTokens > 0 && (summary.totalCacheReadTokens || 0) > 0 && (
                   <div className="mt-2 pt-2 border-t border-green-200/30 dark:border-green-700/30">
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-muted-foreground">Cache Hit Rate</span>
+                      <span className="text-muted-foreground">{t("ai.session_stats.cache_hit_rate")}</span>
                       <span className="font-mono text-green-600 dark:text-green-400">
                         {Math.round(((summary.totalCacheReadTokens || 0) / totalProcessedTokens) * 100)}%
                       </span>
@@ -339,13 +332,13 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200/50 dark:border-purple-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Wrench className="w-4 h-4 text-purple-500" />
-                  <span className="text-xs font-medium text-muted-foreground">Tool Calls</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t("ai.session_stats.tool_calls")}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">{summary.toolCallCount}</span>
                   {summary.toolDurationMs && (
                     <div className="text-[10px] text-muted-foreground mt-1">
-                      Avg: {formatDuration(summary.toolDurationMs / summary.toolCallCount)} per call
+                      Avg: {formatDuration(summary.toolDurationMs / summary.toolCallCount)} {t("ai.session_stats.per_call")}
                     </div>
                   )}
                 </div>
@@ -371,7 +364,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
               <div className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-700/30">
                 <div className="flex items-center gap-2 mb-2">
                   <FileEdit className="w-4 h-4 text-emerald-500" />
-                  <span className="text-xs font-medium text-muted-foreground">Files Modified</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t("ai.session_stats.files_modified")}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-2xl font-mono font-bold text-emerald-600 dark:text-emerald-400">{summary.filesModified}</span>

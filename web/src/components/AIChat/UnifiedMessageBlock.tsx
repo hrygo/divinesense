@@ -48,6 +48,16 @@ type ToolCall =
     };
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/** Timestamp multiplier for calculating round-based timestamps */
+const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
+
+/** Offset in milliseconds between tool calls in the same round */
+const TOOL_CALL_OFFSET_MS = 1000;
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -167,54 +177,123 @@ function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boole
   return true;
 }
 
-const MAX_MESSAGE_HEIGHT = 200;
-
 // ============================================================================
 // Sub-Components
 // ============================================================================
 
 interface BlockHeaderProps {
   userMessage: ConversationMessage;
+  assistantMessage?: ConversationMessage;
+  sessionSummary?: SessionSummary;
   parrotId?: ParrotAgentType;
   theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
   onToggle: () => void;
   isCollapsed: boolean;
+  isStreaming?: boolean;
 }
 
-function BlockHeader({ userMessage, parrotId, theme, onToggle, isCollapsed }: BlockHeaderProps) {
+function BlockHeader({
+  userMessage,
+  assistantMessage,
+  sessionSummary,
+  parrotId,
+  theme,
+  onToggle,
+  isCollapsed,
+  isStreaming,
+}: BlockHeaderProps) {
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
 
+  // Calculate stats for Outcome Badge
+
+  // Determine border color based on status (Status Bubbling)
+  // Determine border color based on status (Status Bubbling)
+  const statusBorderClass = useMemo(() => {
+    if (isStreaming) return "border-l-4 border-l-blue-500/50 dark:border-l-blue-400"; // Breathing animation handled in parent
+    if (assistantMessage?.error) return "border-l-4 border-l-red-500 dark:border-l-red-400";
+    return "border-l-4 border-l-transparent";
+  }, [isStreaming, assistantMessage]);
+
+  // Geek Mode Summary Info
+  const geekSummary = useMemo(() => {
+    if (!sessionSummary || (parrotId !== "GEEK" && parrotId !== "EVOLUTION")) return null;
+
+    const cost = sessionSummary.totalCostUSD ? `$${sessionSummary.totalCostUSD.toFixed(4)}` : "";
+    const tokens =
+      sessionSummary.totalInputTokens && sessionSummary.totalOutputTokens
+        ? `${((sessionSummary.totalInputTokens + sessionSummary.totalOutputTokens) / 1000).toFixed(1)}k tok`
+        : "";
+    const time = sessionSummary.totalDurationMs ? `${(sessionSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
+
+    return { cost, tokens, time };
+  }, [sessionSummary, parrotId]);
+
   return (
-    <div className={cn("flex items-center justify-between px-4 py-2.5 select-none cursor-pointer", theme.headerBg)} onClick={onToggle}>
+    <div
+      className={cn(
+        "flex items-center justify-between px-4 py-2.5 select-none cursor-pointer transition-colors duration-200",
+        theme.headerBg,
+        statusBorderClass,
+      )}
+      onClick={onToggle}
+    >
       {/* Left: User avatar + message preview */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0">
+        <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0 shadow-sm">
           {userInitial}
         </div>
-        <p className="text-sm font-medium text-foreground truncate">
-          {userMessage.content.slice(0, 60)}
-          {userMessage.content.length > 60 ? "..." : ""}
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground truncate">{userMessage.content}</p>
+        </div>
       </div>
 
-      {/* Right: Timestamp + Badge + Toggle */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className={cn("flex items-center gap-1 text-xs", theme.badgeText)}>
+      {/* Right: Timestamp + Badge + Geek Summary + Toggle */}
+      <div className="flex items-center gap-3 shrink-0 ml-2">
+        {/* Geek/Evolution Summary stats - Compact View */}
+        {geekSummary && (
+          <div className="hidden lg:flex items-center gap-3 text-[10px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
+            <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[9px]">
+              {t("ai.unified_block.session")}
+            </span>
+            {geekSummary.time && (
+              <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
+                <Clock className="w-3 h-3" /> {geekSummary.time}
+              </span>
+            )}
+            {geekSummary.tokens && (
+              <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
+                <Brain className="w-3 h-3" /> {geekSummary.tokens}
+              </span>
+            )}
+            {geekSummary.cost && (
+              <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
+                <span className="font-bold">$</span> {geekSummary.cost}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className={cn("hidden sm:flex items-center gap-1 text-xs", theme.badgeText)}>
           <Clock className="w-3 h-3" />
           <span>{formatTime(userMessage.timestamp, t)}</span>
         </div>
 
-        {(parrotId === "GEEK" || parrotId === "EVOLUTION") && (
-          <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
-            {parrotId === "GEEK" ? "Geek" : "Evolution"}
+        {(parrotId === "GEEK" || parrotId === "EVOLUTION" || parrotId === "AMAZING") && (
+          <span className={cn("hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
+            {parrotId === "GEEK" ? t("ai.mode.geek") : parrotId === "EVOLUTION" ? t("ai.mode.evolution") : t("ai.mode.normal")}
           </span>
         )}
 
         <button
           type="button"
           className={cn("p-1 rounded transition-colors", "hover:bg-black/10 dark:hover:bg-white/10", theme.badgeText)}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          aria-label={isCollapsed ? t("common.expand") : t("common.collapse")}
+          aria-expanded={!isCollapsed}
         >
           {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
@@ -229,408 +308,395 @@ interface BlockBodyProps {
   isCollapsed: boolean;
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
   streamingPhase?: "thinking" | "tools" | "answer" | null;
+  isLatest?: boolean;
   children?: ReactNode;
 }
 
-function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors, streamingPhase = null, children }: BlockBodyProps) {
+function BlockBody({
+  assistantMessage,
+  sessionSummary,
+  isCollapsed,
+  themeColors,
+  streamingPhase = null,
+  isLatest = false,
+  children,
+}: BlockBodyProps) {
   const { t } = useTranslation();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isFolded, setIsFolded] = useState(false);
-  const [shouldShowFold, setShouldShowFold] = useState(false);
-
-  // Detect height for auto-folding
-  useEffect(() => {
-    if (contentRef.current && assistantMessage?.content && !isCollapsed) {
-      const height = contentRef.current.scrollHeight;
-      if (height > MAX_MESSAGE_HEIGHT) {
-        setShouldShowFold(true);
-      } else {
-        setShouldShowFold(false);
-      }
-    }
-  }, [assistantMessage?.content, isCollapsed]);
 
   // Check for error state
   const hasError = assistantMessage?.error;
 
-  // 按轮次分组数据
   const thinkingSteps = assistantMessage?.metadata?.thinkingSteps || [];
   const toolCalls = assistantMessage?.metadata?.toolCalls || [];
   const toolResults = assistantMessage?.metadata?.toolResults || [];
   const hasAnswer = assistantMessage?.content;
-  const hasSessionSummary =
-    sessionSummary &&
-    ((sessionSummary.totalDurationMs || 0) > 0 ||
-      (sessionSummary.totalInputTokens || 0) + (sessionSummary.totalOutputTokens || 0) > 0 ||
-      (sessionSummary.totalCostUSD || 0) > 0);
 
-  // 计算最大轮次
-  const maxRound = Math.max(
-    0,
-    ...thinkingSteps.map((s) => s.round),
-    ...toolCalls.map((c) => c.round || 0),
-    ...toolResults.map((r) => r.round || 0),
-  );
+  // 聚合 Thinking 内容
+  const allThinkingContent = useMemo(() => {
+    const placeholderTexts = ["处理中...", "Thinking...", "...", "AI is thinking", "思考中"];
+    return thinkingSteps
+      .map((s) => s.content?.trim() || "")
+      .filter((c) => c && !placeholderTexts.some((p) => c === p || c.startsWith(p)))
+      .join("\n\n");
+  }, [thinkingSteps]);
 
-  // 按轮次分组
-  const rounds = Array.from({ length: maxRound + 1 }, (_, i) => {
-    const step = thinkingSteps.find((s) => s.round === i);
-    const roundToolCalls = toolCalls.filter((c) => (c.round || 0) === i);
-    const roundToolResults = toolResults.filter((r) => (r.round || 0) === i);
-    return { round: i, step, toolCalls: roundToolCalls, toolResults: roundToolResults };
+  // States for collapsible sections - Default expand thinking if it's the latest message
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(() => isLatest && allThinkingContent.length > 0);
+
+  // Auto-expand thinking when content arrives for the latest message
+  useEffect(() => {
+    if (isLatest && allThinkingContent.length > 0 && streamingPhase === "thinking") {
+      setIsThinkingExpanded(true);
+    }
+  }, [allThinkingContent.length, isLatest, streamingPhase]);
+
+  // 构建时序事件列表（按时间顺序排列）
+  type TimelineEvent =
+    | { type: "thinking"; id: string; timestamp: number; data: { content: string }; isFirst: boolean }
+    | { type: "tool_call"; id: string; timestamp: number; data: ToolCall }
+    | { type: "tool_result"; id: string; timestamp: number; data: (typeof toolResults)[number] };
+
+  const timelineEvents: TimelineEvent[] = [];
+
+  // 1. Thinking Logic: 作为一个整体处理，而不是分散的事件
+  if (allThinkingContent.length > 0) {
+    timelineEvents.push({
+      type: "thinking",
+      id: "thinking-group",
+      timestamp: thinkingSteps[0]?.timestamp || 0,
+      data: { content: allThinkingContent },
+      isFirst: true,
+    });
+  }
+
+  // 2. Tool Logic
+  toolCalls.forEach((call, index) => {
+    const round = (typeof call === "object" ? call.round : 0) || 0;
+    const baseTimestamp = round * ROUND_TIMESTAMP_MULTIPLIER;
+    const callTimestamp = baseTimestamp + index * TOOL_CALL_OFFSET_MS;
+    timelineEvents.push({
+      type: "tool_call",
+      id: `toolcall-${round}-${index}`,
+      timestamp: callTimestamp,
+      data: call,
+    });
   });
 
-  // 计算实际有内容的轮次数量
-  const roundsWithContent = rounds.filter((r) => r.step || r.toolCalls.length > 0).length;
-  const isMultiRound = roundsWithContent > 1;
+  // 按时间戳排序
+  timelineEvents.sort((a, b) => a.timestamp - b.timestamp);
+
+  // 计算各类事件的最后一个索引（用于动效判断）
+  const lastToolIndex = timelineEvents
+    .map((e, i) => (e.type === "tool_call" ? i : -1))
+    .filter((i) => i >= 0)
+    .pop();
 
   // When collapsed, show minimal info
   if (isCollapsed) {
-    return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.collapsed") || "Click expand to view details"}</div>;
+    return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.unified_block.collapsed")}</div>;
   }
 
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-4">
       {/* Timeline Flow */}
       <div className="relative">
-        {/* Left Timeline Line */}
-        <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-border" />
+        {/* Left Timeline Line - 优化：虚线/实线混合 */}
+        <div className="absolute left-[11px] top-2 bottom-4 w-px bg-border/60" />
 
-        <div className="relative pl-6 space-y-4">
-          {/* 渲染每一轮思考 */}
-          {rounds.map((round) => {
-            const hasRoundContent = round.step || round.toolCalls.length > 0;
-            if (!hasRoundContent) return null;
+        <div className="relative pl-8 space-y-6">
+          {/* 1. Thinking Section - Collapsible Accordion Style */}
+          {allThinkingContent.length > 0 && (
+            <div className="relative group">
+              <div
+                className={cn(
+                  "absolute -left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
+                  streamingPhase === "thinking"
+                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/10"
+                    : "bg-muted text-muted-foreground group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500",
+                )}
+              >
+                {streamingPhase === "thinking" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+              </div>
 
-            const roundNumber = round.round;
+              <div className="flex flex-col">
+                <button
+                  onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full group/btn"
+                >
+                  <span>
+                    {streamingPhase === "thinking"
+                      ? t("ai.states.thinking") || "Thinking..."
+                      : t("ai.unified_block.thinking_process") || "Thinking Process"}
+                  </span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {isThinkingExpanded ? `(${t("common.collapse")})` : `(${t("common.expand")})`}
+                  </span>
+                  {isThinkingExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 opacity-50" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                  )}
+                </button>
+
+                {/* Condensed View (When collapsed) */}
+                {!isThinkingExpanded && (
+                  <p
+                    className="text-xs text-muted-foreground mt-1 line-clamp-1 italic opacity-80 cursor-pointer"
+                    onClick={() => setIsThinkingExpanded(true)}
+                  >
+                    {allThinkingContent.split("\n")[0]}...
+                  </p>
+                )}
+
+                {/* Expanded View */}
+                {isThinkingExpanded && (
+                  <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200 prose prose-xs dark:prose-invert max-w-none">
+                    <ReactMarkdown>{allThinkingContent}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Tool Calls Stream */}
+          {timelineEvents.map((event, eventIndex) => {
+            if (event.type !== "tool_call") return null;
+
+            const calling = streamingPhase === "tools" && eventIndex === lastToolIndex;
+            const call = event.data;
+            const callName = typeof call === "string" ? call : call.name;
+
+            // Find result
+            const result = toolResults.find(
+              (r) => r.name === callName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
+            );
+
+            const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
+            // Determine operation type (Read vs Write)
+            const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => callName.toLowerCase().includes(k));
 
             return (
-              <div key={round.round} className="space-y-3">
-                {/* 轮次标题（如果有多个轮次） */}
-                {isMultiRound && (
-                  <div className="flex items-center gap-2 pl-2">
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Round {roundNumber + 1}</span>
-                    <div className="flex-1 h-px bg-border/50" />
+              <div key={event.id} className="relative group">
+                {/* Timeline Node */}
+                <div
+                  className={cn(
+                    "absolute -left-8 top-0 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border transition-all",
+                    calling
+                      ? "bg-purple-100 dark:bg-purple-900/40 border-purple-500 animate-pulse"
+                      : "bg-card border-border group-hover:border-purple-400/50",
+                    isError && "bg-red-50 border-red-200",
+                  )}
+                >
+                  {calling ? (
+                    <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
+                  ) : (
+                    <Wrench className={cn("w-3 h-3", isError ? "text-red-500" : "text-muted-foreground group-hover:text-purple-500")} />
+                  )}
+                </div>
+
+                {/* Card Container */}
+                <div
+                  className={cn(
+                    "rounded-lg border overflow-hidden transition-all duration-200",
+                    "bg-card hover:shadow-sm",
+                    isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
+                    // Write operations get subtle highlighting
+                  )}
+                >
+                  {/* Tool Header */}
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/20 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("font-semibold", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
+                        {callName}
+                      </span>
+                      {typeof call === "object" && call.duration && (
+                        <span className="text-[10px] text-muted-foreground bg-background/50 px-1.5 py-0.5 rounded">
+                          {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
+                        </span>
+                      )}
+                    </div>
+                    {typeof call === "object" && call.filePath && (
+                      <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[150px]" title={call.filePath}>
+                        {call.filePath}
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {/* AI Thinking */}
-                {round.step && (
-                  <div className="relative">
-                    <div
-                      className={cn(
-                        "absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 flex items-center justify-center shrink-0",
-                        streamingPhase === "thinking" && "animate-pulse ring-2 ring-blue-300/50 dark:ring-blue-600/30",
-                      )}
-                    >
-                      {streamingPhase === "thinking" ? (
-                        <Loader2 className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400 animate-spin" />
-                      ) : (
-                        <Brain className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
-                      )}
+                  {/* Tool Input Preview (Argument) */}
+                  {typeof call === "object" && call.inputSummary && (
+                    <div className="px-3 py-2 border-t border-border/30 bg-background/50">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold mb-0.5">{t("ai.unified_block.input")}</div>
+                      <code className="text-xs text-muted-foreground/80 font-mono break-all line-clamp-2 hover:line-clamp-none transition-all">
+                        {call.inputSummary}
+                      </code>
                     </div>
-                    <div className="pl-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-700/30">
-                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">AI Thinking</span>
+                  )}
+
+                  {/* Tool Result (Output) */}
+                  {result && result.outputSummary && (
+                    <div className="px-3 py-2 border-t border-border/30 bg-muted/10">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
+                          <Terminal className="w-3 h-3" /> {t("ai.unified_block.output")}
+                        </div>
+                        {result.isError && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded font-medium">Error</span>}
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground italic">{round.step.content}</p>
+                      <pre
+                        className={cn(
+                          "text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-1.5 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
+                          result.isError && "text-red-600/90 bg-red-50/50",
+                        )}
+                      >
+                        {result.outputSummary}
+                      </pre>
                     </div>
-                  </div>
-                )}
-
-                {/* Tools (tool_use → tool_result pairs) for this round */}
-                {round.toolCalls.length > 0 ? (
-                  <div className="relative space-y-3">
-                    <div
-                      className={cn(
-                        "absolute -left-6 top-0 w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 flex items-center justify-center shrink-0",
-                        streamingPhase === "tools" && "animate-pulse ring-2 ring-purple-300/50 dark:ring-purple-600/30",
-                      )}
-                    >
-                      {streamingPhase === "tools" ? (
-                        <Loader2 className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400 animate-spin" />
-                      ) : (
-                        <Wrench className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" />
-                      )}
-                    </div>
-
-                    <div className="pl-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50/50 dark:bg-purple-900/20 border border-purple-200/50 dark:border-purple-700/30 mb-3">
-                        <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">Tools</span>
-                        <span className="text-xs text-muted-foreground">{round.toolCalls.length} operations</span>
-                      </div>
-
-                      {/* Tool pairs: tool_use → tool_result */}
-                      <div className="space-y-3">
-                        {round.toolCalls.map((call: ToolCall, callIndex) => {
-                          const callName = typeof call === "string" ? call : call.name;
-                          // Find corresponding result in this round
-                          const result = round.toolResults.find(
-                            (r) => r.name === callName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
-                          );
-                          const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
-
-                          return (
-                            <div key={callIndex} className="relative pl-4 border-l-2 border-purple-200 dark:border-purple-700/50">
-                              {/* Tool Use */}
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <div
-                                  className={cn(
-                                    "w-5 h-5 rounded flex items-center justify-center shrink-0",
-                                    isError
-                                      ? "bg-red-100 dark:bg-red-900/30 text-red-600"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600",
-                                  )}
-                                >
-                                  <Terminal className="w-3 h-3" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium">{callName}</span>
-                                    {typeof call === "object" && call.duration && (
-                                      <span className="text-[10px] text-muted-foreground">
-                                        {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
-                                      </span>
-                                    )}
-                                    {typeof call === "object" && call.inputSummary && (
-                                      <span className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={call.inputSummary}>
-                                        {call.inputSummary}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {typeof call === "object" && call.filePath && (
-                                    <div className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded mt-0.5">
-                                      {call.filePath}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Tool Result (if available) */}
-                              {result && result.outputSummary && result.outputSummary.length > 0 && (
-                                <div className="mt-2">
-                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
-                                    <ChevronDown className="w-3 h-3" />
-                                    <span>
-                                      Output (
-                                      {result.duration && result.duration > 1000
-                                        ? `${(result.duration / 1000).toFixed(1)}s`
-                                        : `${result.duration || 0}ms`}
-                                      )
-                                    </span>
-                                  </div>
-                                  <div className="rounded-lg bg-slate-950 dark:bg-slate-950 border border-slate-800 overflow-hidden">
-                                    <div className="px-3 py-1 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2">
-                                      <div className="flex gap-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500/80" />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/80" />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500/80" />
-                                      </div>
-                                      <span className="text-[10px] text-slate-500 font-mono">Output</span>
-                                    </div>
-                                    <pre className="p-2.5 text-xs text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                                      {result.outputSummary}
-                                    </pre>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Waiting for result indicator (if no result yet) */}
-                              {!result && (
-                                <div className="mt-2 flex items-center gap-2">
-                                  <Loader2 className="w-3 h-3 text-purple-500 animate-spin" />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+                  )}
+                </div>
               </div>
             );
           })}
 
-          {/* AI Answer */}
-          {hasAnswer && (
-            <div className="relative">
-              {/* Timeline Dot */}
+          {/* 3. AI Answer Section */}
+          {/* 3. AI Answer Section */}
+          {hasAnswer ? (
+            <div className="relative pt-2">
               <div
                 className={cn(
-                  "absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500 flex items-center justify-center shrink-0",
-                  streamingPhase === "answer" && "animate-pulse ring-2 ring-amber-300/50 dark:ring-amber-600/30",
+                  "absolute -left-8 top-3.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
+                  streamingPhase === "answer"
+                    ? "bg-amber-100 dark:bg-amber-900/40 border border-amber-500 animate-pulse text-amber-600"
+                    : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-500",
                 )}
               >
-                {streamingPhase === "answer" ? (
-                  <Loader2 className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 animate-spin" />
-                ) : (
-                  <Zap className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                )}
+                {streamingPhase === "answer" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
               </div>
-              {/* Content */}
-              <div className="pl-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50/50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 mb-2">
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">AI Answer</span>
+
+              {/* Message bubble */}
+              <div
+                className={cn(
+                  "relative rounded-xl shadow-sm transition-colors",
+                  themeColors.bubbleBg,
+                  themeColors.bubbleBorder,
+                  themeColors.text,
+                )}
+              >
+                {/* Floating Copy Button */}
+                <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => {
+                      if (assistantMessage) {
+                        navigator.clipboard.writeText(assistantMessage.content);
+                      }
+                    }}
+                    className="p-1.5 rounded-md bg-background/50 hover:bg-background border border-border/50 text-muted-foreground shadow-sm transition-all"
+                    title={t("common.copy")}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                {/* Message bubble with Markdown */}
-                <div
-                  className={cn(
-                    "relative rounded-2xl shadow-sm transition-colors min-w-[120px] max-w-full",
-                    themeColors.bubbleBg,
-                    themeColors.bubbleBorder,
-                    themeColors.text,
-                    shouldShowFold && isFolded && "overflow-hidden",
-                  )}
-                  style={shouldShowFold && isFolded ? { maxHeight: `${MAX_MESSAGE_HEIGHT}px` } : {}}
-                >
-                  {/* Floating Copy Button */}
-                  <div className="absolute top-2 right-2 z-30">
-                    <button
-                      onClick={() => {
-                        if (assistantMessage) {
-                          navigator.clipboard.writeText(assistantMessage.content);
-                        }
-                      }}
-                      className={cn(
-                        "p-1.5 rounded-lg border shadow-sm transition-all active:scale-90",
-                        "bg-card/50 border-border text-muted-foreground hover:text-foreground backdrop-blur-sm",
-                      )}
-                      title={t("common.copy") || "Copy"}
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
-                  {/* Markdown content */}
-                  <div ref={contentRef} className="pl-4 pr-10 py-2.5">
-                    <div className="prose prose-sm dark:prose-invert max-w-none break-words text-sm font-normal font-sans">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkBreaks]}
-                        components={{
-                          a: ({ node, ...props }) => (
-                            <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
-                          ),
-                          p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0 text-sm leading-relaxed" />,
-                          ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 mb-2 space-y-1" />,
-                          ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 mb-2 space-y-1" />,
-                          li: ({ node, ...props }) => <li {...props} className="pl-1" />,
-                          h1: ({ node, ...props }) => <h1 {...props} className="text-xl font-bold mb-2 mt-4 first:mt-0" />,
-                          h2: ({ node, ...props }) => <h2 {...props} className="text-lg font-bold mb-2 mt-3" />,
-                          h3: ({ node, ...props }) => <h3 {...props} className="text-base font-bold mb-1 mt-2" />,
-                          blockquote: ({ node, ...props }) => (
-                            <blockquote
+                {/* Markdown content */}
+                <div ref={contentRef} className="px-5 py-4">
+                  <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-normal font-sans text-[15px]">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkBreaks]}
+                      components={{
+                        a: ({ node, ...props }) => (
+                          <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
+                        ),
+                        p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0 text-sm leading-relaxed" />,
+                        ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 mb-2 space-y-1" />,
+                        ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 mb-2 space-y-1" />,
+                        li: ({ node, ...props }) => <li {...props} className="pl-1" />,
+                        h1: ({ node, ...props }) => <h1 {...props} className="text-xl font-bold mb-2 mt-4 first:mt-0" />,
+                        h2: ({ node, ...props }) => <h2 {...props} className="text-lg font-bold mb-2 mt-3" />,
+                        h3: ({ node, ...props }) => <h3 {...props} className="text-base font-bold mb-1 mt-2" />,
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote {...props} className="border-l-4 border-primary/30 pl-4 py-1 my-2 bg-muted/30 italic rounded-r-lg" />
+                        ),
+                        table: ({ node, ...props }) => (
+                          <div className="my-4 w-full overflow-x-auto rounded-lg border border-border shadow-sm">
+                            <table className="w-full text-sm" {...props} />
+                          </div>
+                        ),
+                        thead: ({ node, ...props }) => <thead className="bg-muted/50 text-xs uppercase" {...props} />,
+                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-border" {...props} />,
+                        tr: ({ node, ...props }) => <tr className="hover:bg-muted/50 transition-colors" {...props} />,
+                        th: ({ node, ...props }) => (
+                          <th className="px-4 py-2.5 text-left font-medium text-muted-foreground tracking-wider" {...props} />
+                        ),
+                        td: ({ node, ...props }) => <td className="px-4 py-2.5 whitespace-pre-wrap" {...props} />,
+                        pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
+                        code: ({ className, children, inline, ...props }: CodeComponentProps) => {
+                          return inline ? (
+                            <code
+                              className={cn("px-1.5 py-0.5 rounded-md bg-muted/80 font-mono text-xs text-secondary-foreground", className)}
                               {...props}
-                              className="border-l-4 border-primary/30 pl-4 py-1 my-2 bg-muted/30 italic rounded-r-lg"
-                            />
-                          ),
-                          table: ({ node, ...props }) => (
-                            <div className="my-4 w-full overflow-x-auto rounded-lg border border-border shadow-sm">
-                              <table className="w-full text-sm" {...props} />
-                            </div>
-                          ),
-                          thead: ({ node, ...props }) => <thead className="bg-muted/50 text-xs uppercase" {...props} />,
-                          tbody: ({ node, ...props }) => <tbody className="divide-y divide-border" {...props} />,
-                          tr: ({ node, ...props }) => <tr className="hover:bg-muted/50 transition-colors" {...props} />,
-                          th: ({ node, ...props }) => (
-                            <th className="px-4 py-2.5 text-left font-medium text-muted-foreground tracking-wider" {...props} />
-                          ),
-                          td: ({ node, ...props }) => <td className="px-4 py-2.5 whitespace-pre-wrap" {...props} />,
-                          pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
-                          code: ({ className, children, inline, ...props }: CodeComponentProps) => {
-                            return inline ? (
-                              <code
-                                className={cn("px-1.5 py-0.5 rounded-md bg-muted text-xs break-all whitespace-pre-wrap", className)}
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            ) : (
-                              <code className={className} {...props}>
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                      >
-                        {assistantMessage.content || t("ai.states.thinking") || "..."}
-                      </ReactMarkdown>
-                      {children}
-                    </div>
-                  </div>
-
-                  {/* Fold Mask and Button */}
-                  {shouldShowFold && (
-                    <>
-                      {isFolded && (
-                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card via-card/40 to-transparent pointer-events-none" />
-                      )}
-                      <div className={cn("flex justify-center p-1.5", isFolded ? "absolute bottom-0 inset-x-0 z-10" : "relative")}>
-                        <button
-                          onClick={() => setIsFolded((prev) => !prev)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-card border border-border shadow-sm hover:bg-accent text-muted-foreground"
-                        >
-                          {isFolded ? (
-                            <>
-                              <ChevronDown className="w-3 h-3" />
-                              {t("common.expand")}
-                            </>
+                            >
+                              {children}
+                            </code>
                           ) : (
-                            <>
-                              <ChevronUp className="w-3 h-3" />
-                              {t("common.collapse")}
-                            </>
-                          )}
-                        </button>
-                      </div>
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {assistantMessage.content || t("ai.states.thinking")}
+                    </ReactMarkdown>
+                    {children}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Pending State (Cold Start / Initializing) */
+            (isLatest || children) && (
+              <div className="relative pt-2 px-1 animate-in fade-in duration-300">
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  {/* Fallback spinner if valid children (cursor) is not provided */}
+                  {children ? (
+                    <div className="scale-90 origin-left">{children}</div>
+                  ) : (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/50" />
+                      <span className="text-sm italic opacity-70">Initializing...</span>
                     </>
                   )}
                 </div>
               </div>
-            </div>
+            )
           )}
 
-          {/* 4. Error */}
+          {/* 4. Error Section */}
           {hasError && (
-            <div className="relative">
-              {/* Timeline Dot */}
-              <div className="absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center justify-center shrink-0">
-                <AlertCircle className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
+            <div className="relative group">
+              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
               </div>
-              {/* Content */}
-              <div className="pl-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-700/30">
-                  <span className="text-xs font-semibold text-red-700 dark:text-red-300">Error</span>
-                </div>
-                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{assistantMessage.error}</p>
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
+                <p className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+                  {t("ai.unified_block.error_occurred")}
+                </p>
+                <p className="mt-1 text-red-600/80 dark:text-red-400/80 font-mono text-xs break-all">{assistantMessage.error}</p>
               </div>
             </div>
           )}
-
-          {/* 5. SessionSummary */}
-          {hasSessionSummary && (
+          {/* 5. Session Summary (Detailed view for all modes if present) */}
+          {sessionSummary && (
             <div className="relative">
-              {/* Timeline Dot */}
-              <div className="absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center shrink-0">
-                <BarChart3 className="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
+              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-500 flex items-center justify-center shrink-0 z-10 transition-colors">
+                <BarChart3 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
               </div>
-              {/* Content */}
-              <div className="pl-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50/50 dark:bg-green-900/20 border border-green-200/50 dark:border-green-700/30 mb-2">
-                  <span className="text-xs font-semibold text-green-700 dark:text-green-300">Session Summary</span>
-                </div>
-                {/* ExpandedSessionSummary embedded */}
-                <div className="pl-2">
-                  <ExpandedSessionSummary summary={sessionSummary} />
-                </div>
+              <div className="pl-0">
+                <ExpandedSessionSummary summary={sessionSummary} />
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Custom children (typing cursor, etc.) */}
-      {children}
     </div>
   );
 }
@@ -684,7 +750,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
         )}
       >
         {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-        {isCollapsed ? t("common.expand") || "Expand" : t("common.collapse") || "Collapse"}
+        {isCollapsed ? t("common.expand") : t("common.collapse")}
       </button>
 
       {/* Right: Action Buttons */}
@@ -699,9 +765,23 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
               theme.badgeText,
             )}
           >
-            {t("ai.regenerate") || "Regenerate"}
+            {t("ai.regenerate")}
           </button>
         )}
+        {/* Context Pinning / Remove - Visual Only for now */}
+        <button
+          type="button"
+          className={cn(
+            "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-60 hover:opacity-100",
+            "hover:bg-black/10 dark:hover:bg-white/10",
+            theme.badgeText,
+          )}
+          title={t("ai.unified_block.forget_tooltip")}
+        >
+          <Brain className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline">{t("ai.unified_block.forget")}</span>
+        </button>
+
         <button
           type="button"
           onClick={handleCopy}
@@ -713,7 +793,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
           )}
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? t("common.copied") || "Copied" : t("common.copy") || "Copy"}
+          {copied ? t("common.copied") : t("common.copy")}
         </button>
         {onDelete && (
           <button
@@ -725,7 +805,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
               "text-red-600 dark:text-red-400",
             )}
           >
-            {t("common.delete") || "Delete"}
+            {t("common.delete")}
           </button>
         )}
       </div>
@@ -786,15 +866,26 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   return (
     <div
       className={cn(
-        "rounded-lg border overflow-hidden shadow-sm transition-all duration-200",
+        "rounded-lg border overflow-hidden shadow-sm transition-all duration-300",
         blockTheme.border,
-        isLatest && `ring-2 ${blockTheme.ringColor}`,
+        // Active/Streaming state: Breathing border + Ring
+        isLatest && isStreaming && `ring-2 ${blockTheme.ringColor} animate-block-pulse`,
+        isLatest && !isStreaming && `ring-1 ${blockTheme.ringColor}`,
         className,
       )}
     >
       {/* Block Header - 始终显示 */}
       <div className={cn("border-b", blockTheme.border)}>
-        <BlockHeader userMessage={userMessage} parrotId={parrotId} theme={blockTheme} onToggle={toggleCollapse} isCollapsed={collapsed} />
+        <BlockHeader
+          userMessage={userMessage}
+          assistantMessage={assistantMessage}
+          sessionSummary={sessionSummary}
+          parrotId={parrotId}
+          theme={blockTheme}
+          onToggle={toggleCollapse}
+          isCollapsed={collapsed}
+          isStreaming={isStreaming}
+        />
       </div>
 
       {/* Block Body - 可折叠内容 */}
@@ -804,6 +895,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         isCollapsed={collapsed}
         themeColors={themeColors}
         streamingPhase={streamingPhase}
+        isLatest={isLatest}
       >
         {children}
       </BlockBody>

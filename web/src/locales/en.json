@@ -281,7 +281,19 @@
         "budget-remaining": "Budget Remaining",
         "status-success": "Success",
         "status-error": "Error",
-        "status-cancelled": "Cancelled"
+        "status-cancelled": "Cancelled",
+        "session_id": "Session ID",
+        "duration_breakdown": "Duration Breakdown",
+        "total": "total",
+        "tool_execution": "Tool Execution",
+        "tool_calls": "Tool Calls",
+        "cache_read_discount": "Cache Read (90% off)",
+        "cache_write_premium": "Cache Write (1.25x)",
+        "new_input": "New Input",
+        "total_processed": "Total Processed",
+        "per_1k_tokens": "per 1K billed tokens",
+        "cache_hit_rate": "Cache Hit Rate",
+        "per_call": "per call"
       },
       "try-asking": "Try asking"
     },
@@ -383,6 +395,19 @@
       "failed": "Failed",
       "tools": "Tools",
       "results": "Results"
+    },
+    "unified_block": {
+      "session": "Session",
+      "session_duration": "Session Duration",
+      "session_tokens": "Total Session Tokens",
+      "session_cost": "Total Session Cost",
+      "thinking_process": "Thinking Process",
+      "collapsed": "Click expand to view details",
+      "input": "Input",
+      "output": "Output",
+      "error_occurred": "Error Occurred",
+      "forget": "Forget",
+      "forget_tooltip": "Remove from context (Coming soon)"
     }
   },
   "auth": {

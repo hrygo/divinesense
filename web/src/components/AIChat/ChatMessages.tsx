@@ -3,7 +3,7 @@ import TypingCursor from "@/components/AIChat/TypingCursor";
 import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIContainer";
 import type { GenerativeUIContainerProps } from "@/components/ScheduleAI/types";
 import { cn } from "@/lib/utils";
-import { ChatItem, ConversationMessage, MessageRole } from "@/types/aichat";
+import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
 import type { SessionSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -54,7 +54,7 @@ function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean):
 
   for (const item of items) {
     // Skip context separators for now (they could be rendered separately)
-    if ("type" in item && item.type === "context-separator") {
+    if (isContextSeparator(item)) {
       if (pendingUser) {
         blocks.push({
           id: pendingUser.id,
@@ -263,7 +263,12 @@ const ChatMessages = memo(function ChatMessages({
   }, []);
 
   // Group messages into blocks
-  const messageBlocks = useMemo(() => groupMessagesIntoBlocks(items, !!sessionSummary), [items, sessionSummary]);
+  // Use items.length and last item ID as dependencies to avoid recalculation
+  // when the parent component re-renders with the same array content
+  const messageBlocks = useMemo(
+    () => groupMessagesIntoBlocks(items, !!sessionSummary),
+    [items.length, items[items.length - 1]?.id, sessionSummary],
+  );
 
   // Check if last assistant message is streaming
   const lastBlock = messageBlocks[messageBlocks.length - 1];
@@ -288,6 +293,13 @@ const ChatMessages = memo(function ChatMessages({
     return null;
   }, [isLastStreaming, lastBlock, isStreaming]);
 
+  // Determine effective parrot ID based on session mode (Geek/Evolution override normal parrotId)
+  const effectiveParrotId = useMemo(() => {
+    if (sessionSummary?.mode === "geek") return ParrotAgentType.GEEK;
+    if (sessionSummary?.mode === "evolution") return ParrotAgentType.EVOLUTION;
+    return currentParrotId;
+  }, [currentParrotId, sessionSummary?.mode]);
+
   return (
     <div
       ref={scrollRef}
@@ -301,14 +313,32 @@ const ChatMessages = memo(function ChatMessages({
         <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto space-y-3">
           {messageBlocks.map((block, index) => {
             const blockIsLast = index === messageBlocks.length - 1;
+
+            // Determine effective parrot ID for this specific block based on message metadata
+            // detailed order:
+            // 1. Assistant message metadata mode
+            // 2. User message metadata mode
+            // 3. Session summary mode (legacy/fallback)
+            // 4. Current global parrotId (fallback)
+            const blockMode: AIMode | undefined = block.assistantMessage?.metadata?.mode || block.userMessage?.metadata?.mode;
+
+            let blockParrotId = effectiveParrotId;
+            if (blockMode === "geek") {
+              blockParrotId = ParrotAgentType.GEEK;
+            } else if (blockMode === "evolution") {
+              blockParrotId = ParrotAgentType.EVOLUTION;
+            } else if (blockMode === "normal") {
+              blockParrotId = ParrotAgentType.AMAZING;
+            }
+
             return (
               <UnifiedMessageBlock
                 key={block.id}
                 userMessage={block.userMessage}
                 assistantMessage={block.assistantMessage}
                 sessionSummary={block.attachSessionSummary ? sessionSummary : undefined}
-                parrotId={currentParrotId}
-                isLatest={block.isLatest && !isTyping}
+                parrotId={blockParrotId}
+                isLatest={block.isLatest}
                 isStreaming={isLastStreaming && block.isLatest}
                 streamingPhase={blockIsLast ? streamingPhase : null}
                 onCopy={onCopyMessage}
@@ -317,7 +347,7 @@ const ChatMessages = memo(function ChatMessages({
               >
                 {/* Typing cursor for streaming messages */}
                 {block.isLatest && isTyping && !block.assistantMessage?.error && (
-                  <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
+                  <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.AMAZING} variant="dots" />
                 )}
               </UnifiedMessageBlock>
             );
@@ -344,7 +374,7 @@ const ChatMessages = memo(function ChatMessages({
             <span className="text-lg md:text-xl">🤖</span>
           </div>
           <div className={cn("px-4 py-3 rounded-2xl border shadow-sm", PARROT_THEMES.AMAZING.bubbleBg, PARROT_THEMES.AMAZING.bubbleBorder)}>
-            <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
+            <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.AMAZING} variant="dots" />
           </div>
         </div>
       )}

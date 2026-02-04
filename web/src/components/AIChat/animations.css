@@ -77,3 +77,18 @@
     opacity: 1;
   }
 }
+
+/* Breathing Ring Animation for Active Blocks */
+@keyframes breatheShadow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--tw-ring-color);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--tw-ring-color);
+  }
+}
+
+.animate-block-pulse {
+  animation: breatheShadow 2s infinite;
+}

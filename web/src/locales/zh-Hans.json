@@ -276,7 +276,19 @@
         "budget-remaining": "剩余预算",
         "status-success": "成功",
         "status-error": "错误",
-        "status-cancelled": "已取消"
+        "status-cancelled": "已取消",
+        "session_id": "会话 ID",
+        "duration_breakdown": "耗时分析",
+        "total": "总计",
+        "tool_execution": "工具执行",
+        "tool_calls": "工具调用",
+        "cache_read_discount": "缓存读取 (1折)",
+        "cache_write_premium": "缓存写入 (1.25倍)",
+        "new_input": "新输入",
+        "total_processed": "总处理量",
+        "per_1k_tokens": "每 1K 计费 Token",
+        "cache_hit_rate": "缓存命中率",
+        "per_call": "每次调用"
       },
       "try-asking": "试着这样问"
     },
@@ -378,6 +390,19 @@
       "failed": "失败",
       "tools": "工具调用",
       "results": "执行结果"
+    },
+    "unified_block": {
+      "session": "会话",
+      "session_duration": "会话时长",
+      "session_tokens": "会话总 Token",
+      "session_cost": "会话总成本",
+      "thinking_process": "思考过程",
+      "collapsed": "点击展开查看详情",
+      "input": "输入",
+      "output": "输出",
+      "error_occurred": "发生错误",
+      "forget": "遗忘",
+      "forget_tooltip": "从上下文中移除 (即将推出)"
     }
   },
   "auth": {
