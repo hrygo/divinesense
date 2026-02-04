@@ -10,7 +10,7 @@ interface RouteHeaderImageProps {
 
 const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
   const location = useLocation();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const path = location.pathname;
 
   // Detect if language is Chinese (simplified or traditional)
@@ -18,6 +18,7 @@ const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
   const suffix = isZh ? "-zh" : "";
 
   let headerName = "";
+  let textTitle = "";
 
   if (path === Routes.HOME) headerName = "memos";
   else if (path.startsWith(Routes.EXPLORE)) headerName = "explore";
@@ -30,9 +31,14 @@ const RouteHeaderImage = ({ mode = "normal" }: RouteHeaderImageProps) => {
   else if (path.startsWith(Routes.KNOWLEDGE_GRAPH)) headerName = "knowledge";
   else if (path.startsWith(Routes.ATTACHMENTS)) headerName = "files";
   else if (path.startsWith(Routes.INBOX)) headerName = "inbox";
-  // Setting page has its own header structure, don't show RouteHeaderImage
-  else if (path.startsWith(Routes.SETTING)) return null;
+  // Setting page - use text title instead of image
+  else if (path.startsWith(Routes.SETTING)) textTitle = t("setting.settings");
   else if (path.startsWith("/memos/")) headerName = "memos"; // Detail
+
+  // Return text title for Setting page
+  if (textTitle) {
+    return <span className="text-lg font-semibold">{textTitle}</span>;
+  }
 
   if (!headerName) return null;
 
