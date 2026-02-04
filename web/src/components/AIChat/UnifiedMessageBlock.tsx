@@ -595,12 +595,22 @@ function BlockBody({
   // States for collapsible sections - Default expand thinking if it's the latest message
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(() => isLatest && allThinkingContent.length > 0);
 
+  // Track whether we've ever been in thinking phase (for completed state display)
+  const [hadThinkingPhase, setHadThinkingPhase] = useState(false);
+
   // Auto-expand thinking when content arrives for the latest message
   useEffect(() => {
     if (isLatest && allThinkingContent.length > 0 && streamingPhase === "thinking") {
       setIsThinkingExpanded(true);
     }
   }, [allThinkingContent.length, isLatest, streamingPhase]);
+
+  // Track thinking phase for completed state
+  useEffect(() => {
+    if (streamingPhase === "thinking") {
+      setHadThinkingPhase(true);
+    }
+  }, [streamingPhase]);
 
   // 构建时序事件列表（按时间顺序排列）
   type TimelineEvent =
