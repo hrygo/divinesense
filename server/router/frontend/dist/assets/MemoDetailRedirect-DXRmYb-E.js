@@ -1,0 +1,1 @@
+import{bz as o,j as r,bs as e}from"./react-vendor-LyyF-653.js";import"./ui-vendor-ByoYm48K.js";import"./leaflet-vendor-Cu4zZue4.js";import"./markdown-vendor-DtAGkuPo.js";import"./math-vendor-JUchi9-2.js";import"./mermaid-vendor-B1M2OtO5.js";import"./lodash-vendor-DIRPa7cU.js";const s=()=>{const{uid:s}=o();return r.jsx(e,{to:`/memos/${s}`,replace:!0})};export{s as default};

@@ -1,0 +1,1 @@
+import{r as e}from"./react-vendor-LyyF-653.js";function s(s=!1){const[a,t]=e.useState(s);return{isOpen:a,open:e.useCallback(()=>t(!0),[]),close:e.useCallback(()=>t(!1),[]),toggle:e.useCallback(()=>t(e=>!e),[]),setOpen:t}}export{s as u};

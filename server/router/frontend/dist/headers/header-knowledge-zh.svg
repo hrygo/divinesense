@@ -1,0 +1,50 @@
+<svg width="1200" height="140" viewBox="0 0 1200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+     <linearGradient id="divine_gradient" x1="0" y1="0" x2="100%" y2="100%" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4"/> <!-- Cyan-500 -->
+      <stop offset="50%" stop-color="#8b5cf6"/> <!-- Violet-500 -->
+      <stop offset="100%" stop-color="#eab308"/> <!-- Yellow-500 (Gold) -->
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+
+  <style>
+    .title { font-family: system-ui, -apple-system, sans-serif; font-weight: 800; font-size: 80px; fill: url(#divine_gradient); letter-spacing: -1px; }
+    .subtitle { font-family: system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 24px; fill: #94a3b8; letter-spacing: 6px; text-transform: uppercase; }
+    .icon-stroke { stroke: url(#divine_gradient); stroke-width: 6; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: url(#glow); }
+    .icon-fill { fill: url(#divine_gradient); filter: url(#glow); }
+  </style>
+
+  <!-- Content Group -->
+  
+  <!-- Icon centered at center_x -->
+  <g transform="translate(530.0, 0) scale(0.7)">
+      
+            <circle class="icon-stroke" cx="50" cy="150" r="20" />
+            <circle class="icon-stroke" cx="150" cy="150" r="20" />
+            <circle class="icon-stroke" cx="100" cy="50" r="20" />
+            <line class="icon-stroke" x1="50" y1="130" x2="100" y2="70" />
+            <line class="icon-stroke" x1="150" y1="130" x2="100" y2="70" />
+            <line class="icon-stroke" x1="70" y1="150" x2="130" y2="150" />
+            <circle class="icon-fill" cx="100" cy="100" r="10" />
+            <line class="icon-stroke" x1="50" y1="130" x2="100" y2="100" opacity="0.5"/>
+            <line class="icon-stroke" x1="150" y1="130" x2="100" y2="100" opacity="0.5"/>
+            <line class="icon-stroke" x1="100" y1="70" x2="100" y2="100" opacity="0.5"/>
+        
+  </g>
+  
+  <!-- Part 1: Aligned END (Right) to the Left of Icon -->
+  <g transform="translate(505.0, 0)">
+       <text class="title" x="0" y="50%" style="font-size: 72px; text-anchor: end; dominant-baseline: central; alignment-baseline: central;">知识</text>
+  </g>
+
+  <!-- Part 2: Aligned START (Left) to the Right of Icon -->
+  <g transform="translate(695.0, 0)">
+       <text class="title" x="0" y="50%" style="font-size: 72px; text-anchor: start; dominant-baseline: central; alignment-baseline: central;">图谱</text>
+  </g>
+</svg>

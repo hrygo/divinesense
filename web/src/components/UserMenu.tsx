@@ -141,7 +141,7 @@ const UserMenu = (props: Props) => {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLocaleChange}>
               <GlobeIcon className="size-4 text-muted-foreground bg-transparent" />
-              {currentLocale === "en" ? "中文(简体)" : "English"}
+              <span className="text-sm">{currentLocale === "en" ? "中文" : "English"}</span>
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -227,7 +227,7 @@ const UserMenu = (props: Props) => {
                   className="w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-0 active:bg-muted/50"
                 >
                   <GlobeIcon className="w-5 h-5 text-muted-foreground shrink-0" />
-                  <span className="text-sm">{currentLocale === "en" ? "中文(简体)" : "English"}</span>
+                  <span className="text-sm">{currentLocale === "en" ? "中文" : "English"}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -267,7 +267,7 @@ const UserMenu = (props: Props) => {
                 <SheetTitle>{t("setting.preference-section.theme")}</SheetTitle>
               </SheetHeader>
               <div className="mt-4">
-                {THEME_OPTIONS.filter((opt) => ["system", "light", "dark"].includes(opt.value)).map((theme) => (
+                {THEME_OPTIONS.filter((opt) => ["system", "default", "default-dark"].includes(opt.value)).map((theme) => (
                   <button
                     key={theme.value}
                     onClick={() => handleThemeChange(theme.value)}

@@ -1,0 +1,27 @@
+<svg width="1500" height="300" viewBox="0 0 1500 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg_text" x1="0" y1="0" x2="1500" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#312e81"/>
+      <stop offset="1" stop-color="#020617"/> 
+    </linearGradient>
+     <linearGradient id="primary" x1="0" y1="0" x2="300" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(20, 0) scale(0.58)">
+      <rect width="512" height="512" rx="128" fill="url(#bg_text)" fill-opacity="0"/> 
+      <path d="M256 128 C160 128 96 256 96 256 C96 256 160 384 256 384 C352 384 416 256 416 256 C416 256 352 128 256 128 Z" 
+          stroke="url(#primary)" stroke-width="16" fill="none" opacity="0.9"/>
+       <circle cx="256" cy="256" r="64" fill="url(#primary)"/>
+        <path d="M256 96 L256 64" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+        <path d="M256 416 L256 448" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+        <path d="M96 256 L64 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+        <path d="M416 256 L448 256" stroke="url(#primary)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Light Text for Dark Mode -->
+  <text x="360" y="200" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="160" fill="#f8fafc" letter-spacing="-2">DivineSense</text>
+  <text x="370" y="270" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="50" fill="#94a3b8" letter-spacing="8">SECOND BRAIN</text>
+</svg>

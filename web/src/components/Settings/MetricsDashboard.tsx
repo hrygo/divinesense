@@ -137,7 +137,9 @@ function MetricsDashboard() {
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-destructive font-medium">{tErrors}</p>
-            <p className="text-xs text-destructive/80 mt-1">{metrics.error_count} errors in this period</p>
+            <p className="text-xs text-destructive/80 mt-1">
+              {metrics.error_count} {t("setting.metrics-section.errors")}
+            </p>
           </div>
         </div>
       )}
@@ -145,7 +147,7 @@ function MetricsDashboard() {
       {metrics && metrics.is_mock && (
         <div className={cn("flex items-start gap-3 rounded-xl border p-3", "bg-amber-500/10 border-amber-500/20")}>
           <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-600 dark:text-amber-400">Mock data - Metrics service not yet implemented</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400">{t("setting.metrics-section.mock-data")}</p>
         </div>
       )}
     </div>
