@@ -269,6 +269,25 @@ const ChatMessages = memo(function ChatMessages({
   const lastBlock = messageBlocks[messageBlocks.length - 1];
   const isLastStreaming = lastBlock?.assistantMessage ? isStreaming : false;
 
+  // 计算当前流式阶段（用于动画效果）
+  const streamingPhase = useMemo((): "thinking" | "tools" | "answer" | null => {
+    if (!isLastStreaming || !lastBlock?.assistantMessage) return null;
+    const metadata = lastBlock.assistantMessage.metadata;
+    if (!metadata) return null;
+
+    // 有工具调用正在执行（有 toolCalls 但没有 outputSummary）
+    const hasPendingTools = metadata.toolCalls?.some((tc) => typeof tc === "object" && !tc.outputSummary);
+    if (hasPendingTools) return "tools";
+
+    // 有内容正在流式输出
+    if (lastBlock.assistantMessage.content) return "answer";
+
+    // 正在思考（有 thinkingSteps 或 thinking 但还没有内容）
+    if ((metadata.thinkingSteps?.length ?? 0) > 0 || metadata.thinking) return "thinking";
+
+    return null;
+  }, [isLastStreaming, lastBlock, isStreaming]);
+
   return (
     <div
       ref={scrollRef}
@@ -280,25 +299,29 @@ const ChatMessages = memo(function ChatMessages({
 
       {messageBlocks.length > 0 && (
         <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto space-y-3">
-          {messageBlocks.map((block) => (
-            <UnifiedMessageBlock
-              key={block.id}
-              userMessage={block.userMessage}
-              assistantMessage={block.assistantMessage}
-              sessionSummary={block.attachSessionSummary ? sessionSummary : undefined}
-              parrotId={currentParrotId}
-              isLatest={block.isLatest && !isTyping}
-              isStreaming={isLastStreaming && block.isLatest}
-              onCopy={onCopyMessage}
-              onRegenerate={block.isLatest ? onRegenerate : undefined}
-              onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
-            >
-              {/* Typing cursor for streaming messages */}
-              {block.isLatest && isTyping && !block.assistantMessage?.error && (
-                <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
-              )}
-            </UnifiedMessageBlock>
-          ))}
+          {messageBlocks.map((block, index) => {
+            const blockIsLast = index === messageBlocks.length - 1;
+            return (
+              <UnifiedMessageBlock
+                key={block.id}
+                userMessage={block.userMessage}
+                assistantMessage={block.assistantMessage}
+                sessionSummary={block.attachSessionSummary ? sessionSummary : undefined}
+                parrotId={currentParrotId}
+                isLatest={block.isLatest && !isTyping}
+                isStreaming={isLastStreaming && block.isLatest}
+                streamingPhase={blockIsLast ? streamingPhase : null}
+                onCopy={onCopyMessage}
+                onRegenerate={block.isLatest ? onRegenerate : undefined}
+                onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
+              >
+                {/* Typing cursor for streaming messages */}
+                {block.isLatest && isTyping && !block.assistantMessage?.error && (
+                  <TypingCursor active={true} parrotId={currentParrotId} variant="dots" />
+                )}
+              </UnifiedMessageBlock>
+            );
+          })}
         </div>
       )}
 

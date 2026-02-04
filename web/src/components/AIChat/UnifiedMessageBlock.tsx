@@ -20,7 +20,7 @@
  * ```
  */
 
-import { AlertCircle, BarChart3, Brain, Check, ChevronDown, ChevronUp, Clock, Copy, Terminal, Wrench, Zap } from "lucide-react";
+import { AlertCircle, BarChart3, Brain, Check, ChevronDown, ChevronUp, Clock, Copy, Loader2, Terminal, Wrench, Zap } from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
@@ -70,6 +70,8 @@ export interface UnifiedMessageBlockProps {
   isLatest?: boolean;
   /** Whether assistant is currently streaming */
   isStreaming?: boolean;
+  /** Current streaming phase for animation */
+  streamingPhase?: "thinking" | "tools" | "answer" | null;
   /** Actions */
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
@@ -226,10 +228,11 @@ interface BlockBodyProps {
   sessionSummary?: SessionSummary;
   isCollapsed: boolean;
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
+  streamingPhase?: "thinking" | "tools" | "answer" | null;
   children?: ReactNode;
 }
 
-function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors, children }: BlockBodyProps) {
+function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors, streamingPhase = null, children }: BlockBodyProps) {
   const { t } = useTranslation();
   const contentRef = useRef<HTMLDivElement>(null);
   const [isFolded, setIsFolded] = useState(false);
@@ -277,6 +280,10 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
     return { round: i, step, toolCalls: roundToolCalls, toolResults: roundToolResults };
   });
 
+  // 计算实际有内容的轮次数量
+  const roundsWithContent = rounds.filter((r) => r.step || r.toolCalls.length > 0).length;
+  const isMultiRound = roundsWithContent > 1;
+
   // When collapsed, show minimal info
   if (isCollapsed) {
     return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.collapsed") || "Click expand to view details"}</div>;
@@ -292,11 +299,10 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
         <div className="relative pl-6 space-y-4">
           {/* 渲染每一轮思考 */}
           {rounds.map((round) => {
-            const hasRoundContent = round.step || round.toolCalls.length > 0 || round.toolResults.length > 0;
+            const hasRoundContent = round.step || round.toolCalls.length > 0;
             if (!hasRoundContent) return null;
 
             const roundNumber = round.round;
-            const isMultiRound = maxRound > 0;
 
             return (
               <div key={round.round} className="space-y-3">
@@ -311,8 +317,17 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
                 {/* AI Thinking */}
                 {round.step && (
                   <div className="relative">
-                    <div className="absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 flex items-center justify-center shrink-0">
-                      <Brain className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                    <div
+                      className={cn(
+                        "absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 flex items-center justify-center shrink-0",
+                        streamingPhase === "thinking" && "animate-pulse ring-2 ring-blue-300/50 dark:ring-blue-600/30",
+                      )}
+                    >
+                      {streamingPhase === "thinking" ? (
+                        <Loader2 className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400 animate-spin" />
+                      ) : (
+                        <Brain className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                      )}
                     </div>
                     <div className="pl-2">
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-700/30">
@@ -324,18 +339,25 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
                 )}
 
                 {/* Tools (tool_use → tool_result pairs) for this round */}
-                {round.toolCalls.length > 0 || round.toolResults.length > 0 ? (
+                {round.toolCalls.length > 0 ? (
                   <div className="relative space-y-3">
-                    <div className="absolute -left-6 top-0 w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 flex items-center justify-center shrink-0">
-                      <Wrench className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" />
+                    <div
+                      className={cn(
+                        "absolute -left-6 top-0 w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 flex items-center justify-center shrink-0",
+                        streamingPhase === "tools" && "animate-pulse ring-2 ring-purple-300/50 dark:ring-purple-600/30",
+                      )}
+                    >
+                      {streamingPhase === "tools" ? (
+                        <Loader2 className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400 animate-spin" />
+                      ) : (
+                        <Wrench className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" />
+                      )}
                     </div>
 
                     <div className="pl-2">
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50/50 dark:bg-purple-900/20 border border-purple-200/50 dark:border-purple-700/30 mb-3">
                         <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">Tools</span>
-                        <span className="text-xs text-muted-foreground">
-                          {round.toolCalls.length + round.toolResults.length} operations
-                        </span>
+                        <span className="text-xs text-muted-foreground">{round.toolCalls.length} operations</span>
                       </div>
 
                       {/* Tool pairs: tool_use → tool_result */}
@@ -415,9 +437,8 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
 
                               {/* Waiting for result indicator (if no result yet) */}
                               {!result && (
-                                <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-                                  <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse" />
-                                  <span>Waiting for result...</span>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <Loader2 className="w-3 h-3 text-purple-500 animate-spin" />
                                 </div>
                               )}
                             </div>
@@ -431,114 +452,21 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, themeColors,
             );
           })}
 
-          {/* 2. Tools (tool_use → tool_result pairs) */}
-          {toolCalls.length > 0 || toolResults.length > 0 ? (
-            <div className="relative space-y-3">
-              {/* Tool indicator header */}
-              <div className="absolute -left-6 top-0 w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 flex items-center justify-center shrink-0">
-                <Wrench className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" />
-              </div>
-
-              <div className="pl-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50/50 dark:bg-purple-900/20 border border-purple-200/50 dark:border-purple-700/30 mb-3">
-                  <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">Tools</span>
-                  <span className="text-xs text-muted-foreground">{toolCalls.length + toolResults.length} operations</span>
-                </div>
-
-                {/* Tool pairs: tool_use → tool_result */}
-                <div className="space-y-3">
-                  {toolCalls.map((call: ToolCall, callIndex) => {
-                    const callName = typeof call === "string" ? call : call.name;
-                    // Find corresponding result
-                    const result = toolResults.find(
-                      (r) => r.name === callName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
-                    );
-                    const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
-
-                    return (
-                      <div key={callIndex} className="relative pl-4 border-l-2 border-purple-200 dark:border-purple-700/50">
-                        {/* Tool Use */}
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div
-                            className={cn(
-                              "w-5 h-5 rounded flex items-center justify-center shrink-0",
-                              isError ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-slate-100 dark:bg-slate-800 text-slate-600",
-                            )}
-                          >
-                            <Terminal className="w-3 h-3" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">{callName}</span>
-                              {typeof call === "object" && call.duration && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
-                                </span>
-                              )}
-                              {typeof call === "object" && call.inputSummary && (
-                                <span className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={call.inputSummary}>
-                                  {call.inputSummary}
-                                </span>
-                              )}
-                            </div>
-                            {typeof call === "object" && call.filePath && (
-                              <div className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded mt-0.5">
-                                {call.filePath}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Tool Result (if available) */}
-                        {result && result.outputSummary && result.outputSummary.length > 0 && (
-                          <div className="mt-2">
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
-                              <ChevronDown className="w-3 h-3" />
-                              <span>
-                                Output (
-                                {result.duration && result.duration > 1000
-                                  ? `${(result.duration / 1000).toFixed(1)}s`
-                                  : `${result.duration || 0}ms`}
-                                )
-                              </span>
-                            </div>
-                            <div className="rounded-lg bg-slate-950 dark:bg-slate-950 border border-slate-800 overflow-hidden">
-                              <div className="px-3 py-1 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2">
-                                <div className="flex gap-1">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500/80" />
-                                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/80" />
-                                  <div className="w-1.5 h-1.5 rounded-full bg-green-500/80" />
-                                </div>
-                                <span className="text-[10px] text-slate-500 font-mono">Output</span>
-                              </div>
-                              <pre className="p-2.5 text-xs text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                                {result.outputSummary}
-                              </pre>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Waiting for result indicator (if no result yet) */}
-                        {!result && (
-                          <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse" />
-                            <span>Waiting for result...</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {/* 3. AI Answer */}
+          {/* AI Answer */}
           {hasAnswer && (
             <div className="relative">
               {/* Timeline Dot */}
-              <div className="absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500 flex items-center justify-center shrink-0">
-                <Zap className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+              <div
+                className={cn(
+                  "absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500 flex items-center justify-center shrink-0",
+                  streamingPhase === "answer" && "animate-pulse ring-2 ring-amber-300/50 dark:ring-amber-600/30",
+                )}
+              >
+                {streamingPhase === "answer" ? (
+                  <Loader2 className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 animate-spin" />
+                ) : (
+                  <Zap className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                )}
               </div>
               {/* Content */}
               <div className="pl-2">
@@ -816,6 +744,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   parrotId,
   isLatest = false,
   isStreaming = false,
+  streamingPhase = null,
   onCopy,
   onRegenerate,
   onDelete,
@@ -869,7 +798,13 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
       </div>
 
       {/* Block Body - 可折叠内容 */}
-      <BlockBody assistantMessage={assistantMessage} sessionSummary={sessionSummary} isCollapsed={collapsed} themeColors={themeColors}>
+      <BlockBody
+        assistantMessage={assistantMessage}
+        sessionSummary={sessionSummary}
+        isCollapsed={collapsed}
+        themeColors={themeColors}
+        streamingPhase={streamingPhase}
+      >
         {children}
       </BlockBody>
 
