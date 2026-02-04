@@ -99,9 +99,9 @@ const Setting = () => {
   }, []);
 
   return (
-    <section className="@container w-full max-w-[100rem] min-h-full flex flex-col justify-start items-start sm:pt-3 md:pt-6 pb-8">
+    <section className="@container w-full min-h-full flex flex-col justify-start items-start">
       {!sm && <MobileHeader />}
-      <div className="w-full px-4 sm:px-6">
+      <div className="w-full">
         <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
           {sm && (
             <div className="flex flex-col justify-start items-start w-40 h-auto shrink-0 py-2">

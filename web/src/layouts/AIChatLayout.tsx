@@ -21,6 +21,14 @@ import type { AIMode } from "@/types/aichat";
  * - 统一间距和边框样式
  * - 改进侧边栏和主内容的视觉层次
  * - 移动端 Header 支持三种模式视觉反馈（普通/极客/进化）
+ *
+ * === SPACING DEVIATION NOTES ===
+ * This layout intentionally deviates from the standard spacing specification:
+ * - NO top padding (pt-6) on main content - full-screen chat experience
+ * - Sidebar padding: pt-2 (8px) instead of py-6 - more compact
+ * - This is by design for immersive chat interface
+ *
+ * @see docs/research/layout-spacing-unification.md
  */
 
 // Helper function to get mode-specific styles
