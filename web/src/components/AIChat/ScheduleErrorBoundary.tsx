@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { AlertCircle } from "lucide-react";
 import { Component, ErrorInfo, ReactNode } from "react";
 
@@ -34,18 +35,19 @@ export class ScheduleErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const t = i18next.t;
       return (
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <div className="rounded-full bg-destructive/10 p-3">
             <AlertCircle className="h-6 w-6 text-destructive" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold">Something went wrong</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{this.state.error?.message || "An error occurred while loading schedules"}</p>
+          <h3 className="mt-4 text-lg font-semibold">{t("schedule.error.something_went_wrong")}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{this.state.error?.message || t("schedule.error.loading_failed")}</p>
           <button
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
             onClick={() => this.setState({ hasError: false, error: null })}
           >
-            Try Again
+            {t("schedule.error.try_again")}
           </button>
         </div>
       );

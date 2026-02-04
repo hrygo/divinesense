@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import "./animations.css";
@@ -139,6 +140,7 @@ interface StreamingIndicatorProps {
 }
 
 export function StreamingIndicator({ active = true, parrotId }: StreamingIndicatorProps) {
+  const { t } = useTranslation();
   if (!active) return null;
 
   const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.AMAZING : PARROT_THEMES.AMAZING;
@@ -146,7 +148,7 @@ export function StreamingIndicator({ active = true, parrotId }: StreamingIndicat
   return (
     <span className="inline-flex items-center gap-1 ml-2">
       <span className={cn("w-1.5 h-1.5 rounded-full", theme.iconBg, "animate-pulse")} />
-      <span className="text-xs text-muted-foreground">AI typing</span>
+      <span className="text-xs text-muted-foreground">{t("ai.typing_indicator")}</span>
     </span>
   );
 }

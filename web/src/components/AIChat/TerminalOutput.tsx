@@ -1,5 +1,6 @@
 import { Check, Copy, Terminal } from "lucide-react";
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface TerminalOutputProps {
@@ -21,6 +22,7 @@ export const TerminalOutput = memo(function TerminalOutput({
   command,
   exitCode,
 }: TerminalOutputProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -53,9 +55,11 @@ export const TerminalOutput = memo(function TerminalOutput({
             "hover:bg-slate-800 transition-colors",
           )}
           type="button"
+          aria-label={t("common.copy")}
         >
           {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? "Copied" : "Copy"}
+          <span className="sr-only">{copied ? t("common.copied") : t("common.copy")}</span>
+          {copied ? t("common.copied") : t("common.copy")}
         </button>
       </div>
 
@@ -70,7 +74,7 @@ export const TerminalOutput = memo(function TerminalOutput({
             exitCode === 0 ? "text-green-500" : "text-red-500",
           )}
         >
-          Exit code: {exitCode}
+          {t("ai.events.exit_code")} {exitCode}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Sparkles, Wrench, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,44 +14,43 @@ interface EventBadgeProps {
 }
 
 /**
- * Event display configuration for each event type
- * 事件显示配置
- */
-const EVENT_CONFIG: Record<CcEventType, { icon: React.ElementType; label: string; color: string }> = {
-  thinking: {
-    icon: Sparkles,
-    label: "Thinking",
-    color: "text-slate-500 dark:text-slate-400",
-  },
-  tool_use: {
-    icon: Wrench,
-    label: "Tool",
-    color: "text-blue-500 dark:text-blue-400",
-  },
-  tool_result: {
-    icon: CheckCircle,
-    label: "Result",
-    color: "text-green-500 dark:text-green-400",
-  },
-  answer: {
-    icon: CheckCircle,
-    label: "Answer",
-    color: "text-emerald-600 dark:text-emerald-400",
-  },
-  error: {
-    icon: AlertCircle,
-    label: "Error",
-    color: "text-red-500 dark:text-red-400",
-  },
-};
-
-/**
  * EventBadge - Displays event type with icon and styling
  * EventBadge - 显示事件类型徽章
  */
 export function EventBadge({ type, className }: EventBadgeProps) {
-  const config = EVENT_CONFIG[type] || EVENT_CONFIG.answer;
+  const { t } = useTranslation();
+
+  const eventConfig: Record<CcEventType, { icon: React.ElementType; key: string; color: string }> = {
+    thinking: {
+      icon: Sparkles,
+      key: "ai.events.thinking",
+      color: "text-slate-500 dark:text-slate-400",
+    },
+    tool_use: {
+      icon: Wrench,
+      key: "ai.events.tool_use",
+      color: "text-blue-500 dark:text-blue-400",
+    },
+    tool_result: {
+      icon: CheckCircle,
+      key: "ai.events.tool_result",
+      color: "text-green-500 dark:text-green-400",
+    },
+    answer: {
+      icon: CheckCircle,
+      key: "ai.events.answer",
+      color: "text-emerald-600 dark:text-emerald-400",
+    },
+    error: {
+      icon: AlertCircle,
+      key: "ai.events.error",
+      color: "text-red-500 dark:text-red-400",
+    },
+  };
+
+  const config = eventConfig[type] || eventConfig.answer;
   const Icon = config.icon;
+  const label = t(config.key) as string;
 
   return (
     <div
@@ -63,7 +63,7 @@ export function EventBadge({ type, className }: EventBadgeProps) {
       )}
     >
       <Icon className="w-3.5 h-3.5" />
-      <span>{config.label}</span>
+      <span>{label}</span>
     </div>
   );
 }
@@ -78,10 +78,13 @@ interface ToolResultBadgeProps {
 }
 
 export function ToolResultBadge({ isError = false, className }: ToolResultBadgeProps) {
+  const { t } = useTranslation();
+
   const config = isError
-    ? { icon: XCircle, label: "Failed", color: "text-red-500 dark:text-red-400" }
-    : { icon: CheckCircle, label: "Success", color: "text-green-500 dark:text-green-400" };
+    ? { icon: XCircle, key: "ai.events.failed", color: "text-red-500 dark:text-red-400" }
+    : { icon: CheckCircle, key: "ai.events.success", color: "text-green-500 dark:text-green-400" };
   const Icon = config.icon;
+  const label = t(config.key) as string;
 
   return (
     <div
@@ -94,7 +97,7 @@ export function ToolResultBadge({ isError = false, className }: ToolResultBadgeP
       )}
     >
       <Icon className="w-3.5 h-3.5" />
-      <span>{config.label}</span>
+      <span>{label}</span>
     </div>
   );
 }

@@ -51,7 +51,9 @@ export function AmazingInsightCard({ memos, schedules, insight, onMemoClick, onS
           <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           {t("ai.aichat.amazing-insight.title")}
         </h3>
-        <span className="text-[10px] uppercase tracking-wider text-purple-400 font-medium">Auto-generated</span>
+        <span className="text-[10px] uppercase tracking-wider text-purple-400 font-medium">
+          {t("ai.aichat.amazing-insight.auto_generated")}
+        </span>
       </div>
 
       {/* Content Grid */}
@@ -119,7 +121,7 @@ export function AmazingInsightCard({ memos, schedules, insight, onMemoClick, onS
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 dark:bg-purple-500 shrink-0 shadow-[0_0_8px_rgba(167,139,250,0.5)] mt-1.5" />
                       <div className="flex-1 min-w-0">
                         <div className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-tighter">
-                          {formatScheduleTime(schedule)}
+                          {formatScheduleTime(schedule, t)}
                         </div>
                         <div className="text-xs text-zinc-700 dark:text-zinc-300 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors break-words">
                           {schedule.title}
@@ -152,7 +154,7 @@ export function AmazingInsightCard({ memos, schedules, insight, onMemoClick, onS
 /**
  * Format schedule time for display
  */
-function formatScheduleTime(schedule: ScheduleSummary): string {
+function formatScheduleTime(schedule: ScheduleSummary, t: (key: string) => string): string {
   const start = dayjs.unix(schedule.startTimestamp);
   const now = dayjs();
 
@@ -169,7 +171,7 @@ function formatScheduleTime(schedule: ScheduleSummary): string {
   }
 
   // Format time
-  const timeStr = schedule.allDay ? "All day" : start.format("h:mm A");
+  const timeStr = schedule.allDay ? t("ai.amazing_insight.all_day") : start.format("h:mm A");
 
   return `${datePrefix}${timeStr}`;
 }

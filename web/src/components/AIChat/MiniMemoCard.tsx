@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ReferencedMemo } from "@/types/aichat";
@@ -10,6 +11,7 @@ interface MiniMemoCardProps {
 }
 
 export function MiniMemoCard({ memo, rank, showRank = true, className }: MiniMemoCardProps) {
+  const { t } = useTranslation();
   const scorePercentage = Math.round(memo.score * 100);
   const scoreColor = getScoreColor(memo.score);
 
@@ -33,7 +35,7 @@ export function MiniMemoCard({ memo, rank, showRank = true, className }: MiniMem
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{memo.content}</p>
           <div className="flex items-center justify-between mt-1.5">
-            <span className="text-xs text-muted-foreground">{memo.timestamp ? formatTime(memo.timestamp) : ""}</span>
+            <span className="text-xs text-muted-foreground">{memo.timestamp ? formatTime(memo.timestamp, t) : ""}</span>
             <span className={cn("text-xs px-1.5 py-0.5 rounded", scoreColor)}>{scorePercentage}%</span>
           </div>
         </div>
@@ -54,7 +56,7 @@ function getScoreColor(score: number): string {
   }
 }
 
-function formatTime(timestamp: number): string {
+function formatTime(timestamp: number, t: (key: string, params?: Record<string, unknown>) => string): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -62,10 +64,10 @@ function formatTime(timestamp: number): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return t("ai.mini_memo_card.just_now");
+  if (diffMins < 60) return t("ai.mini_memo_card.minutes_ago", { count: diffMins });
+  if (diffHours < 24) return t("ai.mini_memo_card.hours_ago", { count: diffHours });
+  if (diffDays < 7) return t("ai.mini_memo_card.days_ago", { count: diffDays });
 
   return date.toLocaleDateString();
 }

@@ -129,7 +129,10 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
             {summary.totalCostUSD && summary.totalCostUSD > 0 && (
               <span className="flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5 text-green-500" />
-                <span className="font-mono font-medium">${summary.totalCostUSD.toFixed(4)}</span>
+                <span className="font-mono font-medium">
+                  {t("ai.session_stats.currency_symbol")}
+                  {summary.totalCostUSD.toFixed(4)}
+                </span>
               </span>
             )}
           </div>
@@ -302,14 +305,16 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <span className="text-xs font-medium text-muted-foreground">{t("ai.session_stats.total_cost")}</span>
                   </div>
                   <span className="text-2xl font-mono font-bold text-green-600 dark:text-green-400">
-                    ${summary.totalCostUSD.toFixed(4)}
+                    {t("ai.session_stats.currency_symbol")}
+                    {summary.totalCostUSD.toFixed(4)}
                   </span>
                 </div>
 
                 {/* Cost per 1K tokens */}
                 {totalTokens > 0 && (
                   <div className="text-[10px] text-muted-foreground text-center">
-                    ${((summary.totalCostUSD / totalTokens) * 1000).toFixed(4)} {t("ai.session_stats.per_1k_tokens")}
+                    {t("ai.session_stats.currency_symbol")}
+                    {((summary.totalCostUSD / totalTokens) * 1000).toFixed(4)} {t("ai.session_stats.per_1k_tokens")}
                   </div>
                 )}
 
@@ -319,7 +324,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                     <div className="flex items-center justify-between text-[10px]">
                       <span className="text-muted-foreground">{t("ai.session_stats.cache_hit_rate")}</span>
                       <span className="font-mono text-green-600 dark:text-green-400">
-                        {Math.round(((summary.totalCacheReadTokens || 0) / totalProcessedTokens) * 100)}%
+                        {Math.round(((summary.totalCacheReadTokens || 0) / totalProcessedTokens) * 100)}
+                        {t("ai.session_stats.percent")}
                       </span>
                     </div>
                   </div>
@@ -338,7 +344,8 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
                   <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">{summary.toolCallCount}</span>
                   {summary.toolDurationMs && (
                     <div className="text-[10px] text-muted-foreground mt-1">
-                      Avg: {formatDuration(summary.toolDurationMs / summary.toolCallCount)} {t("ai.session_stats.per_call")}
+                      {t("ai.session_stats.avg")}: {formatDuration(summary.toolDurationMs / summary.toolCallCount)}{" "}
+                      {t("ai.session_stats.per_call")}
                     </div>
                   )}
                 </div>

@@ -195,7 +195,7 @@ export const ScheduleSearchBar = ({ schedules, onFilteredChange, onHasFilterChan
       {/* Semantic Tag Display */}
       {semanticFilter && (
         <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-          <span className="text-xs font-medium text-muted-foreground">Time Filter:</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("schedule.time_filter")}:</span>
           <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20">
             {semanticFilter.label}
           </span>

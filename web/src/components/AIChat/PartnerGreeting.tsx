@@ -393,7 +393,7 @@ export const PartnerGreeting = memo(function PartnerGreeting({
     <div className={cn("flex flex-col items-center justify-center h-full w-full px-6 py-8", className)}>
       {/* 主图标 - 带悬浮动画 */}
       <div className="mb-8 animate-in fade-in zoom-in duration-500">
-        <AnimatedAvatar src="/assistant-avatar.webp" alt="AI Agent" size="xl" isThinking={!isSending} />
+        <AnimatedAvatar src="/assistant-avatar.webp" alt={t("ai.assistant_name")} size="xl" isThinking={!isSending} />
       </div>
 
       {/* 问候语区域 */}

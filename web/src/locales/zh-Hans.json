@@ -10,7 +10,9 @@
         "insight-prefix": "洞察",
         "key-memos": "关键笔记",
         "title": "惊奇洞察",
-        "upcoming-events": "近期日程"
+        "upcoming-events": "近期日程",
+        "all_day": "全天",
+        "auto_generated": "自动生成"
       },
       "delete-conversation-confirm": "确定要删除这个会话吗？此操作无法撤销。",
       "delete-conversation-title": "删除会话",
@@ -47,7 +49,13 @@
         "time-just-now": "刚刚",
         "time-minutes-ago_one": "{{count}} 分钟前",
         "time-minutes-ago_other": "{{count}} 分钟前",
-        "try-different-search": "尝试不同的搜索词"
+        "try-different-search": "尝试不同的搜索词",
+        "mini_memo_card": {
+          "just_now": "刚刚",
+          "minutes_ago": "{{count}}分钟前",
+          "hours_ago": "{{count}}小时前",
+          "days_ago": "{{count}}天前"
+        }
       }
     },
     "assistant-description": "你的数字伙伴",
@@ -288,7 +296,10 @@
         "total_processed": "总处理量",
         "per_1k_tokens": "每 1K 计费 Token",
         "cache_hit_rate": "缓存命中率",
-        "per_call": "每次调用"
+        "per_call": "每次调用",
+        "avg": "平均",
+        "currency_symbol": "¥",
+        "percent": "%"
       },
       "try-asking": "试着这样问"
     },
@@ -374,13 +385,15 @@
     "states": {
       "thinking": "思考中...",
       "processing": "处理中...",
+      "initializing": "初始化中...",
       "error": "出错了"
     },
+    "typing_indicator": "AI 正在输入",
     "events": {
       "thinking": "思考中",
       "tool_use": "工具",
       "tool_result": "结果",
-      "answer": "回复",
+      "answer": "回答",
       "error": "错误",
       "input": "输入",
       "output": "输出",
@@ -389,7 +402,33 @@
       "success": "成功",
       "failed": "失败",
       "tools": "工具调用",
-      "results": "执行结果"
+      "results": "执行结果",
+      "exit_code": "退出码："
+    },
+    "session_stats": {
+      "status-success": "成功",
+      "currency_symbol": "¥",
+      "session_id": "会话 ID",
+      "duration_breakdown": "时长分布",
+      "total": "总计",
+      "thinking": "思考",
+      "tool_execution": "工具执行",
+      "generation": "生成",
+      "tools": "工具",
+      "tokens": "Tokens",
+      "cache_read_discount": "缓存读取 (优惠 90%)",
+      "cache_write_premium": "缓存写入 (+25%)",
+      "new_input": "新输入",
+      "output": "输出",
+      "total_processed": "总计处理",
+      "total_cost": "总成本",
+      "per_1k_tokens": "每千 Tokens",
+      "cache_hit_rate": "缓存命中率",
+      "percent": "%",
+      "tool_calls": "工具调用",
+      "avg": "平均",
+      "per_call": "/次",
+      "files_modified": "修改文件"
     },
     "unified_block": {
       "session": "会话",
@@ -463,6 +502,7 @@
     "collapse": "收起",
     "confirm": "确定",
     "copy": "复制",
+    "copied": "已复制",
     "create": "创建",
     "created-at": "创建时间",
     "delete": "删除",
@@ -842,7 +882,13 @@
     "tap-to-view": "点击日期查看日程详情",
     "timeline": "时间轴",
     "title": "日程管理",
-    "untitled": "无标题日程"
+    "untitled": "无标题日程",
+    "time_filter": "时间筛选",
+    "error": {
+      "something_went_wrong": "出错了",
+      "loading_failed": "加载日程时发生错误",
+      "try_again": "重试"
+    }
   },
   "search": {
     "ai-error": "AI 搜索不可用",

@@ -100,6 +100,7 @@ const BLOCK_THEMES: Record<
   {
     border: string;
     headerBg: string;
+    footerBg: string;
     badgeBg: string;
     badgeText: string;
     ringColor: string;
@@ -108,6 +109,7 @@ const BLOCK_THEMES: Record<
   default: {
     border: "border-zinc-200 dark:border-zinc-700",
     headerBg: "bg-zinc-50 dark:bg-zinc-900/50",
+    footerBg: "bg-zinc-200/80 dark:bg-zinc-800/60",
     badgeBg: "bg-zinc-100 dark:bg-zinc-800",
     badgeText: "text-zinc-600 dark:text-zinc-400",
     ringColor: "ring-primary/20",
@@ -115,6 +117,7 @@ const BLOCK_THEMES: Record<
   MEMO: {
     border: "border-slate-200 dark:border-slate-700",
     headerBg: "bg-slate-50 dark:bg-slate-900/50",
+    footerBg: "bg-slate-200/80 dark:bg-slate-800/60",
     badgeBg: "bg-slate-100 dark:bg-slate-800",
     badgeText: "text-slate-600 dark:text-slate-400",
     ringColor: "ring-slate-500/20",
@@ -122,6 +125,7 @@ const BLOCK_THEMES: Record<
   SCHEDULE: {
     border: "border-cyan-200 dark:border-cyan-700",
     headerBg: "bg-cyan-50 dark:bg-cyan-900/20",
+    footerBg: "bg-cyan-200/80 dark:bg-cyan-800/50",
     badgeBg: "bg-cyan-100 dark:bg-cyan-900/30",
     badgeText: "text-cyan-600 dark:text-cyan-400",
     ringColor: "ring-cyan-500/20",
@@ -129,6 +133,7 @@ const BLOCK_THEMES: Record<
   AMAZING: {
     border: "border-emerald-200 dark:border-emerald-700",
     headerBg: "bg-emerald-50 dark:bg-emerald-900/20",
+    footerBg: "bg-emerald-200/80 dark:bg-emerald-800/50",
     badgeBg: "bg-emerald-100 dark:bg-emerald-900/30",
     badgeText: "text-emerald-600 dark:text-emerald-400",
     ringColor: "ring-emerald-500/20",
@@ -136,6 +141,7 @@ const BLOCK_THEMES: Record<
   GEEK: {
     border: "border-violet-200 dark:border-violet-700",
     headerBg: "bg-violet-50 dark:bg-violet-900/20",
+    footerBg: "bg-violet-200/80 dark:bg-violet-800/50",
     badgeBg: "bg-violet-100 dark:bg-violet-900/30",
     badgeText: "text-violet-600 dark:text-violet-400",
     ringColor: "ring-violet-500/20",
@@ -143,6 +149,7 @@ const BLOCK_THEMES: Record<
   EVOLUTION: {
     border: "border-rose-200 dark:border-rose-700",
     headerBg: "bg-rose-50 dark:bg-rose-900/20",
+    footerBg: "bg-rose-200/80 dark:bg-rose-800/50",
     badgeBg: "bg-rose-100 dark:bg-rose-900/30",
     badgeText: "text-rose-600 dark:text-rose-400",
     ringColor: "ring-rose-500/20",
@@ -222,7 +229,7 @@ function BlockHeader({
     const cost = sessionSummary.totalCostUSD ? `$${sessionSummary.totalCostUSD.toFixed(4)}` : "";
     const tokens =
       sessionSummary.totalInputTokens && sessionSummary.totalOutputTokens
-        ? `${((sessionSummary.totalInputTokens + sessionSummary.totalOutputTokens) / 1000).toFixed(1)}k tok`
+        ? `${((sessionSummary.totalInputTokens + sessionSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
         : "";
     const time = sessionSummary.totalDurationMs ? `${(sessionSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
 
@@ -540,7 +547,9 @@ function BlockBody({
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
                           <Terminal className="w-3 h-3" /> {t("ai.unified_block.output")}
                         </div>
-                        {result.isError && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded font-medium">Error</span>}
+                        {result.isError && (
+                          <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded font-medium">{t("ai.events.error")}</span>
+                        )}
                       </div>
                       <pre
                         className={cn(
@@ -662,7 +671,7 @@ function BlockBody({
                   ) : (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/50" />
-                      <span className="text-sm italic opacity-70">Initializing...</span>
+                      <span className="text-sm italic opacity-70">{t("ai.states.initializing")}</span>
                     </>
                   )}
                 </div>
@@ -738,7 +747,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
   }, []);
 
   return (
-    <div className={cn("flex items-center justify-between px-4 py-2 border-t", theme.border, theme.headerBg)}>
+    <div className={cn("flex items-center justify-between px-4 py-2 border-t", theme.border, theme.footerBg)}>
       {/* Left: Collapse/Expand Toggle */}
       <button
         type="button"

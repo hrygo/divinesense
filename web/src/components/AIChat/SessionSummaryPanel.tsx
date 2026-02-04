@@ -124,7 +124,7 @@ export function SessionSummaryPanel({ summary, className }: SessionSummaryPanelP
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-amber-500" />
             <span className="font-mono font-medium">{formatNumber(totalTokens)}</span>
-            <span className="text-[10px]">tokens</span>
+            <span className="text-[10px]">token</span>
             {/* Input/Output breakdown */}
             {(summary.totalInputTokens || summary.totalOutputTokens) && (
               <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
@@ -187,7 +187,7 @@ export function CompactSessionSummary({ summary, className }: CompactSessionSumm
   return (
     <div className={cn("flex items-center gap-3 text-xs text-muted-foreground", className)}>
       {summary.totalDurationMs && summary.totalDurationMs > 0 && <span>⏱ {summary.totalDurationMs}ms</span>}
-      {totalTokens > 0 && <span>⚡ {totalTokens} tokens</span>}
+      {totalTokens > 0 && <span>⚡ {totalTokens} token</span>}
       {summary.totalCostUSD && summary.totalCostUSD > 0 && <span>💰 ${summary.totalCostUSD.toFixed(4)}</span>}
       {summary.toolCallCount && summary.toolCallCount > 0 && <span>🔧 {summary.toolCallCount} calls</span>}
     </div>
