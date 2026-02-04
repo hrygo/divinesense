@@ -30,7 +30,6 @@ import {
   Clock,
   Copy,
   Loader2,
-  MessageSquare,
   Terminal,
   User,
   Wrench,
@@ -449,16 +448,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
       </div>
 
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-          <MessageSquare className="w-4 h-4 text-blue-500" />
-          {t("ai.unified_block.user_inputs") || "用户输入"}
-          {hasMultiple && (
-            <span className="px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
-              {allInputs.length}
-            </span>
-          )}
-        </span>
+      <div className="flex items-center justify-end mb-3">
         {(isLongContent || hasMultiple) && (
           <button
             type="button"
