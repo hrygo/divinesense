@@ -380,7 +380,9 @@
       "no_output": "No output yet...",
       "running": "Running...",
       "success": "Success",
-      "failed": "Failed"
+      "failed": "Failed",
+      "tools": "Tools",
+      "results": "Results"
     }
   },
   "auth": {
