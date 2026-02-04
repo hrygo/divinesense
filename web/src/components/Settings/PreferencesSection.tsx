@@ -162,7 +162,7 @@ const PreferencesSection = () => {
             >
               <div className="flex items-center gap-2">
                 <VisibilityIcon visibility={option.value} />
-                <span className="text-sm">{t(option.labelKey)}</span>
+                <span className="text-sm">{(t as any)(option.labelKey)}</span>
               </div>
               {setting.memoVisibility === convertVisibilityToString(option.value) && (
                 <CheckIcon className="w-5 h-5 text-green-600" />

@@ -127,7 +127,7 @@ const Setting = () => {
 
   const renderMobileSectionCard = (titleKey: string, sections: SettingSection[]) => (
     <div className="mb-6">
-      <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-4">{t(titleKey)}</h3>
+      <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-4">{(t as any)(titleKey)}</h3>
       <div className="bg-background border border-border rounded-xl overflow-hidden">
         {sections.map((section) => {
           const Icon = SECTION_ICON_MAP[section];
@@ -144,7 +144,7 @@ const Setting = () => {
             >
               <Icon className="w-5 h-5 text-muted-foreground shrink-0" />
               <span className="text-sm text-foreground flex-1 text-left">
-                {section === "chat-apps" ? (t as any)(`setting.${section}.title`) : t(titleKey)}
+                {section === "chat-apps" ? (t as any)(`setting.${section}.title`) : (t as any)(titleKey)}
               </span>
               <ChevronRightIcon className="w-5 h-5 text-muted-foreground shrink-0" />
             </button>
