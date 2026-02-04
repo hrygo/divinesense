@@ -446,7 +446,11 @@
       "output": "Output",
       "error_occurred": "Error Occurred",
       "forget": "Forget",
-      "forget_tooltip": "Remove from context (Coming soon)"
+      "forget_tooltip": "Remove from context (Coming soon)",
+      "user_inputs": "User Inputs",
+      "more_input": "appended",
+      "more_inputs": "appended",
+      "expand_to_read_all": "Click to expand and read all"
     }
   },
   "auth": {

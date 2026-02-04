@@ -20,7 +20,22 @@
  * ```
  */
 
-import { AlertCircle, BarChart3, Brain, Check, ChevronDown, ChevronUp, Clock, Copy, Loader2, Terminal, Wrench, Zap } from "lucide-react";
+import {
+  AlertCircle,
+  BarChart3,
+  Brain,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Copy,
+  Loader2,
+  MessageSquare,
+  Terminal,
+  User,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
@@ -70,6 +85,8 @@ export interface BlockState {
 export interface UnifiedMessageBlockProps {
   /** User message that triggered this block */
   userMessage: ConversationMessage;
+  /** Additional user inputs appended during streaming (追加的用户输入) */
+  additionalUserInputs?: ConversationMessage[];
   /** Assistant message (may be streaming) */
   assistantMessage?: ConversationMessage;
   /** Session summary for Geek/Evolution modes */
@@ -197,6 +214,8 @@ interface BlockHeaderProps {
   onToggle: () => void;
   isCollapsed: boolean;
   isStreaming?: boolean;
+  /** 追加的用户输入列表 (支持多个) */
+  additionalUserInputs?: ConversationMessage[];
 }
 
 function BlockHeader({
@@ -208,9 +227,27 @@ function BlockHeader({
   onToggle,
   isCollapsed,
   isStreaming,
+  additionalUserInputs = [],
 }: BlockHeaderProps) {
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
+
+  // 计算用户输入预览文本 (支持追加输入)
+  const userInputPreview = useMemo(() => {
+    const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
+    if (inputs.length === 1) {
+      return inputs[0];
+    }
+    // 多个输入时显示摘要
+    const firstLine = inputs[0].split("\n")[0];
+    if (inputs.length === 2) {
+      return `${firstLine} + 1 ${t("ai.unified_block.more_input") || "追加"}`;
+    }
+    return `${firstLine} + ${inputs.length - 1} ${t("ai.unified_block.more_inputs") || "追加"}`;
+  }, [userMessage.content, additionalUserInputs, t]);
+
+  // 计算追加输入的总数
+  const totalInputCount = useMemo(() => 1 + additionalUserInputs.length, [additionalUserInputs.length]);
 
   // Calculate stats for Outcome Badge
 
@@ -247,11 +284,21 @@ function BlockHeader({
     >
       {/* Left: User avatar + message preview */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0 shadow-sm">
-          {userInitial}
+        <div className="relative">
+          <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0 shadow-sm">
+            {userInitial}
+          </div>
+          {/* 追加输入计数徽章 */}
+          {totalInputCount > 1 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white border-2 border-background shadow-sm">
+              {totalInputCount}
+            </div>
+          )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground truncate">{userMessage.content}</p>
+        <div className="min-w-0 flex-1" title={userMessage.content}>
+          <p className="text-sm font-medium text-foreground line-clamp-2 hover:line-clamp-none transition-all cursor-help">
+            {userInputPreview}
+          </p>
         </div>
       </div>
 
@@ -314,7 +361,119 @@ function BlockHeader({
   );
 }
 
+// ============================================================================
+// User Inputs Section Component (新增)
+// ============================================================================
+
+interface UserInputsSectionProps {
+  userMessage: ConversationMessage;
+  additionalUserInputs?: ConversationMessage[];
+  isCollapsed?: boolean;
+  isStreaming?: boolean;
+}
+
+function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed }: UserInputsSectionProps) {
+  const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const allInputs = useMemo(() => [userMessage, ...additionalUserInputs], [userMessage, additionalUserInputs]);
+  const hasMultiple = allInputs.length > 1;
+  const totalLength = allInputs.reduce((sum, m) => sum + m.content.length, 0);
+  const isLongContent = totalLength > 300; // 超过300字默认折叠
+
+  // 默认展开条件：内容不长或只有一个输入
+  const shouldShowExpanded = !isLongContent || isExpanded;
+
+  if (isCollapsed) return null;
+
+  return (
+    <div className="relative group mb-6">
+      {/* Timeline Node */}
+      <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-500 flex items-center justify-center shrink-0 z-10">
+        <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+      </div>
+      {/* Content with pl-8 for timeline alignment */}
+      <div className="pl-8">
+        {/* Section Header */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <MessageSquare className="w-4 h-4 text-blue-500" />
+            {t("ai.unified_block.user_inputs") || "用户输入"}
+            {hasMultiple && (
+              <span className="px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                {allInputs.length}
+              </span>
+            )}
+          </span>
+          {(isLongContent || hasMultiple) && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  {t("common.collapse") || "收起"}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  {t("common.expand") || "展开"}
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Inputs List */}
+        <div className="space-y-3">
+          {shouldShowExpanded ? (
+            allInputs.map((input, index) => (
+              <div
+                key={input.id}
+                className={cn("rounded-lg border p-3 transition-colors", "bg-muted/20 border-border/50 hover:border-border")}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-medium">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-foreground whitespace-pre-wrap break-words">{input.content}</div>
+                    {input.timestamp && (
+                      <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatTime(input.timestamp, t)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            /* Collapsed Preview */
+            <div
+              className="rounded-lg border p-3 bg-muted/20 border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => setIsExpanded(true)}
+            >
+              <div className="text-sm text-muted-foreground line-clamp-3 italic">
+                {allInputs.map((m) => m.content.split("\n")[0]).join(" ")}...
+              </div>
+              <div className="text-xs text-muted-foreground/60 mt-2 flex items-center gap-1">
+                <ChevronDown className="w-3 h-3" />
+                {t("ai.unified_block.expand_to_read_all") || "点击展开查看全部内容"}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface BlockBodyProps {
+  userMessage?: ConversationMessage;
+  additionalUserInputs?: ConversationMessage[];
   assistantMessage?: ConversationMessage;
   sessionSummary?: SessionSummary;
   isCollapsed: boolean;
@@ -325,6 +484,8 @@ interface BlockBodyProps {
 }
 
 function BlockBody({
+  userMessage,
+  additionalUserInputs = [],
   assistantMessage,
   sessionSummary,
   isCollapsed,
@@ -417,6 +578,15 @@ function BlockBody({
         <div className="absolute left-[11px] top-2 bottom-4 w-px bg-border/60" />
 
         <div className="relative pl-8 space-y-6">
+          {/* User Inputs Section - 新增用户输入区域 (放在 timeline 内) */}
+          {(userMessage || additionalUserInputs.length > 0) && (
+            <UserInputsSection
+              userMessage={userMessage || { id: "", role: "user" as const, content: "", timestamp: Date.now() }}
+              additionalUserInputs={additionalUserInputs}
+              isCollapsed={isCollapsed}
+            />
+          )}
+
           {/* 1. Thinking Section - Collapsible Accordion Style */}
           {allThinkingContent.length > 0 && (
             <div className="relative group">
@@ -838,6 +1008,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
 
 export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   userMessage,
+  additionalUserInputs = [],
   assistantMessage,
   sessionSummary,
   parrotId,
@@ -904,11 +1075,14 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           onToggle={toggleCollapse}
           isCollapsed={collapsed}
           isStreaming={isStreaming}
+          additionalUserInputs={additionalUserInputs}
         />
       </div>
 
       {/* Block Body - 可折叠内容 */}
       <BlockBody
+        userMessage={userMessage}
+        additionalUserInputs={additionalUserInputs}
         assistantMessage={assistantMessage}
         sessionSummary={sessionSummary}
         isCollapsed={collapsed}

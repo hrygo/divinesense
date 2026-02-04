@@ -441,7 +441,11 @@
       "output": "输出",
       "error_occurred": "发生错误",
       "forget": "遗忘",
-      "forget_tooltip": "从上下文中移除 (即将推出)"
+      "forget_tooltip": "从上下文中移除 (即将推出)",
+      "user_inputs": "用户输入",
+      "more_input": "追加",
+      "more_inputs": "个追加",
+      "expand_to_read_all": "点击展开查看全部内容"
     }
   },
   "auth": {
