@@ -19,8 +19,11 @@ import { useTranslate } from "@/utils/i18n";
 import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const MemoRelatedSettings = () => {
+  const isMobile = useIsMobile();
   const t = useTranslate();
   const { memoRelatedSetting: originalSetting, updateSetting, fetchSetting } = useInstance();
   const [memoRelatedSetting, setMemoRelatedSetting] = useState<InstanceSetting_MemoRelatedSetting>(originalSetting);
@@ -70,6 +73,10 @@ const MemoRelatedSettings = () => {
 
   return (
     <SettingSection>
+      {isMobile ? (
+        <DesktopOnlyBanner messageKey="memo-desktop-only" />
+      ) : (
+        <>
       <SettingGroup title={t("setting.memo-related-settings.title")}>
         <SettingRow label={t("setting.system-section.disable-public-memos")}>
           <Switch
@@ -135,6 +142,8 @@ const MemoRelatedSettings = () => {
           {t("common.save")}
         </Button>
       </div>
+      </>
+      )}
     </SettingSection>
   );
 };

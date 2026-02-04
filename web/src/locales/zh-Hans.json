@@ -974,7 +974,15 @@
       "update-failed": "更新聊天应用凭证失败"
     },
     "mobile": {
-      "api-management-desktop-only": "API 访问令牌管理仅在桌面端可用"
+      "api-management-desktop-only": "API 访问令牌管理仅在桌面端可用",
+      "desktop-only": "仅限桌面端",
+      "desktop-required-title": "需要桌面端",
+      "desktop-required-description": "此功能仅在桌面端可用，请从电脑访问以管理这些设置。",
+      "member-desktop-only": "成员管理仅在桌面端可用",
+      "storage-desktop-only": "存储配置仅在桌面端可用",
+      "system-desktop-only": "系统设置仅在桌面端可用",
+      "sso-desktop-only": "SSO 配置仅在桌面端可用",
+      "memo-desktop-only": "笔记相关设置仅在桌面端可用"
     },
     "account-section": {
       "change-password": "修改密码",

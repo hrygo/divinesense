@@ -17,8 +17,11 @@ import CreateUserDialog from "../CreateUserDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import SettingSection from "./SettingSection";
 import SettingTable from "./SettingTable";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const MemberSection = () => {
+  const isMobile = useIsMobile();
   const t = useTranslate();
   const currentUser = useCurrentUser();
   const { data: users = [], refetch: refetchUsers } = useListUsers();
@@ -98,12 +101,17 @@ const MemberSection = () => {
     <SettingSection
       title={t("setting.member-list")}
       actions={
-        <Button onClick={handleCreateUser}>
-          <PlusIcon className="w-4 h-4 mr-2" />
-          {t("common.create")}
-        </Button>
+        !isMobile && (
+          <Button onClick={handleCreateUser}>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            {t("common.create")}
+          </Button>
+        )
       }
     >
+      {isMobile ? (
+        <DesktopOnlyBanner messageKey="member-desktop-only" />
+      ) : (
       <SettingTable
         columns={[
           {
@@ -170,32 +178,37 @@ const MemberSection = () => {
       />
 
       {/* Create User Dialog */}
-      <CreateUserDialog open={createDialog.isOpen} onOpenChange={createDialog.setOpen} onSuccess={refetchUsers} />
+      {!isMobile && <CreateUserDialog open={createDialog.isOpen} onOpenChange={createDialog.setOpen} onSuccess={refetchUsers} />}
 
       {/* Edit User Dialog */}
-      <CreateUserDialog open={editDialog.isOpen} onOpenChange={editDialog.setOpen} user={editingUser} onSuccess={refetchUsers} />
+      {!isMobile && <CreateUserDialog open={editDialog.isOpen} onOpenChange={editDialog.setOpen} user={editingUser} onSuccess={refetchUsers} />}
 
-      <ConfirmDialog
-        open={!!archiveTarget}
-        onOpenChange={(open) => !open && setArchiveTarget(undefined)}
-        title={archiveTarget ? t("setting.member-section.archive-warning", { username: archiveTarget.username }) : ""}
-        description={archiveTarget ? t("setting.member-section.archive-warning-description") : ""}
-        confirmLabel={t("common.confirm")}
-        cancelLabel={t("common.cancel")}
-        onConfirm={confirmArchiveUser}
-        confirmVariant="default"
-      />
+      {!isMobile && (
+        <>
+          <ConfirmDialog
+            open={!!archiveTarget}
+            onOpenChange={(open) => !open && setArchiveTarget(undefined)}
+            title={archiveTarget ? t("setting.member-section.archive-warning", { username: archiveTarget.username }) : ""}
+            description={archiveTarget ? t("setting.member-section.archive-warning-description") : ""}
+            confirmLabel={t("common.confirm")}
+            cancelLabel={t("common.cancel")}
+            onConfirm={confirmArchiveUser}
+            confirmVariant="default"
+          />
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(undefined)}
-        title={deleteTarget ? t("setting.member-section.delete-warning", { username: deleteTarget.username }) : ""}
-        description={deleteTarget ? t("setting.member-section.delete-warning-description") : ""}
-        confirmLabel={t("common.delete")}
-        cancelLabel={t("common.cancel")}
-        onConfirm={confirmDeleteUser}
-        confirmVariant="destructive"
-      />
+          <ConfirmDialog
+            open={!!deleteTarget}
+            onOpenChange={(open) => !open && setDeleteTarget(undefined)}
+            title={deleteTarget ? t("setting.member-section.delete-warning", { username: deleteTarget.username }) : ""}
+            description={deleteTarget ? t("setting.member-section.delete-warning-description") : ""}
+            confirmLabel={t("common.delete")}
+            cancelLabel={t("common.cancel")}
+            onConfirm={confirmDeleteUser}
+            confirmVariant="destructive"
+          />
+        </>
+      )}
+      )}
     </SettingSection>
   );
 };

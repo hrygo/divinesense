@@ -22,8 +22,11 @@ import { useTranslate } from "@/utils/i18n";
 import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const StorageSection = () => {
+  const isMobile = useIsMobile();
   const t = useTranslate();
   const { storageSetting: originalSetting, updateSetting, fetchSetting } = useInstance();
   const [instanceStorageSetting, setInstanceStorageSetting] = useState<InstanceSetting_StorageSetting>(originalSetting);
@@ -151,6 +154,10 @@ const StorageSection = () => {
 
   return (
     <SettingSection>
+      {isMobile ? (
+        <DesktopOnlyBanner messageKey="storage-desktop-only" />
+      ) : (
+        <>
       <SettingGroup title={t("setting.storage-section.current-storage")}>
         <div className="w-full">
           <RadioGroup
@@ -240,6 +247,8 @@ const StorageSection = () => {
           {t("common.save")}
         </Button>
       </div>
+      </>
+      )}
     </SettingSection>
   );
 };

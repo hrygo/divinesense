@@ -12,8 +12,11 @@ import CreateIdentityProviderDialog from "../CreateIdentityProviderDialog";
 import LearnMore from "../LearnMore";
 import SettingSection from "./SettingSection";
 import SettingTable from "./SettingTable";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const SSOSection = () => {
+  const isMobile = useIsMobile();
   const t = useTranslate();
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -75,16 +78,21 @@ const SSOSection = () => {
       title={
         <div className="flex items-center gap-2">
           <span>{t("setting.sso-section.sso-list")}</span>
-          <LearnMore url="https://divinesense.com/docs/configuration/authentication" />
+          {!isMobile && <LearnMore url="https://divinesense.com/docs/configuration/authentication" />}
         </div>
       }
       actions={
-        <Button onClick={handleCreateIdentityProvider}>
-          <PlusIcon className="w-4 h-4 mr-2" />
-          {t("common.create")}
-        </Button>
+        !isMobile && (
+          <Button onClick={handleCreateIdentityProvider}>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            {t("common.create")}
+          </Button>
+        )
       }
     >
+      {isMobile ? (
+        <DesktopOnlyBanner messageKey="sso-desktop-only" />
+      ) : (
       <SettingTable
         columns={[
           {
@@ -142,6 +150,7 @@ const SSOSection = () => {
         onConfirm={confirmDeleteIdentityProvider}
         confirmVariant="destructive"
       />
+      )}
     </SettingSection>
   );
 };

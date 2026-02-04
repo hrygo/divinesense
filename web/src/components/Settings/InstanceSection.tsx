@@ -22,8 +22,11 @@ import UpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
 import SettingGroup from "./SettingGroup";
 import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
+import DesktopOnlyBanner from "./DesktopOnlyBanner";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const InstanceSection = () => {
+  const isMobile = useIsMobile();
   const t = useTranslate();
   const customizeDialog = useDialog();
   const { generalSetting: originalSetting, profile, updateSetting, fetchSetting } = useInstance();
@@ -79,6 +82,10 @@ const InstanceSection = () => {
 
   return (
     <SettingSection>
+      {isMobile ? (
+        <DesktopOnlyBanner messageKey="system-desktop-only" />
+      ) : (
+        <>
       <SettingGroup title={t("common.basic")}>
         <SettingRow label={t("setting.system-section.server-name")} description={instanceGeneralSetting.customProfile?.title || "Memos"}>
           <Button variant="outline" onClick={handleUpdateCustomizedProfileButtonClick}>
@@ -165,14 +172,18 @@ const InstanceSection = () => {
         </Button>
       </div>
 
-      <UpdateCustomizedProfileDialog
-        open={customizeDialog.isOpen}
-        onOpenChange={customizeDialog.setOpen}
-        onSuccess={() => {
-          // Refresh instance settings if needed
-          toast.success("Profile updated successfully!");
-        }}
-      />
+      {!isMobile && (
+        <UpdateCustomizedProfileDialog
+          open={customizeDialog.isOpen}
+          onOpenChange={customizeDialog.setOpen}
+          onSuccess={() => {
+            // Refresh instance settings if needed
+            toast.success("Profile updated successfully!");
+          }}
+        />
+      )}
+      </>
+      )}
     </SettingSection>
   );
 };
