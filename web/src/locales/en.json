@@ -1015,8 +1015,11 @@
     "member": "Member",
     "member-list": "Member list",
     "memo-related": "Memo",
+    "memo-related-title": "Memo Related",
     "metrics": "Metrics",
+    "metrics-title": "Metrics",
     "metrics-section": {
+      "title": "Metrics Dashboard",
       "errors": "Errors",
       "latency": "Latency (P50)",
       "overview": "Overview",
@@ -1050,6 +1053,7 @@
     "my-account": "My Account",
     "personal": "Personal",
     "preference": "Preferences",
+    "settings": "Settings",
     "preference-section": {
       "default-memo-sort-option": "Memo display time",
       "default-memo-visibility": "Default memo visibility",
@@ -1061,6 +1065,7 @@
     },
     "sso": "SSO",
     "sso-section": {
+      "title": "Single Sign-On",
       "authorization-endpoint": "Authorization endpoint",
       "client-id": "Client ID",
       "client-secret": "Client secret",
@@ -1086,6 +1091,7 @@
     },
     "storage": "Storage",
     "storage-section": {
+      "title": "Object Storage",
       "accesskey": "Access key",
       "accesskey-placeholder": "Access key / Access ID",
       "bucket": "Bucket",

@@ -1010,8 +1010,11 @@
     "member": "成员",
     "member-list": "成员列表",
     "memo-related": "备忘录",
+    "memo-related-title": "备忘录相关",
     "metrics": "系统指标",
+    "metrics-title": "系统指标",
     "metrics-section": {
+      "title": "系统指标仪表盘",
       "errors": "错误",
       "latency": "延迟 (P50)",
       "overview": "概览",
@@ -1045,6 +1048,7 @@
     "my-account": "我的账号",
     "personal": "个人",
     "preference": "偏好设置",
+    "settings": "设置",
     "preference-section": {
       "default-memo-sort-option": "备忘录显示时间",
       "default-memo-visibility": "默认备忘录可见性",
@@ -1056,6 +1060,7 @@
     },
     "sso": "单点登录",
     "sso-section": {
+      "title": "单点登录",
       "authorization-endpoint": "授权端点（Authorization Endpoint）",
       "client-id": "客户端ID（Client ID）",
       "client-secret": "客户端密钥（Client Secret）",
@@ -1081,6 +1086,7 @@
     },
     "storage": "存储",
     "storage-section": {
+      "title": "对象存储",
       "accesskey": "访问密钥（Access key）",
       "accesskey-placeholder": "Access key / Access ID",
       "bucket": "储存桶（Bucket）",

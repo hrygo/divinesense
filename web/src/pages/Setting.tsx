@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import MobileHeader from "@/components/MobileHeader";
 import ChatAppsSection from "@/components/Settings/ChatAppsSection";
 import InstanceSection from "@/components/Settings/InstanceSection";
 import MemberSection from "@/components/Settings/MemberSection";
@@ -57,10 +56,10 @@ const SECTION_TITLE_MAP: Record<SettingSection, string> = {
   "chat-apps": "setting.chat-apps.title",
   member: "setting.member-list",
   system: "setting.system-section.title",
-  "memo-related": "setting.memo-related.title",
+  "memo-related": "setting.memo-related-title",
   storage: "setting.storage-section.title",
   sso: "setting.sso-section.title",
-  metrics: "setting.metrics.title",
+  metrics: "setting.metrics-title",
 };
 
 const Setting = () => {
