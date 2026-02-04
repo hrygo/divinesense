@@ -33,7 +33,7 @@
  */
 
 import { Check, ChevronDown, ChevronUp, Clock, Copy } from "lucide-react";
-import { memo, ReactNode, useCallback, useEffect, useState } from "react";
+import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { ConversationMessage } from "@/types/aichat";
@@ -85,6 +85,7 @@ export interface UnifiedMessageBlockProps {
 
 /**
  * Block theme configuration - extends PARROT_THEMES with Block-specific styles
+ * 使用与 PARROT_THEMES 一致的颜色系统，GEEK 使用 violet 色系
  */
 const BLOCK_THEMES: Record<
   ParrotAgentType | "default",
@@ -93,6 +94,7 @@ const BLOCK_THEMES: Record<
     headerBg: string;
     badgeBg: string;
     badgeText: string;
+    ringColor: string;
   }
 > = {
   default: {
@@ -100,36 +102,42 @@ const BLOCK_THEMES: Record<
     headerBg: "bg-zinc-50 dark:bg-zinc-900/50",
     badgeBg: "bg-zinc-100 dark:bg-zinc-800",
     badgeText: "text-zinc-600 dark:text-zinc-400",
+    ringColor: "ring-primary/20",
   },
   MEMO: {
     border: "border-slate-200 dark:border-slate-700",
     headerBg: "bg-slate-50 dark:bg-slate-900/50",
     badgeBg: "bg-slate-100 dark:bg-slate-800",
     badgeText: "text-slate-600 dark:text-slate-400",
+    ringColor: "ring-slate-500/20",
   },
   SCHEDULE: {
     border: "border-cyan-200 dark:border-cyan-700",
     headerBg: "bg-cyan-50 dark:bg-cyan-900/20",
     badgeBg: "bg-cyan-100 dark:bg-cyan-900/30",
     badgeText: "text-cyan-600 dark:text-cyan-400",
+    ringColor: "ring-cyan-500/20",
   },
   AMAZING: {
     border: "border-emerald-200 dark:border-emerald-700",
     headerBg: "bg-emerald-50 dark:bg-emerald-900/20",
     badgeBg: "bg-emerald-100 dark:bg-emerald-900/30",
     badgeText: "text-emerald-600 dark:text-emerald-400",
+    ringColor: "ring-emerald-500/20",
   },
   GEEK: {
-    border: "border-green-500/30 dark:border-green-500/30",
-    headerBg: "bg-green-50 dark:bg-green-900/20",
-    badgeBg: "bg-green-100 dark:bg-green-900/30",
-    badgeText: "text-green-600 dark:text-green-400",
+    border: "border-violet-200 dark:border-violet-700",
+    headerBg: "bg-violet-50 dark:bg-violet-900/20",
+    badgeBg: "bg-violet-100 dark:bg-violet-900/30",
+    badgeText: "text-violet-600 dark:text-violet-400",
+    ringColor: "ring-violet-500/20",
   },
   EVOLUTION: {
-    border: "border-purple-500/30 dark:border-purple-500/30",
-    headerBg: "bg-purple-50 dark:bg-purple-900/20",
-    badgeBg: "bg-purple-100 dark:bg-purple-900/30",
-    badgeText: "text-purple-600 dark:text-purple-400",
+    border: "border-rose-200 dark:border-rose-700",
+    headerBg: "bg-rose-50 dark:bg-rose-900/20",
+    badgeBg: "bg-rose-100 dark:bg-rose-900/30",
+    badgeText: "text-rose-600 dark:text-rose-400",
+    ringColor: "ring-rose-500/20",
   },
 };
 
@@ -148,8 +156,20 @@ function formatTime(timestamp: number, t: (key: string, options?: Record<string,
 
   if (diffMins < 1) return t("ai.aichat.sidebar.time-just-now");
   if (diffMins < 60) return t("ai.aichat.sidebar.time-minutes-ago", { count: diffMins });
-  if (diffMins < 1440) return t("ai.aichat.sidebar.time-hours-ago", { count: Math.floor(diffMs / 60) });
+  if (diffMins < 1440) return t("ai.aichat.sidebar.time-hours-ago", { count: Math.floor(diffMins / 60) });
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/**
+ * Extract user initial from content for avatar
+ */
+function extractUserInitial(content: string): string {
+  // Remove leading whitespace and get first character
+  const trimmed = content.trim();
+  if (trimmed.length === 0) return "U";
+  // Get first visible character (skip special chars)
+  const match = trimmed.match(/[a-zA-Z\u4e00-\u9fa5]/);
+  return match ? match[0].toUpperCase() : "U";
 }
 
 /**
@@ -176,6 +196,7 @@ interface BlockHeaderProps {
 
 function BlockHeader({ userMessage, parrotId, isCollapsed, onToggle, theme }: BlockHeaderProps) {
   const { t } = useTranslation();
+  const userInitial = extractUserInitial(userMessage.content);
 
   return (
     <div
@@ -191,9 +212,9 @@ function BlockHeader({ userMessage, parrotId, isCollapsed, onToggle, theme }: Bl
     >
       {/* Left: User message preview */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* User avatar */}
+        {/* User avatar with initial */}
         <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0">
-          U
+          {userInitial}
         </div>
         {/* Message preview */}
         <div className="flex-1 min-w-0">
@@ -248,17 +269,18 @@ function BlockBody({ assistantMessage, sessionSummary, isCollapsed, parrotId, th
   const { t } = useTranslation();
   const themeColors = PARROT_THEMES[parrotId || "AMAZING"] || PARROT_THEMES.AMAZING;
 
-  if (isCollapsed) {
-    return null;
-  }
-
   const hasThinking = assistantMessage?.metadata?.thinking;
   const hasToolCalls = assistantMessage?.metadata?.toolCalls && assistantMessage.metadata.toolCalls.length > 0;
   const hasToolResults = assistantMessage?.metadata?.toolResults && assistantMessage.metadata.toolResults.length > 0;
   const hasAnswer = assistantMessage?.content;
 
   return (
-    <div className="px-4 py-3 space-y-4">
+    <div
+      className={cn(
+        "px-4 py-3 space-y-4 transition-all duration-300 ease-in-out",
+        isCollapsed ? "max-h-0 opacity-50 overflow-hidden py-0" : "max-h-none opacity-100",
+      )}
+    >
       {/* Thinking Section */}
       {hasThinking && (
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -355,12 +377,32 @@ interface BlockFooterProps {
 function BlockFooter({ isCollapsed, onCopy, onRegenerate, onDelete, theme }: BlockFooterProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopy = useCallback(() => {
     onCopy();
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+
+    // Clear previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set new timeout and store reference
+    timeoutRef.current = setTimeout(() => {
+      setCopied(false);
+      timeoutRef.current = null;
+    }, 2000);
   }, [onCopy]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   if (isCollapsed) {
     return null;
@@ -461,10 +503,14 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     setCollapsed((prev) => !prev);
   }, []);
 
-  // Build content for copying
-  const contentForCopy = [`User: ${userMessage.content}`, assistantMessage?.content ? `Assistant: ${assistantMessage.content}` : ""]
-    .filter(Boolean)
-    .join("\n\n");
+  // Build content for copying - memoized to avoid recreating on every render
+  const contentForCopy = useMemo(
+    () =>
+      [`User: ${userMessage.content}`, assistantMessage?.content ? `Assistant: ${assistantMessage.content}` : ""]
+        .filter(Boolean)
+        .join("\n\n"),
+    [userMessage.content, assistantMessage?.content],
+  );
 
   const handleCopy = useCallback(() => {
     onCopy?.(contentForCopy);
@@ -475,7 +521,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
       className={cn(
         "rounded-lg border overflow-hidden shadow-sm transition-all duration-200",
         blockTheme.border,
-        isLatest && "ring-2 ring-primary/20",
+        isLatest && `ring-2 ${blockTheme.ringColor}`,
         className,
       )}
     >
@@ -498,6 +544,9 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     </div>
   );
 });
+
+// Add display name for debugging
+UnifiedMessageBlock.displayName = "UnifiedMessageBlock";
 
 // ============================================================================
 // Hook for Block State Management
@@ -533,6 +582,45 @@ export function useBlockState(messages: ConversationMessage[]) {
     });
     return initial;
   });
+
+  // Sync block states when messages array changes
+  // Use message IDs for stable dependency comparison
+  const messageIds = useMemo(() => messages.map((m) => m.id).join(","), [messages]);
+  useEffect(() => {
+    setBlockStates((prev) => {
+      const currentIds = new Set(messages.map((m) => m.id));
+      const prevIds = new Set(Object.keys(prev));
+
+      // Skip if IDs are identical (no structural change)
+      if (currentIds.size === prevIds.size && [...currentIds].every((id) => prevIds.has(id))) {
+        // Just update isLatest flags
+        let hasChanges = false;
+        const updated: Record<string, BlockState> = { ...prev };
+        messages.forEach((msg, i) => {
+          const isLatest = i === messages.length - 1;
+          if (prev[msg.id]?.isLatest !== isLatest) {
+            updated[msg.id] = { ...prev[msg.id], isLatest };
+            hasChanges = true;
+          }
+        });
+        return hasChanges ? updated : prev;
+      }
+
+      // Full rebuild when messages structure changes
+      const updated: Record<string, BlockState> = {};
+      messages.forEach((msg, i) => {
+        const isLatest = i === messages.length - 1;
+        const existing = prev[msg.id];
+        updated[msg.id] = {
+          collapsed: existing?.collapsed ?? getDefaultCollapseState(isLatest, false),
+          isLatest,
+          isStreaming: false,
+        };
+      });
+
+      return updated;
+    });
+  }, [messageIds, messages.length]);
 
   const updateBlockState = useCallback((messageId: string, updates: Partial<BlockState>) => {
     setBlockStates((prev) => ({
