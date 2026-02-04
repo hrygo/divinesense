@@ -1,7 +1,9 @@
 # Spec: Unified Block Model
 
-> **Status**: [PRD](https://github.com/hrygo/divinesense/issues/71) | **Version**: 1.0
+> **Status**: [In Development](https://github.com/hrygo/divinesense/issues/71) | **Version**: 1.1
 > **Priority**: P0 (Core) | **Sprint**: Backend Refactoring
+
+> **Phase 规格**: 本规格已拆分为 6 个独立 Phase 文档，详见 [实施计划](#6-实施计划-implementation-plan)
 
 ---
 
@@ -912,108 +914,106 @@ export const PARROT_THEMES = {
 
 ## 6. 实施计划 (Implementation Plan)
 
+> **详细规格**: 本项目已拆分为 6 个独立 Phase 规格，每个规格包含完整的技术实现方案和验收标准。
+
 ### 6.1 时间表 (Timeline)
 
-| 阶段 | 时间 | 任务 | 优先级 |
-|:-----|:-----|:-----|:-------|
-| **Phase 1** | 2-3 天 | 数据库迁移 + Proto 生成 | P0 |
-| **Phase 2** | 3-4 天 | 后端 BlockStore 实现 | P0 |
-| **Phase 3** | 2-3 天 | Chat Handler 改造 | P0 |
-| **Phase 4** | 2 天 | 前端类型定义 + 主题色更新 | P1 |
-| **Phase 5** | 3-4 天 | UnifiedMessageBlock 改造 | P1 |
-| **Phase 6** | 2-3 天 | ChatMessages + AIChat Context | P1 |
-| **Phase 7** | 2 天 | 集成测试 | P1 |
+| Phase | 规格 | 投入 | 优先级 | 状态 |
+|:------|:-----|:-----|:-------|:-----|
+| **Phase 1** | [unified-block-model-phase1.md](./unified-block-model-phase1.md) | 5人天 | P0 | 🔲 待开发 |
+| **Phase 2** | [unified-block-model-phase2.md](./unified-block-model-phase2.md) | 3人天 | P0 | 🔲 待开发 |
+| **Phase 3** | [unified-block-model-phase3.md](./unified-block-model-phase3.md) | 2人天 | P1 | 🔲 待开发 |
+| **Phase 4** | [unified-block-model-phase4.md](./unified-block-model-phase4.md) | 4人天 | P1 | 🔲 待开发 |
+| **Phase 5** | [unified-block-model-phase5.md](./unified-block-model-phase5.md) | 4人天 | P1 | 🔲 待开发 |
+| **Phase 6** | [unified-block-model-phase6.md](./unified-block-model-phase6.md) | 3人天 | P1 | 🔲 待开发 |
 
-**总计**: 约 16-22 天
+**总计**: 21 人天
 
-### 6.2 详细任务 (Detailed Tasks)
+### 6.2 Phase 概要
 
-#### Phase 1: 数据库迁移 (2-3 天)
+#### Phase 1: 数据库 & 后端 Store (5人天)
 
-- [ ] **1.1** 编写 `store/migration/postgres/migrate/XXXX_create_ai_block.up.sql`
-- [ ] **1.2** 创建 `ai_block` 表结构
-- [ ] **1.3** 创建索引 (conversation_id, round_number, mode, status)
-- [ ] **1.4** 创建 JSONB GIN 索引 (event_stream, user_inputs)
-- [ ] **1.5** 创建触发器 (updated_ts, conversation updated_ts)
-- [ ] **1.6** 创建兼容视图 `v_ai_message`
-- [ ] **1.7** 编写 down migration (回滚脚本)
-- [ ] **1.8** 运行 `make migration-up` 验证
+**目标**: 创建 `ai_block` 表和 PostgreSQL Store 实现
 
-#### Phase 2: 后端 BlockStore 实现 (3-4 天)
+- 数据库表结构定义（JSONB 字段）
+- BlockStore 接口定义
+- PostgreSQL CRUD 操作实现
+- 兼容视图 `v_ai_message` 创建
 
-- [ ] **2.1** 定义 `store/block.go` 接口
-- [ ] **2.2** 实现 `store/db/postgres/block.go`
-  - [ ] 2.2.1 `CreateBlock()`
-  - [ ] 2.2.2 `GetBlock()`
-  - [ ] 2.2.3 `ListBlocks()`
-  - [ ] 2.2.4 `UpdateBlock()`
-  - [ ] 2.2.5 `AppendUserInput()`
-  - [ ] 2.2.6 `DeleteBlock()`
-  - [ ] 2.2.7 `GetLatestBlock()`
-  - [ ] 2.2.8 `GetBlockByRound()`
-- [ ] **2.3** 实现 `store/db/sqlite/block.go` (仅接口，无 AI 功能)
-- [ ] **2.4** 添加单元测试 `store/db/postgres/block_test.go`
-- [ ] **2.5** 注册 BlockStore 到 Store 接口
+**交付物**:
+- `store/migration/postgres/V0.60.x_create_ai_block.up.sql`
+- `store/ai_block.go` (接口)
+- `store/db/postgres/ai_block.go` (实现)
 
-#### Phase 3: Chat Handler 改造 (2-3 天)
+#### Phase 2: Proto & API (3人天)
 
-- [ ] **3.1** 更新 `proto/api/v1/ai_service.proto` 添加 Block 消息
-- [ ] **3.2** 运行 `make generate` 生成代码
-- [ ] **3.3** 改造 `server/router/api/v1/ai/handler.go`
-  - [ ] 3.3.1 `handleChat()` 使用 BlockStore
-  - [ ] 3.3.2 判断逻辑: latestBlock.status != 'completed' → 追加
-  - [ ] 3.3.3 流式更新 Block (event_stream, status)
-  - [ ] 3.3.4 完成时保存 session_stats
-- [ ] **3.4** 添加 `CreateBlock` API 端点
-- [ ] **3.5** 添加 `AppendUserInput` API 端点
-- [ ] **3.6** 添加 `ListBlocks` API 端点
+**目标**: 定义 gRPC 消息和 BlockService
 
-#### Phase 4: 前端类型定义 (2 天)
+- Protobuf 消息定义 (AIBlock, UserInput, StreamEvent)
+- BlockService RPC 方法
+- API Handler 实现
 
-- [ ] **4.1** 创建 `web/src/types/block.ts`
-- [ ] **4.2** 导出 Block 相关类型
-- [ ] **4.3** 更新 `PARROT_THEMES` 配色 (琥珀/石板蓝/翠绿)
-- [ ] **4.4** 添加 Block API 调用 (`api/block.ts`)
-- [ ] **4.5** 运行 `pnpm check-i18n` 验证
+**交付物**:
+- `proto/api/v1/ai_service.proto` (扩展)
+- `server/router/api/v1/ai/block_handler.go` (新增)
 
-#### Phase 5: UnifiedMessageBlock 改造 (3-4 天)
+#### Phase 3: 前端类型定义 (2人天)
 
-- [ ] **5.1** 重构 `UnifiedMessageBlockProps` 接收 `block: AIBlock`
-- [ ] **5.2** 移除 `userMessage`/`assistantMessage` 分离逻辑
-- [ ] **5.3** 从 `block.userInputs` 读取用户输入
-- [ ] **5.4** 从 `block.eventStream` 渲染事件流
-- [ ] **5.5** 从 `block.sessionStats` 渲染统计
-- [ ] **5.6** 根据 `block.mode` 选择主题色
-- [ ] **5.7** 更新 `BlockHeader` 显示追加的用户输入
-- [ ] **5.8** 测试三种模式的渲染效果
+**目标**: TypeScript 类型定义和 Hooks
 
-#### Phase 6: ChatMessages + AIChat Context (2-3 天)
+- AIBlock, BlockEvent, BlockUserInput 类型
+- Block API Hooks (useBlocks, useAppendUserInput)
+- Block-Parrot 映射函数
 
-- [ ] **6.1** 移除 `groupMessagesIntoBlocks()` 逻辑
-- [ ] **6.2** `ChatMessages` 直接接收 `blocks: AIBlock[]`
-- [ ] **6.3** 映射 `block.mode` 到 `blockParrotId`
-- [ ] **6.4** 更新 `AIChatContext` 管理 Blocks
-- [ ] **6.5** 实现 `useBlockStream` Hook
-- [ ] **6.6** 更新流式事件处理逻辑
+**交付物**:
+- `web/src/types/block.ts` (新增)
+- `web/src/hooks/grpc/useAIBlocks.ts` (新增)
 
-#### Phase 7: 集成测试 (2 天)
+#### Phase 4: 前端组件改造 (4人天)
 
-- [ ] **7.1** 端到端测试: 创建会话 → 发送消息 → 接收回复
-- [ ] **7.2** 测试追加输入功能
-- [ ] **7.3** 测试三种模式的持久化
-- [ ] **7.4** 测试模式切换
-- [ ] **7.5** 测试 CC 会话映射
-- [ ] **7.6** 性能测试 (大量 Blocks)
-- [ ] **7.7] 向后兼容测试 (旧会话数据)
+**目标**: ChatMessages 改用 Block 数据
+
+- 移除前端配对逻辑
+- AIChatContext 扩展 Block 方法
+- SSE 事件处理扩展
+
+**交付物**:
+- `web/src/components/AIChat/ChatMessages.tsx` (改造)
+- `web/src/contexts/AIChatContext.tsx` (扩展)
+
+#### Phase 5: Chat Handler 集成 (4人天)
+
+**目标**: 后端 Chat Handler 使用 Block 生命周期
+
+- Block 创建/更新逻辑
+- EventWriter 实现
+- Geek/Evolution 模式处理器
+
+**交付物**:
+- `server/router/api/v1/ai/handler.go` (改造)
+- `server/router/api/v1/ai/event_writer.go` (新增)
+
+#### Phase 6: 集成测试 (3人天)
+
+**目标**: 端到端测试覆盖
+
+- 单元测试 (Store CRUD)
+- 集成测试 (Chat Handler → Store)
+- E2E 测试 (Playwright, 三种模式)
+
+**交付物**:
+- `store/db/postgres/ai_block_test.go` (新增)
+- `server/router/api/v1/ai/integration_test.go` (新增)
+- `web/e2e/block-model.spec.ts` (新增)
 
 ### 6.3 检查点 (Checkpoints)
 
-- [ ] **Checkpoint 1**: 数据库迁移成功，`ai_block` 表创建完成
-- [ ] **Checkpoint 2**: BlockStore 实现通过单元测试
-- [ ] **Checkpoint 3**: Chat Handler 可使用 Block 创建和更新
-- [ ] **Checkpoint 4**: 前端可渲染 Block (静态数据)
-- [ ] **Checkpoint 5**: 流式更新 Block 正常工作
-- [ ] **Checkpoint 6**: 端到端流程验证通过
+- [ ] **Checkpoint 1**: Phase 1 完成 - 数据库迁移成功，`ai_block` 表创建完成
+- [ ] **Checkpoint 2**: Phase 2 完成 - Proto 和 API 定义完成，代码生成通过
+- [ ] **Checkpoint 3**: Phase 3 完成 - 前端类型定义完成，`pnpm type-check` 通过
+- [ ] **Checkpoint 4**: Phase 4 完成 - 前端组件改造完成，可渲染 Block
+- [ ] **Checkpoint 5**: Phase 5 完成 - Chat Handler 使用 Block 生命周期
+- [ ] **Checkpoint 6**: Phase 6 完成 - 端到端流程验证通过，所有测试通过
 
 ---
 
@@ -1143,10 +1143,10 @@ export function legacyMessageToBlock(
 
 | 维度 | 值 |
 |:-----|:---:|
-| **开发投入** | 16-22 人天 |
+| **开发投入** | 21 人天 |
 | **预期收益** | 数据模型统一，支持完整持久化和追加输入 |
 | **风险评估** | 中 (主要风险在数据迁移) |
-| **回报周期** | 1-2 个 Sprint |
+| **回报周期** | 3 Sprint |
 
 ---
 

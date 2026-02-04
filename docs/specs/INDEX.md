@@ -341,7 +341,13 @@ Phase 3 (Sprint 5-6) - 极致体验
 |:---|:---|:---:|
 | [cc_runner_async_arch](./cc_runner_async_arch.md) | CC Runner 异步架构 | ✅ Published |
 | [chat-apps-integration](./chat-apps-integration.md) | 聊天应用集成 (Telegram/钉钉) | ✅ Published |
-| [unified-block-model](./unified-block-model.md) | 统一 Block 模型 | 🔄 PRD |
+| [unified-block-model](./unified-block-model.md) | 统一 Block 模型 | 🔄 In Development |
+| [unified-block-model-phase1](./unified-block-model-phase1.md) | Phase 1: 数据库 & 后端 Store | 🔲 待开发 |
+| [unified-block-model-phase2](./unified-block-model-phase2.md) | Phase 2: Proto & API | 🔲 待开发 |
+| [unified-block-model-phase3](./unified-block-model-phase3.md) | Phase 3: 前端类型 | 🔲 待开发 |
+| [unified-block-model-phase4](./unified-block-model-phase4.md) | Phase 4: 前端组件 | 🔲 待开发 |
+| [unified-block-model-phase5](./unified-block-model-phase5.md) | Phase 5: Chat Handler | 🔲 待开发 |
+| [unified-block-model-phase6](./unified-block-model-phase6.md) | Phase 6: 集成测试 | 🔲 待开发 |
 
 ---
 
