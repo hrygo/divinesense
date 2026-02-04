@@ -236,7 +236,7 @@ function BlockHeader({
   const userInitial = extractUserInitial(userMessage.content);
 
   // 计算用户输入预览文本 (固定字符截取)
-  const HEADER_MAX_CHARS = 20;
+  const HEADER_MAX_CHARS = 12;
   const userInputPreview = useMemo(() => {
     const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
     // 多个输入时显示摘要
