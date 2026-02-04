@@ -112,6 +112,7 @@ const MemberSection = () => {
       {isMobile ? (
         <DesktopOnlyBanner messageKey="member-desktop-only" />
       ) : (
+        <>
       <SettingTable
         columns={[
           {
@@ -208,6 +209,7 @@ const MemberSection = () => {
           />
         </>
       )}
+      </>
       )}
     </SettingSection>
   );
