@@ -98,12 +98,38 @@ const Setting = () => {
     window.location.hash = settingSection;
   }, []);
 
+  // Mobile: render section directly on page, no sheet needed
+  const renderSection = () => {
+    switch (state.selectedSection) {
+      case "my-account":
+        return <MyAccountSection />;
+      case "preference":
+        return <PreferencesSection />;
+      case "chat-apps":
+        return <ChatAppsSection />;
+      case "member":
+        return <MemberSection />;
+      case "system":
+        return <InstanceSection />;
+      case "memo-related":
+        return <MemoRelatedSettings />;
+      case "storage":
+        return <StorageSection />;
+      case "sso":
+        return <SSOSection />;
+      case "metrics":
+        return <MetricsDashboard />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <section className="@container w-full min-h-full flex flex-col justify-start items-start">
-      {!sm && <MobileHeader />}
-      <div className="w-full">
-        <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
-          {sm && (
+    <section className="@container w-full max-w-[100rem] min-h-full flex flex-col justify-start items-start pb-8">
+      <div className="w-full px-4 sm:px-6">
+        {/* Desktop Layout: Sidebar + Content */}
+        {sm && (
+          <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
             <div className="flex flex-col justify-start items-start w-40 h-auto shrink-0 py-2">
               <span className="text-sm mt-0.5 pl-3 font-mono select-none text-muted-foreground">{t("common.basic")}</span>
               <div className="w-full flex flex-col justify-start items-start mt-1">
@@ -137,45 +163,30 @@ const Setting = () => {
                 </>
               ) : null}
             </div>
-          )}
-          <div className="w-full grow sm:pl-4 overflow-x-auto">
-            {!sm && (
-              <div className="w-auto inline-block my-2">
-                <Select value={state.selectedSection} onValueChange={(value) => handleSectionSelectorItemClick(value as SettingSection)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select section" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {settingsSectionList.map((settingSection) => (
-                      <SelectItem key={settingSection} value={settingSection}>
-                        {settingSection === "chat-apps" ? t(`setting.${settingSection}.title`) : t(`setting.${settingSection}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {state.selectedSection === "my-account" ? (
-              <MyAccountSection />
-            ) : state.selectedSection === "preference" ? (
-              <PreferencesSection />
-            ) : state.selectedSection === "chat-apps" ? (
-              <ChatAppsSection />
-            ) : state.selectedSection === "member" ? (
-              <MemberSection />
-            ) : state.selectedSection === "system" ? (
-              <InstanceSection />
-            ) : state.selectedSection === "memo-related" ? (
-              <MemoRelatedSettings />
-            ) : state.selectedSection === "storage" ? (
-              <StorageSection />
-            ) : state.selectedSection === "sso" ? (
-              <SSOSection />
-            ) : state.selectedSection === "metrics" ? (
-              <MetricsDashboard />
-            ) : null}
+            <div className="w-full grow sm:pl-4 overflow-x-auto">{renderSection()}</div>
           </div>
-        </div>
+        )}
+
+        {/* Mobile Layout: Header with dropdown selector + full-width content */}
+        {!sm && (
+          <>
+            <div className="w-auto inline-block my-2">
+              <Select value={state.selectedSection} onValueChange={(value) => handleSectionSelectorItemClick(value as SettingSection)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {settingsSectionList.map((settingSection) => (
+                    <SelectItem key={settingSection} value={settingSection}>
+                      {settingSection === "chat-apps" ? t(`setting.${settingSection}.title`) : t(`setting.${settingSection}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full mt-2">{renderSection()}</div>
+          </>
+        )}
       </div>
     </section>
   );

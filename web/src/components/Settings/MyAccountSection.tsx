@@ -2,6 +2,7 @@ import { MoreVerticalIcon, PenLineIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useDialog } from "@/hooks/useDialog";
+import useIsMobile from "@/hooks/useIsMobile";
 import { useTranslate } from "@/utils/i18n";
 import ChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
 import UpdateAccountDialog from "../UpdateAccountDialog";
@@ -14,6 +15,7 @@ import SettingSection from "./SettingSection";
 const MyAccountSection = () => {
   const t = useTranslate();
   const user = useCurrentUser();
+  const isMobile = useIsMobile();
   const accountDialog = useDialog();
   const passwordDialog = useDialog();
 
@@ -56,9 +58,21 @@ const MyAccountSection = () => {
         </div>
       </SettingGroup>
 
-      <SettingGroup showSeparator>
-        <AccessTokenSection />
-      </SettingGroup>
+      {/* On mobile, show a message indicating API management is desktop-only */}
+      {isMobile ? (
+        <SettingGroup showSeparator>
+          <div className="flex flex-col gap-3 px-4 py-6 bg-muted/30 rounded-lg border border-border text-center">
+            <p className="text-sm font-medium text-foreground">{t("setting.access-token-section.title")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("setting.mobile.api-management-desktop-only") || "API access token management is only available on desktop"}
+            </p>
+          </div>
+        </SettingGroup>
+      ) : (
+        <SettingGroup showSeparator>
+          <AccessTokenSection />
+        </SettingGroup>
+      )}
 
       {/* Update Account Dialog */}
       <UpdateAccountDialog open={accountDialog.isOpen} onOpenChange={accountDialog.setOpen} />

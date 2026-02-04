@@ -1,14 +1,14 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-interface SettingTableColumn<T = Record<string, unknown>> {
+interface SettingTableColumn<T = unknown> {
   key: string;
   header: string;
   className?: string;
-  render?: (value: T[keyof T], row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => React.ReactNode;
 }
 
-interface SettingTableProps<T = Record<string, unknown>> {
+interface SettingTableProps<T = unknown> {
   columns: SettingTableColumn<T>[];
   data: T[];
   emptyMessage?: string;
@@ -16,13 +16,7 @@ interface SettingTableProps<T = Record<string, unknown>> {
   getRowKey?: (row: T, index: number) => string;
 }
 
-const SettingTable = <T extends Record<string, unknown>>({
-  columns,
-  data,
-  emptyMessage = "No data",
-  className,
-  getRowKey,
-}: SettingTableProps<T>) => {
+function SettingTable<T>({ columns, data, emptyMessage = "No data", className, getRowKey }: SettingTableProps<T>) {
   return (
     <div className={cn("w-full overflow-x-auto", className)}>
       <div className="inline-block min-w-full align-middle border border-border rounded-lg">
@@ -49,7 +43,7 @@ const SettingTable = <T extends Record<string, unknown>>({
                 return (
                   <tr key={rowKey}>
                     {columns.map((column) => {
-                      const value = row[column.key as keyof T] as T[keyof T];
+                      const value = (row as Record<string, unknown>)[column.key];
                       const content = column.render ? column.render(value, row) : (value as React.ReactNode);
                       return (
                         <td key={column.key} className={cn("whitespace-nowrap px-3 py-2 text-sm text-muted-foreground", column.className)}>
@@ -66,6 +60,6 @@ const SettingTable = <T extends Record<string, unknown>>({
       </div>
     </div>
   );
-};
+}
 
 export default SettingTable;

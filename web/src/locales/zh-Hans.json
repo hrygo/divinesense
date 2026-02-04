@@ -973,6 +973,9 @@
       "delete-failed": "删除聊天应用凭证失败",
       "update-failed": "更新聊天应用凭证失败"
     },
+    "mobile": {
+      "api-management-desktop-only": "API 访问令牌管理仅在桌面端可用"
+    },
     "account-section": {
       "change-password": "修改密码",
       "email-note": "可选",

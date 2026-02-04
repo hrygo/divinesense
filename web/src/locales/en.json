@@ -978,6 +978,9 @@
       "delete-failed": "Failed to delete chat app credential",
       "update-failed": "Failed to update chat app credential"
     },
+    "mobile": {
+      "api-management-desktop-only": "API access token management is only available on desktop"
+    },
     "account-section": {
       "change-password": "Change password",
       "email-note": "Optional",
