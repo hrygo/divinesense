@@ -556,6 +556,14 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
           messages: c.messages.map((m) => {
             if (isContextSeparator(m)) return m;
             if (m.id !== messageId) return m;
+            // Deep merge metadata to preserve existing fields
+            if (updates.metadata) {
+              return {
+                ...m,
+                ...updates,
+                metadata: { ...m.metadata, ...updates.metadata },
+              };
+            }
             return { ...m, ...updates };
           }),
           updatedAt: Date.now(),

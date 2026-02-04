@@ -31,6 +31,7 @@ export interface ConversationMessage {
       filePath?: string;
       duration?: number;
       isError?: boolean;
+      round?: number; // 第几轮思考（0-based）
     }>; // List of tools called by the agent
     toolResults?: Array<{
       name: string;
@@ -39,8 +40,15 @@ export interface ConversationMessage {
       outputSummary?: string;
       duration?: number;
       isError?: boolean;
+      round?: number; // 第几轮思考（0-based）
     }>; // List of tool execution results
-    thinking?: string;
+    // 多轮思考支持：thinkingSteps 数组或单一 thinking 字符串（向后兼容）
+    thinkingSteps?: Array<{
+      content: string;
+      timestamp: number;
+      round: number; // 第几轮（0-based）
+    }>;
+    thinking?: string; // 保留单一字符串向后兼容
   };
 }
 

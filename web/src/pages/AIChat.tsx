@@ -246,6 +246,9 @@ const AIChat = () => {
   const lastAssistantMessageIdRef = useRef<string | null>(null);
   const streamingContentRef = useRef<string>("");
   const isCreatingConversationRef = useRef(false);
+  // 多轮思考支持
+  const currentRoundRef = useRef(0); // 当前第几轮思考（0-based）
+  const thinkingStepsRef = useRef<Array<{ content: string; timestamp: number; round: number }>>([]);
   const toolCallsRef = useRef<
     Array<{
       name: string;
@@ -256,6 +259,7 @@ const AIChat = () => {
       duration?: number;
       exitCode?: number;
       isError?: boolean;
+      round?: number; // 第几轮思考
     }>
   >([]);
 
@@ -312,7 +316,10 @@ const AIChat = () => {
       setCapabilityStatus("thinking");
       setMemoQueryResults([]);
       setScheduleQueryResults([]);
-      toolCallsRef.current = []; // Reset tool calls for new message
+      // 重置多轮思考状态
+      toolCallsRef.current = [];
+      thinkingStepsRef.current = [];
+      currentRoundRef.current = 0;
       const _messageId = ++messageIdRef.current;
 
       const explicitMessage = userMessage;
@@ -333,8 +340,18 @@ const AIChat = () => {
             if (lastAssistantMessageIdRef.current) {
               // Handle i18n keys from backend (e.g., "ai.geek_mode.thinking")
               const content = msg.startsWith("ai.") ? t(msg) : msg;
+              // 每次思考开始时，推进到下一轮
+              const round = currentRoundRef.current++;
+              // 添加新的思考步骤
+              const newStep = { content, timestamp: Date.now(), round };
+              thinkingStepsRef.current.push(newStep);
+              // 更新消息 metadata
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                content,
+                metadata: {
+                  thinkingSteps: [...thinkingStepsRef.current],
+                  // 同时保留单一 thinking 字段（最新一轮，向后兼容）
+                  thinking: content,
+                },
               });
             }
           },
@@ -348,11 +365,12 @@ const AIChat = () => {
               inputSummary: meta?.inputSummary,
               outputSummary: meta?.outputSummary,
               filePath: meta?.filePath,
+              round: currentRoundRef.current, // 标记属于哪一轮思考
             });
             if (lastAssistantMessageIdRef.current) {
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
                 metadata: {
-                  toolCalls: [...toolCallsRef.current], // Copy to avoid reference issues
+                  toolCalls: [...toolCallsRef.current],
                 },
               });
             }
@@ -368,7 +386,7 @@ const AIChat = () => {
               lastToolCall.exitCode = meta?.errorMsg ? -1 : 0;
               lastToolCall.isError = !!meta?.errorMsg;
 
-              // Update message with tool results
+              // Update message with tool results（保留 round 字段）
               updateMessage(conversationId, lastAssistantMessageIdRef.current, {
                 metadata: {
                   toolCalls: [...toolCallsRef.current],
@@ -379,6 +397,7 @@ const AIChat = () => {
                     outputSummary: tc.outputSummary,
                     duration: tc.duration,
                     isError: tc.isError || false,
+                    round: tc.round, // 传递 round 字段
                   })),
                 },
               });

@@ -1,5 +1,4 @@
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIContainer";
 import type { GenerativeUIContainerProps } from "@/components/ScheduleAI/types";
@@ -42,12 +41,14 @@ interface MessageBlock {
   userMessage: ConversationMessage;
   assistantMessage?: ConversationMessage;
   isLatest: boolean;
+  /** Session summary attached to this block (only for last block) */
+  attachSessionSummary?: boolean;
 }
 
 /**
  * Group messages into user-assistant pairs
  */
-function groupMessagesIntoBlocks(items: ChatItem[]): MessageBlock[] {
+function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean): MessageBlock[] {
   const blocks: MessageBlock[] = [];
   let pendingUser: ConversationMessage | null = null;
 
@@ -113,9 +114,14 @@ function groupMessagesIntoBlocks(items: ChatItem[]): MessageBlock[] {
     });
   }
 
-  // Mark last block as latest
+  // Mark last block as latest and attach session summary if available
   if (blocks.length > 0) {
-    blocks[blocks.length - 1].isLatest = true;
+    const lastBlock = blocks[blocks.length - 1];
+    lastBlock.isLatest = true;
+    // Only attach session summary to the last block if it has an assistant message
+    if (hasSessionSummary && lastBlock.assistantMessage) {
+      lastBlock.attachSessionSummary = true;
+    }
   }
 
   return blocks;
@@ -138,7 +144,6 @@ const ChatMessages = memo(function ChatMessages({
   streamingContent = "",
   sessionSummary,
 }: ChatMessagesProps) {
-  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
@@ -258,7 +263,7 @@ const ChatMessages = memo(function ChatMessages({
   }, []);
 
   // Group messages into blocks
-  const messageBlocks = useMemo(() => groupMessagesIntoBlocks(items), [items]);
+  const messageBlocks = useMemo(() => groupMessagesIntoBlocks(items, !!sessionSummary), [items, sessionSummary]);
 
   // Check if last assistant message is streaming
   const lastBlock = messageBlocks[messageBlocks.length - 1];
@@ -280,6 +285,7 @@ const ChatMessages = memo(function ChatMessages({
               key={block.id}
               userMessage={block.userMessage}
               assistantMessage={block.assistantMessage}
+              sessionSummary={block.attachSessionSummary ? sessionSummary : undefined}
               parrotId={currentParrotId}
               isLatest={block.isLatest && !isTyping}
               isStreaming={isLastStreaming && block.isLatest}
@@ -305,24 +311,6 @@ const ChatMessages = memo(function ChatMessages({
       {uiTools && uiTools.length > 0 && onUIAction && onUIDismiss && (
         <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto mt-3">
           <GenerativeUIContainer tools={uiTools} onAction={onUIAction} onDismiss={onUIDismiss} />
-        </div>
-      )}
-
-      {/* Session Summary Panel - for Geek/Evolution modes */}
-      {sessionSummary && !isTyping && (
-        <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto mt-3">
-          <UnifiedMessageBlock
-            userMessage={{
-              id: "summary-user",
-              role: "user" as MessageRole,
-              content: t("ai.session.summary") || "Session Summary",
-              timestamp: Date.now(),
-            }}
-            parrotId={currentParrotId}
-            sessionSummary={sessionSummary}
-            isLatest={false}
-            isStreaming={false}
-          />
         </div>
       )}
 
