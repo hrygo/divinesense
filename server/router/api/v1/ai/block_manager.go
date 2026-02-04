@@ -2,12 +2,11 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"time"
 
-	"github.com/lithammer/shortuuid/v4"
 	"github.com/hrygo/divinesense/store"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 // BlockManager manages the lifecycle of conversation blocks.
@@ -155,10 +154,10 @@ func (m *BlockManager) UpdateBlockStatus(
 ) error {
 	now := time.Now().Unix()
 	update := &store.UpdateAIBlock{
-		ID:              blockID,
-		Status:          &status,
+		ID:               blockID,
+		Status:           &status,
 		AssistantContent: &assistantContent,
-		UpdatedTs:       &now,
+		UpdatedTs:        &now,
 	}
 
 	if sessionStats != nil {
@@ -220,7 +219,7 @@ type BlockMode string
 
 const (
 	BlockModeNormal    BlockMode = "normal"
-	BlockModeGeek     BlockMode = "geek"
+	BlockModeGeek      BlockMode = "geek"
 	BlockModeEvolution BlockMode = "evolution"
 )
 
@@ -237,21 +236,3 @@ func convertBlockModeToStore(mode BlockMode) store.AIBlockMode {
 	}
 }
 
-func convertAgentTypeToBlockMode(agentType string) BlockMode {
-	// Evolution mode maps to creative agent type
-	if agentType == "creative" {
-		return BlockModeEvolution
-	}
-	return BlockModeNormal
-}
-
-// formatMetadata converts a map to JSON string for storage.
-func formatMetadata(metadata map[string]any) string {
-	if metadata == nil || len(metadata) == 0 {
-		return "{}"
-	}
-	if jsonBytes, err := json.Marshal(metadata); err == nil {
-		return string(jsonBytes)
-	}
-	return "{}"
-}

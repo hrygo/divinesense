@@ -104,15 +104,15 @@ type CreateAIBlock struct {
 
 // UpdateAIBlock represents the input for updating a block
 type UpdateAIBlock struct {
-	ID                int64
-	UserInputs        *[]UserInput       // Replace user inputs
-	AssistantContent  *string             // Update AI response
-	EventStream       *[]BlockEvent      // Replace event stream
-	SessionStats      *SessionStats       // Update session stats
-	CCSessionID       *string             // Update CC session ID
-	Status            *AIBlockStatus      // Update status
-	Metadata          map[string]any       // Merge metadata
-	UpdatedTs         *int64              // Update timestamp
+	ID               int64
+	UserInputs       *[]UserInput   // Replace user inputs
+	AssistantContent *string        // Update AI response
+	EventStream      *[]BlockEvent  // Replace event stream
+	SessionStats     *SessionStats  // Update session stats
+	CCSessionID      *string        // Update CC session ID
+	Status           *AIBlockStatus // Update status
+	Metadata         map[string]any // Merge metadata
+	UpdatedTs        *int64         // Update timestamp
 }
 
 // FindAIBlock represents the filter for finding blocks

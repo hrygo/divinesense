@@ -342,18 +342,18 @@ func (s *AIService) AppendEvent(ctx context.Context, req *v1pb.AppendEventReques
 // convertBlockFromStore converts a store.AIBlock to protobuf Block.
 func convertBlockFromStore(b *store.AIBlock) *v1pb.Block {
 	pbBlock := &v1pb.Block{
-		Id:                  b.ID,
-		Uid:                 b.UID,
-		ConversationId:      b.ConversationID,
+		Id:                 b.ID,
+		Uid:                b.UID,
+		ConversationId:     b.ConversationID,
 		RoundNumber:        b.RoundNumber,
 		BlockType:          convertBlockTypeToProto(b.BlockType),
-		Mode:                convertBlockModeToProto(b.Mode),
+		Mode:               convertBlockModeToProto(b.Mode),
 		AssistantContent:   b.AssistantContent,
 		AssistantTimestamp: b.AssistantTimestamp,
 		CcSessionId:        b.CCSessionID,
-		Status:              convertBlockStatusToProto(b.Status),
-		CreatedTs:           b.CreatedTs,
-		UpdatedTs:           b.UpdatedTs,
+		Status:             convertBlockStatusToProto(b.Status),
+		CreatedTs:          b.CreatedTs,
+		UpdatedTs:          b.UpdatedTs,
 	}
 
 	// Convert user inputs
@@ -402,7 +402,7 @@ func parseMetadata(metadataStr string) map[string]any {
 
 // formatMetadata formats map[string]any into a JSON string.
 func formatMetadata(metadata map[string]any) string {
-	if metadata == nil || len(metadata) == 0 {
+	if len(metadata) == 0 {
 		return emptyMetadata
 	}
 	if jsonBytes, err := json.Marshal(metadata); err == nil {

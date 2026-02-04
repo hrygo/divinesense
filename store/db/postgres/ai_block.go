@@ -48,10 +48,10 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 		string(create.BlockType),
 		string(create.Mode),
 		userInputsJSON,
-		nil, // assistant_content
-		0,   // assistant_timestamp
+		nil,          // assistant_content
+		0,            // assistant_timestamp
 		[]byte("[]"), // event_stream
-		nil, // session_stats
+		nil,          // session_stats
 		create.CCSessionID,
 		string(create.Status),
 		metadataJSON,
@@ -561,10 +561,10 @@ func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIB
 		string(create.BlockType),
 		string(create.Mode),
 		userInputsJSON,
-		nil, // assistant_content
-		0,   // assistant_timestamp
+		nil,          // assistant_content
+		0,            // assistant_timestamp
 		[]byte("[]"), // event_stream
-		nil, // session_stats
+		nil,          // session_stats
 		create.CCSessionID,
 		string(create.Status),
 		metadataJSON,
