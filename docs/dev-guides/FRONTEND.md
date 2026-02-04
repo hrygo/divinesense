@@ -305,6 +305,33 @@ web/src/locales/
 
 ## 组件模式
 
+### UnifiedMessageBlock (Warp Block 风格)
+
+UnifiedMessageBlock 用于将用户输入 + AI 回复封装为一个统一的可折叠 Block：
+
+```tsx
+import { UnifiedMessageBlock } from "@/components/AIChat/UnifiedMessageBlock";
+
+<UnifiedMessageBlock
+  userMessage={userMsg}
+  assistantMessage={assistantMsg}
+  sessionSummary={summary}
+  parrotId="GEEK"
+  isLatest={true}
+  isStreaming={false}
+  onCopy={() => navigator.clipboard.writeText(content)}
+  onRegenerate={() => regenerate()}
+  onDelete={() => deleteMessage()}
+/>
+```
+
+**功能**：
+- Block Header: 用户消息预览 + 时间戳 + 状态徽章
+- Block Body: 可折叠内容（思考/工具/结果/回答/会话统计）
+- Block Footer: 操作栏（复制/重新生成/删除）
+- 支持 5 种 Parrot 主题适配（MEMO/SCHEDULE/AMAZING/GEEK/EVOLUTION）
+- 自动折叠策略：新/最新 Block 展开，历史 Block 折叠
+
 ### MemoCard
 
 MemoCard 用于在整个应用中显示笔记内容：
