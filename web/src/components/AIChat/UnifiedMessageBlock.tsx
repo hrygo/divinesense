@@ -72,6 +72,9 @@ const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
 /** Offset in milliseconds between tool calls in the same round */
 const TOOL_CALL_OFFSET_MS = 1000;
 
+/** User inputs expand threshold (字符数阈值) */
+const USER_INPUTS_EXPAND_THRESHOLD = 300;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -290,7 +293,7 @@ function BlockHeader({
           </div>
           {/* 追加输入计数徽章 */}
           {totalInputCount > 1 && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white border-2 border-background shadow-sm">
+            <div className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white border-2 border-background shadow-sm">
               {totalInputCount}
             </div>
           )}
@@ -379,7 +382,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
   const allInputs = useMemo(() => [userMessage, ...additionalUserInputs], [userMessage, additionalUserInputs]);
   const hasMultiple = allInputs.length > 1;
   const totalLength = allInputs.reduce((sum, m) => sum + m.content.length, 0);
-  const isLongContent = totalLength > 300; // 超过300字默认折叠
+  const isLongContent = totalLength > USER_INPUTS_EXPAND_THRESHOLD;
 
   // 默认展开条件：内容不长或只有一个输入
   const shouldShowExpanded = !isLongContent || isExpanded;
@@ -409,7 +412,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {isExpanded ? (
                 <>
@@ -452,9 +455,10 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
             ))
           ) : (
             /* Collapsed Preview */
-            <div
-              className="rounded-lg border p-3 bg-muted/20 border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
+            <button
+              type="button"
               onClick={() => setIsExpanded(true)}
+              className="w-full text-left rounded-lg border p-3 bg-muted/20 border-border/50 cursor-pointer hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="text-sm text-muted-foreground line-clamp-3 italic">
                 {allInputs.map((m) => m.content.split("\n")[0]).join(" ")}...
@@ -463,7 +467,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
                 <ChevronDown className="w-3 h-3" />
                 {t("ai.unified_block.expand_to_read_all") || "点击展开查看全部内容"}
               </div>
-            </div>
+            </button>
           )}
         </div>
       </div>
@@ -1034,20 +1038,19 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     setCollapsed((prev) => !prev);
   }, []);
 
-  // Build content for copying
-  const contentForCopy = useMemo(
-    () =>
-      [
-        `User: ${userMessage.content}`,
-        assistantMessage?.content ? `Assistant: ${assistantMessage.content}` : "",
-        assistantMessage?.metadata?.toolResults
-          ? `\n\nTools:\n${assistantMessage.metadata.toolResults.map((r) => `- ${r.name}: ${r.duration}ms`).join("\n")}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    [userMessage.content, assistantMessage?.content, assistantMessage?.metadata?.toolResults],
-  );
+  // Build content for copying (包含追加用户输入)
+  const contentForCopy = useMemo(() => {
+    const userContents = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
+    return [
+      `User: ${userContents.join("\n> ")}`,
+      assistantMessage?.content ? `Assistant: ${assistantMessage.content}` : "",
+      assistantMessage?.metadata?.toolResults
+        ? `\n\nTools:\n${assistantMessage.metadata.toolResults.map((r) => `- ${r.name}: ${r.duration}ms`).join("\n")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }, [userMessage.content, additionalUserInputs, assistantMessage?.content, assistantMessage?.metadata?.toolResults]);
 
   const handleCopy = useCallback(() => {
     onCopy?.(contentForCopy);
