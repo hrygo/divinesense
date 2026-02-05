@@ -566,3 +566,70 @@ export function fromProtoBlockStatus(status: BlockStatus): "pending" | "streamin
       return "pending";
   }
 }
+
+// ============================================================================
+// ERROR HANDLING & FALLBACK (Phase 4)
+// ============================================================================
+
+/**
+ * Result type for useBlocksWithFallback - includes error state for fallback
+ */
+interface BlocksWithFallbackResult {
+  blocks: Block[];
+  isLoading: boolean;
+  error: Error | null;
+  shouldFallback: boolean;
+}
+
+/**
+ * Hook to fetch blocks with automatic fallback on error
+ *
+ * When Block API fails (network error, 404, etc.), this hook returns
+ * an error state that signals the UI to fall back to ChatItem[].
+ *
+ * @param conversationId - The conversation ID to fetch blocks for
+ * @param filters - Optional filters for the block list
+ * @param options - Additional options like isActive (for active conversations)
+ * @returns BlocksWithFallbackResult with blocks, loading state, and error info
+ */
+export function useBlocksWithFallback(
+  conversationId: number,
+  filters?: Partial<ListBlocksRequest>,
+  options?: { isActive?: boolean },
+): BlocksWithFallbackResult {
+  const is_active = options?.isActive ?? false;
+
+  const query = useQuery({
+    queryKey: blockKeys.list(conversationId, filters),
+    queryFn: async () => {
+      const request = create(ListBlocksRequestSchema, {
+        conversationId,
+        ...filters,
+      } as Record<string, unknown>);
+      const response = await aiServiceClient.listBlocks(request);
+      return response;
+    },
+    enabled: conversationId > 0,
+    staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
+    gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
+    retry: RETRY_CONFIG.NETWORK.retries,
+    retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
+    refetchOnWindowFocus: is_active,
+    refetchOnReconnect: true,
+  });
+
+  const blocks = query.data?.blocks || [];
+
+  // Determine if we should fallback based on error state
+  // Fallback conditions:
+  // 1. Query failed and has error
+  // 2. No blocks returned (might indicate API not available)
+  const shouldFallback = query.isError || (query.isSuccess && blocks.length === 0 && conversationId > 0);
+
+  return {
+    blocks,
+    isLoading: query.isLoading,
+    error: query.error ?? null,
+    shouldFallback,
+  };
+}

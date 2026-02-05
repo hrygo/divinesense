@@ -22,12 +22,13 @@ import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
-import { useBlocks } from "@/hooks/useBlockQueries";
+import { useBlocksWithFallback } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import type { AIMode, ChatItem } from "@/types/aichat";
 import type { Block as AIBlock } from "@/types/block";
+import { isActiveStatus } from "@/types/block";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
 import type { MemoQueryResultData, ScheduleQueryResultData, SessionSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
@@ -293,6 +294,9 @@ const AIChat = () => {
     setCapabilityStatus,
     setMode,
     toggleImmersiveMode,
+    // Phase 4: Block methods
+    appendUserInput,
+    loadBlocks,
   } = aiChat;
 
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
@@ -308,17 +312,22 @@ const AIChat = () => {
     return id ? parseInt(id, 10) : 0;
   }, [currentConversation?.id]);
 
-  // Use Block API as primary data source (falls back to items for new conversations)
-  const { data: blocksData, isLoading: isLoadingBlocks } = useBlocks(
+  // Use Block API as primary data source with error fallback (falls back to items for new conversations)
+  const {
+    blocks: blocksFromApi,
+    isLoading: isLoadingBlocks,
+    shouldFallback: shouldFallbackToItems,
+  } = useBlocksWithFallback(
     currentConversationIdNum,
     undefined, // No filters - get all blocks
     { isActive: true }, // Refetch when active
   );
 
-  const blocks = useMemo(() => blocksData?.blocks || [], [blocksData?.blocks]);
+  // Use blocks from API if available and not in fallback mode, otherwise use empty array
+  const blocks = useMemo(() => (shouldFallbackToItems ? [] : blocksFromApi), [blocksFromApi, shouldFallbackToItems]);
 
-  // Legacy: Get messages from current conversation (fallback for empty blocks)
-  // TODO: Remove once Block API is fully integrated
+  // Legacy: Get messages from current conversation (fallback for empty blocks or API errors)
+  // TODO: Remove once Block API is fully integrated and stable
   const items = useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
 
   const { t } = useTranslation();
@@ -512,6 +521,29 @@ const AIChat = () => {
         return;
       }
 
+      // Phase 4: Check if there's a Block in streaming state
+      // If so, append user input to that Block instead of creating a new message
+      const streamingBlock = blocks?.find((b) => isActiveStatus(b.status));
+      if (streamingBlock) {
+        const blockId = Number(streamingBlock.id);
+        if (blockId > 0) {
+          debugLog("Appending user input to streaming block", { blockId, userMessage });
+          try {
+            await appendUserInput(blockId, userMessage);
+            // Trigger reload to show the appended input
+            const convId = currentConversation?.id;
+            if (convId) {
+              loadBlocks(convId);
+            }
+          } catch (e) {
+            console.error("[AI Chat] Failed to append user input to block:", e);
+            // Fallback to normal message sending if append fails
+          }
+          setInput("");
+          return;
+        }
+      }
+
       // 智能路由：根据输入内容自动识别能力
       const intentResult = capabilityRouter.route(userMessage, currentCapability);
       const targetCapability = intentResult.capability;
@@ -615,6 +647,10 @@ const AIChat = () => {
       addMessage,
       handleParrotChat,
       resetTypingState,
+      // Phase 4: Block append dependencies
+      blocks,
+      appendUserInput,
+      loadBlocks,
     ],
   );
 
