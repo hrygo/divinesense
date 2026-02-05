@@ -82,10 +82,12 @@ export function isTerminalStatus(status: BlockStatusEnum | string): boolean {
 
 /**
  * Type guard for checking if a status is active (pending or streaming)
+ * BlockStatus enum values: UNSPECIFIED=0, PENDING=1, STREAMING=2, COMPLETED=3, ERROR=4
  */
-export function isActiveStatus(status: BlockStatusEnum | string): boolean {
-  const statusStr = typeof status === "string" ? status : String(status);
-  return statusStr === String(BLOCK_STATUS.PENDING) || statusStr === String(BLOCK_STATUS.STREAMING);
+export function isActiveStatus(status: BlockStatusEnum | string | number): boolean {
+  const statusNum = typeof status === "number" ? status : parseInt(String(status), 10) || 0;
+  // PENDING=1 or STREAMING=2 are active states
+  return statusNum === 1 || statusNum === 2;
 }
 
 /**
