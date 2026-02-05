@@ -12,13 +12,13 @@ import (
 
 // mockBlockStore is a mock store for testing BlockManager.
 type mockBlockStore struct {
-	blocks          map[int64]*store.AIBlock
-	nextID          int64
-	createErr       error
-	appendEventErr  error
-	appendInputErr  error
-	updateErr       error
-	getLatestErr    error
+	blocks         map[int64]*store.AIBlock
+	nextID         int64
+	createErr      error
+	appendEventErr error
+	appendInputErr error
+	updateErr      error
+	getLatestErr   error
 }
 
 func newMockBlockStore() *mockBlockStore {
@@ -37,21 +37,21 @@ func (m *mockBlockStore) CreateAIBlockWithRound(ctx context.Context, create *sto
 	m.nextID++
 
 	block := &store.AIBlock{
-		ID:              id,
-		UID:             create.UID,
-		ConversationID:  create.ConversationID,
-		RoundNumber:     0, // Simplified for mock
-		BlockType:       create.BlockType,
-		Mode:            create.Mode,
-		UserInputs:      create.UserInputs,
+		ID:               id,
+		UID:              create.UID,
+		ConversationID:   create.ConversationID,
+		RoundNumber:      0, // Simplified for mock
+		BlockType:        create.BlockType,
+		Mode:             create.Mode,
+		UserInputs:       create.UserInputs,
 		AssistantContent: "",
-		EventStream:     []store.BlockEvent{},
-		SessionStats:    nil,
-		CCSessionID:     create.CCSessionID,
-		Status:          create.Status,
-		Metadata:        create.Metadata,
-		CreatedTs:       create.CreatedTs,
-		UpdatedTs:       create.UpdatedTs,
+		EventStream:      []store.BlockEvent{},
+		SessionStats:     nil,
+		CCSessionID:      create.CCSessionID,
+		Status:           create.Status,
+		Metadata:         create.Metadata,
+		CreatedTs:        create.CreatedTs,
+		UpdatedTs:        create.UpdatedTs,
 	}
 
 	m.blocks[id] = block

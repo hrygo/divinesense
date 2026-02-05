@@ -36,7 +36,7 @@ type ParrotHandler struct {
 	llm          ai.LLMService
 	chatRouter   *agentpkg.ChatRouter
 	persister    *aistats.Persister // session stats persister
-	blockManager *BlockManager            // Phase 5: Unified Block Model support
+	blockManager *BlockManager      // Phase 5: Unified Block Model support
 }
 
 // NewParrotHandler creates a new parrot handler.
@@ -646,7 +646,6 @@ func (h *ParrotHandler) executeAgent(
 		slog.Int64("duration_ms", sessionSummary.TotalDurationMs),
 		slog.Int64("tool_calls", int64(sessionSummary.ToolCallCount)),
 		slog.Bool("done", true),
-		slog.Bool("has_session_summary", sessionSummary != nil),
 	)
 	sendErr := stream.Send(&v1pb.ChatResponse{
 		Done:           true,
@@ -668,26 +667,24 @@ func (h *ParrotHandler) executeAgent(
 		assistantContentMu.Unlock()
 
 		// Convert SessionSummary to store.SessionStats
-		var blockSessionStats *store.SessionStats
-		if sessionSummary != nil {
-			blockSessionStats = &store.SessionStats{
-				SessionID:            sessionSummary.SessionId,
-				UserID:               req.UserID,
-				AgentType:            string(req.AgentType),
-				TotalDurationMs:      sessionSummary.TotalDurationMs,
-				ThinkingDurationMs:   sessionSummary.ThinkingDurationMs,
-				ToolDurationMs:       sessionSummary.ToolDurationMs,
-				GenerationDurationMs: sessionSummary.GenerationDurationMs,
-				InputTokens:          int(sessionSummary.TotalInputTokens),
-				OutputTokens:         int(sessionSummary.TotalOutputTokens),
-				CacheWriteTokens:     int(sessionSummary.TotalCacheWriteTokens),
-				CacheReadTokens:      int(sessionSummary.TotalCacheReadTokens),
-				TotalCostUsd:         sessionSummary.TotalCostUsd,
-				ToolCallCount:        int(sessionSummary.ToolCallCount),
-				ToolsUsed:            sessionSummary.ToolsUsed,
-				FilesModified:        int(sessionSummary.FilesModified),
-				FilePaths:            sessionSummary.FilePaths,
-			}
+		// sessionSummary is always non-nil (created on line 591)
+		blockSessionStats := &store.SessionStats{
+			SessionID:            sessionSummary.SessionId,
+			UserID:               req.UserID,
+			AgentType:            string(req.AgentType),
+			TotalDurationMs:      sessionSummary.TotalDurationMs,
+			ThinkingDurationMs:   sessionSummary.ThinkingDurationMs,
+			ToolDurationMs:       sessionSummary.ToolDurationMs,
+			GenerationDurationMs: sessionSummary.GenerationDurationMs,
+			InputTokens:          int(sessionSummary.TotalInputTokens),
+			OutputTokens:         int(sessionSummary.TotalOutputTokens),
+			CacheWriteTokens:     int(sessionSummary.TotalCacheWriteTokens),
+			CacheReadTokens:      int(sessionSummary.TotalCacheReadTokens),
+			TotalCostUsd:         sessionSummary.TotalCostUsd,
+			ToolCallCount:        int(sessionSummary.ToolCallCount),
+			ToolsUsed:            sessionSummary.ToolsUsed,
+			FilesModified:        int(sessionSummary.FilesModified),
+			FilePaths:            sessionSummary.FilePaths,
 		}
 
 		if execErr != nil {
