@@ -54,7 +54,7 @@ interface UnifiedChatViewProps {
   items: ChatItem[];
   // Phase 4: Block data (primary source when available)
   blocks?: AIBlock[];
-  isLoadingBlocks?: boolean;
+  // isLoadingBlocks?: boolean; // Reserved for future loading state
   currentCapability: CapabilityType;
   capabilityStatus: CapabilityStatus;
   recentMemoCount?: number;
@@ -83,7 +83,7 @@ function UnifiedChatView({
   blockSummary,
   items,
   blocks,
-  isLoadingBlocks, // Reserved for future loading state
+  // isLoadingBlocks, // Reserved for future loading state
   currentCapability,
   capabilityStatus,
   recentMemoCount,
@@ -92,13 +92,8 @@ function UnifiedChatView({
   onModeChange,
   immersiveMode,
   onImmersiveModeToggle,
-  isAdmin = true,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
-  const md = useMediaQuery("md");
-
-  // Silence unused variable warning (reserved for future loading state)
-  void isLoadingBlocks;
 
   // P1-5: Concurrent rendering optimizations
   // Defer non-critical UI updates (query results) to improve input responsiveness
@@ -131,19 +126,16 @@ function UnifiedChatView({
 
   return (
     <div className={cn("w-full h-full flex flex-col relative bg-background", getModeContainerClass(currentMode))}>
-      {/* Desktop Header */}
-      {md && (
-        <ChatHeader
-          currentCapability={currentCapability}
-          capabilityStatus={capabilityStatus}
-          isThinking={isThinking}
-          currentMode={currentMode}
-          onModeChange={onModeChange}
-          immersiveMode={immersiveMode}
-          onImmersiveModeToggle={onImmersiveModeToggle}
-          isAdmin={isAdmin}
-        />
-      )}
+      {/* Header - desktop only */}
+      <ChatHeader
+        className="hidden lg:flex"
+        currentCapability={currentCapability}
+        capabilityStatus={capabilityStatus}
+        isThinking={isThinking}
+        currentMode={currentMode}
+        immersiveMode={immersiveMode}
+        onImmersiveModeToggle={onImmersiveModeToggle}
+      />
 
       {/* Messages Area with Welcome */}
       <ChatMessages
@@ -323,7 +315,7 @@ const AIChat = () => {
   // Use Block API as primary data source with error fallback (falls back to items for new conversations)
   const {
     blocks: blocksFromApi,
-    isLoading: isLoadingBlocks,
+    // isLoading: isLoadingBlocks, // Reserved for future loading state
     shouldFallback: shouldFallbackToItems,
     refetch: refetchBlocks,
   } = useBlocksWithFallback(
@@ -532,18 +524,14 @@ const AIChat = () => {
       const streamingBlock = blocks?.find((b) => isActiveStatus(b.status));
       if (streamingBlock) {
         const blockId = Number(streamingBlock.id);
-        if (blockId > 0) {
-          debugLog("Appending user input to streaming block", { blockId, userMessage });
+        const convId = Number(streamingBlock.conversationId);
+        if (blockId > 0 && convId > 0) {
+          debugLog("Appending user input to streaming block", { blockId, convId, userMessage });
           try {
-            await appendUserInput(blockId, userMessage);
+            // Pass conversationId for optimistic update
+            await appendUserInput(blockId, userMessage, convId);
             // Only clear input AFTER successful append
             setInput("");
-            // Wait a tick for backend to process, then reload
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            const convId = currentConversation?.id;
-            if (convId) {
-              loadBlocks(convId);
-            }
             return;
           } catch (e) {
             console.error("[AI Chat] Failed to append user input to block:", e);
@@ -771,7 +759,7 @@ const AIChat = () => {
       blockSummary={blockSummary}
       items={items}
       blocks={blocks}
-      isLoadingBlocks={isLoadingBlocks}
+      // isLoadingBlocks={isLoadingBlocks} // Reserved for future loading state
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}
       currentMode={currentMode}

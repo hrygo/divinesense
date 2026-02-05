@@ -1,6 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { aiServiceClient } from "@/connect";
+// Import blockKeys for consistent query cache management
+import { blockKeys } from "@/hooks/useBlockQueries";
 import {
   AI_STORAGE_KEYS,
   AIChatContextValue,
@@ -217,6 +220,7 @@ function mergeMessageLists(existing: ChatItem[], incoming: ChatItem[]): ChatItem
 
 export function AIChatProvider({ children, initialState }: AIChatProviderProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AIChatState>(() => {
     // Load mode preferences from localStorage
     let savedAIMode: AIMode = "normal";
@@ -1124,33 +1128,37 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   /**
    * Append user input to an existing block
    * Used during multi-turn conversations within the same block
+   *
+   * Uses invalidate + refetch pattern:
+   * 1. Call API to persist the change
+   * 2. Invalidate and refetch to get updated data
    */
-  const appendUserInput = useCallback(async (blockId: number, content: string) => {
-    try {
-      await aiServiceClient.appendUserInput({
-        id: BigInt(blockId),
-        input: {
-          content,
-          timestamp: BigInt(Date.now()),
-          metadata: JSON.stringify({}),
-        },
-      });
+  const appendUserInput = useCallback(
+    async (blockId: number, content: string, conversationId: number) => {
+      try {
+        // Call API to persist the change
+        await aiServiceClient.appendUserInput({
+          id: BigInt(blockId),
+          input: {
+            content,
+            timestamp: BigInt(Date.now()),
+            metadata: JSON.stringify({}),
+          },
+        });
 
-      // Reload blocks for all conversations that might contain this block
-      // In practice, we'd track which conversation a block belongs to
-      setState((prev) => {
-        const updated = { ...prev.blocksByConversation };
-        for (const convId of Object.keys(updated)) {
-          // Filter out the block that was updated - it will be reloaded on next render
-          updated[convId] = updated[convId].filter((b) => Number(b.id) !== blockId);
-        }
-        return { ...prev, blocksByConversation: updated };
-      });
-    } catch (e) {
-      console.error("Failed to append user input:", e);
-      throw e;
-    }
-  }, []);
+        // Invalidate specific conversation's blocks to trigger refetch
+        await queryClient.invalidateQueries({
+          queryKey: blockKeys.list(conversationId),
+        });
+      } catch (e) {
+        console.error("Failed to append user input:", e);
+        // On error, invalidate cache to trigger refetch of correct state
+        await queryClient.invalidateQueries({ queryKey: blockKeys.lists() });
+        throw e;
+      }
+    },
+    [queryClient],
+  );
 
   /**
    * Update block status locally (optimistic update)

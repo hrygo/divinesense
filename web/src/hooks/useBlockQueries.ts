@@ -10,6 +10,8 @@
 
 import { create } from "@bufbuild/protobuf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ApiError } from "@/config/errors";
+import { createRetryDelay, shouldRetryError } from "@/config/errors";
 import { aiServiceClient } from "@/connect";
 import type {
   AppendEventRequest,
@@ -59,16 +61,12 @@ const STALE_TIMES = {
 
 /** Retry configuration for different error types */
 const RETRY_CONFIG = {
-  /** Network errors - retry with exponential backoff */
-  NETWORK: {
-    retries: 3,
-    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  },
-  /** Timeout errors - retry immediately */
-  TIMEOUT: {
-    retries: 2,
-    retryDelay: 1000,
-  },
+  /** Maximum retry attempts for network errors */
+  MAX_RETRIES: 3,
+  /** Base retry delay in milliseconds */
+  BASE_RETRY_DELAY: 1000,
+  /** Maximum retry delay in milliseconds */
+  MAX_RETRY_DELAY: 30000,
 } as const;
 
 // Query keys factory for consistent cache management
@@ -104,16 +102,11 @@ export function useBlocks(conversationId: number, filters?: Partial<ListBlocksRe
     staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
     gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
     retry: (failureCount, error) => {
-      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
-      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
-      const err = error as any;
-      if (err?.status === 500 || err?.code === "Internal") {
-        return false;
-      }
-      // Use default retry for other errors (network errors, etc.)
-      return failureCount < RETRY_CONFIG.NETWORK.retries;
+      // Use type-safe error handling instead of any
+      const err = error as ApiError;
+      return shouldRetryError(err, failureCount, RETRY_CONFIG.MAX_RETRIES);
     },
-    retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
+    retryDelay: createRetryDelay(RETRY_CONFIG.BASE_RETRY_DELAY, RETRY_CONFIG.MAX_RETRY_DELAY),
     refetchOnWindowFocus: is_active,
     refetchOnReconnect: true,
   });
@@ -137,16 +130,10 @@ export function useBlock(id: number, options?: { enabled?: boolean }) {
     staleTime: STALE_TIMES.BLOCK_DETAIL,
     gcTime: CACHE_TIMES.BLOCK_DETAIL,
     retry: (failureCount, error) => {
-      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
-      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
-      const err = error as any;
-      if (err?.status === 500 || err?.code === "Internal") {
-        return false;
-      }
-      // Use default retry for other errors (network errors, etc.)
-      return failureCount < RETRY_CONFIG.NETWORK.retries;
+      const err = error as ApiError;
+      return shouldRetryError(err, failureCount, RETRY_CONFIG.MAX_RETRIES);
     },
-    retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
+    retryDelay: createRetryDelay(RETRY_CONFIG.BASE_RETRY_DELAY, RETRY_CONFIG.MAX_RETRY_DELAY),
   });
 }
 
@@ -636,16 +623,10 @@ export function useBlocksWithFallback(
     staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
     gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
     retry: (failureCount, error) => {
-      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
-      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
-      const err = error as any;
-      if (err?.status === 500 || err?.code === "Internal") {
-        return false;
-      }
-      // Use default retry for other errors (network errors, etc.)
-      return failureCount < RETRY_CONFIG.NETWORK.retries;
+      const err = error as ApiError;
+      return shouldRetryError(err, failureCount, RETRY_CONFIG.MAX_RETRIES);
     },
-    retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
+    retryDelay: createRetryDelay(RETRY_CONFIG.BASE_RETRY_DELAY, RETRY_CONFIG.MAX_RETRY_DELAY),
     refetchOnWindowFocus: is_active,
     refetchOnReconnect: true,
   });

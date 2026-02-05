@@ -420,18 +420,18 @@
    ============================================================ */
 
 /* Navigation Drawer Logo 动效 - 根据 body 模式类应用 */
-body img[src="/logo.webp"] {
+.logo-animated[src="/logo.webp"] {
   animation: logo-breathe-gentle 3s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
 /* 极客模式 - 故障效果 */
-.geek-mode img[src="/logo.webp"] {
+.geek-mode .logo-animated[src="/logo.webp"] {
   animation: logo-glitch 1.5s steps(4) infinite;
 }
 
 /* 进化模式 - 有机脉动 */
-.evolution-mode img[src="/logo.webp"] {
+.evolution-mode .logo-animated[src="/logo.webp"] {
   animation: logo-evolution 2.5s ease-in-out infinite;
 }
 
@@ -439,38 +439,34 @@ body img[src="/logo.webp"] {
 @keyframes logo-breathe-gentle {
   0%,
   100% {
-    opacity: 0.7;
+    opacity: 0.85;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.12);
+    transform: scale(1.04);
   }
 }
 
 @keyframes logo-glitch {
   0% {
-    opacity: 0.85;
+    opacity: 0.9;
     transform: translateX(0) scale(1);
   }
-  20% {
+  25% {
     opacity: 1;
-    transform: translateX(-3px) scale(1.05);
+    transform: translateX(-1px) scale(1.02);
   }
-  40% {
-    opacity: 0.9;
-    transform: translateX(3px) scale(0.95);
-  }
-  60% {
-    opacity: 1;
-    transform: translateX(-2px) scale(1.08);
-  }
-  80% {
+  50% {
     opacity: 0.95;
-    transform: translateX(2px) scale(0.98);
+    transform: translateX(1px) scale(0.98);
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(-1px) scale(1.02);
   }
   100% {
-    opacity: 0.85;
+    opacity: 0.9;
     transform: translateX(0) scale(1);
   }
 }
@@ -478,20 +474,12 @@ body img[src="/logo.webp"] {
 @keyframes logo-evolution {
   0%,
   100% {
-    opacity: 0.85;
+    opacity: 0.9;
     transform: scale(1) rotate(0deg);
-  }
-  25% {
-    opacity: 1;
-    transform: scale(1.15) rotate(5deg);
   }
   50% {
     opacity: 1;
-    transform: scale(1.2) rotate(0deg);
-  }
-  75% {
-    opacity: 1;
-    transform: scale(1.15) rotate(-5deg);
+    transform: scale(1.06) rotate(2deg);
   }
 }
 

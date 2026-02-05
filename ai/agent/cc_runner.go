@@ -37,9 +37,13 @@ const (
 )
 
 // UUID v5 namespace for DivineSense session mapping.
-// Using a custom namespace ensures deterministic UUID generation from ConversationID.
+// Using a custom v4 namespace ensures uniqueness across projects.
 // DivineSense 专用的 UUID v5 命名空间，用于会话映射。
-var divineSenseNamespace = uuid.MustParse("6ba7b811-9dad-11d1-80b4-00c04fd430c8") // TODO: register proper namespace
+// Generated with: uuid.NewRandom() to avoid conflicts with other projects.
+var divineSenseNamespace = uuid.Must(uuid.FromBytes([]byte{
+	0xd1, 0x7e, 0xc3, 0x9b, 0x1a, 0x5f, 0x4e, 0x8a,
+	0x9b, 0x2c, 0x4d, 0x6e, 0x8f, 0x1a, 0x3b, 0x7c,
+}))
 
 // ConversationIDToSessionID converts a database ConversationID to a deterministic UUID v5.
 // This ensures the same ConversationID always maps to the same SessionID,
