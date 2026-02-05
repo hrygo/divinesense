@@ -59,8 +59,8 @@ interface ChatMessagesProps {
   /** Phase 2: 流式渲染支持 */
   isStreaming?: boolean;
   streamingContent?: string;
-  /** Session summary for Geek/Evolution modes */
-  sessionSummary?: BlockSummary;
+  /** Block summary for Geek/Evolution modes */
+  blockSummary?: BlockSummary;
   /** Phase 4: Block data support */
   blocks?: AIBlock[];
 }
@@ -273,7 +273,7 @@ const ChatMessages = memo(function ChatMessages({
   amazingInsightCard,
   isStreaming = false,
   streamingContent = "",
-  sessionSummary,
+  blockSummary,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -401,11 +401,11 @@ const ChatMessages = memo(function ChatMessages({
   const messageBlocks = useMemo(() => {
     if (blocks && blocks.length > 0) {
       // Use new Block data structure
-      return convertAIBlocksToMessageBlocks(blocks, !!sessionSummary, t);
+      return convertAIBlocksToMessageBlocks(blocks, !!blockSummary, t);
     }
     // Legacy: use ChatItem[] structure
-    return groupMessagesIntoBlocks(items, !!sessionSummary, t);
-  }, [blocks, items, sessionSummary, t]);
+    return groupMessagesIntoBlocks(items, !!blockSummary, t);
+  }, [blocks, items, blockSummary, t]);
 
   // Phase 4: Check streaming status from either blocks or props (using extracted hook)
   const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);
@@ -503,7 +503,7 @@ const ChatMessages = memo(function ChatMessages({
                 key={block.id}
                 userMessage={block.userMessage}
                 assistantMessage={block.assistantMessage}
-                blockSummary={block.attachBlockSummary ? sessionSummary : undefined}
+                blockSummary={block.attachBlockSummary ? blockSummary : undefined}
                 parrotId={blockParrotId}
                 isLatest={block.isLatest}
                 isStreaming={isLastStreaming && block.isLatest}
