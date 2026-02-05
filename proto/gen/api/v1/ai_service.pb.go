@@ -1740,8 +1740,8 @@ type ChatResponse struct {
 	EventData string `protobuf:"bytes,7,opt,name=event_data,json=eventData,proto3" json:"event_data,omitempty"` // Event data (JSON or plain text depending on event type)
 	// Event metadata for Geek Mode and Evolution Mode observability
 	EventMeta *EventMetadata `protobuf:"bytes,8,opt,name=event_meta,json=eventMeta,proto3" json:"event_meta,omitempty"` // Enhanced metadata for events (timing, tokens, tool info)
-	// Session summary sent when done=true
-	SessionSummary *SessionSummary `protobuf:"bytes,9,opt,name=session_summary,json=sessionSummary,proto3" json:"session_summary,omitempty"` // Summary statistics for the completed session
+	// Block summary sent when done=true (statistics for this single chat round)
+	BlockSummary *BlockSummary `protobuf:"bytes,9,opt,name=block_summary,json=blockSummary,proto3" json:"block_summary,omitempty"` // Summary statistics for the completed block
 	// Phase 4: Block ID for Unified Block Model
 	BlockId       int64 `protobuf:"varint,10,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"` // Block ID for this conversation round (allows frontend to update Block state during streaming)
 	unknownFields protoimpl.UnknownFields
@@ -1834,9 +1834,9 @@ func (x *ChatResponse) GetEventMeta() *EventMetadata {
 	return nil
 }
 
-func (x *ChatResponse) GetSessionSummary() *SessionSummary {
+func (x *ChatResponse) GetBlockSummary() *BlockSummary {
 	if x != nil {
-		return x.SessionSummary
+		return x.BlockSummary
 	}
 	return nil
 }
@@ -3971,15 +3971,17 @@ func (x *EventMetadata) GetLineCount() int32 {
 	return 0
 }
 
-// SessionSummary provides end-of-session statistics for Geek/Evolution modes.
+// BlockSummary provides end-of-block statistics for a single chat round.
 // Sent in the final ChatResponse when done=true.
 //
+// This represents statistics for a SINGLE Block, not the entire conversation.
+// For conversation-level aggregation, query across multiple Blocks.
+//
 // NOTE: Mode is NOT included here - use Block.mode as the single source of truth.
-// The session mode is determined by the Block that contains this session.
-type SessionSummary struct {
+type BlockSummary struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Session identification
-	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // Claude Code CLI session ID
+	// Session identification (for Geek/Evolution modes)
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // Claude Code CLI session ID (only for geek/evolution blocks)
 	// Overall timing
 	TotalDurationMs      int64 `protobuf:"varint,2,opt,name=total_duration_ms,json=totalDurationMs,proto3" json:"total_duration_ms,omitempty"`                // Total session duration in milliseconds
 	ThinkingDurationMs   int64 `protobuf:"varint,3,opt,name=thinking_duration_ms,json=thinkingDurationMs,proto3" json:"thinking_duration_ms,omitempty"`       // Time spent in "thinking" state
@@ -4005,20 +4007,20 @@ type SessionSummary struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SessionSummary) Reset() {
-	*x = SessionSummary{}
+func (x *BlockSummary) Reset() {
+	*x = BlockSummary{}
 	mi := &file_api_v1_ai_service_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SessionSummary) String() string {
+func (x *BlockSummary) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SessionSummary) ProtoMessage() {}
+func (*BlockSummary) ProtoMessage() {}
 
-func (x *SessionSummary) ProtoReflect() protoreflect.Message {
+func (x *BlockSummary) ProtoReflect() protoreflect.Message {
 	mi := &file_api_v1_ai_service_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4030,117 +4032,117 @@ func (x *SessionSummary) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SessionSummary.ProtoReflect.Descriptor instead.
-func (*SessionSummary) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlockSummary.ProtoReflect.Descriptor instead.
+func (*BlockSummary) Descriptor() ([]byte, []int) {
 	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{55}
 }
 
-func (x *SessionSummary) GetSessionId() string {
+func (x *BlockSummary) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
 	}
 	return ""
 }
 
-func (x *SessionSummary) GetTotalDurationMs() int64 {
+func (x *BlockSummary) GetTotalDurationMs() int64 {
 	if x != nil {
 		return x.TotalDurationMs
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetThinkingDurationMs() int64 {
+func (x *BlockSummary) GetThinkingDurationMs() int64 {
 	if x != nil {
 		return x.ThinkingDurationMs
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetToolDurationMs() int64 {
+func (x *BlockSummary) GetToolDurationMs() int64 {
 	if x != nil {
 		return x.ToolDurationMs
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetGenerationDurationMs() int64 {
+func (x *BlockSummary) GetGenerationDurationMs() int64 {
 	if x != nil {
 		return x.GenerationDurationMs
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetTotalInputTokens() int32 {
+func (x *BlockSummary) GetTotalInputTokens() int32 {
 	if x != nil {
 		return x.TotalInputTokens
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetTotalOutputTokens() int32 {
+func (x *BlockSummary) GetTotalOutputTokens() int32 {
 	if x != nil {
 		return x.TotalOutputTokens
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetTotalCacheWriteTokens() int32 {
+func (x *BlockSummary) GetTotalCacheWriteTokens() int32 {
 	if x != nil {
 		return x.TotalCacheWriteTokens
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetTotalCacheReadTokens() int32 {
+func (x *BlockSummary) GetTotalCacheReadTokens() int32 {
 	if x != nil {
 		return x.TotalCacheReadTokens
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetToolCallCount() int32 {
+func (x *BlockSummary) GetToolCallCount() int32 {
 	if x != nil {
 		return x.ToolCallCount
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetToolsUsed() []string {
+func (x *BlockSummary) GetToolsUsed() []string {
 	if x != nil {
 		return x.ToolsUsed
 	}
 	return nil
 }
 
-func (x *SessionSummary) GetFilesModified() int32 {
+func (x *BlockSummary) GetFilesModified() int32 {
 	if x != nil {
 		return x.FilesModified
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetFilePaths() []string {
+func (x *BlockSummary) GetFilePaths() []string {
 	if x != nil {
 		return x.FilePaths
 	}
 	return nil
 }
 
-func (x *SessionSummary) GetTotalCostUsd() float64 {
+func (x *BlockSummary) GetTotalCostUsd() float64 {
 	if x != nil {
 		return x.TotalCostUsd
 	}
 	return 0
 }
 
-func (x *SessionSummary) GetStatus() string {
+func (x *BlockSummary) GetStatus() string {
 	if x != nil {
 		return x.Status
 	}
 	return ""
 }
 
-func (x *SessionSummary) GetErrorMsg() string {
+func (x *BlockSummary) GetErrorMsg() string {
 	if x != nil {
 		return x.ErrorMsg
 	}
@@ -5819,7 +5821,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\tR\toperation\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12'\n" +
 	"\x0fpattern_matched\x18\x03 \x01(\tR\x0epatternMatched\x12%\n" +
-	"\x0ebypass_allowed\x18\x04 \x01(\bR\rbypassAllowed\"\xe9\x03\n" +
+	"\x0ebypass_allowed\x18\x04 \x01(\bR\rbypassAllowed\"\xe3\x03\n" +
 	"\fChatResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12\x12\n" +
@@ -5831,8 +5833,8 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\n" +
 	"event_data\x18\a \x01(\tR\teventData\x12:\n" +
 	"\n" +
-	"event_meta\x18\b \x01(\v2\x1b.memos.api.v1.EventMetadataR\teventMeta\x12E\n" +
-	"\x0fsession_summary\x18\t \x01(\v2\x1c.memos.api.v1.SessionSummaryR\x0esessionSummary\x12\x19\n" +
+	"event_meta\x18\b \x01(\v2\x1b.memos.api.v1.EventMetadataR\teventMeta\x12?\n" +
+	"\rblock_summary\x18\t \x01(\v2\x1a.memos.api.v1.BlockSummaryR\fblockSummary\x12\x19\n" +
 	"\bblock_id\x18\n" +
 	" \x01(\x03R\ablockId\"\x85\x01\n" +
 	"\x16ScheduleCreationIntent\x12\x1a\n" +
@@ -6017,8 +6019,8 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x0eoutput_summary\x18\f \x01(\tR\routputSummary\x12\x1b\n" +
 	"\tfile_path\x18\r \x01(\tR\bfilePath\x12\x1d\n" +
 	"\n" +
-	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xa3\x05\n" +
-	"\x0eSessionSummary\x12\x1d\n" +
+	"line_count\x18\x0e \x01(\x05R\tlineCount\"\xa1\x05\n" +
+	"\fBlockSummary\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12*\n" +
 	"\x11total_duration_ms\x18\x02 \x01(\x03R\x0ftotalDurationMs\x120\n" +
@@ -6344,7 +6346,7 @@ var file_api_v1_ai_service_proto_goTypes = []any{
 	(*GetReviewStatsRequest)(nil),            // 58: memos.api.v1.GetReviewStatsRequest
 	(*GetReviewStatsResponse)(nil),           // 59: memos.api.v1.GetReviewStatsResponse
 	(*EventMetadata)(nil),                    // 60: memos.api.v1.EventMetadata
-	(*SessionSummary)(nil),                   // 61: memos.api.v1.SessionSummary
+	(*BlockSummary)(nil),                     // 61: memos.api.v1.BlockSummary
 	(*SessionStats)(nil),                     // 62: memos.api.v1.SessionStats
 	(*GetSessionStatsRequest)(nil),           // 63: memos.api.v1.GetSessionStatsRequest
 	(*ListSessionStatsRequest)(nil),          // 64: memos.api.v1.ListSessionStatsRequest
@@ -6379,7 +6381,7 @@ var file_api_v1_ai_service_proto_depIdxs = []int32{
 	30, // 8: memos.api.v1.ChatResponse.schedule_creation_intent:type_name -> memos.api.v1.ScheduleCreationIntent
 	31, // 9: memos.api.v1.ChatResponse.schedule_query_result:type_name -> memos.api.v1.ScheduleQueryResult
 	60, // 10: memos.api.v1.ChatResponse.event_meta:type_name -> memos.api.v1.EventMetadata
-	61, // 11: memos.api.v1.ChatResponse.session_summary:type_name -> memos.api.v1.SessionSummary
+	61, // 11: memos.api.v1.ChatResponse.block_summary:type_name -> memos.api.v1.BlockSummary
 	32, // 12: memos.api.v1.ScheduleQueryResult.schedules:type_name -> memos.api.v1.ScheduleSummary
 	11, // 13: memos.api.v1.GetRelatedMemosResponse.memos:type_name -> memos.api.v1.SearchResult
 	1,  // 14: memos.api.v1.GetParrotSelfCognitionRequest.agent_type:type_name -> memos.api.v1.AgentType

@@ -30,7 +30,7 @@ import type { AIMode, ChatItem } from "@/types/aichat";
 import type { Block as AIBlock } from "@/types/block";
 import { isActiveStatus } from "@/types/block";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
-import type { MemoQueryResultData, ScheduleQueryResultData, SessionSummary } from "@/types/parrot";
+import type { MemoQueryResultData, ScheduleQueryResultData, BlockSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
 
 // ============================================================
@@ -50,7 +50,7 @@ interface UnifiedChatViewProps {
   onClearContext: () => void;
   memoQueryResults: MemoQueryResultData[];
   scheduleQueryResults: ScheduleQueryResultData[];
-  sessionSummary?: SessionSummary;
+  blockSummary?: BlockSummary;
   items: ChatItem[];
   // Phase 4: Block data (primary source when available)
   blocks?: AIBlock[];
@@ -80,7 +80,7 @@ function UnifiedChatView({
   onClearContext,
   memoQueryResults,
   scheduleQueryResults,
-  sessionSummary,
+  blockSummary,
   items,
   blocks,
   isLoadingBlocks, // Reserved for future loading state
@@ -158,7 +158,7 @@ function UnifiedChatView({
             <AmazingInsightCard memos={deferredMemoResults[0]?.memos ?? []} schedules={deferredScheduleResults[0]?.schedules ?? []} />
           ) : undefined
         }
-        sessionSummary={sessionSummary}
+        blockSummary={blockSummary}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
         {(blocks?.length ?? 0) === 0 && items.length === 0 && (
@@ -253,7 +253,7 @@ const AIChat = () => {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [memoQueryResults, setMemoQueryResults] = useState<MemoQueryResultData[]>([]);
   const [scheduleQueryResults, setScheduleQueryResults] = useState<ScheduleQueryResultData[]>([]);
-  const [sessionSummary, setSessionSummary] = useState<SessionSummary | undefined>();
+  const [blockSummary, setBlockSummary] = useState<BlockSummary | undefined>();
   const [showCapabilityPanel, setShowCapabilityPanel] = useState(false);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -444,9 +444,9 @@ const AIChat = () => {
               });
             }
           },
-          onSessionSummary: (summary) => {
-            debugLog("[Geek/Evolution Mode] Session summary:", summary);
-            setSessionSummary(summary);
+          onBlockSummary: (summary) => {
+            debugLog("[Geek/Evolution Mode] Block summary:", summary);
+            setBlockSummary(summary);
           },
           onMemoQueryResult: (result) => {
             if (_messageId === messageIdRef.current) {
@@ -759,7 +759,7 @@ const AIChat = () => {
       onClearContext={handleClearContext}
       memoQueryResults={memoQueryResults}
       scheduleQueryResults={scheduleQueryResults}
-      sessionSummary={sessionSummary}
+      blockSummary={blockSummary}
       items={items}
       blocks={blocks}
       isLoadingBlocks={isLoadingBlocks}

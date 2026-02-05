@@ -437,8 +437,8 @@ message ChatResponse {
   // Event metadata for Geek Mode and Evolution Mode observability
   EventMetadata event_meta = 8; // Enhanced metadata for events (timing, tokens, tool info)
 
-  // Session summary sent when done=true
-  SessionSummary session_summary = 9; // Summary statistics for the completed session
+  // Block summary sent when done=true (statistics for this single chat round)
+  BlockSummary block_summary = 9; // Summary statistics for the completed block
 
   // Phase 4: Block ID for Unified Block Model
   int64 block_id = 10; // Block ID for this conversation round (allows frontend to update Block state during streaming)
@@ -713,14 +713,16 @@ message EventMetadata {
   int32 line_count = 14; // Number of lines affected (for edit operations)
 }
 
-// SessionSummary provides end-of-session statistics for Geek/Evolution modes.
+// BlockSummary provides end-of-block statistics for a single chat round.
 // Sent in the final ChatResponse when done=true.
 //
+// This represents statistics for a SINGLE Block, not the entire conversation.
+// For conversation-level aggregation, query across multiple Blocks.
+//
 // NOTE: Mode is NOT included here - use Block.mode as the single source of truth.
-// The session mode is determined by the Block that contains this session.
-message SessionSummary {
-  // Session identification
-  string session_id = 1; // Claude Code CLI session ID
+message BlockSummary {
+  // Session identification (for Geek/Evolution modes)
+  string session_id = 1; // Claude Code CLI session ID (only for geek/evolution blocks)
 
   // Overall timing
   int64 total_duration_ms = 2; // Total session duration in milliseconds

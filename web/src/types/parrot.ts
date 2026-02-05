@@ -292,13 +292,13 @@ export interface ScheduleSummary {
 }
 
 /**
- * Session summary for Geek/Evolution modes
- * 会话摘要 - 用于极客模式和进化模式
+ * Block summary for a single chat round (Block)
+ * Block 摘要 - 单个聊天轮次的统计
  *
- * NOTE: Mode has been removed from SessionSummary - use Block.mode as the single source of truth.
- * The mode is determined by the Block that contains this session's data.
+ * This represents statistics for a SINGLE Block, not the entire conversation.
+ * NOTE: Mode has been removed - use Block.mode as the single source of truth.
  */
-export interface SessionSummary {
+export interface BlockSummary {
   sessionId?: string;
   totalDurationMs?: number;
   thinkingDurationMs?: number;

@@ -34,8 +34,8 @@ interface EventMetadata {
   lineCount?: number;
 }
 
-// Session summary for Geek/Evolution modes
-interface SessionSummary {
+// Block summary for Geek/Evolution modes (per-block statistics, not session-level)
+interface BlockSummary {
   sessionId?: string;
   totalDurationMs?: number;
   thinkingDurationMs?: number;
@@ -203,7 +203,7 @@ export function useChat() {
           count: number;
         }) => void;
         // Observability callbacks (Geek/Evolution modes)
-        onSessionSummary?: (summary: SessionSummary) => void;
+        onBlockSummary?: (summary: BlockSummary) => void;
       },
     ) => {
       const request = create(ChatRequestSchema, {
@@ -281,7 +281,7 @@ export function useChat() {
               hasEventType: !!response.eventType,
               hasEventMeta: !!response.eventMeta,
               done: response.done,
-              hasSessionSummary: !!response.sessionSummary,
+              hasBlockSummary: !!response.blockSummary,
               hasBlockId: response.blockId !== undefined && response.blockId !== 0n,
               blockId: response.blockId,
               eventType: response.eventType,
@@ -471,40 +471,40 @@ export function useChat() {
             if (import.meta.env.DEV) {
               console.log("[AI Chat] Received done=true signal", {
                 responseCount,
-                hasSessionSummary: !!response.sessionSummary,
-                sessionId: response.sessionSummary?.sessionId,
-                sessionSummary: response.sessionSummary,
+                hasBlockSummary: !!response.blockSummary,
+                sessionId: response.blockSummary?.sessionId,
+                blockSummary: response.blockSummary,
                 fullResponse: response,
               });
             }
             doneCalled = true;
-            // Send session summary if available (Geek/Evolution modes)
-            if (response.sessionSummary) {
-              // Convert proto SessionSummary (bigint fields) to local SessionSummary (number fields)
+            // Send block summary if available (Geek/Evolution modes)
+            if (response.blockSummary) {
+              // Convert proto BlockSummary (bigint fields) to local BlockSummary (number fields)
+              // Note: mode is NOT included here - use Block.mode as the single source of truth
               const summary = {
-                sessionId: response.sessionSummary.sessionId,
-                mode: response.sessionSummary.mode, // "geek" | "evolution" | "normal"
-                totalDurationMs: response.sessionSummary.totalDurationMs ? Number(response.sessionSummary.totalDurationMs) : undefined,
-                thinkingDurationMs: response.sessionSummary.thinkingDurationMs
-                  ? Number(response.sessionSummary.thinkingDurationMs)
+                sessionId: response.blockSummary.sessionId,
+                totalDurationMs: response.blockSummary.totalDurationMs ? Number(response.blockSummary.totalDurationMs) : undefined,
+                thinkingDurationMs: response.blockSummary.thinkingDurationMs
+                  ? Number(response.blockSummary.thinkingDurationMs)
                   : undefined,
-                toolDurationMs: response.sessionSummary.toolDurationMs ? Number(response.sessionSummary.toolDurationMs) : undefined,
-                generationDurationMs: response.sessionSummary.generationDurationMs
-                  ? Number(response.sessionSummary.generationDurationMs)
+                toolDurationMs: response.blockSummary.toolDurationMs ? Number(response.blockSummary.toolDurationMs) : undefined,
+                generationDurationMs: response.blockSummary.generationDurationMs
+                  ? Number(response.blockSummary.generationDurationMs)
                   : undefined,
-                totalInputTokens: response.sessionSummary.totalInputTokens,
-                totalOutputTokens: response.sessionSummary.totalOutputTokens,
-                totalCacheWriteTokens: response.sessionSummary.totalCacheWriteTokens,
-                totalCacheReadTokens: response.sessionSummary.totalCacheReadTokens,
-                toolCallCount: response.sessionSummary.toolCallCount,
-                toolsUsed: response.sessionSummary.toolsUsed,
-                filesModified: response.sessionSummary.filesModified,
-                filePaths: response.sessionSummary.filePaths,
-                totalCostUSD: response.sessionSummary.totalCostUsd,
-                status: response.sessionSummary.status,
-                errorMsg: response.sessionSummary.errorMsg,
+                totalInputTokens: response.blockSummary.totalInputTokens,
+                totalOutputTokens: response.blockSummary.totalOutputTokens,
+                totalCacheWriteTokens: response.blockSummary.totalCacheWriteTokens,
+                totalCacheReadTokens: response.blockSummary.totalCacheReadTokens,
+                toolCallCount: response.blockSummary.toolCallCount,
+                toolsUsed: response.blockSummary.toolsUsed,
+                filesModified: response.blockSummary.filesModified,
+                filePaths: response.blockSummary.filePaths,
+                totalCostUSD: response.blockSummary.totalCostUsd,
+                status: response.blockSummary.status,
+                errorMsg: response.blockSummary.errorMsg,
               };
-              callbacks?.onSessionSummary?.(summary);
+              callbacks?.onBlockSummary?.(summary);
             }
             callbacks?.onDone?.();
             break;

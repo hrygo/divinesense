@@ -3843,6 +3843,67 @@ components:
             description: |-
                 BlockEvent represents an event in the event stream.
                  Events are stored chronologically and track the AI's process.
+        BlockSummary:
+            type: object
+            properties:
+                sessionId:
+                    type: string
+                    description: Session identification (for Geek/Evolution modes)
+                totalDurationMs:
+                    type: string
+                    description: Overall timing
+                thinkingDurationMs:
+                    type: string
+                toolDurationMs:
+                    type: string
+                generationDurationMs:
+                    type: string
+                totalInputTokens:
+                    type: integer
+                    description: Token usage
+                    format: int32
+                totalOutputTokens:
+                    type: integer
+                    format: int32
+                totalCacheWriteTokens:
+                    type: integer
+                    format: int32
+                totalCacheReadTokens:
+                    type: integer
+                    format: int32
+                toolCallCount:
+                    type: integer
+                    description: Tool call statistics
+                    format: int32
+                toolsUsed:
+                    type: array
+                    items:
+                        type: string
+                filesModified:
+                    type: integer
+                    description: File operations (for Evolution Mode)
+                    format: int32
+                filePaths:
+                    type: array
+                    items:
+                        type: string
+                totalCostUsd:
+                    type: number
+                    description: Cost tracking (from Claude Code CLI)
+                    format: double
+                status:
+                    type: string
+                    description: Status
+                errorMsg:
+                    type: string
+            description: |-
+                BlockSummary provides end-of-block statistics for a single chat round.
+                 Sent in the final ChatResponse when done=true.
+
+                 This represents statistics for a SINGLE Block, not the entire conversation.
+                 For conversation-level aggregation, query across multiple Blocks.
+
+                 NOTE: Mode is NOT included here - use Block.mode as the single source of truth.
         ChatRequest:
             required:
                 - message
@@ -3908,10 +3969,10 @@ components:
                     allOf:
                         - $ref: '#/components/schemas/EventMetadata'
                     description: Event metadata for Geek Mode and Evolution Mode observability
-                sessionSummary:
+                blockSummary:
                     allOf:
-                        - $ref: '#/components/schemas/SessionSummary'
-                    description: Session summary sent when done=true
+                        - $ref: '#/components/schemas/BlockSummary'
+                    description: Block summary sent when done=true (statistics for this single chat round)
                 blockId:
                     type: string
                     description: 'Phase 4: Block ID for Unified Block Model'
@@ -5533,65 +5594,6 @@ components:
                 updatedAt:
                     type: string
             description: SessionStats represents detailed statistics for a single session.
-        SessionSummary:
-            type: object
-            properties:
-                sessionId:
-                    type: string
-                    description: Session identification
-                totalDurationMs:
-                    type: string
-                    description: Overall timing
-                thinkingDurationMs:
-                    type: string
-                toolDurationMs:
-                    type: string
-                generationDurationMs:
-                    type: string
-                totalInputTokens:
-                    type: integer
-                    description: Token usage
-                    format: int32
-                totalOutputTokens:
-                    type: integer
-                    format: int32
-                totalCacheWriteTokens:
-                    type: integer
-                    format: int32
-                totalCacheReadTokens:
-                    type: integer
-                    format: int32
-                toolCallCount:
-                    type: integer
-                    description: Tool call statistics
-                    format: int32
-                toolsUsed:
-                    type: array
-                    items:
-                        type: string
-                filesModified:
-                    type: integer
-                    description: File operations (for Evolution Mode)
-                    format: int32
-                filePaths:
-                    type: array
-                    items:
-                        type: string
-                totalCostUsd:
-                    type: number
-                    description: Cost tracking (from Claude Code CLI)
-                    format: double
-                status:
-                    type: string
-                    description: Status
-                errorMsg:
-                    type: string
-            description: |-
-                SessionSummary provides end-of-session statistics for Geek/Evolution modes.
-                 Sent in the final ChatResponse when done=true.
-
-                 NOTE: Mode is NOT included here - use Block.mode as the single source of truth.
-                 The session mode is determined by the Block that contains this session.
         SetMemoAttachmentsRequest:
             required:
                 - name

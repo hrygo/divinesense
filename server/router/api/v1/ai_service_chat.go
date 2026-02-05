@@ -262,7 +262,7 @@ func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
 	// Log for debugging
 	if resp.Done {
 		slog.Info("eventCollectingStream: Sending done=true to frontend",
-			"has_summary", resp.SessionSummary != nil,
+			"has_summary", resp.BlockSummary != nil,
 			"event_type", resp.EventType)
 	}
 

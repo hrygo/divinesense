@@ -46,7 +46,7 @@ import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSumma
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
 import { ConversationMessage } from "@/types/aichat";
-import { PARROT_THEMES, ParrotAgentType, SessionSummary } from "@/types/parrot";
+import { PARROT_THEMES, ParrotAgentType, BlockSummary } from "@/types/parrot";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
@@ -89,8 +89,8 @@ export interface UnifiedMessageBlockProps {
   additionalUserInputs?: ConversationMessage[];
   /** Assistant message (may be streaming) */
   assistantMessage?: ConversationMessage;
-  /** Session summary for Geek/Evolution modes */
-  sessionSummary?: SessionSummary;
+  /** Block summary for this chat round (Geek/Evolution modes) */
+  blockSummary?: BlockSummary;
   /** Current parrot agent type */
   parrotId?: ParrotAgentType;
   /** Whether this is the latest block */
@@ -277,7 +277,7 @@ function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boole
 interface BlockHeaderProps {
   userMessage: ConversationMessage;
   assistantMessage?: ConversationMessage;
-  sessionSummary?: SessionSummary;
+  blockSummary?: BlockSummary;
   parrotId?: ParrotAgentType;
   theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
   onToggle: () => void;
@@ -290,7 +290,7 @@ interface BlockHeaderProps {
 function BlockHeader({
   userMessage,
   assistantMessage,
-  sessionSummary,
+  blockSummary,
   parrotId,
   theme,
   onToggle,
@@ -334,19 +334,19 @@ function BlockHeader({
     return "border-l-4 border-l-transparent";
   }, [isStreaming, assistantMessage]);
 
-  // Geek Mode Summary Info
+  // Geek/Evolution Mode Summary Info
   const geekSummary = useMemo(() => {
-    if (!sessionSummary || (parrotId !== "GEEK" && parrotId !== "EVOLUTION")) return null;
+    if (!blockSummary || (parrotId !== "GEEK" && parrotId !== "EVOLUTION")) return null;
 
-    const cost = sessionSummary.totalCostUSD ? `$${sessionSummary.totalCostUSD.toFixed(4)}` : "";
+    const cost = blockSummary.totalCostUsd ? `$${blockSummary.totalCostUsd.toFixed(4)}` : "";
     const tokens =
-      sessionSummary.totalInputTokens && sessionSummary.totalOutputTokens
-        ? `${((sessionSummary.totalInputTokens + sessionSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
+      blockSummary.totalInputTokens && blockSummary.totalOutputTokens
+        ? `${((blockSummary.totalInputTokens + blockSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
         : "";
-    const time = sessionSummary.totalDurationMs ? `${(sessionSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
+    const time = blockSummary.totalDurationMs ? `${(blockSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
 
     return { cost, tokens, time };
-  }, [sessionSummary, parrotId]);
+  }, [blockSummary, parrotId]);
 
   return (
     <div
@@ -547,7 +547,7 @@ interface BlockBodyProps {
   userMessage?: ConversationMessage;
   additionalUserInputs?: ConversationMessage[];
   assistantMessage?: ConversationMessage;
-  sessionSummary?: SessionSummary;
+  blockSummary?: BlockSummary;
   isCollapsed: boolean;
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
   streamingPhase?: "thinking" | "tools" | "answer" | null;
@@ -559,7 +559,7 @@ function BlockBody({
   userMessage,
   additionalUserInputs = [],
   assistantMessage,
-  sessionSummary,
+  blockSummary,
   isCollapsed,
   themeColors,
   streamingPhase = null,
@@ -937,14 +937,14 @@ function BlockBody({
               </div>
             </div>
           )}
-          {/* 5. Session Summary (Detailed view for all modes if present) */}
-          {sessionSummary && (
+          {/* 5. Block Summary (Detailed view for all modes if present) */}
+          {blockSummary && (
             <div className="relative">
               <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-500 flex items-center justify-center shrink-0 z-10 transition-colors">
                 <BarChart3 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
               </div>
               <div className="pl-0">
-                <ExpandedSessionSummary summary={sessionSummary} />
+                <ExpandedSessionSummary summary={blockSummary} />
               </div>
             </div>
           )}
@@ -1079,7 +1079,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   userMessage,
   additionalUserInputs = [],
   assistantMessage,
-  sessionSummary,
+  blockSummary,
   parrotId,
   isLatest = false,
   isStreaming = false,
@@ -1146,7 +1146,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         <BlockHeader
           userMessage={userMessage}
           assistantMessage={assistantMessage}
-          sessionSummary={sessionSummary}
+          blockSummary={blockSummary}
           parrotId={parrotId}
           theme={blockTheme}
           onToggle={toggleCollapse}
@@ -1161,7 +1161,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         userMessage={userMessage}
         additionalUserInputs={additionalUserInputs}
         assistantMessage={assistantMessage}
-        sessionSummary={sessionSummary}
+        blockSummary={blockSummary}
         isCollapsed={collapsed}
         themeColors={themeColors}
         streamingPhase={streamingPhase}

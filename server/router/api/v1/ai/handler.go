@@ -425,7 +425,7 @@ func (h *ParrotHandler) executeAgent(
 			}
 		} else if eventType == agentpkg.EventTypeSessionStats {
 			// Handle session_stats event (from CCRunner result message)
-			// Extract and store total cost for final SessionSummary
+			// Extract and store total cost for final BlockSummary
 			if sessionStatsData, ok := eventData.(*agentpkg.SessionStatsData); ok {
 				costMu.Lock()
 				totalCostUsd = sessionStatsData.TotalCostUSD
@@ -445,7 +445,7 @@ func (h *ParrotHandler) executeAgent(
 					}
 				}
 			}
-			// Don't stream session_stats to frontend (it's included in final SessionSummary)
+			// Don't stream session_stats to frontend (it's included in final BlockSummary)
 			return nil
 		} else {
 			// Handle legacy event types (string, error)
@@ -599,9 +599,9 @@ func (h *ParrotHandler) executeAgent(
 		status = "error"
 	}
 
-	// Build session summary with available data
-	// 使用可用数据构建会话摘要
-	sessionSummary := &v1pb.SessionSummary{
+	// Build block summary with available data
+	// 使用可用数据构建 Block 摘要
+	blockSummary := &v1pb.BlockSummary{
 		TotalDurationMs: sessionTotalDuration,
 		Status:          status,
 		ToolCallCount:   finalToolCallCount,
@@ -614,43 +614,43 @@ func (h *ParrotHandler) executeAgent(
 	// 从 detailedStats 设置 SessionId（Geek/Evolution 模式使用真实的 UUID session ID）
 	// 如果没有详细统计数据，回退到 conversation ID 格式以保持向后兼容
 	if detailedStats != nil && detailedStats.SessionID != "" {
-		sessionSummary.SessionId = detailedStats.SessionID
+		blockSummary.SessionId = detailedStats.SessionID
 	} else {
-		sessionSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
+		blockSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
 	}
 
-	// NOTE: SessionSummary.Mode has been removed - Block.mode is the single source of truth.
+	// NOTE: BlockSummary.Mode has been removed - Block.mode is the single source of truth.
 	// The mode is stored in the Block (currentBlock.mode) and should be read from there.
 
 	// Add detailed stats if available (from GeekParrot/EvolutionParrot)
 	// 添加详细统计数据（如果可用，来自 GeekParrot/EvolutionParrot）
 	if detailedStats != nil {
-		sessionSummary.TotalDurationMs = detailedStats.TotalDurationMs
-		sessionSummary.ThinkingDurationMs = detailedStats.ThinkingDurationMs
-		sessionSummary.ToolDurationMs = detailedStats.ToolDurationMs
-		sessionSummary.GenerationDurationMs = detailedStats.GenerationDurationMs
-		sessionSummary.TotalInputTokens = detailedStats.InputTokens
-		sessionSummary.TotalOutputTokens = detailedStats.OutputTokens
-		sessionSummary.TotalCacheWriteTokens = detailedStats.CacheWriteTokens
-		sessionSummary.TotalCacheReadTokens = detailedStats.CacheReadTokens
-		sessionSummary.ToolCallCount = detailedStats.ToolCallCount
+		blockSummary.TotalDurationMs = detailedStats.TotalDurationMs
+		blockSummary.ThinkingDurationMs = detailedStats.ThinkingDurationMs
+		blockSummary.ToolDurationMs = detailedStats.ToolDurationMs
+		blockSummary.GenerationDurationMs = detailedStats.GenerationDurationMs
+		blockSummary.TotalInputTokens = detailedStats.InputTokens
+		blockSummary.TotalOutputTokens = detailedStats.OutputTokens
+		blockSummary.TotalCacheWriteTokens = detailedStats.CacheWriteTokens
+		blockSummary.TotalCacheReadTokens = detailedStats.CacheReadTokens
+		blockSummary.ToolCallCount = detailedStats.ToolCallCount
 		if len(detailedStats.ToolsUsed) > 0 {
 			tools := make([]string, 0, len(detailedStats.ToolsUsed))
 			for tool := range detailedStats.ToolsUsed {
 				tools = append(tools, tool)
 			}
-			sessionSummary.ToolsUsed = tools
+			blockSummary.ToolsUsed = tools
 		}
-		sessionSummary.FilesModified = detailedStats.FilesModified
-		sessionSummary.FilePaths = detailedStats.FilePaths
+		blockSummary.FilesModified = detailedStats.FilesModified
+		blockSummary.FilePaths = detailedStats.FilePaths
 	}
 
 	// Safely send done marker
 	streamMu.Lock()
-	logger.Info("Agent: sending done marker with session summary",
-		slog.String("session_id", sessionSummary.SessionId),
-		slog.Int64("duration_ms", sessionSummary.TotalDurationMs),
-		slog.Int64("tool_calls", int64(sessionSummary.ToolCallCount)),
+	logger.Info("Agent: sending done marker with block summary",
+		slog.String("session_id", blockSummary.SessionId),
+		slog.Int64("duration_ms", blockSummary.TotalDurationMs),
+		slog.Int64("tool_calls", int64(blockSummary.ToolCallCount)),
 		slog.Bool("done", true),
 	)
 	// Phase 4: Include BlockId in done marker
@@ -659,9 +659,9 @@ func (h *ParrotHandler) executeAgent(
 		blockId = currentBlock.ID
 	}
 	sendErr := stream.Send(&v1pb.ChatResponse{
-		Done:           true,
-		SessionSummary: sessionSummary,
-		BlockId:        blockId,
+		Done:         true,
+		BlockSummary: blockSummary,
+		BlockId:      blockId,
 	})
 	streamMu.Unlock()
 
@@ -678,25 +678,25 @@ func (h *ParrotHandler) executeAgent(
 		finalContent := assistantContent.String()
 		assistantContentMu.Unlock()
 
-		// Convert SessionSummary to store.SessionStats
-		// sessionSummary is always non-nil (created on line 591)
+		// Convert BlockSummary to store.SessionStats
+		// blockSummary is always non-nil (created on line 604)
 		blockSessionStats := &store.SessionStats{
-			SessionID:            sessionSummary.SessionId,
+			SessionID:            blockSummary.SessionId,
 			UserID:               req.UserID,
 			AgentType:            string(req.AgentType),
-			TotalDurationMs:      sessionSummary.TotalDurationMs,
-			ThinkingDurationMs:   sessionSummary.ThinkingDurationMs,
-			ToolDurationMs:       sessionSummary.ToolDurationMs,
-			GenerationDurationMs: sessionSummary.GenerationDurationMs,
-			InputTokens:          int(sessionSummary.TotalInputTokens),
-			OutputTokens:         int(sessionSummary.TotalOutputTokens),
-			CacheWriteTokens:     int(sessionSummary.TotalCacheWriteTokens),
-			CacheReadTokens:      int(sessionSummary.TotalCacheReadTokens),
-			TotalCostUsd:         sessionSummary.TotalCostUsd,
-			ToolCallCount:        int(sessionSummary.ToolCallCount),
-			ToolsUsed:            sessionSummary.ToolsUsed,
-			FilesModified:        int(sessionSummary.FilesModified),
-			FilePaths:            sessionSummary.FilePaths,
+			TotalDurationMs:      blockSummary.TotalDurationMs,
+			ThinkingDurationMs:   blockSummary.ThinkingDurationMs,
+			ToolDurationMs:       blockSummary.ToolDurationMs,
+			GenerationDurationMs: blockSummary.GenerationDurationMs,
+			InputTokens:          int(blockSummary.TotalInputTokens),
+			OutputTokens:         int(blockSummary.TotalOutputTokens),
+			CacheWriteTokens:     int(blockSummary.TotalCacheWriteTokens),
+			CacheReadTokens:      int(blockSummary.TotalCacheReadTokens),
+			TotalCostUsd:         blockSummary.TotalCostUsd,
+			ToolCallCount:        int(blockSummary.ToolCallCount),
+			ToolsUsed:            blockSummary.ToolsUsed,
+			FilesModified:        int(blockSummary.FilesModified),
+			FilePaths:            blockSummary.FilePaths,
 		}
 
 		if execErr != nil {
