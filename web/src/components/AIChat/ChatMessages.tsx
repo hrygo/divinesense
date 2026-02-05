@@ -80,11 +80,16 @@ interface MessageBlock {
 
 /**
  * Translate i18n keys in thinking steps content
+ * Optimized to avoid creating new array when no translation is needed.
  * @param steps - Thinking steps with possibly raw i18n keys
  * @param t - Translation function
  * @returns Thinking steps with translated content
  */
 function translateThinkingSteps(steps: ThinkingStep[], t: (key: string) => string): ThinkingStep[] {
+  // Check if any step needs translation (starts with "ai.")
+  const needsTranslation = steps.some((s) => s.content.startsWith("ai."));
+  if (!needsTranslation) return steps;
+
   return steps.map((step) => ({
     ...step,
     content: step.content.startsWith("ai.") ? t(step.content) : step.content,
@@ -103,7 +108,7 @@ function translateThinkingSteps(steps: ThinkingStep[], t: (key: string) => strin
  * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
  * - sessionStats: SessionStats (for Geek/Evolution modes)
  * @param blocks - Array of AIBlock objects
- * @param hasBlockSummary - Whether session summary is available
+ * @param hasBlockSummary - Whether block summary is available
  * @param t - Translation function for i18n keys
  */
 function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: boolean, t: (key: string) => string): MessageBlock[] {
@@ -148,7 +153,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
     };
 
     const isLatest = false; // Will be determined after loop
-    const attachBlockSummary = false; // Will be set for last block
+    const attachBlockSummary = false; // Will be set for last block if blockSummary available
 
     messageBlocks.push({
       id: String(block.id),
@@ -159,7 +164,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
     });
   }
 
-  // Mark last block as latest and attach session summary if available
+  // Mark last block as latest and attach block summary if available
   if (messageBlocks.length > 0) {
     const lastBlock = messageBlocks[messageBlocks.length - 1];
     lastBlock.isLatest = true;
@@ -175,7 +180,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
  * Group messages into user-assistant pairs
  * Legacy function for ChatItem[] support (backward compatibility)
  * @param items - Array of ChatItem objects
- * @param hasBlockSummary - Whether session summary is available
+ * @param hasBlockSummary - Whether block summary is available
  * @param t - Translation function for i18n keys
  */
 function groupMessagesIntoBlocks(items: ChatItem[], hasBlockSummary: boolean, _t: (key: string) => string): MessageBlock[] {
@@ -244,7 +249,7 @@ function groupMessagesIntoBlocks(items: ChatItem[], hasBlockSummary: boolean, _t
     });
   }
 
-  // Mark last block as latest and attach session summary if available
+  // Mark last block as latest and attach block summary if available
   if (blocks.length > 0) {
     const lastBlock = blocks[blocks.length - 1];
     lastBlock.isLatest = true;

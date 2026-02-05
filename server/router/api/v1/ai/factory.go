@@ -44,7 +44,7 @@ func AgentTypeFromProto(protoType v1pb.AgentType) AgentType {
 }
 
 // ToProto converts internal AgentType to proto AgentType.
-// AUTO is mapped to DEFAULT to trigger backend routing.
+// AUTO maps to DEFAULT to let backend ChatRouter decide the agent.
 func (t AgentType) ToProto() v1pb.AgentType {
 	switch t {
 	case AgentTypeMemo:
