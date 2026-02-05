@@ -99,10 +99,10 @@ export const CAPABILITIES: Record<CapabilityType, Omit<Capability, "id">> = {
     catchphrases: ["看看这个...", "综合来看", "发现规律了"],
   },
   [CapabilityType.AUTO]: {
-    parrotId: ParrotAgentType.AMAZING, // AUTO fallback to AMAZING
+    parrotId: ParrotAgentType.AUTO, // 由后端三层路由决定使用哪只鹦鹉
     name: "自动",
     nameAlt: "Auto",
-    description: "智能识别",
+    description: "智能路由",
     icon: "🤖",
     color: "emerald",
     soundEffects: {
