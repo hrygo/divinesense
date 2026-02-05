@@ -896,32 +896,32 @@ message BlockEvent {
 // BlockType represents the type of block.
 enum BlockType {
   BLOCK_TYPE_UNSPECIFIED = 0;
-  BLOCK_TYPE_MESSAGE = 1;          // User-AI conversation round
+  BLOCK_TYPE_MESSAGE = 1; // User-AI conversation round
   BLOCK_TYPE_CONTEXT_SEPARATOR = 2; // Context separator marker
 }
 
 // BlockMode represents the AI mode used for this block.
 enum BlockMode {
   BLOCK_MODE_UNSPECIFIED = 0;
-  BLOCK_MODE_NORMAL = 1;     // Normal AI assistant mode
-  BLOCK_MODE_GEEK = 2;       // Geek mode (Claude Code CLI)
-  BLOCK_MODE_EVOLUTION = 3;  // Evolution mode (self-improvement)
+  BLOCK_MODE_NORMAL = 1; // Normal AI assistant mode
+  BLOCK_MODE_GEEK = 2; // Geek mode (Claude Code CLI)
+  BLOCK_MODE_EVOLUTION = 3; // Evolution mode (self-improvement)
 }
 
 // BlockStatus represents the current status of a block.
 enum BlockStatus {
   BLOCK_STATUS_UNSPECIFIED = 0;
-  BLOCK_STATUS_PENDING = 1;    // Waiting for AI response
-  BLOCK_STATUS_STREAMING = 2;  // AI is currently responding
-  BLOCK_STATUS_COMPLETED = 3;  // Response completed
-  BLOCK_STATUS_ERROR = 4;      // Error occurred
+  BLOCK_STATUS_PENDING = 1; // Waiting for AI response
+  BLOCK_STATUS_STREAMING = 2; // AI is currently responding
+  BLOCK_STATUS_COMPLETED = 3; // Response completed
+  BLOCK_STATUS_ERROR = 4; // Error occurred
 }
 
 // ListBlocksRequest is the request for ListBlocks.
 message ListBlocksRequest {
   int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
   BlockStatus status = 2; // Optional filter by status
-  BlockMode mode = 3;     // Optional filter by mode
+  BlockMode mode = 3; // Optional filter by mode
   string cc_session_id = 4; // Optional filter by CC session
 }
 
@@ -939,7 +939,7 @@ message GetBlockRequest {
 message CreateBlockRequest {
   int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
   BlockType block_type = 2; // Default: MESSAGE
-  BlockMode mode = 3;       // Default: NORMAL
+  BlockMode mode = 3; // Default: NORMAL
   repeated UserInput user_inputs = 4;
   string metadata = 5; // JSON string
   string cc_session_id = 6; // For Geek/Evolution modes
