@@ -439,6 +439,9 @@ message ChatResponse {
 
   // Session summary sent when done=true
   SessionSummary session_summary = 9; // Summary statistics for the completed session
+
+  // Phase 4: Block ID for Unified Block Model
+  int64 block_id = 10; // Block ID for this conversation round (allows frontend to update Block state during streaming)
 }
 
 // ScheduleCreationIntent represents AI's analysis of user's intent to create a schedule.

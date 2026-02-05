@@ -1742,8 +1742,10 @@ type ChatResponse struct {
 	EventMeta *EventMetadata `protobuf:"bytes,8,opt,name=event_meta,json=eventMeta,proto3" json:"event_meta,omitempty"` // Enhanced metadata for events (timing, tokens, tool info)
 	// Session summary sent when done=true
 	SessionSummary *SessionSummary `protobuf:"bytes,9,opt,name=session_summary,json=sessionSummary,proto3" json:"session_summary,omitempty"` // Summary statistics for the completed session
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Phase 4: Block ID for Unified Block Model
+	BlockId       int64 `protobuf:"varint,10,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"` // Block ID for this conversation round (allows frontend to update Block state during streaming)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatResponse) Reset() {
@@ -1837,6 +1839,13 @@ func (x *ChatResponse) GetSessionSummary() *SessionSummary {
 		return x.SessionSummary
 	}
 	return nil
+}
+
+func (x *ChatResponse) GetBlockId() int64 {
+	if x != nil {
+		return x.BlockId
+	}
+	return 0
 }
 
 // ScheduleCreationIntent represents AI's analysis of user's intent to create a schedule.
@@ -4925,10 +4934,13 @@ type Block struct {
 	CcSessionId string `protobuf:"bytes,12,opt,name=cc_session_id,json=ccSessionId,proto3" json:"cc_session_id,omitempty"`
 	// Block status
 	Status BlockStatus `protobuf:"varint,13,opt,name=status,proto3,enum=memos.api.v1.BlockStatus" json:"status,omitempty"`
+	// Tree branching support (for edit & regenerate functionality)
+	ParentBlockId int64  `protobuf:"varint,14,opt,name=parent_block_id,json=parentBlockId,proto3" json:"parent_block_id,omitempty"` // Parent block ID (null for root blocks)
+	BranchPath    string `protobuf:"bytes,15,opt,name=branch_path,json=branchPath,proto3" json:"branch_path,omitempty"`             // Branch path for ordering (e.g., "0/1/3")
 	// Extension metadata
-	Metadata      string `protobuf:"bytes,14,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string
-	CreatedTs     int64  `protobuf:"varint,15,opt,name=created_ts,json=createdTs,proto3" json:"created_ts,omitempty"`
-	UpdatedTs     int64  `protobuf:"varint,16,opt,name=updated_ts,json=updatedTs,proto3" json:"updated_ts,omitempty"`
+	Metadata      string `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string
+	CreatedTs     int64  `protobuf:"varint,17,opt,name=created_ts,json=createdTs,proto3" json:"created_ts,omitempty"`
+	UpdatedTs     int64  `protobuf:"varint,18,opt,name=updated_ts,json=updatedTs,proto3" json:"updated_ts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5052,6 +5064,20 @@ func (x *Block) GetStatus() BlockStatus {
 		return x.Status
 	}
 	return BlockStatus_BLOCK_STATUS_UNSPECIFIED
+}
+
+func (x *Block) GetParentBlockId() int64 {
+	if x != nil {
+		return x.ParentBlockId
+	}
+	return 0
+}
+
+func (x *Block) GetBranchPath() string {
+	if x != nil {
+		return x.BranchPath
+	}
+	return ""
 }
 
 func (x *Block) GetMetadata() string {
@@ -5798,7 +5824,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\toperation\x18\x01 \x01(\tR\toperation\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12'\n" +
 	"\x0fpattern_matched\x18\x03 \x01(\tR\x0epatternMatched\x12%\n" +
-	"\x0ebypass_allowed\x18\x04 \x01(\bR\rbypassAllowed\"\xce\x03\n" +
+	"\x0ebypass_allowed\x18\x04 \x01(\bR\rbypassAllowed\"\xe9\x03\n" +
 	"\fChatResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12\x12\n" +
@@ -5811,7 +5837,9 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"event_data\x18\a \x01(\tR\teventData\x12:\n" +
 	"\n" +
 	"event_meta\x18\b \x01(\v2\x1b.memos.api.v1.EventMetadataR\teventMeta\x12E\n" +
-	"\x0fsession_summary\x18\t \x01(\v2\x1c.memos.api.v1.SessionSummaryR\x0esessionSummary\"\x85\x01\n" +
+	"\x0fsession_summary\x18\t \x01(\v2\x1c.memos.api.v1.SessionSummaryR\x0esessionSummary\x12\x19\n" +
+	"\bblock_id\x18\n" +
+	" \x01(\x03R\ablockId\"\x85\x01\n" +
 	"\x16ScheduleCreationIntent\x12\x1a\n" +
 	"\bdetected\x18\x01 \x01(\bR\bdetected\x121\n" +
 	"\x14schedule_description\x18\x02 \x01(\tR\x13scheduleDescription\x12\x1c\n" +
@@ -6098,7 +6126,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x1a_per_session_threshold_usdB\x10\n" +
 	"\x0e_alert_enabledB\x0e\n" +
 	"\f_alert_emailB\x0f\n" +
-	"\r_alert_in_app\"\xa1\x05\n" +
+	"\r_alert_in_app\"\xea\x05\n" +
 	"\x05Block\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12'\n" +
@@ -6115,12 +6143,15 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	" \x03(\v2\x18.memos.api.v1.BlockEventR\veventStream\x12?\n" +
 	"\rsession_stats\x18\v \x01(\v2\x1a.memos.api.v1.SessionStatsR\fsessionStats\x12\"\n" +
 	"\rcc_session_id\x18\f \x01(\tR\vccSessionId\x121\n" +
-	"\x06status\x18\r \x01(\x0e2\x19.memos.api.v1.BlockStatusR\x06status\x12\x1a\n" +
-	"\bmetadata\x18\x0e \x01(\tR\bmetadata\x12\x1d\n" +
+	"\x06status\x18\r \x01(\x0e2\x19.memos.api.v1.BlockStatusR\x06status\x12&\n" +
+	"\x0fparent_block_id\x18\x0e \x01(\x03R\rparentBlockId\x12\x1f\n" +
+	"\vbranch_path\x18\x0f \x01(\tR\n" +
+	"branchPath\x12\x1a\n" +
+	"\bmetadata\x18\x10 \x01(\tR\bmetadata\x12\x1d\n" +
 	"\n" +
-	"created_ts\x18\x0f \x01(\x03R\tcreatedTs\x12\x1d\n" +
+	"created_ts\x18\x11 \x01(\x03R\tcreatedTs\x12\x1d\n" +
 	"\n" +
-	"updated_ts\x18\x10 \x01(\x03R\tupdatedTs\"_\n" +
+	"updated_ts\x18\x12 \x01(\x03R\tupdatedTs\"_\n" +
 	"\tUserInput\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x1a\n" +

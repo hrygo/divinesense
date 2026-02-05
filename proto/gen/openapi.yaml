@@ -3813,6 +3813,11 @@ components:
                     type: string
                     description: Block status
                     format: enum
+                parentBlockId:
+                    type: string
+                    description: Tree branching support (for edit & regenerate functionality)
+                branchPath:
+                    type: string
                 metadata:
                     type: string
                     description: Extension metadata
@@ -3907,6 +3912,9 @@ components:
                     allOf:
                         - $ref: '#/components/schemas/SessionSummary'
                     description: Session summary sent when done=true
+                blockId:
+                    type: string
+                    description: 'Phase 4: Block ID for Unified Block Model'
             description: ChatResponse is the response for Chat.
         CheckConflictRequest:
             required:

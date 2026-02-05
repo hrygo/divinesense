@@ -22,10 +22,12 @@ import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
+import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import type { AIMode, ChatItem } from "@/types/aichat";
+import type { Block as AIBlock } from "@/types/block";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
 import type { MemoQueryResultData, ScheduleQueryResultData, SessionSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
@@ -49,6 +51,9 @@ interface UnifiedChatViewProps {
   scheduleQueryResults: ScheduleQueryResultData[];
   sessionSummary?: SessionSummary;
   items: ChatItem[];
+  // Phase 4: Block data (primary source when available)
+  blocks?: AIBlock[];
+  isLoadingBlocks?: boolean;
   currentCapability: CapabilityType;
   capabilityStatus: CapabilityStatus;
   recentMemoCount?: number;
@@ -76,6 +81,8 @@ function UnifiedChatView({
   scheduleQueryResults,
   sessionSummary,
   items,
+  blocks,
+  isLoadingBlocks, // Reserved for future loading state
   currentCapability,
   capabilityStatus,
   recentMemoCount,
@@ -88,6 +95,9 @@ function UnifiedChatView({
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
   const md = useMediaQuery("md");
+
+  // Silence unused variable warning (reserved for future loading state)
+  void isLoadingBlocks;
 
   // P1-5: Concurrent rendering optimizations
   // Defer non-critical UI updates (query results) to improve input responsiveness
@@ -137,6 +147,7 @@ function UnifiedChatView({
       {/* Messages Area with Welcome */}
       <ChatMessages
         items={items}
+        blocks={blocks}
         isTyping={isTyping}
         currentParrotId={ParrotAgentType.AMAZING}
         onCopyMessage={handleCopyMessage}
@@ -149,7 +160,7 @@ function UnifiedChatView({
         sessionSummary={sessionSummary}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
-        {items.length === 0 && (
+        {(blocks?.length ?? 0) === 0 && items.length === 0 && (
           <PartnerGreeting
             recentMemoCount={recentMemoCount}
             upcomingScheduleCount={upcomingScheduleCount}
@@ -289,7 +300,25 @@ const AIChat = () => {
   const currentMode = state.currentMode || "normal";
   const immersiveMode = state.immersiveMode || false;
 
-  // Get messages from current conversation (memoized to prevent unnecessary re-renders)
+  // ============================================================
+  // Phase 4: Unified Block Model - Use blocks as primary data source
+  // ============================================================
+  const currentConversationIdNum = useMemo(() => {
+    const id = currentConversation?.id;
+    return id ? parseInt(id, 10) : 0;
+  }, [currentConversation?.id]);
+
+  // Use Block API as primary data source (falls back to items for new conversations)
+  const { data: blocksData, isLoading: isLoadingBlocks } = useBlocks(
+    currentConversationIdNum,
+    undefined, // No filters - get all blocks
+    { isActive: true }, // Refetch when active
+  );
+
+  const blocks = useMemo(() => blocksData?.blocks || [], [blocksData?.blocks]);
+
+  // Legacy: Get messages from current conversation (fallback for empty blocks)
+  // TODO: Remove once Block API is fully integrated
   const items = useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
 
   const { t } = useTranslation();
@@ -696,6 +725,8 @@ const AIChat = () => {
       scheduleQueryResults={scheduleQueryResults}
       sessionSummary={sessionSummary}
       items={items}
+      blocks={blocks}
+      isLoadingBlocks={isLoadingBlocks}
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}
       currentMode={currentMode}

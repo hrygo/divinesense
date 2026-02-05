@@ -13,6 +13,8 @@ import {
   SemanticSearchRequestSchema,
   SuggestTagsRequestSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
+// Phase 4: Import blockKeys for invalidating blocks on updates
+import { blockKeys } from "./useBlockQueries";
 
 // Event metadata types for Geek/Evolution mode observability
 interface EventMetadata {
@@ -280,9 +282,29 @@ export function useChat() {
               hasEventMeta: !!response.eventMeta,
               done: response.done,
               hasSessionSummary: !!response.sessionSummary,
+              hasBlockId: response.blockId !== undefined && response.blockId !== 0n,
+              blockId: response.blockId,
               eventType: response.eventType,
             });
           }
+
+          // Phase 4: Handle Block ID - invalidate blocks cache to trigger refetch
+          // When we receive a block_id, it means a new block was created/updated
+          // Invalidate the blocks query to fetch the latest data
+          const blockId = response.blockId;
+          if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+            if (import.meta.env.DEV) {
+              console.log("[AI Chat] Received block_id, invalidating blocks cache", {
+                blockId: blockId.toString(),
+                conversationId: params.conversationId,
+              });
+            }
+            // Invalidate blocks cache for this conversation to trigger refetch
+            queryClient.invalidateQueries({
+              queryKey: blockKeys.list(params.conversationId),
+            });
+          }
+
           // Handle sources (sent in first response)
           if (response.sources.length > 0) {
             sources.push(...response.sources);

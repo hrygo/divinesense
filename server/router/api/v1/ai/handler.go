@@ -497,10 +497,17 @@ func (h *ParrotHandler) executeAgent(
 		streamMu.Lock()
 		defer streamMu.Unlock()
 
+		// Phase 4: Include BlockId in all streaming events
+		var blockId int64
+		if currentBlock != nil {
+			blockId = currentBlock.ID
+		}
+
 		return stream.Send(&v1pb.ChatResponse{
 			EventType: eventType,
 			EventData: dataStr,
 			EventMeta: eventMeta,
+			BlockId:   blockId,
 		})
 	})
 
@@ -529,10 +536,16 @@ func (h *ParrotHandler) executeAgent(
 				if time.Since(lastTime) > 5*time.Second {
 					// Send heartbeat
 					streamMu.Lock()
+					// Phase 4: Include BlockId in heartbeat
+					var blockId int64
+					if currentBlock != nil {
+						blockId = currentBlock.ID
+					}
 					// Just send a lightweight ping chunk
 					err := stream.Send(&v1pb.ChatResponse{
 						EventType: "ping",
 						EventData: ".", // Minimal data
+						BlockId:   blockId,
 					})
 					streamMu.Unlock()
 					// If send fails, client disconnected - stop heartbeat early
@@ -647,9 +660,15 @@ func (h *ParrotHandler) executeAgent(
 		slog.Int64("tool_calls", int64(sessionSummary.ToolCallCount)),
 		slog.Bool("done", true),
 	)
+	// Phase 4: Include BlockId in done marker
+	var blockId int64
+	if currentBlock != nil {
+		blockId = currentBlock.ID
+	}
 	sendErr := stream.Send(&v1pb.ChatResponse{
 		Done:           true,
 		SessionSummary: sessionSummary,
+		BlockId:        blockId,
 	})
 	streamMu.Unlock()
 
