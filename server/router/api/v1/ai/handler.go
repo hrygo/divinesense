@@ -459,7 +459,7 @@ func (h *ParrotHandler) executeAgent(
 			}
 		}
 
-		// Phase 5: Append event to Block (async, don't block streaming)
+		// Phase 5: Append event to Block (async with error logging)
 		if currentBlock != nil && h.blockManager != nil {
 			// Build metadata for block event
 			var eventMetaForBlock map[string]any
@@ -480,10 +480,15 @@ func (h *ParrotHandler) executeAgent(
 				}
 			}
 
-			// Append event asynchronously (don't block streaming)
-			go func() {
-				_ = h.blockManager.AppendEvent(ctx, currentBlock.ID, eventType, dataStr, eventMetaForBlock)
-			}()
+			// Append event asynchronously with error logging (don't block streaming)
+			go func(blockID int64, evtType string) {
+				if err := h.blockManager.AppendEvent(ctx, blockID, evtType, dataStr, eventMetaForBlock); err != nil {
+					logger.Warn("Failed to append event to block",
+						slog.Int64("block_id", blockID),
+						slog.String("event_type", evtType),
+						slog.String("error", err.Error()))
+				}
+			}(currentBlock.ID, eventType)
 
 			// Collect assistant content for block completion
 			if eventType == "answer" || eventType == "content" {
@@ -600,7 +605,6 @@ func (h *ParrotHandler) executeAgent(
 	}
 
 	// Build block summary with available data
-	// 使用可用数据构建 Block 摘要
 	blockSummary := &v1pb.BlockSummary{
 		TotalDurationMs: sessionTotalDuration,
 		Status:          status,
@@ -611,8 +615,6 @@ func (h *ParrotHandler) executeAgent(
 
 	// Set SessionId from detailedStats (Geek/Evolution modes use real UUID session IDs)
 	// If no detailed stats available, fall back to conversation ID format for backward compatibility
-	// 从 detailedStats 设置 SessionId（Geek/Evolution 模式使用真实的 UUID session ID）
-	// 如果没有详细统计数据，回退到 conversation ID 格式以保持向后兼容
 	if detailedStats != nil && detailedStats.SessionID != "" {
 		blockSummary.SessionId = detailedStats.SessionID
 	} else {
@@ -623,7 +625,6 @@ func (h *ParrotHandler) executeAgent(
 	// The mode is stored in the Block (currentBlock.mode) and should be read from there.
 
 	// Add detailed stats if available (from GeekParrot/EvolutionParrot)
-	// 添加详细统计数据（如果可用，来自 GeekParrot/EvolutionParrot）
 	if detailedStats != nil {
 		blockSummary.TotalDurationMs = detailedStats.TotalDurationMs
 		blockSummary.ThinkingDurationMs = detailedStats.ThinkingDurationMs
