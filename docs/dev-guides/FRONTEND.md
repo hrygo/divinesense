@@ -1,6 +1,6 @@
 # 前端开发指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v0.91.0 (Chat Apps 集成)
+> **保鲜状态**: ✅ 已验证 (2026-02-05) | **最后检查**: v0.93.0 (Unified Block Model)
 
 ## 技术栈
 - **框架**：React 18 + Vite 7
@@ -415,3 +415,47 @@ const mutation = useMutation({
   },
 });
 ```
+
+### Block Hooks (Unified Block Model)
+
+> **实现状态**: ✅ 完成 (Issue #71) | **文件**: `web/src/hooks/useBlockQueries.ts`
+
+Block hooks 提供 AI 聊天对话持久化的 React Query 集成：
+
+```tsx
+import { useBlocks, useCreateBlock, useUpdateBlock } from "@/hooks/useBlockQueries";
+
+// 获取会话的所有 Blocks
+const { data: blocks, isLoading } = useBlocks(conversationId, { isActive: true });
+
+// 创建新 Block
+const createBlock = useCreateBlock();
+createBlock.mutate({
+  conversationId: 123,
+  blockType: BlockType.MESSAGE,
+  mode: BlockMode.NORMAL,
+  userInputs: [{ content: "Hello", timestamp: Date.now() }],
+});
+
+// 更新 Block 状态
+const updateBlock = useUpdateBlock();
+updateBlock.mutate({
+  id: BigInt(blockId),
+  status: BlockStatus.COMPLETED,
+  assistantContent: "Response here",
+});
+```
+
+**可用 Hooks**：
+
+| Hook | 描述 |
+|:-----|:-----|
+| `useBlocks(conversationId, filters, options)` | 获取会话 Blocks 列表 |
+| `useBlock(id, options)` | 获取单个 Block 详情 |
+| `useCreateBlock()` | 创建新 Block（乐观更新） |
+| `useUpdateBlock()` | 更新 Block（支持流式状态） |
+| `useDeleteBlock()` | 删除 Block |
+| `useAppendUserInput()` | 追加用户输入 |
+| `useAppendEvent()` | 追加流式事件 |
+| `useStreamingBlock(blockId)` | 流式 Block 状态管理 |
+| `usePrefetchBlock()` | 预加载 Block 数据 |

@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v0.91.0 (AI Core 重构)
+> **保鲜状态**: ✅ 已验证 (2026-02-05) | **最后检查**: v0.93.0 (Unified Block Model)
 
 ## 项目概述
 
@@ -609,12 +609,132 @@ RootLayout（全局导航 + 认证）
 
 ---
 
+## Unified Block Model (统一块模型)
+
+> **实现状态**: ✅ 完成 (Issue #71) | **版本**: v0.93.0
+
+**概述**：Unified Block Model 是一种新的 AI 聊天对话持久化方案，替代原有的 ChatItem[] 结构。
+
+### 核心概念
+
+**Block (块)**：一个聊天轮次的完整数据单元
+```
+┌─────────────────────────────────────────────────────────┐
+│                      AIBlock                          │
+├─────────────────────────────────────────────────────────┤
+│  id, uid, conversation_id, round_number               │
+│  mode: normal | geek | evolution                        │
+│  user_inputs[]       // 用户输入（支持多轮补充）       │
+│  assistant_content   // AI 回复内容                    │
+│  event_stream[]      // 流式事件（thinking/tool_use）  │
+│  session_stats       // 会话统计（tokens/cost）         │
+│  status: pending | streaming | completed | error       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 架构图
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  Frontend (React)                        │
+│  ChatMessages ──▶ AIBlock[] ──▶ UnifiedMessageBlock    │
+└────────────────────┬────────────────────────────────────┘
+                     │ gRPC Stream
+┌────────────────────▼────────────────────────────────────┐
+│                 Backend (Go)                             │
+│  Chat Handler ──▶ BlockManager ──▶ Store.AIBlock       │
+│                      │                                 │
+│                      ├─ CreateBlockForChat()           │
+│                      ├─ AppendEvent() (async)         │
+│                      ├─ CompleteBlock()               │
+│                      └─ MarkBlockError()              │
+└────────────────────┬────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────┐
+│              PostgreSQL (ai_block 表)                   │
+│  - id, uid, conversation_id, round_number              │
+│  - mode (normal/geek/evolution)                         │
+│  - user_inputs[], event_stream[], session_stats         │
+│  - status (pending/streaming/completed/error)           │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 核心组件
+
+| 组件 | 位置 | 描述 |
+|:-----|:-----|:-----|
+| **BlockManager** | `server/router/api/v1/ai/block_manager.go` | Block 生命周期管理 |
+| **ChatMessages** | `web/src/components/AIChat/ChatMessages.tsx` | 前端 Block 渲染 |
+| **AIChatContext** | `web/src/contexts/AIChatContext.tsx` | Block 状态管理 |
+| **Block Queries** | `web/src/hooks/useBlockQueries.ts` | React Query 集成 |
+
+### 数据库表：`ai_block`
+
+| 字段 | 类型 | 描述 |
+|:-----|:-----|:-----|
+| `id` | BIGINT | 主键 |
+| `uid` | VARCHAR(64) | 唯一标识符 |
+| `conversation_id` | INTEGER | 所属会话（外键） |
+| `round_number` | INTEGER | 轮次号（会话内自增） |
+| `mode` | TEXT | 模式：normal/geek/evolution |
+| `user_inputs` | JSONB | 用户输入数组 |
+| `assistant_content` | TEXT | AI 回复内容 |
+| `event_stream` | JSONB | 流式事件数组 |
+| `session_stats` | JSONB | 会话统计信息 |
+| `cc_session_id` | VARCHAR(64) | CC Runner 会话 ID |
+| `status` | TEXT | 状态：pending/streaming/completed/error |
+| `metadata` | JSONB | 元数据 |
+| `created_ts` | BIGINT | 创建时间戳 |
+| `updated_ts` | BIGINT | 更新时间戳 |
+
+**索引**：
+- `idx_ai_block_conversation`：`(conversation_id, round_number)`
+- `idx_ai_block_status`：`(status)`
+- `idx_ai_block_cc_session`：`(cc_session_id)`
+
+**触发器**：
+- `ai_block_round_number_trigger`：自动设置 `round_number`
+
+### Block 状态流转
+
+```
+pending ──▶ streaming ──▶ completed
+    │             │
+    │             └──▶ error
+    └──▶ error
+```
+
+### BlockMode 映射
+
+| BlockMode | ParrotAgentType | 用途 |
+|:----------|:----------------|:-----|
+| `normal` | `AMAZING` | 综合助理（笔记 + 日程） |
+| `geek` | `GEEK` | Claude Code CLI 代码执行 |
+| `evolution` | `EVOLUTION` | 系统自我进化 |
+
+### API 端点
+
+| RPC | 方法 | 描述 |
+|:-----|:-----|:-----|
+| `AIService` | `ListBlocks` | 列出会话的所有 Blocks |
+| `AIService` | `GetBlock` | 获取单个 Block 详情 |
+| `AIService` | `CreateBlock` | 创建新 Block |
+| `AIService` | `UpdateBlock` | 更新 Block |
+| `AIService` | `DeleteBlock` | 删除 Block |
+| `AIService` | `AppendEvent` | 追加事件到流 |
+| `AIService` | `AppendUserInput` | 追加用户输入 |
+
+**详细规格**：[Unified Block Model 规格](../specs/unified-block-model.md)
+
+---
+
 ## AI 数据库架构（PostgreSQL）
 
 ### 核心表
 
 | 表名                   | 用途                                      |
 | :--------------------- | :---------------------------------------- |
+| `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     |
 | `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           |
 | `conversation_context` | 会话持久化（30 天保留）                   |
 | `episodic_memory`      | 长期用户记忆和学习                        |

@@ -138,6 +138,12 @@ export function useBlock(id: number, options?: { enabled?: boolean }) {
  * Optimistically adds the block to the cache before the server responds,
  * rolling back on error.
  */
+/**
+ * Hook to create a new block with optimistic update
+ *
+ * Optimistically adds the block to the cache before the server responds,
+ * rolling back on error.
+ */
 export function useCreateBlock() {
   const queryClient = useQueryClient();
 
@@ -155,12 +161,36 @@ export function useCreateBlock() {
       // Snapshot previous value
       const previousBlocks = queryClient.getQueryData(blockKeys.list(conversationId));
 
-      // Optimistically update cache with pending block (using partial data)
-      // Note: We don't add to cache here as we don't have the full proto message
-      // The optimistic update will be handled at the UI level
+      // Generate temp ID for optimistic update
+      const tempId = BigInt(-Date.now());
+
+      // Create optimistic block
+      // biome-ignore lint/suspicious/noExplicitAny: Protobuf partial creation for optimistic update
+      const optimisticBlock = create(create(CreateBlockRequestSchema, variables as Record<string, unknown>) as any, {
+        id: tempId,
+        uid: `temp-${tempId}`,
+        status: BlockStatus.PENDING,
+        createdTs: BigInt(Date.now()),
+        updatedTs: BigInt(Date.now()),
+        userInputs: variables.userInputs || [],
+        assistantContent: "",
+        eventStream: [],
+        metadata: "{}",
+      }) as unknown as Block;
+
+      // Optimistically update cache
+      // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
+      queryClient.setQueryData(blockKeys.list(conversationId), (old: any) => {
+        if (!old) return { blocks: [optimisticBlock], totalCount: 1 };
+        return {
+          ...old,
+          blocks: [...old.blocks, optimisticBlock],
+          totalCount: (old.totalCount || 0) + 1,
+        };
+      });
 
       // Return context with rollback function
-      return { previousBlocks, conversationId };
+      return { previousBlocks, conversationId, tempId };
     },
     onError: (_error, _variables, context) => {
       // Rollback on error
@@ -168,18 +198,18 @@ export function useCreateBlock() {
         queryClient.setQueryData(blockKeys.list(context.conversationId), context.previousBlocks);
       }
     },
-    onSuccess: (newBlock, variables, _context) => {
+    onSuccess: (newBlock, variables, context) => {
       // Update cache with actual server response
       const conversationId = Number(variables.conversationId);
       queryClient.setQueryData(blockKeys.detail(Number(newBlock.id)), newBlock);
 
-      // Update list cache with actual block
+      // Replace optimistic block in list with actual block
       // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
       queryClient.setQueryData(blockKeys.list(conversationId), (old: any) => {
         if (!old) return { blocks: [newBlock], totalCount: 1 };
         return {
           ...old,
-          blocks: old.blocks.map((b: Block) => (b.id === BigInt(0) ? newBlock : b)),
+          blocks: old.blocks.map((b: Block) => (b.id === context?.tempId ? newBlock : b)),
         };
       });
     },

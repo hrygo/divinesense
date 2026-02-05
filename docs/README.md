@@ -25,6 +25,7 @@ docs/
 ├── specs/                       # 规格文档 (活跃)
 │   ├── INDEX.md                 # 规格总索引
 │   ├── SPEC_TEMPLATE.md         # 规格模板
+│   ├── block-design/            # 统一 Block 模型设计 (重要)
 │   ├── evolution/               # 进化模式规格
 │   ├── sprint-0/                # Sprint 0: 接口契约
 │   ├── phase-1/                 # Phase 1: 基础稳定
@@ -46,13 +47,13 @@ docs/
 
 ## 🚀 快速开始
 
-| 角色 | 入口文档 | 说明 |
-|:-----|:---------|:-----|
-| **新开发者** | [ARCHITECTURE.md](dev-guides/ARCHITECTURE.md) | 了解系统架构 |
-| **后端开发** | [BACKEND_DB.md](dev-guides/BACKEND_DB.md) | 数据库、API、AI |
-| **前端开发** | [FRONTEND.md](dev-guides/FRONTEND.md) | 布局、组件、样式 |
-| **Agent 开发** | [QUICKSTART_AGENT.md](dev-guides/QUICKSTART_AGENT.md) | AI 代理开发 |
-| **运维部署** | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维 |
+| 角色           | 入口文档                                                | 说明             |
+| :------------- | :------------------------------------------------------ | :--------------- |
+| **新开发者**   | [ARCHITECTURE.md](dev-guides/ARCHITECTURE.md)           | 了解系统架构     |
+| **后端开发**   | [BACKEND_DB.md](dev-guides/BACKEND_DB.md)               | 数据库、API、AI  |
+| **前端开发**   | [FRONTEND.md](dev-guides/FRONTEND.md)                   | 布局、组件、样式 |
+| **Agent 开发** | [QUICKSTART_AGENT.md](dev-guides/QUICKSTART_AGENT.md)   | AI 代理开发      |
+| **运维部署**   | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
 
 ---
 
@@ -60,22 +61,22 @@ docs/
 
 ### 活跃文档 (Active)
 
-| 目录 | 用途 | 状态 |
-|:-----|:-----|:-----|
-| [`dev-guides/`](dev-guides/) | 开发指南 | ✅ 维护中 |
-| [`deployment/`](deployment/) | 部署文档 | ✅ 维护中 |
-| [`research/`](research/) | 研究与路线图 | ✅ 维护中 |
-| [`specs/`](specs/) | 实施规格 | ✅ 维护中 |
+| 目录                         | 用途         | 状态     |
+| :--------------------------- | :----------- | :------- |
+| [`dev-guides/`](dev-guides/) | 开发指南     | ✅ 维护中 |
+| [`deployment/`](deployment/) | 部署文档     | ✅ 维护中 |
+| [`research/`](research/)     | 研究与路线图 | ✅ 维护中 |
+| [`specs/`](specs/)           | 实施规格     | ✅ 维护中 |
 
 ### 归档文档 (Archived)
 
-| 目录 | 归档时间 | 内容 |
-|:-----|:---------|:-----|
-| [`archived/cleanup_20260123/`](archived/cleanup_20260123/) | 2026-01-23 | 早期实施计划、RAG 研究 |
-| [`archived/research_cleanup_20260131/`](archived/research_cleanup_20260131/) | 2026-01-31 | 历史报告、方法论 |
-| [`archived/research_20250202/`](archived/research_20250202/) | 2025-02-02 | 研究路线图（8 个文档） |
-| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/) | 2025-02-02 | Phase-1 已完成规格（9 个） |
-| [`archived/specs/`](archived/specs/) | 2026-01-23 | 已完成的 AI/FE 规格 |
+| 目录                                                                         | 归档时间   | 内容                       |
+| :--------------------------------------------------------------------------- | :--------- | :------------------------- |
+| [`archived/cleanup_20260123/`](archived/cleanup_20260123/)                   | 2026-01-23 | 早期实施计划、RAG 研究     |
+| [`archived/research_cleanup_20260131/`](archived/research_cleanup_20260131/) | 2026-01-31 | 历史报告、方法论           |
+| [`archived/research_20250202/`](archived/research_20250202/)                 | 2025-02-02 | 研究路线图（8 个文档）     |
+| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/)     | 2025-02-02 | Phase-1 已完成规格（9 个） |
+| [`archived/specs/`](archived/specs/)                                         | 2026-01-23 | 已完成的 AI/FE 规格        |
 
 ---
 
@@ -109,12 +110,12 @@ docs/
 
 ### 文档命名
 
-| 类型 | 格式 | 示例 |
-|:-----|:-----|:-----|
-| 开发指南 | `UPPER_CASE.md` | `ARCHITECTURE.md` |
-| 研究报告 | `{name}-research.md` | `assistant-research.md` |
-| 路线图 | `{name}-roadmap.md` | `memo-roadmap.md` |
-| 规格 | `P{Phase}-T{Team}{ID}-{name}.md` | `P1-A001-memory-system.md` |
+| 类型     | 格式                             | 示例                       |
+| :------- | :------------------------------- | :------------------------- |
+| 开发指南 | `UPPER_CASE.md`                  | `ARCHITECTURE.md`          |
+| 研究报告 | `{name}-research.md`             | `assistant-research.md`    |
+| 路线图   | `{name}-roadmap.md`              | `memo-roadmap.md`          |
+| 规格     | `P{Phase}-T{Team}{ID}-{name}.md` | `P1-A001-memory-system.md` |
 
 ### 更新原则
 

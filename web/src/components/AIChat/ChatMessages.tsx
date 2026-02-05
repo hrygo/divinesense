@@ -63,6 +63,18 @@ interface MessageBlock {
  * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
  * - sessionStats: SessionStats (for Geek/Evolution modes)
  */
+/**
+ * Normalize timestamp to milliseconds
+ * Heuristic: If timestamp is less than 10000000000 (year 2286 in seconds), treat as seconds.
+ */
+function normalizeTimestamp(ts: number | bigint): number {
+  const num = Number(ts);
+  if (num < 10000000000) {
+    return num * 1000;
+  }
+  return num;
+}
+
 function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean): MessageBlock[] {
   const messageBlocks: MessageBlock[] = [];
 
@@ -82,7 +94,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
       id: `block-${block.id}`,
       role: "user" as MessageRole,
       content: userContent,
-      timestamp: Number(block.createdTs),
+      timestamp: normalizeTimestamp(block.createdTs),
       metadata: {
         mode: getBlockModeName(block.mode) as AIMode,
       },
@@ -93,7 +105,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
       id: `block-${block.id}-assistant`,
       role: "assistant" as MessageRole,
       content: block.assistantContent || "",
-      timestamp: Number(block.updatedTs),
+      timestamp: normalizeTimestamp(block.updatedTs),
       error: String(block.status) === String(BLOCK_STATUS.ERROR),
       metadata: {
         mode: getBlockModeName(block.mode) as AIMode,
@@ -157,11 +169,11 @@ function extractThinkingSteps(events: BlockEvent[]): ThinkingStep[] | undefined 
       const parsed = JSON.parse(e.content);
       return {
         content: parsed.content || e.content,
-        timestamp: parsed.timestamp || Number(e.timestamp),
+        timestamp: normalizeTimestamp(parsed.timestamp || e.timestamp),
         round: parsed.round || 0,
       };
     } catch {
-      return { content: e.content, timestamp: Number(e.timestamp), round: 0 };
+      return { content: e.content, timestamp: normalizeTimestamp(e.timestamp), round: 0 };
     }
   });
 }
