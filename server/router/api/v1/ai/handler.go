@@ -481,9 +481,11 @@ func (h *ParrotHandler) executeAgent(
 			}
 
 			// Append event asynchronously with error logging (don't block streaming)
+			// Note: Persistence failures are logged with structured "metric" attribute for monitoring/alerting
 			go func(blockID int64, evtType string) {
 				if err := h.blockManager.AppendEvent(ctx, blockID, evtType, dataStr, eventMetaForBlock); err != nil {
 					logger.Warn("Failed to append event to block",
+						slog.String("metric", "ai.event_persistence_failure"), // Structured attribute for monitoring
 						slog.Int64("block_id", blockID),
 						slog.String("event_type", evtType),
 						slog.String("error", err.Error()))

@@ -16,7 +16,8 @@ import {
 } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType } from "@/types/capability";
 import { ParrotAgentType } from "@/types/parrot";
-import { AgentType, AIConversation, AIMessage } from "@/types/proto/api/v1/ai_service_pb";
+// Import BlockType enum for type-safe comparisons
+import { AgentType, AIConversation, Block, BlockType } from "@/types/proto/api/v1/ai_service_pb";
 
 const MESSAGE_CACHE_LIMIT = 100; // Maximum MSG messages to cache per conversation
 
@@ -27,6 +28,17 @@ const AI_MODE_STORAGE_KEY = "divinesense.ai_mode";
 const IMMERSIVE_MODE_STORAGE_KEY = "divinesense.immersive_mode";
 
 const generateId = () => `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Safe JSON parser with fallback for metadata fields
+function parseMetadata(metadata: string | undefined | null): Record<string, unknown> {
+  if (!metadata) return {};
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    console.warn("Failed to parse metadata, using empty object:", metadata);
+    return {};
+  }
+}
 
 // Helper function to get default conversation title based on parrot type.
 // Note: This returns a fallback English title. The actual display titles are
@@ -112,6 +124,96 @@ function enforceFIFOMessages(messages: ChatItem[]): ChatItem[] {
 
   return result;
 }
+
+// ============================================================================
+// Message Merge Helper Functions (Refactored from mergeMessagesIntoState)
+// ============================================================================
+
+/**
+ * Gets the unique identifier for a message.
+ * ChatItems from backend have `uid`, while local messages use `id`.
+ */
+function getMessageUid(msg: ChatItem): string {
+  return "uid" in msg ? (msg.uid ?? "") : (msg.id ?? "");
+}
+
+/**
+ * Finds the index of a local optimistic update message that matches the given message.
+ * Optimistic updates have IDs starting with "chat_" and match by role and content.
+ */
+function findOptimisticMatch(messages: ChatItem[], msg: ChatItem): number {
+  return messages.findIndex(
+    (m) =>
+      !isContextSeparator(m) &&
+      (m as ConversationMessage).id.startsWith("chat_") &&
+      (m as ConversationMessage).role === (msg as ConversationMessage).role &&
+      (m as ConversationMessage).content === (msg as ConversationMessage).content,
+  );
+}
+
+/**
+ * Replaces a local optimistic message with the synced version from backend.
+ * Preserves local metadata that might be missing from the backend response.
+ */
+function replaceOptimisticMessage(messages: ChatItem[], index: number, newMsg: ChatItem): void {
+  const localMsg = messages[index] as ConversationMessage;
+  messages[index] = {
+    ...newMsg,
+    metadata: {
+      ...localMsg.metadata,
+      ...("metadata" in newMsg ? newMsg.metadata : {}),
+    },
+  };
+}
+
+/**
+ * Merges incoming messages with existing messages using three strategies:
+ *
+ * Case 1: Skip - Message already synced (UID match)
+ * Case 2: Replace - Optimistic update found (local chat_* prefix message)
+ * Case 3: Append - Totally new message
+ *
+ * Context Separator messages are always appended (no UID).
+ */
+function mergeMessageLists(existing: ChatItem[], incoming: ChatItem[]): ChatItem[] {
+  const merged = [...existing];
+
+  // Track seen UIDs for deduplication (exclude SEPARATOR which has no UID)
+  const seenUids = new Set(existing.filter((m) => !isContextSeparator(m)).map((m) => getMessageUid(m)));
+
+  for (const msg of incoming) {
+    // Context Separator: always append (no UID to check)
+    if (isContextSeparator(msg)) {
+      merged.push(msg);
+      continue;
+    }
+
+    const uid = getMessageUid(msg);
+
+    // Case 1: Message already exists, skip
+    if (seenUids.has(uid)) {
+      continue;
+    }
+
+    // Case 2: Optimistic update replacement
+    const matchIndex = findOptimisticMatch(merged, msg);
+    if (matchIndex !== -1) {
+      replaceOptimisticMessage(merged, matchIndex, msg);
+      seenUids.add(uid);
+      continue;
+    }
+
+    // Case 3: New message, append
+    merged.push(msg);
+    seenUids.add(uid);
+  }
+
+  return merged;
+}
+
+// ============================================================================
+// End of Message Merge Helper Functions
+// ============================================================================
 
 export function AIChatProvider({ children, initialState }: AIChatProviderProps) {
   const { t } = useTranslation();
@@ -229,33 +331,48 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     return state.blocksByConversation[state.currentConversationId] || [];
   }, [state.currentConversationId, state.blocksByConversation]);
 
-  // Helpers to convert from Protobuf to local types
-  // Note: convertMessageFromPb must be defined before convertConversationFromPb
-  const convertMessageFromPb = useCallback((m: AIMessage): ChatItem => {
-    if (m.type === "SEPARATOR") {
-      return {
+  // Helper to convert protobuf Block to local ChatItem
+  // ALL IN BLOCK! - Now converts from Block instead of AIMessage
+  const convertBlockToChatItem = useCallback((block: Block): ChatItem[] => {
+    const items: ChatItem[] = [];
+
+    // Handle SEPARATOR blocks - use enum constant for type safety
+    if (block.blockType === BlockType.CONTEXT_SEPARATOR) {
+      items.push({
         type: "context-separator",
-        id: String(m.id),
-        uid: m.uid, // Include UID for incremental sync
-        timestamp: Number(m.createdTs) * 1000,
+        id: String(block.id),
+        uid: block.uid,
+        timestamp: Number(block.createdTs),
         synced: true,
-      };
+      });
+      return items;
     }
-    // Safe JSON parse with fallback
-    let metadata = {};
-    try {
-      metadata = JSON.parse(m.metadata || "{}");
-    } catch {
-      console.warn("Failed to parse message metadata", m.metadata);
+
+    // Convert user inputs to user messages
+    for (const input of block.userInputs) {
+      items.push({
+        id: String(block.id),
+        uid: block.uid,
+        role: "user",
+        content: input.content,
+        timestamp: Number(input.timestamp),
+        metadata: parseMetadata(input.metadata),
+      });
     }
-    return {
-      id: String(m.id),
-      uid: m.uid, // Include UID for incremental sync
-      role: m.role.toLowerCase() as "user" | "assistant",
-      content: m.content,
-      timestamp: Number(m.createdTs) * 1000,
-      metadata,
-    };
+
+    // Convert assistant content to assistant message
+    if (block.assistantContent) {
+      items.push({
+        id: String(block.id),
+        uid: block.uid,
+        role: "assistant",
+        content: block.assistantContent,
+        timestamp: Number(block.assistantTimestamp || block.updatedTs),
+        metadata: parseMetadata(block.metadata),
+      });
+    }
+
+    return items;
   }, []);
 
   // Helper: Convert protobuf AgentType enum to ParrotAgentType string
@@ -285,18 +402,25 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
 
   const convertConversationFromPb = useCallback(
     (pb: AIConversation): Conversation => {
+      // ALL IN BLOCK! - Convert blocks to messages for local state
+      const blocks = pb.blocks ?? [];
+      const messages: ChatItem[] = [];
+      for (const block of blocks) {
+        messages.push(...convertBlockToChatItem(block));
+      }
+
       return {
         id: String(pb.id),
         title: localizeTitle(pb.title),
         parrotId: convertAgentTypeToParrotId(pb.parrotId),
         createdAt: Number(pb.createdTs) * 1000,
         updatedAt: Number(pb.updatedTs) * 1000,
-        messages: (pb.messages ?? []).map((m) => convertMessageFromPb(m)),
-        referencedMemos: [], // Backend managed for RAG, but state can store it if needed
-        messageCount: pb.messageCount, // Use backend-provided message count
+        messages,
+        referencedMemos: [],
+        messageCount: pb.blockCount, // Use backend-provided block count
       };
     },
-    [convertMessageFromPb, localizeTitle, convertAgentTypeToParrotId],
+    [convertBlockToChatItem, localizeTitle, convertAgentTypeToParrotId],
   );
 
   // Sync state with backend
@@ -651,93 +775,46 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     [convertConversationFromPb],
   );
 
-  // Helper function to merge messages into state (pure function, safe for async callbacks)
+  /**
+   * Merges server response messages into the AI chat state.
+   *
+   * This is a pure function that handles:
+   * - Converting Blocks to ChatItems
+   * - First load: direct replacement
+   * - Incremental sync: intelligent merge with deduplication
+   *
+   * The actual merge logic is delegated to mergeMessageLists() helper.
+   *
+   * @see mergeMessageLists for the three merge strategies (skip/replace/append)
+   */
   function mergeMessagesIntoState(
     prevState: AIChatState,
     conversationId: string,
     response: {
-      messages: AIMessage[];
+      blocks: Block[];
       hasMore: boolean;
       totalCount: number;
-      latestMessageUid: string;
+      latestBlockUid: string;
     },
-    convertMessageFromPb: (m: AIMessage) => ChatItem,
+    convertBlockToChatItemFn: (b: Block) => ChatItem[],
   ): AIChatState {
-    const newMessages = response.messages.map((m) => convertMessageFromPb(m));
+    // Convert Blocks to ChatItems
+    const newMessages = response.blocks.flatMap(convertBlockToChatItemFn);
 
     return {
       ...prevState,
       conversations: prevState.conversations.map((c) => {
         if (c.id !== conversationId) return c;
 
-        // For first load (no existing cache), use new messages directly
-        if (!c.messageCache) {
-          return {
-            ...c,
-            messages: enforceFIFOMessages(newMessages),
-            messageCache: {
-              lastMessageUid: response.latestMessageUid,
-              totalCount: response.totalCount,
-              hasMore: response.hasMore,
-            },
-          };
-        }
+        // First load: use new messages directly
+        // Incremental sync: merge with existing messages
+        const messages = c.messageCache ? mergeMessageLists(c.messages, newMessages) : newMessages;
 
-        // For incremental sync, merge with existing messages
-        const existingMessages = c.messages || [];
-        // Create a copy for mutation
-        const mergedMessages = [...existingMessages];
-        const existingUids = new Set(existingMessages.filter((m) => !isContextSeparator(m)).map((m) => ("uid" in m ? m.uid : m.id)));
-
-        for (const msg of newMessages) {
-          if (isContextSeparator(msg)) {
-            mergedMessages.push(msg);
-            continue;
-          }
-
-          const uid = "uid" in msg ? msg.uid : msg.id;
-
-          // Case 1: Message already synced (UID match)
-          if (existingUids.has(uid)) {
-            continue;
-          }
-
-          // Case 2: Check for Optimistic Update (Local temporary message)
-          // Look for a local message (with "chat_" prefix ID) that matches role and content
-          const matchIndex = mergedMessages.findIndex(
-            (localMsg) =>
-              !isContextSeparator(localMsg) &&
-              localMsg.id.startsWith("chat_") && // Is temporary
-              localMsg.role === msg.role &&
-              localMsg.content === msg.content,
-          );
-
-          if (matchIndex !== -1) {
-            // Found a match! Replace local message with synced real message
-            // Preserve local metadata (like mode) that might be missing from backend
-            const localMsg = mergedMessages[matchIndex] as ConversationMessage;
-            mergedMessages[matchIndex] = {
-              ...msg,
-              metadata: {
-                ...localMsg.metadata,
-                ...msg.metadata,
-              },
-            };
-            // Add new UID to set to prevent duplicate additions
-            existingUids.add(uid);
-          } else {
-            // Case 3: Totally new message, append it
-            mergedMessages.push(msg);
-            existingUids.add(uid);
-          }
-        }
-
-        // Enforce FIFO limit
         return {
           ...c,
-          messages: enforceFIFOMessages(mergedMessages),
+          messages: enforceFIFOMessages(messages),
           messageCache: {
-            lastMessageUid: response.latestMessageUid,
+            lastMessageUid: response.latestBlockUid,
             totalCount: response.totalCount,
             hasMore: response.hasMore,
           },
@@ -747,6 +824,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   }
 
   // Message sync actions with incremental sync and FIFO cache
+  // ALL IN BLOCK! - Now uses lastBlockUid instead of lastMessageUid
   const syncMessages = useCallback(
     async (conversationId: string) => {
       const numericId = parseInt(conversationId);
@@ -755,15 +833,15 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
       // Use functional state update to get current state without creating dependency
       setState((prev) => {
         const conversation = prev.conversations.find((c) => c.id === conversationId);
-        const lastMessageUid = conversation?.messageCache?.lastMessageUid || "";
-        const limit = 100; // Always request 100 messages
+        const lastBlockUid = conversation?.messageCache?.lastMessageUid || "";
+        const limit = 100; // Always request 100 blocks
 
         // Fire-and-forget async operation (we can't await in setState updater)
         // Check mounted state before setState to prevent updates after unmount
         aiServiceClient
           .listMessages({
             conversationId: numericId,
-            lastMessageUid,
+            lastBlockUid,
             limit,
           })
           .then((response) => {
@@ -778,19 +856,19 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
                   return { ...c, messages: [], messageCache: undefined };
                 }),
               }));
-              // Retry with empty lastMessageUid
+              // Retry with empty lastBlockUid
               aiServiceClient
                 .listMessages({
                   conversationId: numericId,
-                  lastMessageUid: "",
+                  lastBlockUid: "",
                   limit,
                 })
                 .then((retryResponse) => {
                   if (!isMountedRef.current) return; // Skip update if unmounted
-                  setState((innerPrev) => mergeMessagesIntoState(innerPrev, conversationId, retryResponse, convertMessageFromPb));
+                  setState((innerPrev) => mergeMessagesIntoState(innerPrev, conversationId, retryResponse, convertBlockToChatItem));
                 });
             } else {
-              setState((innerPrev) => mergeMessagesIntoState(innerPrev, conversationId, response, convertMessageFromPb));
+              setState((innerPrev) => mergeMessagesIntoState(innerPrev, conversationId, response, convertBlockToChatItem));
             }
           })
           .catch((e: unknown) => {
@@ -800,8 +878,8 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
         return prev; // Return previous state unchanged (async update will follow)
       });
     },
-    [convertMessageFromPb],
-  ); // Only depends on convertMessageFromPb
+    [convertBlockToChatItem],
+  ); // Only depends on convertBlockToChatItem
 
   const loadMoreMessages = useCallback(
     async (conversationId: string) => {
@@ -824,14 +902,17 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
         aiServiceClient
           .listMessages({
             conversationId: numericId,
-            lastMessageUid: oldestUid as string, // Request messages before this UID
+            lastBlockUid: oldestUid as string, // Request blocks before this UID
             limit: 100,
           })
           .then((response) => {
             if (!isMountedRef.current) return; // Skip update if unmounted
 
             // Prepend messages (older messages come first)
-            const olderMessages = response.messages.map((m) => convertMessageFromPb(m));
+            const olderMessages: ChatItem[] = [];
+            for (const block of response.blocks || []) {
+              olderMessages.push(...convertBlockToChatItem(block));
+            }
             setState((innerPrev) => ({
               ...innerPrev,
               conversations: innerPrev.conversations.map((c) => {
@@ -857,8 +938,8 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
         return prev;
       });
     },
-    [convertMessageFromPb],
-  ); // Only depends on convertMessageFromPb
+    [convertBlockToChatItem],
+  ); // Only depends on convertBlockToChatItem
 
   // Referenced content actions
   const addReferencedMemos = useCallback((conversationId: string, memos: ReferencedMemo[]) => {

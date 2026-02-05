@@ -46,7 +46,7 @@ import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSumma
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
 import { ConversationMessage } from "@/types/aichat";
-import { PARROT_THEMES, ParrotAgentType, BlockSummary } from "@/types/parrot";
+import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
@@ -67,10 +67,18 @@ type ToolCall =
 // Constants
 // ============================================================================
 
-/** Timestamp multiplier for calculating round-based timestamps */
+/**
+ * Timestamp multiplier for calculating round-based timestamps.
+ *
+ * This value ensures tool calls from the same round are grouped together
+ * in the timeline, with microsecond precision to avoid conflicts.
+ * Formula: baseTimestamp (microseconds) + index * offset
+ *
+ * @example Round 2, 3rd tool call: 2_000_000 + 2 * 50000 = 2001000 microseconds
+ */
 const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
 
-// Note: TOOL_CALL_OFFSET_MS and USER_INPUTS_EXPAND_THRESHOLD imported from constants.ts
+// Note: TOOL_CALL_MS and USER_INPUTS_EXPAND_THRESHOLD imported from constants.ts
 
 // ============================================================================
 // Types
@@ -338,7 +346,7 @@ function BlockHeader({
   const geekSummary = useMemo(() => {
     if (!blockSummary || (parrotId !== "GEEK" && parrotId !== "EVOLUTION")) return null;
 
-    const cost = blockSummary.totalCostUsd ? `$${blockSummary.totalCostUsd.toFixed(4)}` : "";
+    const cost = blockSummary.totalCostUSD ? `$${blockSummary.totalCostUSD.toFixed(4)}` : "";
     const tokens =
       blockSummary.totalInputTokens && blockSummary.totalOutputTokens
         ? `${((blockSummary.totalInputTokens + blockSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
