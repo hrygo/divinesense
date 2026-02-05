@@ -294,10 +294,12 @@ export interface ScheduleSummary {
 /**
  * Session summary for Geek/Evolution modes
  * 会话摘要 - 用于极客模式和进化模式
+ *
+ * NOTE: Mode has been removed from SessionSummary - use Block.mode as the single source of truth.
+ * The mode is determined by the Block that contains this session's data.
  */
 export interface SessionSummary {
   sessionId?: string;
-  mode?: string; // "geek" | "evolution" | "normal"
   totalDurationMs?: number;
   thinkingDurationMs?: number;
   toolDurationMs?: number;

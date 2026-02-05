@@ -5539,8 +5539,6 @@ components:
                 sessionId:
                     type: string
                     description: Session identification
-                mode:
-                    type: string
                 totalDurationMs:
                     type: string
                     description: Overall timing
@@ -5591,6 +5589,9 @@ components:
             description: |-
                 SessionSummary provides end-of-session statistics for Geek/Evolution modes.
                  Sent in the final ChatResponse when done=true.
+
+                 NOTE: Mode is NOT included here - use Block.mode as the single source of truth.
+                 The session mode is determined by the Block that contains this session.
         SetMemoAttachmentsRequest:
             required:
                 - name

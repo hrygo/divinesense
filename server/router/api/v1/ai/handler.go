@@ -619,15 +619,8 @@ func (h *ParrotHandler) executeAgent(
 		sessionSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
 	}
 
-	// Set mode based on request parameters
-	// 根据请求参数设置模式
-	if req.EvolutionMode {
-		sessionSummary.Mode = "evolution"
-	} else if req.GeekMode {
-		sessionSummary.Mode = "geek"
-	} else {
-		sessionSummary.Mode = "normal"
-	}
+	// NOTE: SessionSummary.Mode has been removed - Block.mode is the single source of truth.
+	// The mode is stored in the Block (currentBlock.mode) and should be read from there.
 
 	// Add detailed stats if available (from GeekParrot/EvolutionParrot)
 	// 添加详细统计数据（如果可用，来自 GeekParrot/EvolutionParrot）

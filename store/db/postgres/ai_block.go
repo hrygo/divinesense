@@ -91,8 +91,8 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 			uid, conversation_id, block_type, mode,
 			user_inputs, assistant_content, assistant_timestamp,
 			event_stream, session_stats, cc_session_id, status, metadata,
-			parent_block_id, created_ts, updated_ts
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $15, $16)
+			parent_block_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, round_number, parent_block_id, branch_path, created_ts, updated_ts
 	`
 
@@ -113,8 +113,6 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 		string(create.Status),
 		metadataJSON,
 		create.ParentBlockID,
-		create.CreatedTs,
-		create.UpdatedTs,
 	).Scan(&block.ID, &block.RoundNumber, &parentBlockID, &branchPath, &block.CreatedTs, &block.UpdatedTs)
 
 	if err != nil {

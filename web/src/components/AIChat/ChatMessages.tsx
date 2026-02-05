@@ -28,25 +28,20 @@ function useStreamingStatus(blocks: AIBlock[] | undefined, isStreaming: boolean)
   }, [blocks, isStreaming]);
 }
 
-/** Hook to determine the effective parrot ID considering session and block modes */
+/** Hook to determine the effective parrot ID from Block.mode (single source of truth) */
 function useEffectiveParrotId(
   currentParrotId: ParrotAgentType | undefined,
-  sessionSummary: SessionSummary | undefined,
   blocks: AIBlock[] | undefined,
 ): ParrotAgentType {
   return useMemo(() => {
-    // Session summary has highest priority
-    if (sessionSummary?.mode === "geek") return ParrotAgentType.GEEK;
-    if (sessionSummary?.mode === "evolution") return ParrotAgentType.EVOLUTION;
-
-    // Check last Block mode
+    // Block.mode is the single source of truth for mode determination
     if (blocks && blocks.length > 0) {
       const lastAIBlock = blocks[blocks.length - 1];
       return blockModeToParrotAgentType(lastAIBlock.mode);
     }
 
     return currentParrotId ?? ParrotAgentType.AMAZING;
-  }, [currentParrotId, sessionSummary?.mode, blocks]);
+  }, [currentParrotId, blocks]);
 }
 
 // ============================================================================
@@ -463,9 +458,8 @@ const ChatMessages = memo(function ChatMessages({
     return null;
   }, [isLastStreaming, blocks, messageBlocks, isStreaming]);
 
-  // Determine effective parrot ID based on session mode (Geek/Evolution override normal parrotId)
-  // Phase 4: Also consider Block mode (using extracted hook)
-  const effectiveParrotId = useEffectiveParrotId(currentParrotId, sessionSummary, blocks);
+  // Determine effective parrot ID from Block.mode (single source of truth)
+  const effectiveParrotId = useEffectiveParrotId(currentParrotId, blocks);
 
   return (
     <div
