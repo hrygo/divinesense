@@ -181,7 +181,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
  * @param hasBlockSummary - Whether session summary is available
  * @param t - Translation function for i18n keys
  */
-function groupMessagesIntoBlocks(items: ChatItem[], hasBlockSummary: boolean, t: (key: string) => string): MessageBlock[] {
+function groupMessagesIntoBlocks(items: ChatItem[], hasBlockSummary: boolean, _t: (key: string) => string): MessageBlock[] {
   const blocks: MessageBlock[] = [];
   let pendingUser: ConversationMessage | null = null;
 
@@ -503,7 +503,7 @@ const ChatMessages = memo(function ChatMessages({
                 key={block.id}
                 userMessage={block.userMessage}
                 assistantMessage={block.assistantMessage}
-                sessionSummary={block.attachBlockSummary ? sessionSummary : undefined}
+                blockSummary={block.attachBlockSummary ? sessionSummary : undefined}
                 parrotId={blockParrotId}
                 isLatest={block.isLatest}
                 isStreaming={isLastStreaming && block.isLatest}
