@@ -1,5 +1,6 @@
 import { Calendar, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/utils/i18n";
 
 interface StreamingEvent {
   type: string;
@@ -18,6 +19,8 @@ interface StreamingFeedbackProps {
  * Shows real-time AI thinking and tool use feedback
  */
 export function StreamingFeedback({ events, isStreaming, className }: StreamingFeedbackProps) {
+  const t = useTranslate();
+
   if (!isStreaming || events.length === 0) {
     return null;
   }
@@ -29,19 +32,23 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
   const lastToolUse = events.filter((e) => e.type === "tool_use").at(-1);
 
   const formatToolName = (toolName: string): string => {
+    const usingToolText = (t("schedule.ai.using-tool") as string) || "Using tool";
     switch (toolName) {
       case "schedule_add":
-        return "Creating schedule...";
+        return (t("schedule.ai.creating-schedule") as string) || "Creating schedule...";
       case "schedule_query":
-        return "Checking schedules...";
+        return (t("schedule.ai.checking-schedule") as string) || "Checking schedules...";
       case "schedule_update":
-        return "Updating schedule...";
+        return (t("schedule.ai.updating-schedule") as string) || "Updating schedule...";
       case "find_free_time":
-        return "Finding free time...";
+        return (t("schedule.ai.finding-free-time") as string) || "Finding free time...";
       default:
-        return `Using ${toolName}...`;
+        return `${usingToolText}...`;
     }
   };
+
+  const thinkingText = (t("schedule.ai.thinking") as string) || "Thinking...";
+  const processingText = (t("schedule.ai.processing") as string) || "Processing...";
 
   return (
     <div className={cn("flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl border border-border/50", className)}>
@@ -55,10 +62,10 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
         ) : lastThinking ? (
           <div className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">{lastThinking.data || "Thinking..."}</span>
+            <span className="text-muted-foreground">{lastThinking.data || thinkingText}</span>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">Processing...</span>
+          <span className="text-sm text-muted-foreground">{processingText}</span>
         )}
       </div>
     </div>
