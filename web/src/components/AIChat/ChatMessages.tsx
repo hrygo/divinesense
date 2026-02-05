@@ -29,10 +29,7 @@ function useStreamingStatus(blocks: AIBlock[] | undefined, isStreaming: boolean)
 }
 
 /** Hook to determine the effective parrot ID from Block.mode (single source of truth) */
-function useEffectiveParrotId(
-  currentParrotId: ParrotAgentType | undefined,
-  blocks: AIBlock[] | undefined,
-): ParrotAgentType {
+function useEffectiveParrotId(currentParrotId: ParrotAgentType | undefined, blocks: AIBlock[] | undefined): ParrotAgentType {
   return useMemo(() => {
     // Block.mode is the single source of truth for mode determination
     if (blocks && blocks.length > 0) {
