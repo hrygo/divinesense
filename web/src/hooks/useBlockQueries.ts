@@ -566,6 +566,7 @@ export function fromProtoBlockStatus(status: BlockStatus): "pending" | "streamin
       return "pending";
   }
 }
+<<<<<<< HEAD
 
 // ============================================================================
 // ERROR HANDLING & FALLBACK (Phase 4)
@@ -633,3 +634,5 @@ export function useBlocksWithFallback(
     shouldFallback,
   };
 }
+=======
+>>>>>>> 98db96e2 (feat(ai): implement Unified Block Model (Issue #71) (#78))

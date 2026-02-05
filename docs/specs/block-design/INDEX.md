@@ -68,7 +68,10 @@
 |:-----|:-----|:-----|:-------|
 | [P1-A006-llm-stats-collection.md](./P1-A006-llm-stats-collection.md) | LLM 层统计收集 - 普通 Token 统计 | 🔲 待开发 | P1 |
 | [tree-conversation-branching.md](./tree-conversation-branching.md) | 树状会话分支 - 编辑重生成功能 | 🔲 待开发 | P1 |
+<<<<<<< HEAD
 | [ai-block-fields-extension.md](./ai-block-fields-extension.md) | ai_block 字段扩展 - Token/成本/反馈/软删除 | 📝 已提议 | P1 |
+=======
+>>>>>>> 98db96e2 (feat(ai): implement Unified Block Model (Issue #71) (#78))
 
 ### 5. 审计与协调 (Audit & Coordination)
 
@@ -168,6 +171,7 @@
 | `parent_block_id` | BIGINT | 父 Block ID (支持树状分支) |
 | `branch_path` | TEXT | 分支路径 (如 "0/1/2") |
 
+<<<<<<< HEAD
 ### 扩展字段 (Fields Extension - P1)
 
 | 字段 | 类型 | 描述 |
@@ -180,6 +184,8 @@
 | `regeneration_count` | INTEGER | 重新生成次数 |
 | `archived_at` | BIGINT | 软删除时间戳（NULL 表示正常） |
 
+=======
+>>>>>>> 98db96e2 (feat(ai): implement Unified Block Model (Issue #71) (#78))
 ---
 
 ## 版本历史
