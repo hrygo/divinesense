@@ -1,3 +1,5 @@
+// Phase 4: Import Block type for currentBlocks
+import type { Block } from "./block";
 import { CapabilityStatus, CapabilityType } from "./capability";
 import { ParrotAgentType } from "./parrot";
 
@@ -178,6 +180,9 @@ export interface AIChatState {
   evolutionMode: boolean;
   // 沉浸模式 (沉浸模式 - 全屏沉浸体验)
   immersiveMode: boolean;
+  // Phase 4: Block data (Unified Block Model support)
+  // Maps conversationId to its blocks array
+  blocksByConversation: Record<string, Block[]>;
 }
 
 /**
@@ -191,6 +196,8 @@ export interface AIChatContextValue {
   currentConversation: Conversation | null;
   conversations: Conversation[];
   conversationSummaries: ConversationSummary[];
+  // Phase 4: Current conversation blocks
+  currentBlocks: Block[];
 
   // Conversation actions
   createConversation: (parrotId: ParrotAgentType, title?: string) => { id: string; completed: Promise<string> };
@@ -231,6 +238,11 @@ export interface AIChatContextValue {
 
   // Immersive Mode action (沉浸模式 - 全屏沉浸体验)
   toggleImmersiveMode: (enabled: boolean) => void;
+
+  // Phase 4: Block actions (Unified Block Model support)
+  loadBlocks: (conversationId: string) => Promise<void>;
+  appendUserInput: (blockId: number, content: string) => Promise<void>;
+  updateBlockStatus: (blockId: number, status: "pending" | "streaming" | "completed" | "error") => void;
 
   // Persistence
   saveToStorage: () => void;

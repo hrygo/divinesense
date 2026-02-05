@@ -178,3 +178,28 @@ export interface BlockListFilters {
   mode?: string;
   ccSessionId?: string;
 }
+
+/**
+ * Import ParrotAgentType for mode conversion
+ */
+import { ParrotAgentType } from "./parrot";
+
+/**
+ * Convert BlockMode to ParrotAgentType
+ * Maps the unified Block model modes to Parrot agent types
+ *
+ * @param mode - The BlockMode enum value or string
+ * @returns The corresponding ParrotAgentType
+ */
+export function blockModeToParrotAgentType(mode: BlockModeEnum | string): ParrotAgentType {
+  const modeStr = typeof mode === "string" ? mode : String(mode);
+  switch (modeStr) {
+    case String(BLOCK_MODE.GEEK):
+      return ParrotAgentType.GEEK;
+    case String(BLOCK_MODE.EVOLUTION):
+      return ParrotAgentType.EVOLUTION;
+    case String(BLOCK_MODE.NORMAL):
+    default:
+      return ParrotAgentType.AMAZING;
+  }
+}

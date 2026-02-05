@@ -215,7 +215,9 @@ func (s *AIService) createChatHandler() aichat.Handler {
 		s.AdaptiveRetriever,
 		s.Store,
 	)
-	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService, s.persister)
+	// Phase 5: Create BlockManager for Unified Block Model support
+	blockManager := aichat.NewBlockManager(s.Store)
+	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService, s.persister, blockManager)
 
 	// Configure chat router for auto-routing if intent classifier is enabled
 	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {

@@ -10,7 +10,6 @@
 
 import { create } from "@bufbuild/protobuf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React from "react";
 import { aiServiceClient } from "@/connect";
 import type {
   AppendEventRequest,
@@ -33,15 +32,6 @@ import {
   ListBlocksRequestSchema,
   UpdateBlockRequestSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
-import {
-  classifyError,
-  getErrorTitle,
-  getUserMessage,
-  getRecoveryActions,
-  logError,
-  shouldRetry,
-  type RecoveryAction,
-} from "@/utils/blockErrors";
 
 // ============================================================================
 // Query Configuration
@@ -184,6 +174,7 @@ export function useCreateBlock() {
       queryClient.setQueryData(blockKeys.detail(Number(newBlock.id)), newBlock);
 
       // Update list cache with actual block
+      // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
       queryClient.setQueryData(blockKeys.list(conversationId), (old: any) => {
         if (!old) return { blocks: [newBlock], totalCount: 1 };
         return {
@@ -223,6 +214,7 @@ export function useUpdateBlock() {
       const previousBlock = queryClient.getQueryData(blockKeys.detail(blockId));
 
       // Optimistically update cache
+      // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
       queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
         if (!old) return old;
         return {
@@ -313,6 +305,7 @@ export function useAppendEvent() {
       const blockId = Number(variables.id);
 
       // Direct cache update instead of invalidation (faster)
+      // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
       queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
         if (!old) return old;
 
@@ -348,6 +341,7 @@ export function useAppendEventsBatch() {
     },
     onSuccess: (_, variables) => {
       // Group by blockId for cache updates
+      // biome-ignore lint/suspicious/noExplicitAny: Event array for batch processing
       const updatesByBlock = new Map<number, any[]>();
 
       for (const { event } of variables) {
@@ -360,6 +354,7 @@ export function useAppendEventsBatch() {
 
       // Update caches for all affected blocks
       for (const [blockId, events] of updatesByBlock) {
+        // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
         queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
           if (!old) return old;
           return {
@@ -387,6 +382,7 @@ export function useStreamingBlock(blockId: number) {
   const queryClient = useQueryClient();
 
   const updateStreamingContent = (content: string) => {
+    // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
     queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
       if (!old) return old;
       return {
@@ -398,7 +394,9 @@ export function useStreamingBlock(blockId: number) {
     });
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: Event type from streaming
   const appendStreamingEvent = (event: any) => {
+    // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
     queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
       if (!old) return old;
       return {
@@ -409,7 +407,9 @@ export function useStreamingBlock(blockId: number) {
     });
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: SessionStats optional
   const completeStreaming = (finalContent: string, sessionStats?: any) => {
+    // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
     queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
       if (!old) return old;
       return {
@@ -423,6 +423,7 @@ export function useStreamingBlock(blockId: number) {
   };
 
   const markStreamingError = (errorMessage: string) => {
+    // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
     queryClient.setQueryData(blockKeys.detail(blockId), (old: any) => {
       if (!old) return old;
       return {
@@ -466,95 +467,6 @@ export function usePrefetchBlock() {
   };
 
   return { prefetchBlock };
-}
-
-// ============================================================================
-// Error Handling Hooks
-// ============================================================================
-
-/**
- * Hook for error-aware block operations
- *
- * Provides error state, user-friendly messages, and recovery actions
- * for block operations.
- */
-export function useBlockError() {
-  const [error, setError] = React.useState<unknown>(null);
-  const [retryCount, setRetryCount] = React.useState(0);
-
-  const handleError = (err: unknown, context?: { conversationId?: number; blockId?: number }) => {
-    logError(err, context);
-    setError(err);
-  };
-
-  const clearError = () => {
-    setError(null);
-    setRetryCount(0);
-  };
-
-  const retry = async () => {
-    if (!error || !shouldRetry(error, retryCount)) {
-      return;
-    }
-    setRetryCount((prev) => prev + 1);
-    clearError();
-    // The mutation will be retried automatically by React Query
-  };
-
-  const errorInfo = error
-    ? {
-        title: getErrorTitle(error),
-        message: getUserMessage(error),
-        recoveryActions: getRecoveryActions(error),
-        canRetry: shouldRetry(error, retryCount),
-        classification: classifyError(error),
-      }
-    : null;
-
-  return {
-    error,
-    errorInfo,
-    retryCount,
-    handleError,
-    clearError,
-    retry,
-  };
-}
-
-/**
- * Hook for mutation with built-in error handling
- */
-export function useMutationWithError<TData, TVariables, TError = unknown>(
-  options: {
-    mutationFn: (variables: TVariables) => Promise<TData>;
-    onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
-    onError?: (error: TError, variables: TVariables) => void | Promise<void>;
-    context?: { conversationId?: number; blockId?: number };
-  }
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: options.mutationFn,
-    onSuccess: (data, variables) => {
-      options.onSuccess?.(data, variables);
-    },
-    onError: (err: TError, variables) => {
-      logError(err, options.context);
-      options.onError?.(err, variables);
-    },
-    retry: (failureCount, error) => {
-      // Use custom retry logic
-      return shouldRetry(error, failureCount) ? failureCount + 1 : false;
-    },
-    retryDelay: (attemptIndex) => {
-      // Exponential backoff with jitter
-      const baseDelay = 1000;
-      const exponentialDelay = baseDelay * 2 ** attemptIndex;
-      const jitter = Math.random() * 0.3 * exponentialDelay;
-      return Math.min(exponentialDelay + jitter, 30000);
-    },
-  });
 }
 
 // ============================================================================

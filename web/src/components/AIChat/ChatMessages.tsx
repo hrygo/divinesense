@@ -4,6 +4,9 @@ import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIConta
 import type { GenerativeUIContainerProps } from "@/components/ScheduleAI/types";
 import { cn } from "@/lib/utils";
 import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
+// Phase 4: Import Block types
+import type { Block as AIBlock, BlockEvent } from "@/types/block";
+import { BLOCK_STATUS, blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName } from "@/types/block";
 import type { SessionSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -27,6 +30,8 @@ interface ChatMessagesProps {
   streamingContent?: string;
   /** Session summary for Geek/Evolution modes */
   sessionSummary?: SessionSummary;
+  /** Phase 4: Block data support */
+  blocks?: AIBlock[];
 }
 
 const SCROLL_THRESHOLD = 150;
@@ -46,7 +51,139 @@ interface MessageBlock {
 }
 
 /**
+ * Convert AIBlock[] to MessageBlock[] format
+ * Phase 4: New function to handle Block data structure
+ *
+ * Each AIBlock contains:
+ * - userInputs: UserInput[] (can have multiple user inputs per block)
+ * - assistantContent: string (the assistant response)
+ * - mode: BlockMode (normal/geek/evolution)
+ * - status: BlockStatus (pending/streaming/completed/error)
+ * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
+ * - sessionStats: SessionStats (for Geek/Evolution modes)
+ */
+function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean): MessageBlock[] {
+  const messageBlocks: MessageBlock[] = [];
+
+  for (const block of blocks) {
+    // Skip context separator blocks
+    const blockTypeStr = String(block.blockType);
+    if (blockTypeStr.includes("CONTEXT_SEPARATOR")) {
+      continue;
+    }
+
+    // Combine all user inputs into a single message
+    const userContent = block.userInputs
+      .map((ui) => ui.content)
+      .filter(Boolean)
+      .join("\n");
+
+    const userMessage: ConversationMessage = {
+      id: `block-${block.id}`,
+      role: "user" as MessageRole,
+      content: userContent,
+      timestamp: Number(block.createdTs),
+      metadata: {
+        mode: getBlockModeName(block.mode) as AIMode,
+      },
+    };
+
+    // Build assistant message from assistantContent and eventStream
+    const assistantMessage: ConversationMessage = {
+      id: `block-${block.id}-assistant`,
+      role: "assistant" as MessageRole,
+      content: block.assistantContent || "",
+      timestamp: Number(block.updatedTs),
+      error: String(block.status) === String(BLOCK_STATUS.ERROR),
+      metadata: {
+        mode: getBlockModeName(block.mode) as AIMode,
+        // Parse eventStream to extract metadata for UI
+        thinkingSteps: extractThinkingSteps(block.eventStream),
+        toolCalls: extractToolCalls(block.eventStream),
+      },
+    };
+
+    const isLatest = false; // Will be determined after loop
+    const attachSessionSummary = false; // Will be set for last block
+
+    messageBlocks.push({
+      id: String(block.id),
+      userMessage,
+      assistantMessage,
+      isLatest,
+      attachSessionSummary,
+    });
+  }
+
+  // Mark last block as latest and attach session summary if available
+  if (messageBlocks.length > 0) {
+    const lastBlock = messageBlocks[messageBlocks.length - 1];
+    lastBlock.isLatest = true;
+    if (hasSessionSummary && lastBlock.assistantMessage) {
+      lastBlock.attachSessionSummary = true;
+    }
+  }
+
+  return messageBlocks;
+}
+
+/**
+ * Thinking step type matching aichat.ts
+ */
+type ThinkingStep = { content: string; timestamp: number; round: number };
+
+/**
+ * Tool call type matching aichat.ts
+ */
+type ToolCall = {
+  name: string;
+  toolId?: string;
+  inputSummary?: string;
+  outputSummary?: string;
+  filePath?: string;
+  duration?: number;
+  isError?: boolean;
+  round?: number;
+};
+
+/**
+ * Extract thinking steps from event stream
+ */
+function extractThinkingSteps(events: BlockEvent[]): ThinkingStep[] | undefined {
+  const thinkingEvents = events.filter((e) => e.type === EVENT_TYPE.THINKING);
+  if (thinkingEvents.length === 0) return undefined;
+  return thinkingEvents.map((e) => {
+    try {
+      const parsed = JSON.parse(e.content);
+      return {
+        content: parsed.content || e.content,
+        timestamp: parsed.timestamp || Number(e.timestamp),
+        round: parsed.round || 0,
+      };
+    } catch {
+      return { content: e.content, timestamp: Number(e.timestamp), round: 0 };
+    }
+  });
+}
+
+/**
+ * Extract tool calls from event stream
+ */
+function extractToolCalls(events: BlockEvent[]): ToolCall[] | undefined {
+  const toolEvents = events.filter((e) => e.type === EVENT_TYPE.TOOL_USE);
+  if (toolEvents.length === 0) return undefined;
+  return toolEvents.map((e) => {
+    try {
+      return JSON.parse(e.content);
+    } catch {
+      return { name: e.type, inputSummary: e.content };
+    }
+  });
+}
+
+/**
  * Group messages into user-assistant pairs
+ * Legacy function for ChatItem[] support (backward compatibility)
  */
 function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean): MessageBlock[] {
   const blocks: MessageBlock[] = [];
@@ -129,6 +266,7 @@ function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean):
 
 const ChatMessages = memo(function ChatMessages({
   items,
+  blocks,
   isTyping = false,
   currentParrotId,
   onCopyMessage,
@@ -263,21 +401,59 @@ const ChatMessages = memo(function ChatMessages({
   }, []);
 
   // Group messages into blocks
-  // Use items.length and last item ID as dependencies to avoid recalculation
-  // when the parent component re-renders with the same array content
-  const messageBlocks = useMemo(
-    () => groupMessagesIntoBlocks(items, !!sessionSummary),
-    [items.length, items[items.length - 1]?.id, sessionSummary],
-  );
+  // Phase 4: Use blocks if provided, otherwise fall back to items (backward compatibility)
+  const messageBlocks = useMemo(() => {
+    if (blocks && blocks.length > 0) {
+      // Use new Block data structure
+      return convertAIBlocksToMessageBlocks(blocks, !!sessionSummary);
+    }
+    // Legacy: use ChatItem[] structure
+    return groupMessagesIntoBlocks(items, !!sessionSummary);
+  }, [blocks, blocks?.length, blocks?.[blocks.length - 1]?.id, items.length, items[items.length - 1]?.id, sessionSummary]);
 
-  // Check if last assistant message is streaming
-  const lastBlock = messageBlocks[messageBlocks.length - 1];
-  const isLastStreaming = lastBlock?.assistantMessage ? isStreaming : false;
+  // Phase 4: Check streaming status from either blocks or props
+  const isLastStreaming = useMemo(() => {
+    if (blocks && blocks.length > 0) {
+      const lastAIBlock = blocks[blocks.length - 1];
+      return String(lastAIBlock.status) === String(BLOCK_STATUS.STREAMING);
+    }
+    // Legacy: use prop
+    return isStreaming;
+  }, [blocks, isStreaming]);
 
   // 计算当前流式阶段（用于动画效果）
+  // Phase 4: Enhanced to read from Block eventStream
   const streamingPhase = useMemo((): "thinking" | "tools" | "answer" | null => {
-    if (!isLastStreaming || !lastBlock?.assistantMessage) return null;
-    const metadata = lastBlock.assistantMessage.metadata;
+    if (!isLastStreaming) return null;
+
+    // Phase 4: Check Block eventStream first
+    if (blocks && blocks.length > 0) {
+      const lastAIBlock = blocks[blocks.length - 1];
+      const events = lastAIBlock.eventStream || [];
+
+      // Get the most recent non-answer event
+      const recentEvents = events.filter((e) => e.type !== EVENT_TYPE.ANSWER);
+      const lastNonAnswerEvent = recentEvents[recentEvents.length - 1];
+
+      if (lastNonAnswerEvent) {
+        if (lastNonAnswerEvent.type === EVENT_TYPE.TOOL_USE) {
+          // Check if there's a corresponding tool_result
+          const hasResult = events.some((e, i) => e.type === EVENT_TYPE.TOOL_RESULT && i > events.indexOf(lastNonAnswerEvent));
+          if (!hasResult) return "tools";
+        }
+        if (lastNonAnswerEvent.type === EVENT_TYPE.THINKING) return "thinking";
+      }
+
+      // Check if we have answer content
+      if (lastAIBlock.assistantContent) return "answer";
+
+      return null;
+    }
+
+    // Legacy: use message metadata from messageBlocks
+    const lastMessageBlock = messageBlocks[messageBlocks.length - 1];
+    if (!lastMessageBlock?.assistantMessage) return null;
+    const metadata = lastMessageBlock.assistantMessage.metadata;
     if (!metadata) return null;
 
     // 有工具调用正在执行（有 toolCalls 但没有 outputSummary）
@@ -285,20 +461,29 @@ const ChatMessages = memo(function ChatMessages({
     if (hasPendingTools) return "tools";
 
     // 有内容正在流式输出
-    if (lastBlock.assistantMessage.content) return "answer";
+    if (lastMessageBlock.assistantMessage.content) return "answer";
 
     // 正在思考（有 thinkingSteps 或 thinking 但还没有内容）
     if ((metadata.thinkingSteps?.length ?? 0) > 0 || metadata.thinking) return "thinking";
 
     return null;
-  }, [isLastStreaming, lastBlock, isStreaming]);
+  }, [isLastStreaming, blocks, messageBlocks, isStreaming]);
 
   // Determine effective parrot ID based on session mode (Geek/Evolution override normal parrotId)
+  // Phase 4: Also consider Block mode
   const effectiveParrotId = useMemo(() => {
+    // Session summary has highest priority
     if (sessionSummary?.mode === "geek") return ParrotAgentType.GEEK;
     if (sessionSummary?.mode === "evolution") return ParrotAgentType.EVOLUTION;
+
+    // Phase 4: Check last Block mode
+    if (blocks && blocks.length > 0) {
+      const lastAIBlock = blocks[blocks.length - 1];
+      return blockModeToParrotAgentType(lastAIBlock.mode);
+    }
+
     return currentParrotId;
-  }, [currentParrotId, sessionSummary?.mode]);
+  }, [currentParrotId, sessionSummary?.mode, blocks]);
 
   return (
     <div
@@ -314,21 +499,27 @@ const ChatMessages = memo(function ChatMessages({
           {messageBlocks.map((block, index) => {
             const blockIsLast = index === messageBlocks.length - 1;
 
-            // Determine effective parrot ID for this specific block based on message metadata
-            // detailed order:
-            // 1. Assistant message metadata mode
-            // 2. User message metadata mode
-            // 3. Session summary mode (legacy/fallback)
+            // Phase 4: Determine effective parrot ID for this specific block
+            // Priority order:
+            // 1. Block's own mode (when using blocks prop)
+            // 2. Message metadata mode (legacy items)
+            // 3. Session summary mode (fallback)
             // 4. Current global parrotId (fallback)
-            const blockMode: AIMode | undefined = block.assistantMessage?.metadata?.mode || block.userMessage?.metadata?.mode;
-
             let blockParrotId = effectiveParrotId;
-            if (blockMode === "geek") {
-              blockParrotId = ParrotAgentType.GEEK;
-            } else if (blockMode === "evolution") {
-              blockParrotId = ParrotAgentType.EVOLUTION;
-            } else if (blockMode === "normal") {
-              blockParrotId = ParrotAgentType.AMAZING;
+
+            if (blocks && blocks.length > 0 && index < blocks.length) {
+              // Direct from Block mode
+              blockParrotId = blockModeToParrotAgentType(blocks[index].mode);
+            } else {
+              // Legacy: from message metadata
+              const blockMode: AIMode | undefined = block.assistantMessage?.metadata?.mode || block.userMessage?.metadata?.mode;
+              if (blockMode === "geek") {
+                blockParrotId = ParrotAgentType.GEEK;
+              } else if (blockMode === "evolution") {
+                blockParrotId = ParrotAgentType.EVOLUTION;
+              } else if (blockMode === "normal") {
+                blockParrotId = ParrotAgentType.AMAZING;
+              }
             }
 
             return (

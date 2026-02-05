@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +21,7 @@ import (
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/internal/errors"
 	"github.com/hrygo/divinesense/server/internal/observability"
+	"github.com/hrygo/divinesense/store"
 )
 
 // ChatStream represents the streaming response interface for AI chat.
@@ -30,18 +32,20 @@ type ChatStream interface {
 
 // ParrotHandler handles all parrot agent requests (DEFAULT, MEMO, SCHEDULE, AMAZING, CREATIVE).
 type ParrotHandler struct {
-	factory    *AgentFactory
-	llm        ai.LLMService
-	chatRouter *agentpkg.ChatRouter
-	persister  *aistats.Persister // session stats persister
+	factory      *AgentFactory
+	llm          ai.LLMService
+	chatRouter   *agentpkg.ChatRouter
+	persister    *aistats.Persister // session stats persister
+	blockManager *BlockManager            // Phase 5: Unified Block Model support
 }
 
 // NewParrotHandler creates a new parrot handler.
-func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aistats.Persister) *ParrotHandler {
+func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aistats.Persister, blockManager *BlockManager) *ParrotHandler {
 	return &ParrotHandler{
-		factory:   factory,
-		llm:       llm,
-		persister: persister,
+		factory:      factory,
+		llm:          llm,
+		persister:    persister,
+		blockManager: blockManager, // Phase 5
 	}
 }
 
@@ -299,6 +303,40 @@ func (h *ParrotHandler) executeAgent(
 	stream ChatStream,
 	logger *observability.RequestContext,
 ) error {
+	// Phase 5: Create Block for this chat round
+	// Determine block mode from request
+	var blockMode BlockMode
+	if req.EvolutionMode {
+		blockMode = BlockModeEvolution
+	} else if req.GeekMode {
+		blockMode = BlockModeGeek
+	} else {
+		blockMode = BlockModeNormal
+	}
+
+	// Only create block for non-temporary conversations with valid ID
+	var currentBlock *store.AIBlock
+	if h.blockManager != nil && req.ConversationID > 0 && !req.IsTempConversation {
+		var createErr error
+		currentBlock, createErr = h.blockManager.CreateBlockForChat(
+			ctx,
+			req.ConversationID,
+			req.Message,
+			req.AgentType,
+			blockMode,
+		)
+		if createErr != nil {
+			logger.Warn("Failed to create block, continuing without block",
+				slog.String("error", createErr.Error()),
+			)
+		} else {
+			logger.Info("Created block for chat round",
+				slog.Int64("block_id", currentBlock.ID),
+				slog.Int64("conversation_id", int64(req.ConversationID)),
+			)
+		}
+	}
+
 	// Track events for logging (protected by countMu)
 	eventCounts := make(map[string]int)
 	var countMu sync.Mutex
@@ -321,6 +359,10 @@ func (h *ParrotHandler) executeAgent(
 	// Track last event time for heartbeats
 	lastEventTime := atomic.Int64{}
 	lastEventTime.Store(time.Now().UnixNano())
+
+	// Track assistant content for block completion
+	var assistantContent strings.Builder
+	var assistantContentMu sync.Mutex
 
 	// Create stream adapter
 	streamAdapter := agentpkg.NewParrotStreamAdapter(func(eventType string, eventData any) error {
@@ -414,6 +456,40 @@ func (h *ParrotHandler) executeAgent(
 				dataStr = v.Error()
 			default:
 				dataStr = fmt.Sprintf("%v", v)
+			}
+		}
+
+		// Phase 5: Append event to Block (async, don't block streaming)
+		if currentBlock != nil && h.blockManager != nil {
+			// Build metadata for block event
+			var eventMetaForBlock map[string]any
+			if eventMeta != nil {
+				eventMetaForBlock = map[string]any{
+					"duration_ms":       eventMeta.DurationMs,
+					"total_duration_ms": eventMeta.TotalDurationMs,
+					"tool_name":         eventMeta.ToolName,
+					"tool_id":           eventMeta.ToolId,
+					"status":            eventMeta.Status,
+					"error_msg":         eventMeta.ErrorMsg,
+					"input_tokens":      eventMeta.InputTokens,
+					"output_tokens":     eventMeta.OutputTokens,
+					"input_summary":     eventMeta.InputSummary,
+					"output_summary":    eventMeta.OutputSummary,
+					"file_path":         eventMeta.FilePath,
+					"line_count":        eventMeta.LineCount,
+				}
+			}
+
+			// Append event asynchronously (don't block streaming)
+			go func() {
+				_ = h.blockManager.AppendEvent(ctx, currentBlock.ID, eventType, dataStr, eventMetaForBlock)
+			}()
+
+			// Collect assistant content for block completion
+			if eventType == "answer" || eventType == "content" {
+				assistantContentMu.Lock()
+				assistantContent.WriteString(dataStr)
+				assistantContentMu.Unlock()
 			}
 		}
 
@@ -583,6 +659,54 @@ func (h *ParrotHandler) executeAgent(
 			slog.String("error", sendErr.Error()))
 	} else {
 		logger.Info("Agent: done marker sent successfully")
+	}
+
+	// Phase 5: Complete or mark error on Block
+	if currentBlock != nil && h.blockManager != nil {
+		assistantContentMu.Lock()
+		finalContent := assistantContent.String()
+		assistantContentMu.Unlock()
+
+		// Convert SessionSummary to store.SessionStats
+		var blockSessionStats *store.SessionStats
+		if sessionSummary != nil {
+			blockSessionStats = &store.SessionStats{
+				SessionID:            sessionSummary.SessionId,
+				UserID:               req.UserID,
+				AgentType:            string(req.AgentType),
+				TotalDurationMs:      sessionSummary.TotalDurationMs,
+				ThinkingDurationMs:   sessionSummary.ThinkingDurationMs,
+				ToolDurationMs:       sessionSummary.ToolDurationMs,
+				GenerationDurationMs: sessionSummary.GenerationDurationMs,
+				InputTokens:          int(sessionSummary.TotalInputTokens),
+				OutputTokens:         int(sessionSummary.TotalOutputTokens),
+				CacheWriteTokens:     int(sessionSummary.TotalCacheWriteTokens),
+				CacheReadTokens:      int(sessionSummary.TotalCacheReadTokens),
+				TotalCostUsd:         sessionSummary.TotalCostUsd,
+				ToolCallCount:        int(sessionSummary.ToolCallCount),
+				ToolsUsed:            sessionSummary.ToolsUsed,
+				FilesModified:        int(sessionSummary.FilesModified),
+				FilePaths:            sessionSummary.FilePaths,
+			}
+		}
+
+		if execErr != nil {
+			// Mark block as error
+			if markErr := h.blockManager.MarkBlockError(ctx, currentBlock.ID, execErr.Error()); markErr != nil {
+				logger.Warn("Failed to mark block as error",
+					slog.Int64("block_id", currentBlock.ID),
+					slog.String("error", markErr.Error()),
+				)
+			}
+		} else {
+			// Complete block successfully
+			if completeErr := h.blockManager.CompleteBlock(ctx, currentBlock.ID, finalContent, blockSessionStats); completeErr != nil {
+				logger.Warn("Failed to complete block",
+					slog.Int64("block_id", currentBlock.ID),
+					slog.String("error", completeErr.Error()),
+				)
+			}
+		}
 	}
 
 	if sendErr != nil {
