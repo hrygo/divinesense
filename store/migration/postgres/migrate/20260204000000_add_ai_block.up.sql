@@ -75,9 +75,6 @@ CREATE INDEX idx_ai_block_round ON ai_block(conversation_id, round_number);
 CREATE INDEX idx_ai_block_status ON ai_block(status) WHERE status != 'completed';
 CREATE INDEX idx_ai_block_cc_session ON ai_block(cc_session_id) WHERE cc_session_id IS NOT NULL;
 
--- JSONB index for event stream (optional, for querying specific event types)
-CREATE INDEX idx_ai_block_event_stream ON ai_block USING gin(event_stream);
-
 -- Update timestamp trigger
 CREATE OR REPLACE FUNCTION update_ai_block_updated_ts()
 RETURNS TRIGGER AS $$
@@ -144,5 +141,5 @@ FROM (
 -- Version update
 -- =============================================================================
 INSERT INTO system_setting (name, value, description) VALUES
-('schema_version', '0.55.0', 'Database schema version - Unified Block Model Phase 1')
+('schema_version', '0.55.0', 'Database schema version - Unified Block Model')
 ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;

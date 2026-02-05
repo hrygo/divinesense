@@ -9,6 +9,7 @@ import type { Block as AIBlock, BlockEvent } from "@/types/block";
 import { BLOCK_STATUS, blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName } from "@/types/block";
 import type { SessionSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
+import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
 
 interface ChatMessagesProps {
@@ -67,8 +68,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
 
   for (const block of blocks) {
     // Skip context separator blocks
-    const blockTypeStr = String(block.blockType);
-    if (blockTypeStr.includes("CONTEXT_SEPARATOR")) {
+    if (block.blockType === BlockType.CONTEXT_SEPARATOR) {
       continue;
     }
 

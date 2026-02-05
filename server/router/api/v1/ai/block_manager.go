@@ -34,16 +34,8 @@ func (m *BlockManager) CreateBlockForChat(
 ) (*store.AIBlock, error) {
 	now := time.Now().Unix()
 
-	// Determine block type from mode
-	var blockType store.AIBlockType
-	switch mode {
-	case BlockModeEvolution:
-		blockType = store.AIBlockTypeMessage
-	case BlockModeGeek:
-		blockType = store.AIBlockTypeMessage
-	default:
-		blockType = store.AIBlockTypeMessage
-	}
+	// All modes use MESSAGE type (context_separator is created separately)
+	blockType := store.AIBlockTypeMessage
 
 	// Convert mode to store type
 	storeMode := convertBlockModeToStore(mode)
