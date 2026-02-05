@@ -22,7 +22,6 @@ import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
-import { useAITools } from "@/hooks/useAITools";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -54,7 +53,6 @@ interface UnifiedChatViewProps {
   capabilityStatus: CapabilityStatus;
   recentMemoCount?: number;
   upcomingScheduleCount?: number;
-  uiTools: ReturnType<typeof useAITools>;
   currentMode: AIMode;
   onModeChange: (mode: AIMode) => void;
   immersiveMode: boolean;
@@ -82,7 +80,6 @@ function UnifiedChatView({
   capabilityStatus,
   recentMemoCount,
   upcomingScheduleCount,
-  uiTools,
   currentMode,
   onModeChange,
   immersiveMode,
@@ -149,9 +146,6 @@ function UnifiedChatView({
             <AmazingInsightCard memos={deferredMemoResults[0]?.memos ?? []} schedules={deferredScheduleResults[0]?.schedules ?? []} />
           ) : undefined
         }
-        uiTools={uiTools.tools}
-        onUIAction={uiTools.handleAction}
-        onUIDismiss={uiTools.dismissTool}
         sessionSummary={sessionSummary}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
@@ -238,7 +232,6 @@ const AIChat = () => {
   const chatHook = useChat();
   const aiChat = useAIChat();
   const capabilityRouter = useCapabilityRouter();
-  const uiTools = useAITools();
 
   // Local state
   const [input, setInput] = useState("");
@@ -443,16 +436,6 @@ const AIChat = () => {
               setScheduleQueryResults((prev) => [...prev, transformedResult]);
             }
           },
-          onUIMemoPreview: (data) => {
-            if (_messageId === messageIdRef.current) {
-              uiTools.processEvent({
-                type: "ui_memo_preview",
-                data: JSON.stringify(data),
-                uiType: "ui_memo_preview",
-                uiData: data,
-              });
-            }
-          },
           onContent: (content) => {
             if (lastAssistantMessageIdRef.current) {
               streamingContentRef.current += content;
@@ -486,7 +469,7 @@ const AIChat = () => {
         console.error("[Parrot Chat Error]", error);
       }
     },
-    [chatHook, updateMessage, addReferencedMemos, setCapabilityStatus, t, uiTools],
+    [chatHook, updateMessage, addReferencedMemos, setCapabilityStatus, t],
   );
 
   const handleSend = useCallback(
@@ -715,7 +698,6 @@ const AIChat = () => {
       items={items}
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}
-      uiTools={uiTools}
       currentMode={currentMode}
       onModeChange={setMode}
       immersiveMode={immersiveMode}

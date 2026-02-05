@@ -1,16 +1,54 @@
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import TypingCursor from "@/components/AIChat/TypingCursor";
-import { GenerativeUIContainer } from "@/components/ScheduleAI/GenerativeUIContainer";
-import type { GenerativeUIContainerProps } from "@/components/ScheduleAI/types";
 import { cn } from "@/lib/utils";
 import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
 // Phase 4: Import Block types
-import type { Block as AIBlock, BlockEvent } from "@/types/block";
+import type { Block as AIBlock } from "@/types/block";
 import { BLOCK_STATUS, blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName } from "@/types/block";
 import type { SessionSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
+// Event transformation utilities
+import { extractThinkingSteps, extractToolCalls, normalizeTimestamp } from "./utils/eventTransformers";
+
+// ============================================================================
+// Helper Hooks for ChatMessages
+// ============================================================================
+
+/** Hook to check if the last block is currently streaming */
+function useStreamingStatus(blocks: AIBlock[] | undefined, isStreaming: boolean): boolean {
+  return useMemo(() => {
+    if (blocks && blocks.length > 0) {
+      const lastAIBlock = blocks[blocks.length - 1];
+      return String(lastAIBlock.status) === String(BLOCK_STATUS.STREAMING);
+    }
+    return isStreaming;
+  }, [blocks, isStreaming]);
+}
+
+/** Hook to determine the effective parrot ID considering session and block modes */
+function useEffectiveParrotId(
+  currentParrotId: ParrotAgentType | undefined,
+  sessionSummary: SessionSummary | undefined,
+  blocks: AIBlock[] | undefined,
+): ParrotAgentType {
+  return useMemo(() => {
+    // Session summary has highest priority
+    if (sessionSummary?.mode === "geek") return ParrotAgentType.GEEK;
+    if (sessionSummary?.mode === "evolution") return ParrotAgentType.EVOLUTION;
+
+    // Check last Block mode
+    if (blocks && blocks.length > 0) {
+      const lastAIBlock = blocks[blocks.length - 1];
+      return blockModeToParrotAgentType(lastAIBlock.mode);
+    }
+
+    return currentParrotId ?? ParrotAgentType.AMAZING;
+  }, [currentParrotId, sessionSummary?.mode, blocks]);
+}
+
+// ============================================================================
 
 interface ChatMessagesProps {
   items: ChatItem[];
@@ -22,10 +60,6 @@ interface ChatMessagesProps {
   children?: ReactNode;
   className?: string;
   amazingInsightCard?: ReactNode;
-  /** Generative UI tools to render in message flow */
-  uiTools?: GenerativeUIContainerProps["tools"];
-  onUIAction?: GenerativeUIContainerProps["onAction"];
-  onUIDismiss?: GenerativeUIContainerProps["onDismiss"];
   /** Phase 2: 流式渲染支持 */
   isStreaming?: boolean;
   streamingContent?: string;
@@ -63,18 +97,6 @@ interface MessageBlock {
  * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
  * - sessionStats: SessionStats (for Geek/Evolution modes)
  */
-/**
- * Normalize timestamp to milliseconds
- * Heuristic: If timestamp is less than 10000000000 (year 2286 in seconds), treat as seconds.
- */
-function normalizeTimestamp(ts: number | bigint): number {
-  const num = Number(ts);
-  if (num < 10000000000) {
-    return num * 1000;
-  }
-  return num;
-}
-
 function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean): MessageBlock[] {
   const messageBlocks: MessageBlock[] = [];
 
@@ -137,60 +159,6 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
   }
 
   return messageBlocks;
-}
-
-/**
- * Thinking step type matching aichat.ts
- */
-type ThinkingStep = { content: string; timestamp: number; round: number };
-
-/**
- * Tool call type matching aichat.ts
- */
-type ToolCall = {
-  name: string;
-  toolId?: string;
-  inputSummary?: string;
-  outputSummary?: string;
-  filePath?: string;
-  duration?: number;
-  isError?: boolean;
-  round?: number;
-};
-
-/**
- * Extract thinking steps from event stream
- */
-function extractThinkingSteps(events: BlockEvent[]): ThinkingStep[] | undefined {
-  const thinkingEvents = events.filter((e) => e.type === EVENT_TYPE.THINKING);
-  if (thinkingEvents.length === 0) return undefined;
-  return thinkingEvents.map((e) => {
-    try {
-      const parsed = JSON.parse(e.content);
-      return {
-        content: parsed.content || e.content,
-        timestamp: normalizeTimestamp(parsed.timestamp || e.timestamp),
-        round: parsed.round || 0,
-      };
-    } catch {
-      return { content: e.content, timestamp: normalizeTimestamp(e.timestamp), round: 0 };
-    }
-  });
-}
-
-/**
- * Extract tool calls from event stream
- */
-function extractToolCalls(events: BlockEvent[]): ToolCall[] | undefined {
-  const toolEvents = events.filter((e) => e.type === EVENT_TYPE.TOOL_USE);
-  if (toolEvents.length === 0) return undefined;
-  return toolEvents.map((e) => {
-    try {
-      return JSON.parse(e.content);
-    } catch {
-      return { name: e.type, inputSummary: e.content };
-    }
-  });
 }
 
 /**
@@ -287,9 +255,6 @@ const ChatMessages = memo(function ChatMessages({
   children,
   className,
   amazingInsightCard,
-  uiTools,
-  onUIAction,
-  onUIDismiss,
   isStreaming = false,
   streamingContent = "",
   sessionSummary,
@@ -421,17 +386,10 @@ const ChatMessages = memo(function ChatMessages({
     }
     // Legacy: use ChatItem[] structure
     return groupMessagesIntoBlocks(items, !!sessionSummary);
-  }, [blocks, blocks?.length, blocks?.[blocks.length - 1]?.id, items.length, items[items.length - 1]?.id, sessionSummary]);
+  }, [blocks, items, sessionSummary]);
 
-  // Phase 4: Check streaming status from either blocks or props
-  const isLastStreaming = useMemo(() => {
-    if (blocks && blocks.length > 0) {
-      const lastAIBlock = blocks[blocks.length - 1];
-      return String(lastAIBlock.status) === String(BLOCK_STATUS.STREAMING);
-    }
-    // Legacy: use prop
-    return isStreaming;
-  }, [blocks, isStreaming]);
+  // Phase 4: Check streaming status from either blocks or props (using extracted hook)
+  const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);
 
   // 计算当前流式阶段（用于动画效果）
   // Phase 4: Enhanced to read from Block eventStream
@@ -482,20 +440,8 @@ const ChatMessages = memo(function ChatMessages({
   }, [isLastStreaming, blocks, messageBlocks, isStreaming]);
 
   // Determine effective parrot ID based on session mode (Geek/Evolution override normal parrotId)
-  // Phase 4: Also consider Block mode
-  const effectiveParrotId = useMemo(() => {
-    // Session summary has highest priority
-    if (sessionSummary?.mode === "geek") return ParrotAgentType.GEEK;
-    if (sessionSummary?.mode === "evolution") return ParrotAgentType.EVOLUTION;
-
-    // Phase 4: Check last Block mode
-    if (blocks && blocks.length > 0) {
-      const lastAIBlock = blocks[blocks.length - 1];
-      return blockModeToParrotAgentType(lastAIBlock.mode);
-    }
-
-    return currentParrotId;
-  }, [currentParrotId, sessionSummary?.mode, blocks]);
+  // Phase 4: Also consider Block mode (using extracted hook)
+  const effectiveParrotId = useEffectiveParrotId(currentParrotId, sessionSummary, blocks);
 
   return (
     <div
@@ -561,13 +507,6 @@ const ChatMessages = memo(function ChatMessages({
       {/* Amazing Insight Card - rendered separately */}
       {amazingInsightCard && !isTyping && messageBlocks.length > 0 && (
         <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto mt-3">{amazingInsightCard}</div>
-      )}
-
-      {/* Generative UI Tools */}
-      {uiTools && uiTools.length > 0 && onUIAction && onUIDismiss && (
-        <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto mt-3">
-          <GenerativeUIContainer tools={uiTools} onAction={onUIAction} onDismiss={onUIDismiss} />
-        </div>
       )}
 
       {/* Typing indicator when no messages yet */}

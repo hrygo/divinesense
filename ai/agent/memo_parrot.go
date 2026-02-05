@@ -295,26 +295,6 @@ func (p *MemoParrot) ExecuteWithCallback(
 				jsonData, jsonErr := json.Marshal(eventData)
 				if jsonErr == nil {
 					callbackSafe(EventTypeMemoQueryResult, string(jsonData))
-
-					// Also send ui_memo_preview events for generative UI rendering
-					if len(structuredResult.Memos) > 0 {
-						for i, m := range structuredResult.Memos {
-							if i >= 5 { // Limit to 5 cards to avoid overwhelming UI
-								break
-							}
-							memoPreview := UIMemoPreviewData{
-								UID:        m.UID,
-								Title:      fmt.Sprintf("笔记 #%d", i+1),
-								Content:    m.Content,
-								Confidence: m.Score,
-								Reason:     fmt.Sprintf("相关度: %.0f%%", m.Score*100),
-							}
-							previewData, err := json.Marshal(memoPreview)
-							if err == nil {
-								callbackSafe(EventTypeUIMemoPreview, string(previewData))
-							}
-						}
-					}
 				}
 			}
 		default:

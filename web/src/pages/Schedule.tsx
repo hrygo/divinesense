@@ -5,7 +5,6 @@ import { ScheduleCalendar } from "@/components/AIChat/ScheduleCalendar";
 import { ScheduleInput } from "@/components/AIChat/ScheduleInput";
 import { ScheduleSearchBar } from "@/components/AIChat/ScheduleSearchBar";
 import { ScheduleTimeline } from "@/components/AIChat/ScheduleTimeline";
-import type { UIToolEvent } from "@/components/ScheduleAI/types";
 import { ScheduleQuickInput } from "@/components/ScheduleQuickInput/ScheduleQuickInput";
 import { Button } from "@/components/ui/button";
 import { useScheduleContext } from "@/contexts/ScheduleContext";
@@ -24,7 +23,6 @@ const Schedule = () => {
   const [viewTab, setViewTab] = useState<ViewTab>("timeline");
   const [scheduleInputOpen, setScheduleInputOpen] = useState(false);
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
-  const [uiTools, setUITools] = useState<UIToolEvent[]>([]);
 
   const anchorDate = useMemo(() => {
     return selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
@@ -52,15 +50,6 @@ const Schedule = () => {
 
   const handleScheduleCreated = () => {
     queryClient.invalidateQueries({ queryKey: ["schedules"] });
-  };
-
-  const handleUIAction = (action: { type: string; toolId: string; data?: unknown }) => {
-    setUITools((prev) => prev.filter((t) => t.id !== action.toolId));
-    queryClient.invalidateQueries({ queryKey: ["schedules"] });
-  };
-
-  const handleUIDismiss = (toolId: string) => {
-    setUITools((prev) => prev.filter((t) => t.id !== toolId));
   };
 
   return (
@@ -167,9 +156,6 @@ const Schedule = () => {
             initialDate={selectedDate}
             onScheduleCreated={handleScheduleCreated}
             // editingSchedule prop removed to decouple from edit mode (Unified Dialog handles edits now)
-            uiTools={uiTools}
-            onUIAction={handleUIAction}
-            onUIDismiss={handleUIDismiss}
           />
         </div>
       </div>

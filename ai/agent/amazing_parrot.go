@@ -22,9 +22,6 @@ const (
 	// concurrentRetrievalTimeout is the maximum time to wait for concurrent retrievals.
 	concurrentRetrievalTimeout = 45 * time.Second
 
-	// uiPreviewCardLimit is the maximum number of preview cards to send for UI rendering.
-	uiPreviewCardLimit = 5
-
 	// casualChatShortThreshold is the character length below which input is considered casual chat.
 	casualChatShortThreshold = 30
 
@@ -348,27 +345,6 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				if err == nil {
 					callbackSafe(EventTypeMemoQueryResult, string(eventData))
 				}
-
-				// Send ui_memo_preview event for generative UI rendering
-				if len(structuredResult.Memos) > 0 {
-					// Create memo preview cards for each result
-					for i, m := range structuredResult.Memos {
-						if i >= uiPreviewCardLimit { // Limit to avoid overwhelming UI
-							break
-						}
-						memoPreview := UIMemoPreviewData{
-							UID:        m.UID,
-							Title:      fmt.Sprintf("笔记 #%d", i+1),
-							Content:    m.Content,
-							Confidence: m.Score,
-							Reason:     fmt.Sprintf("相关度: %.0f%%", m.Score*100),
-						}
-						previewData, err := json.Marshal(memoPreview)
-						if err == nil {
-							callbackSafe(EventTypeUIMemoPreview, string(previewData))
-						}
-					}
-				}
 			}
 		}()
 	}
@@ -433,34 +409,6 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				eventData, err := json.Marshal(scheduleQueryResult)
 				if err == nil {
 					callbackSafe(EventTypeScheduleQueryResult, string(eventData))
-				}
-
-				// Send ui_schedule_list event for generative UI rendering
-				if len(structuredResult.Schedules) > 0 {
-					scheduleItems := make([]UIScheduleItem, 0, len(structuredResult.Schedules))
-					for _, s := range structuredResult.Schedules {
-						scheduleItems = append(scheduleItems, UIScheduleItem{
-							UID:      s.UID,
-							Title:    s.Title,
-							StartTs:  s.StartTs,
-							EndTs:    s.EndTs,
-							AllDay:   s.AllDay,
-							Location: s.Location,
-							Status:   s.Status,
-						})
-					}
-					scheduleListData := UIScheduleListData{
-						Title:     "日程列表",
-						Query:     structuredResult.Query,
-						Count:     structuredResult.Count,
-						Schedules: scheduleItems,
-						TimeRange: structuredResult.TimeRangeDescription,
-						Reason:    "根据查询返回的日程",
-					}
-					listEventData, err := json.Marshal(scheduleListData)
-					if err == nil {
-						callbackSafe(EventTypeUIScheduleList, string(listEventData))
-					}
 				}
 			}
 		}()

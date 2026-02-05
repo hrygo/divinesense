@@ -11,7 +11,6 @@
  * Phase 3: 高级交互
  * - useIntentPrediction: 意图预判 Hook
  * - MultiStepWizard: 多步向导组件
- * - PersistentToolContainer: 生成式 UI 持久化
  */
 
 // Phase 1
@@ -39,6 +38,5 @@ export type {
   WizardStepProps,
 } from "./MultiStepWizard";
 export { default as MultiStepWizard } from "./MultiStepWizard";
-export { default as PersistentToolContainer } from "./PersistentToolContainer";
 // Phase 2
 export { default as StreamingMarkdown } from "./StreamingMarkdown";

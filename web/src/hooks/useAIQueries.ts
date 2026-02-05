@@ -200,14 +200,6 @@ export function useChat() {
           query: string;
           count: number;
         }) => void;
-        onUIMemoPreview?: (data: {
-          title: string;
-          content: string;
-          tags?: string[];
-          confidence: number;
-          reason?: string;
-          session_id?: string;
-        }) => void;
         // Observability callbacks (Geek/Evolution modes)
         onSessionSummary?: (summary: SessionSummary) => void;
       },
@@ -446,16 +438,6 @@ export function useChat() {
                 } catch (e) {
                   if (import.meta.env.DEV) {
                     console.error("[useAIQueries] Failed to parse schedule_query_result:", e);
-                  }
-                }
-                break;
-              case "ui_memo_preview":
-                try {
-                  const data = JSON.parse(response.eventData);
-                  callbacks?.onUIMemoPreview?.(data);
-                } catch (e) {
-                  if (import.meta.env.DEV) {
-                    console.error("[useAIQueries] Failed to parse ui_memo_preview:", e);
                   }
                 }
                 break;

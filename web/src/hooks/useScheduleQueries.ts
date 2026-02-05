@@ -22,7 +22,7 @@ import {
   ScheduleSchema,
 } from "@/types/proto/api/v1/schedule_service_pb";
 
-export type { ParsedEvent, UIConflictResolutionData, UIScheduleSuggestionData, UITimeSlotData } from "./useScheduleAgent";
+export type { ParsedEvent } from "./useScheduleAgent";
 // Re-export ScheduleAgent hooks for convenience
 export { scheduleAgentChatStream, useScheduleAgentChat } from "./useScheduleAgent";
 
@@ -30,11 +30,9 @@ export { scheduleAgentChatStream, useScheduleAgentChat } from "./useScheduleAgen
  * Streaming event from the Agent
  */
 export interface StreamingEvent {
-  type: "thinking" | "tool_use" | "tool_result" | "answer" | "error" | "ui_schedule_suggestion";
+  type: "thinking" | "tool_use" | "tool_result" | "answer" | "error";
   data: string;
   timestamp: number;
-  uiType?: string;
-  uiData?: unknown;
 }
 
 /**
@@ -46,7 +44,6 @@ export interface StreamingChatState {
   currentStep: string;
   finalAnswer: string;
   error: string | null;
-  uiEvents: Array<{ type: string; data: string; uiType?: string; uiData?: unknown }>;
 }
 
 /**
@@ -61,7 +58,6 @@ export function useScheduleAgentStreamingChat() {
     currentStep: "",
     finalAnswer: "",
     error: null,
-    uiEvents: [],
   });
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -74,7 +70,6 @@ export function useScheduleAgentStreamingChat() {
         currentStep: "",
         finalAnswer: "",
         error: null,
-        uiEvents: [],
       });
 
       // Create abort controller for cancellation
@@ -84,29 +79,18 @@ export function useScheduleAgentStreamingChat() {
         // Import dynamically to avoid circular dependencies
         const { scheduleAgentChatStream } = await import("./useScheduleAgent");
 
-        const eventHandler = (event: { type: string; data: string; uiType?: string; uiData?: unknown }) => {
+        const eventHandler = (event: { type: string; data: string }) => {
           const streamingEvent: StreamingEvent = {
             type: event.type as StreamingEvent["type"],
             data: event.data,
             timestamp: Date.now(),
-            uiType: event.uiType,
-            uiData: event.uiData,
           };
 
-          setState((prev) => {
-            const newState: StreamingChatState = {
-              ...prev,
-              events: [...prev.events, streamingEvent],
-              currentStep: formatCurrentStep(event.type, event.data),
-            };
-
-            // Also store UI events separately for easy access
-            if (event.uiType && event.uiData) {
-              newState.uiEvents = [...prev.uiEvents, { type: event.type, data: event.data, uiType: event.uiType, uiData: event.uiData }];
-            }
-
-            return newState;
-          });
+          setState((prev) => ({
+            ...prev,
+            events: [...prev.events, streamingEvent],
+            currentStep: formatCurrentStep(event.type, event.data),
+          }));
         };
 
         let finalContent = "";
@@ -162,7 +146,6 @@ export function useScheduleAgentStreamingChat() {
       currentStep: "",
       finalAnswer: "",
       error: null,
-      uiEvents: [],
     });
   }, []);
 

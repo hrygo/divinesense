@@ -117,10 +117,10 @@ func TestSchedulerAgentV2_Execute(t *testing.T) {
 		Return(mockToolCallResponse("schedule_query", queryArgs, "Checking..."), nil).
 		Once()
 
-	// Step 2: Tool execution (called twice: once by tool.Run, once by handleScheduleQuery callback)
+	// Step 2: Tool execution
 	mockSvc.On("FindSchedules", mock.Anything, int32(1), mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
 		Return([]*schedule.ScheduleInstance{}, nil).
-		Times(2)
+		Times(1)
 
 	// Step 3: LLM calls schedule_add
 	addArgs := `{"title": "Meeting", "start_time": "2026-01-26T10:00:00+08:00"}`
