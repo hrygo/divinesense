@@ -6,7 +6,7 @@ import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, Message
 // Phase 4: Import Block types
 import type { Block as AIBlock } from "@/types/block";
 import { BLOCK_STATUS, blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName } from "@/types/block";
-import type { SessionSummary } from "@/types/parrot";
+import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -60,7 +60,7 @@ interface ChatMessagesProps {
   isStreaming?: boolean;
   streamingContent?: string;
   /** Session summary for Geek/Evolution modes */
-  sessionSummary?: SessionSummary;
+  sessionSummary?: BlockSummary;
   /** Phase 4: Block data support */
   blocks?: AIBlock[];
 }
@@ -78,7 +78,7 @@ interface MessageBlock {
   assistantMessage?: ConversationMessage;
   isLatest: boolean;
   /** Session summary attached to this block (only for last block) */
-  attachSessionSummary?: boolean;
+  attachBlockSummary?: boolean;
 }
 
 /**
@@ -106,10 +106,10 @@ function translateThinkingSteps(steps: ThinkingStep[], t: (key: string) => strin
  * - eventStream: BlockEvent[] (thinking/tool_use/tool_result/answer events)
  * - sessionStats: SessionStats (for Geek/Evolution modes)
  * @param blocks - Array of AIBlock objects
- * @param hasSessionSummary - Whether session summary is available
+ * @param hasBlockSummary - Whether session summary is available
  * @param t - Translation function for i18n keys
  */
-function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: boolean, t: (key: string) => string): MessageBlock[] {
+function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: boolean, t: (key: string) => string): MessageBlock[] {
   const messageBlocks: MessageBlock[] = [];
 
   for (const block of blocks) {
@@ -151,14 +151,14 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
     };
 
     const isLatest = false; // Will be determined after loop
-    const attachSessionSummary = false; // Will be set for last block
+    const attachBlockSummary = false; // Will be set for last block
 
     messageBlocks.push({
       id: String(block.id),
       userMessage,
       assistantMessage,
       isLatest,
-      attachSessionSummary,
+      attachBlockSummary,
     });
   }
 
@@ -166,8 +166,8 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
   if (messageBlocks.length > 0) {
     const lastBlock = messageBlocks[messageBlocks.length - 1];
     lastBlock.isLatest = true;
-    if (hasSessionSummary && lastBlock.assistantMessage) {
-      lastBlock.attachSessionSummary = true;
+    if (hasBlockSummary && lastBlock.assistantMessage) {
+      lastBlock.attachBlockSummary = true;
     }
   }
 
@@ -178,10 +178,10 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasSessionSummary: bo
  * Group messages into user-assistant pairs
  * Legacy function for ChatItem[] support (backward compatibility)
  * @param items - Array of ChatItem objects
- * @param hasSessionSummary - Whether session summary is available
+ * @param hasBlockSummary - Whether session summary is available
  * @param t - Translation function for i18n keys
  */
-function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean, t: (key: string) => string): MessageBlock[] {
+function groupMessagesIntoBlocks(items: ChatItem[], hasBlockSummary: boolean, t: (key: string) => string): MessageBlock[] {
   const blocks: MessageBlock[] = [];
   let pendingUser: ConversationMessage | null = null;
 
@@ -252,8 +252,8 @@ function groupMessagesIntoBlocks(items: ChatItem[], hasSessionSummary: boolean, 
     const lastBlock = blocks[blocks.length - 1];
     lastBlock.isLatest = true;
     // Only attach session summary to the last block if it has an assistant message
-    if (hasSessionSummary && lastBlock.assistantMessage) {
-      lastBlock.attachSessionSummary = true;
+    if (hasBlockSummary && lastBlock.assistantMessage) {
+      lastBlock.attachBlockSummary = true;
     }
   }
 
@@ -503,7 +503,7 @@ const ChatMessages = memo(function ChatMessages({
                 key={block.id}
                 userMessage={block.userMessage}
                 assistantMessage={block.assistantMessage}
-                sessionSummary={block.attachSessionSummary ? sessionSummary : undefined}
+                sessionSummary={block.attachBlockSummary ? sessionSummary : undefined}
                 parrotId={blockParrotId}
                 isLatest={block.isLatest}
                 isStreaming={isLastStreaming && block.isLatest}
