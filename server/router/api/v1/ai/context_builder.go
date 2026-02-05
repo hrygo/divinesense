@@ -16,9 +16,9 @@ type Message struct {
 	Type    string // "MESSAGE" or "SEPARATOR"
 }
 
-// MessageStore defines the interface for loading messages from storage.
-type MessageStore interface {
-	ListAIMessages(ctx context.Context, find *store.FindAIMessage) ([]*store.AIMessage, error)
+// BlockStore defines the interface for loading blocks from storage.
+type BlockStore interface {
+	ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*store.AIBlock, error)
 }
 
 // TokenCounter estimates token count for a string.
@@ -54,26 +54,26 @@ type BuiltContext struct {
 	HasPending   bool
 }
 
-// ContextBuilder builds conversation context from stored messages.
+// ContextBuilder builds conversation context from stored blocks.
 // It enforces SEPARATOR filtering and applies token limits.
 //
 // Architecture Note:
 // This component supports a hybrid data source:
-// 1. Persisted messages from the database (authoritative)
+// 1. Persisted blocks from the database (authoritative)
 // 2. Pending messages from EventBus (not yet persisted)
 //
 // This is necessary because EventBus uses async persistence, which creates
 // a race condition: the next message may be sent before the previous
 // message is written to the database.
 type ContextBuilder struct {
-	store        MessageStore
+	store        BlockStore
 	tokenCounter TokenCounter
 	maxTokens    int // Default max tokens (approx 8000 for most models)
 	mu           sync.RWMutex
 }
 
 // NewContextBuilder creates a new ContextBuilder.
-func NewContextBuilder(store MessageStore) *ContextBuilder {
+func NewContextBuilder(store BlockStore) *ContextBuilder {
 	return &ContextBuilder{
 		store:        store,
 		tokenCounter: &SimpleTokenCounter{},
@@ -88,11 +88,10 @@ func (b *ContextBuilder) SetMaxTokens(max int) {
 	b.maxTokens = max
 }
 
-// BuildContext loads and filters conversation messages.
+// BuildContext loads and filters conversation blocks.
 // Returns messages after the last SEPARATOR, respecting token limits.
-// If a SUMMARY message exists after the last SEPARATOR, it's included as a prefix.
 //
-// The function merges persisted messages (from DB) with pending messages
+// The function merges persisted blocks (from DB) with pending messages
 // (from EventBus) to ensure context is complete even when persistence is delayed.
 func (b *ContextBuilder) BuildContext(
 	ctx context.Context,
@@ -114,16 +113,16 @@ func (b *ContextBuilder) BuildContext(
 		pendingMessages = control.PendingMessages
 	}
 
-	// 1. Load all messages from database
-	messages, err := b.store.ListAIMessages(ctx, &store.FindAIMessage{
+	// 1. Load all blocks from database
+	blocks, err := b.store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversationID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to load messages: %w", err)
+		return nil, fmt.Errorf("failed to load blocks: %w", err)
 	}
 
-	// 2. Convert store messages to Message slice
-	allMessages := b.convertFromStore(messages)
+	// 2. Convert store blocks to Message slice
+	allMessages := b.convertFromBlocks(blocks)
 
 	// 3. Append pending messages (not yet in DB)
 	// These are added because EventBus persistence is async
@@ -137,15 +136,8 @@ func (b *ContextBuilder) BuildContext(
 		}
 	}
 
-	// 4. Find last SEPARATOR position and check for SUMMARY after it
+	// 4. Find last SEPARATOR position
 	lastSeparatorIdx := b.findLastSeparator(allMessages)
-	var summaryContent string
-	if lastSeparatorIdx >= 0 && lastSeparatorIdx+1 < len(allMessages) {
-		// Check if there's a SUMMARY immediately after SEPARATOR
-		if allMessages[lastSeparatorIdx+1].Type == string(store.AIMessageTypeSummary) {
-			summaryContent = allMessages[lastSeparatorIdx+1].Content
-		}
-	}
 
 	// 5. Filter messages: only MESSAGE type after SEPARATOR
 	var contextMessages []Message
@@ -165,17 +157,10 @@ func (b *ContextBuilder) BuildContext(
 		}
 	}
 
-	// 6. Convert to string array, excluding SEPARATOR and SUMMARY types
+	// 6. Convert to string array
 	contents := make([]string, 0, len(contextMessages))
-
-	// Add summary as prefix if exists (for LLM context)
-	if summaryContent != "" {
-		contents = append(contents, "[Previous conversation summary: "+summaryContent+"]")
-	}
-
-	// Add MESSAGE type contents
 	for _, msg := range contextMessages {
-		if msg.Type == string(store.AIMessageTypeMessage) {
+		if msg.Type == "MESSAGE" {
 			contents = append(contents, msg.Content)
 		}
 	}
@@ -219,16 +204,31 @@ func (b *ContextBuilder) BuildContext(
 	return result, nil
 }
 
-// convertFromStore converts store.AIMessage slices to Message slices.
-func (b *ContextBuilder) convertFromStore(messages []*store.AIMessage) []Message {
-	result := make([]Message, 0, len(messages))
-	for _, msg := range messages {
-		result = append(result, Message{
-			Content: msg.Content,
-			Role:    string(msg.Role),
-			Type:    string(msg.Type),
-		})
+// convertFromBlocks converts store.AIBlock slices to Message slices.
+// Each block contains user inputs and assistant content as separate messages.
+func (b *ContextBuilder) convertFromBlocks(blocks []*store.AIBlock) []Message {
+	result := make([]Message, 0, len(blocks)*2) // Estimate capacity
+
+	for _, block := range blocks {
+		// Add user inputs as user messages
+		for _, input := range block.UserInputs {
+			result = append(result, Message{
+				Content: input.Content,
+				Role:    "user",
+				Type:    "MESSAGE",
+			})
+		}
+
+		// Add assistant content as assistant message
+		if block.AssistantContent != "" {
+			result = append(result, Message{
+				Content: block.AssistantContent,
+				Role:    "assistant",
+				Type:    "MESSAGE",
+			})
+		}
 	}
+
 	return result
 }
 

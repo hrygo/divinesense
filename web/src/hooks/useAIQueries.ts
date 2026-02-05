@@ -485,9 +485,7 @@ export function useChat() {
               const summary = {
                 sessionId: response.blockSummary.sessionId,
                 totalDurationMs: response.blockSummary.totalDurationMs ? Number(response.blockSummary.totalDurationMs) : undefined,
-                thinkingDurationMs: response.blockSummary.thinkingDurationMs
-                  ? Number(response.blockSummary.thinkingDurationMs)
-                  : undefined,
+                thinkingDurationMs: response.blockSummary.thinkingDurationMs ? Number(response.blockSummary.thinkingDurationMs) : undefined,
                 toolDurationMs: response.blockSummary.toolDurationMs ? Number(response.blockSummary.toolDurationMs) : undefined,
                 generationDurationMs: response.blockSummary.generationDurationMs
                   ? Number(response.blockSummary.generationDurationMs)

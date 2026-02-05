@@ -79,19 +79,8 @@ func (s *Store) DeleteAIConversation(ctx context.Context, delete *DeleteAIConver
 	return s.driver.DeleteAIConversation(ctx, delete)
 }
 
-func (s *Store) CreateAIMessage(ctx context.Context, create *AIMessage) (*AIMessage, error) {
-	return s.driver.CreateAIMessage(ctx, create)
-}
-
-func (s *Store) ListAIMessages(ctx context.Context, find *FindAIMessage) ([]*AIMessage, error) {
-	return s.driver.ListAIMessages(ctx, find)
-}
-
-func (s *Store) DeleteAIMessage(ctx context.Context, delete *DeleteAIMessage) error {
-	return s.driver.DeleteAIMessage(ctx, delete)
-}
-
 // AIBlock methods (Unified Block Model).
+// AIMessage functions removed: ALL IN Block!
 func (s *Store) CreateAIBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error) {
 	return s.driver.CreateAIBlock(ctx, create)
 }

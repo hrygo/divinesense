@@ -266,11 +266,17 @@ git push --no-verify
 
 |  AgentType  | 鹦鹉名称 | 文件                    | 中文名 | 描述                             |
 | :---------: | :------- | :---------------------- | :----- | :------------------------------- |
+|   `AUTO`    | —        | —                       | —      | 路由标记（非鹦鹉），由后端三层路由决定使用哪只鹦鹉 |
 |   `MEMO`    | 灰灰     | `memo_parrot.go`        | 灰灰   | 笔记搜索和检索专家               |
 | `SCHEDULE`  | 时巧     | `schedule_parrot_v2.go` | 时巧   | 日程创建和管理                   |
 |  `AMAZING`  | 折衷     | `amazing_parrot.go`     | 折衷   | 综合助理（笔记 + 日程）          |
 |   `GEEK`    | 极客     | `geek_parrot.go`        | 极客   | Claude Code CLI 通信层（零 LLM） |
 | `EVOLUTION` | 进化     | `evolution_parrot.go`   | 进化   | 自我进化能力（源代码修改）       |
+
+**说明**：
+- **鹦鹉共五只**：MEMO、SCHEDULE、AMAZING、GEEK、EVOLUTION
+- **AUTO 不是鹦鹉**：它是前端发送给后端的特殊标记，表示"请后端路由系统决定使用哪只鹦鹉"
+- 当 `AgentType == AUTO` 时，后端触发三层路由（规则匹配 → 历史感知 → LLM 降级）
 
 ### 代理路由器
 
@@ -286,6 +292,10 @@ ChatRouter 实现**三层**意图分类系统：
            GeekMode? ─Yes→ GeekParrot（Claude Code CLI）
                   │
                   No
+                  ↓
+           AgentType == AUTO?
+                  │
+           Yes ────────┴──── No（直接使用指定的鹦鹉）
                   ↓
            ChatRouter.Route()
                   ↓
@@ -305,7 +315,7 @@ ChatRouter 实现**三层**意图分类系统：
          Qwen2.5-7B-Instruct
          （严格 JSON Schema）
                   ↓
-           路由结果
+           路由结果（MEMO/SCHEDULE/AMAZING）
 ```
 
 **EvolutionMode 最高优先级路由**：
@@ -708,9 +718,9 @@ pending ──▶ streaming ──▶ completed
 
 | BlockMode | ParrotAgentType | 用途 |
 |:----------|:----------------|:-----|
-| `normal` | `AMAZING` | 综合助理（笔记 + 日程） |
-| `geek` | `GEEK` | Claude Code CLI 代码执行 |
-| `evolution` | `EVOLUTION` | 系统自我进化 |
+| `normal` | `AUTO` | 普通模式，由后端三层路由决定使用哪只鹦鹉（MEMO/SCHEDULE/AMAZING） |
+| `geek` | `GEEK` | 极客模式，Claude Code CLI 代码执行 |
+| `evolution` | `EVOLUTION` | 进化模式，系统自我进化 |
 
 ### API 端点
 

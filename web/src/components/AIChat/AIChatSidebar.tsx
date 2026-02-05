@@ -30,9 +30,9 @@ export function AIChatSidebar({ className, onClose }: AIChatSidebarProps) {
     setSidebarTab(tab);
   };
 
-  // 统一入口：直接创建会话，使用 AMAZING 作为默认（综合助手，智能路由）
+  // 统一入口：直接创建会话，使用 AUTO（由后端三层路由决定使用哪个代理）
   const handleStartNewChat = () => {
-    createConversation(ParrotAgentType.AMAZING);
+    createConversation(ParrotAgentType.AUTO);
     onClose?.();
   };
 

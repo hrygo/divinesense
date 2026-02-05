@@ -41,7 +41,13 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 // Import constants
-import { BADGE_WIDTH_OFFSET, HEADER_VISUAL_WIDTH, TOOL_CALL_OFFSET_MS, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
+import {
+  BADGE_WIDTH_OFFSET,
+  HEADER_VISUAL_WIDTH,
+  ROUND_TIMESTAMP_MULTIPLIER,
+  TOOL_CALL_OFFSET_US,
+  USER_INPUTS_EXPAND_THRESHOLD,
+} from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
@@ -74,11 +80,9 @@ type ToolCall =
  * in the timeline, with microsecond precision to avoid conflicts.
  * Formula: baseTimestamp (microseconds) + index * offset
  *
- * @example Round 2, 3rd tool call: 2_000_000 + 2 * 50000 = 2001000 microseconds
+ * @example Round 2, 3rd tool call: 2_000_000 + 2 * 1000 = 2002000 microseconds
  */
-const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
-
-// Note: TOOL_CALL_MS and USER_INPUTS_EXPAND_THRESHOLD imported from constants.ts
+// Note: ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, and USER_INPUTS_EXPAND_THRESHOLD imported from constants.ts
 
 // ============================================================================
 // Types
@@ -120,8 +124,9 @@ export interface UnifiedMessageBlockProps {
 // Theme Configuration
 // ============================================================================
 
+/** Block themes based on BlockMode (NORMAL | GEEK | EVOLUTION) */
 const BLOCK_THEMES: Record<
-  ParrotAgentType | "default",
+  "default" | "NORMAL" | "GEEK" | "EVOLUTION",
   {
     border: string;
     headerBg: string;
@@ -139,45 +144,32 @@ const BLOCK_THEMES: Record<
     badgeText: "text-zinc-600 dark:text-zinc-400",
     ringColor: "ring-primary/20",
   },
-  MEMO: {
-    border: "border-slate-200 dark:border-slate-700",
-    headerBg: "bg-slate-50 dark:bg-slate-900/50",
-    footerBg: "bg-slate-200/80 dark:bg-slate-800/60",
-    badgeBg: "bg-slate-100 dark:bg-slate-800",
-    badgeText: "text-slate-600 dark:text-slate-400",
-    ringColor: "ring-slate-500/20",
+  // NORMAL - 普通 AI 模式（MEMO/SCHEDULE/AMAZING 都用这个）
+  NORMAL: {
+    border: "border-amber-200 dark:border-amber-700",
+    headerBg: "bg-amber-50 dark:bg-amber-900/20",
+    footerBg: "bg-amber-200/80 dark:bg-amber-800/50",
+    badgeBg: "bg-amber-100 dark:bg-amber-900/30",
+    badgeText: "text-amber-600 dark:text-amber-400",
+    ringColor: "ring-amber-500/20",
   },
-  SCHEDULE: {
-    border: "border-cyan-200 dark:border-cyan-700",
-    headerBg: "bg-cyan-50 dark:bg-cyan-900/20",
-    footerBg: "bg-cyan-200/80 dark:bg-cyan-800/50",
-    badgeBg: "bg-cyan-100 dark:bg-cyan-900/30",
-    badgeText: "text-cyan-600 dark:text-cyan-400",
-    ringColor: "ring-cyan-500/20",
+  // GEEK - 极客模式（Claude Code CLI）
+  GEEK: {
+    border: "border-sky-200 dark:border-slate-700",
+    headerBg: "bg-sky-50 dark:bg-slate-900/20",
+    footerBg: "bg-sky-200/80 dark:bg-slate-800/50",
+    badgeBg: "bg-sky-100 dark:bg-slate-900/30",
+    badgeText: "text-sky-600 dark:text-slate-400",
+    ringColor: "ring-sky-500/20",
   },
-  AMAZING: {
+  // EVOLUTION - 进化模式（系统自我进化）
+  EVOLUTION: {
     border: "border-emerald-200 dark:border-emerald-700",
     headerBg: "bg-emerald-50 dark:bg-emerald-900/20",
     footerBg: "bg-emerald-200/80 dark:bg-emerald-800/50",
     badgeBg: "bg-emerald-100 dark:bg-emerald-900/30",
     badgeText: "text-emerald-600 dark:text-emerald-400",
     ringColor: "ring-emerald-500/20",
-  },
-  GEEK: {
-    border: "border-violet-200 dark:border-violet-700",
-    headerBg: "bg-violet-50 dark:bg-violet-900/20",
-    footerBg: "bg-violet-200/80 dark:bg-violet-800/50",
-    badgeBg: "bg-violet-100 dark:bg-violet-900/30",
-    badgeText: "text-violet-600 dark:text-violet-400",
-    ringColor: "ring-violet-500/20",
-  },
-  EVOLUTION: {
-    border: "border-rose-200 dark:border-rose-700",
-    headerBg: "bg-rose-50 dark:bg-rose-900/20",
-    footerBg: "bg-rose-200/80 dark:bg-rose-800/50",
-    badgeBg: "bg-rose-100 dark:bg-rose-900/30",
-    badgeText: "text-rose-600 dark:text-rose-400",
-    ringColor: "ring-rose-500/20",
   },
 };
 
@@ -556,6 +548,7 @@ interface BlockBodyProps {
   additionalUserInputs?: ConversationMessage[];
   assistantMessage?: ConversationMessage;
   blockSummary?: BlockSummary;
+  parrotId?: string;
   isCollapsed: boolean;
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
   streamingPhase?: "thinking" | "tools" | "answer" | null;
@@ -568,6 +561,7 @@ function BlockBody({
   additionalUserInputs = [],
   assistantMessage,
   blockSummary,
+  parrotId,
   isCollapsed,
   themeColors,
   streamingPhase = null,
@@ -576,6 +570,17 @@ function BlockBody({
 }: BlockBodyProps) {
   const { t } = useTranslation();
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Helper: Get mode-specific thinking text
+  const getThinkingText = useCallback(() => {
+    if (parrotId === "GEEK") {
+      return t("ai.geek_mode.thinking");
+    }
+    if (parrotId === "EVOLUTION") {
+      return t("ai.evolution_mode.thinking");
+    }
+    return t("ai.states.thinking");
+  }, [parrotId, t]);
 
   // Check for error state
   const hasError = assistantMessage?.error;
@@ -627,7 +632,7 @@ function BlockBody({
   toolCalls.forEach((call, index) => {
     const round = (typeof call === "object" ? call.round : 0) || 0;
     const baseTimestamp = round * ROUND_TIMESTAMP_MULTIPLIER;
-    const callTimestamp = baseTimestamp + index * TOOL_CALL_OFFSET_MS;
+    const callTimestamp = baseTimestamp + index * TOOL_CALL_OFFSET_US;
     timelineEvents.push({
       type: "tool_call",
       id: `toolcall-${round}-${index}`,
@@ -690,7 +695,7 @@ function BlockBody({
                     {streamingPhase === "thinking" ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
-                        <span className="text-blue-600 dark:text-blue-400">{t("ai.states.thinking") || "思考中..."}</span>
+                        <span className="text-blue-600 dark:text-blue-400">{getThinkingText()}</span>
                       </>
                     ) : (
                       <>
@@ -905,7 +910,7 @@ function BlockBody({
                         },
                       }}
                     >
-                      {assistantMessage.content || t("ai.states.thinking")}
+                      {assistantMessage.content || getThinkingText()}
                     </ReactMarkdown>
                     {children}
                   </div>
@@ -1098,8 +1103,22 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   children,
   className,
 }: UnifiedMessageBlockProps) {
-  const blockTheme = (parrotId && BLOCK_THEMES[parrotId]) || BLOCK_THEMES.default;
-  const themeColors = PARROT_THEMES[parrotId || "AMAZING"] || PARROT_THEMES.AMAZING;
+  // Map ParrotAgentType to BlockMode for theme selection
+  // AUTO/MEMO/SCHEDULE/AMAZING → NORMAL, GEEK → GEEK, EVOLUTION → EVOLUTION
+  const getBlockModeFromParrot = (): "NORMAL" | "GEEK" | "EVOLUTION" => {
+    switch (parrotId) {
+      case ParrotAgentType.GEEK:
+        return "GEEK";
+      case ParrotAgentType.EVOLUTION:
+        return "EVOLUTION";
+      default:
+        return "NORMAL";
+    }
+  };
+
+  const blockMode = getBlockModeFromParrot();
+  const blockTheme = BLOCK_THEMES[blockMode] || BLOCK_THEMES.default;
+  const themeColors = PARROT_THEMES[parrotId || "AUTO"] || PARROT_THEMES.AUTO;
 
   // P1 Fix: Use ref for latest values to avoid closure traps in fast succession
   const isLatestRef = useRef(isLatest);
@@ -1170,6 +1189,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         additionalUserInputs={additionalUserInputs}
         assistantMessage={assistantMessage}
         blockSummary={blockSummary}
+        parrotId={parrotId}
         isCollapsed={collapsed}
         themeColors={themeColors}
         streamingPhase={streamingPhase}

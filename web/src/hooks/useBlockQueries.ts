@@ -103,7 +103,16 @@ export function useBlocks(conversationId: number, filters?: Partial<ListBlocksRe
     enabled: conversationId > 0,
     staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
     gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
-    retry: RETRY_CONFIG.NETWORK.retries,
+    retry: (failureCount, error) => {
+      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
+      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
+      const err = error as any;
+      if (err?.status === 500 || err?.code === "Internal") {
+        return false;
+      }
+      // Use default retry for other errors (network errors, etc.)
+      return failureCount < RETRY_CONFIG.NETWORK.retries;
+    },
     retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
     refetchOnWindowFocus: is_active,
     refetchOnReconnect: true,
@@ -127,17 +136,20 @@ export function useBlock(id: number, options?: { enabled?: boolean }) {
     enabled: (options?.enabled ?? true) && id > 0,
     staleTime: STALE_TIMES.BLOCK_DETAIL,
     gcTime: CACHE_TIMES.BLOCK_DETAIL,
-    retry: RETRY_CONFIG.NETWORK.retries,
+    retry: (failureCount, error) => {
+      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
+      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
+      const err = error as any;
+      if (err?.status === 500 || err?.code === "Internal") {
+        return false;
+      }
+      // Use default retry for other errors (network errors, etc.)
+      return failureCount < RETRY_CONFIG.NETWORK.retries;
+    },
     retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
   });
 }
 
-/**
- * Hook to create a new block with optimistic update
- *
- * Optimistically adds the block to the cache before the server responds,
- * rolling back on error.
- */
 /**
  * Hook to create a new block with optimistic update
  *
@@ -155,7 +167,7 @@ export function useCreateBlock() {
     },
     onMutate: async (variables) => {
       // Cancel outgoing refetches
-      const conversationId = Number(variables.conversationId);
+      const conversationId = Number(variables.conversationId || 0);
       await queryClient.cancelQueries({ queryKey: blockKeys.list(conversationId) });
 
       // Snapshot previous value
@@ -164,19 +176,28 @@ export function useCreateBlock() {
       // Generate temp ID for optimistic update
       const tempId = BigInt(-Date.now());
 
-      // Create optimistic block
-      // biome-ignore lint/suspicious/noExplicitAny: Protobuf partial creation for optimistic update
-      const optimisticBlock = create(create(CreateBlockRequestSchema, variables as Record<string, unknown>) as any, {
+      // Create optimistic block with proper type safety
+      const now = BigInt(Date.now());
+      const optimisticBlock: Block = {
+        $typeName: "memos.api.v1.Block" as const,
         id: tempId,
         uid: `temp-${tempId}`,
-        status: BlockStatus.PENDING,
-        createdTs: BigInt(Date.now()),
-        updatedTs: BigInt(Date.now()),
+        conversationId: conversationId,
+        roundNumber: 0,
+        mode: variables.mode || BlockMode.NORMAL,
+        blockType: variables.blockType || BlockType.MESSAGE,
         userInputs: variables.userInputs || [],
         assistantContent: "",
         eventStream: [],
+        status: BlockStatus.PENDING,
         metadata: "{}",
-      }) as unknown as Block;
+        createdTs: now,
+        updatedTs: now,
+        assistantTimestamp: now,
+        ccSessionId: "",
+        parentBlockId: BigInt(0),
+        branchPath: "",
+      };
 
       // Optimistically update cache
       // biome-ignore lint/suspicious/noExplicitAny: React Query cache update callback
@@ -219,7 +240,8 @@ export function useCreateBlock() {
         queryKey: blockKeys.list(Number(variables.conversationId)),
       });
     },
-    retry: RETRY_CONFIG.NETWORK.retries,
+    // Mutation operations should not auto-retry (may cause duplicate creation)
+    retry: 0,
   });
 }
 
@@ -580,6 +602,7 @@ interface BlocksWithFallbackResult {
   isLoading: boolean;
   error: Error | null;
   shouldFallback: boolean;
+  refetch: () => void; // Manual refetch function to refresh blocks
 }
 
 /**
@@ -613,7 +636,16 @@ export function useBlocksWithFallback(
     enabled: conversationId > 0,
     staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
     gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
-    retry: RETRY_CONFIG.NETWORK.retries,
+    retry: (failureCount, error) => {
+      // Don't retry on 500 errors (server-side issues that won't be fixed by retrying)
+      // biome-ignore lint/suspicious/noExplicitAny: Network error has status/code properties
+      const err = error as any;
+      if (err?.status === 500 || err?.code === "Internal") {
+        return false;
+      }
+      // Use default retry for other errors (network errors, etc.)
+      return failureCount < RETRY_CONFIG.NETWORK.retries;
+    },
     retryDelay: RETRY_CONFIG.NETWORK.retryDelay,
     refetchOnWindowFocus: is_active,
     refetchOnReconnect: true,
@@ -632,6 +664,7 @@ export function useBlocksWithFallback(
     isLoading: query.isLoading,
     error: query.error ?? null,
     shouldFallback,
+    refetch: query.refetch, // Expose refetch function for manual refresh after streaming
   };
 }
 =======

@@ -33,40 +33,5 @@ type DeleteAIConversation struct {
 	ID int32
 }
 
-type AIMessageRole string
-
-const (
-	AIMessageRoleUser      AIMessageRole = "USER"
-	AIMessageRoleAssistant AIMessageRole = "ASSISTANT"
-	AIMessageRoleSystem    AIMessageRole = "SYSTEM"
-)
-
-type AIMessageType string
-
-const (
-	AIMessageTypeMessage   AIMessageType = "MESSAGE"
-	AIMessageTypeSeparator AIMessageType = "SEPARATOR"
-	AIMessageTypeSummary   AIMessageType = "SUMMARY" // Conversation summary (invisible to frontend)
-)
-
-type AIMessage struct {
-	UID            string
-	Type           AIMessageType
-	Role           AIMessageRole
-	Content        string
-	Metadata       string
-	CreatedTs      int64
-	ID             int32
-	ConversationID int32
-}
-
-type FindAIMessage struct {
-	ID             *int32
-	UID            *string
-	ConversationID *int32
-}
-
-type DeleteAIMessage struct {
-	ID             *int32
-	ConversationID *int32
-}
+// AIMessage types removed: ALL IN Block!
+// Use AIBlock from ai_block.go instead for all conversation persistence.

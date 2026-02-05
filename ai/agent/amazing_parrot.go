@@ -251,10 +251,24 @@ func (p *AmazingParrot) planRetrieval(ctx context.Context, userInput string, his
 	// Add current user input
 	messages = append(messages, ai.Message{Role: "user", Content: userInput})
 
+	slog.Debug("AmazingParrot: Calling LLM for planning",
+		"user_id", p.userID,
+		"messages_count", len(messages),
+	)
+
 	response, err := p.llm.Chat(ctx, messages)
 	if err != nil {
+		slog.Error("AmazingParrot: LLM planning call failed",
+			"user_id", p.userID,
+			"error", err,
+		)
 		return nil, fmt.Errorf("LLM planning failed: %w", err)
 	}
+
+	slog.Debug("AmazingParrot: LLM planning response received",
+		"user_id", p.userID,
+		"response_length", len(response),
+	)
 
 	// Parse the plan from LLM response
 	plan := p.parseRetrievalPlan(response, userInput, now)

@@ -391,7 +391,7 @@ paths:
                   schema:
                     type: integer
                     format: int32
-                - name: lastMessageUid
+                - name: lastBlockUid
                   in: query
                   schema:
                     type: string
@@ -3482,36 +3482,14 @@ components:
                     type: string
                 updatedTs:
                     type: string
-                messages:
+                blocks:
                     type: array
                     items:
-                        $ref: '#/components/schemas/AIMessage'
-                messageCount:
+                        $ref: '#/components/schemas/Block'
+                blockCount:
                     type: integer
                     format: int32
             description: AIConversation represents an AI chat session.
-        AIMessage:
-            type: object
-            properties:
-                id:
-                    type: integer
-                    format: int32
-                uid:
-                    type: string
-                conversationId:
-                    type: integer
-                    format: int32
-                type:
-                    type: string
-                role:
-                    type: string
-                content:
-                    type: string
-                metadata:
-                    type: string
-                createdTs:
-                    type: string
-            description: AIMessage represents a single message in an AI conversation.
         Activity:
             type: object
             properties:
@@ -4722,20 +4700,22 @@ components:
         ListMessagesResponse:
             type: object
             properties:
-                messages:
+                blocks:
                     type: array
                     items:
-                        $ref: '#/components/schemas/AIMessage'
+                        $ref: '#/components/schemas/Block'
                 hasMore:
                     type: boolean
                 totalCount:
                     type: integer
                     format: int32
-                latestMessageUid:
+                latestBlockUid:
                     type: string
                 syncRequired:
                     type: boolean
-            description: ListMessagesResponse is the response for ListMessages.
+            description: |-
+                ListMessagesResponse is the response for ListMessages.
+                 NOTE: Named ListMessages for API compatibility, but returns Blocks.
         ListParrotsResponse:
             type: object
             properties:

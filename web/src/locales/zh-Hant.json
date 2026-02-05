@@ -567,6 +567,25 @@
         "disable_label": "退出極客",
         "exit_label": "退出",
         "thinking": "處理中..."
+      },
+      "evolution_mode": {
+        "label": "進化",
+        "tooltip": "切換進化模式，系統自我進化 (僅管理員)",
+        "aria_label": "切換進化模式",
+        "enabled": "進化模式已啟用",
+        "disabled": "進化模式已關閉",
+        "enable_label": "啟用進化模式",
+        "disable_label": "退出進化",
+        "exit_label": "退出",
+        "thinking": "系統自我進化中..."
+      },
+      "enter-immersive": "進入沉浸模式",
+      "exit-immersive": "退出沉浸模式",
+      "states": {
+        "thinking": "思考中...",
+        "processing": "處理中...",
+        "initializing": "初始化中...",
+        "error": "出錯了"
       }
     }
   },

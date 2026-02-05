@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -62,9 +64,29 @@ type llmService struct {
 	temperature float32
 }
 
+// newHTTPClient creates a custom HTTP client with appropriate timeouts.
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+}
+
 // NewLLMService creates a new LLMService.
 func NewLLMService(cfg *LLMConfig) (LLMService, error) {
 	var clientConfig openai.ClientConfig
+
+	// Create custom HTTP client with timeout
+	httpClient := newHTTPClient()
 
 	switch cfg.Provider {
 	case "deepseek":
@@ -74,12 +96,14 @@ func NewLLMService(cfg *LLMConfig) (LLMService, error) {
 		}
 		clientConfig = openai.DefaultConfig(cfg.APIKey)
 		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
 
 	case "openai":
 		clientConfig = openai.DefaultConfig(cfg.APIKey)
 		if cfg.BaseURL != "" {
 			clientConfig.BaseURL = cfg.BaseURL
 		}
+		clientConfig.HTTPClient = httpClient
 
 	case "siliconflow":
 		baseURL := cfg.BaseURL
@@ -88,6 +112,7 @@ func NewLLMService(cfg *LLMConfig) (LLMService, error) {
 		}
 		clientConfig = openai.DefaultConfig(cfg.APIKey)
 		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
 
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
@@ -104,9 +129,15 @@ func NewLLMService(cfg *LLMConfig) (LLMService, error) {
 }
 
 func (s *llmService) Chat(ctx context.Context, messages []Message) (string, error) {
-	// Add timeout protection
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	// Add timeout protection - shorter than HTTP client timeout for context cancellation
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
+
+	slog.Debug("LLM: Chat request",
+		"model", s.model,
+		"messages_count", len(messages),
+		"max_tokens", s.maxTokens,
+	)
 
 	req := openai.ChatCompletionRequest{
 		Model:       s.model,
@@ -117,19 +148,25 @@ func (s *llmService) Chat(ctx context.Context, messages []Message) (string, erro
 
 	resp, err := s.client.CreateChatCompletion(ctx, req)
 	if err != nil {
+		slog.Error("LLM: Chat request failed", "error", err)
 		return "", fmt.Errorf("LLM chat failed: %w", err)
 	}
 
 	if len(resp.Choices) == 0 {
+		slog.Warn("LLM: Empty response from LLM")
 		return "", fmt.Errorf("empty response from LLM")
 	}
+
+	slog.Debug("LLM: Chat response received",
+		"content_length", len(resp.Choices[0].Message.Content),
+	)
 
 	return resp.Choices[0].Message.Content, nil
 }
 
 func (s *llmService) ChatWithTools(ctx context.Context, messages []Message, tools []ToolDescriptor) (*ChatResponse, error) {
 	// Add timeout protection
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	openaiTools := make([]openai.Tool, len(tools))

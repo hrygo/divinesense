@@ -35,17 +35,8 @@ func (d *DB) DeleteAIConversation(ctx context.Context, delete *store.DeleteAICon
 	return ErrSQLiteAINotSupported
 }
 
-func (d *DB) CreateAIMessage(ctx context.Context, create *store.AIMessage) (*store.AIMessage, error) {
-	return nil, ErrSQLiteAINotSupported
-}
-
-func (d *DB) ListAIMessages(ctx context.Context, find *store.FindAIMessage) ([]*store.AIMessage, error) {
-	return nil, ErrSQLiteAINotSupported
-}
-
-func (d *DB) DeleteAIMessage(ctx context.Context, delete *store.DeleteAIMessage) error {
-	return ErrSQLiteAINotSupported
-}
+// ai_message functions removed: ALL IN Block!
+// Use AIBlock functions instead for message persistence.
 
 // ListAIConversationsBasic is a minimal implementation for UI rendering only.
 // Returns empty list since SQLite doesn't support AI conversations.

@@ -14,11 +14,8 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-// emptyMetadata is the default empty JSON object for message metadata.
-const emptyMetadata = "{}"
-
-// MaxMessageLimit is the maximum number of messages to return in a single request.
-const MaxMessageLimit = 100
+// MaxBlockLimit is the maximum number of blocks to return in a single request.
+const MaxBlockLimit = 100
 
 func (s *AIService) ListAIConversations(ctx context.Context, _ *v1pb.ListAIConversationsRequest) (*v1pb.ListAIConversationsResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
@@ -33,28 +30,21 @@ func (s *AIService) ListAIConversations(ctx context.Context, _ *v1pb.ListAIConve
 		return nil, status.Errorf(codes.Internal, "failed to list conversations: %v", err)
 	}
 
-	// Batch count messages for all conversations at once (avoid N+1)
-	// TODO: Optimize by adding ConversationIDs filter to ListAIMessages or
-	// maintain message_count column in ai_conversation table for better performance.
-	messageCounts := make(map[int32]int32)
-	if len(conversations) > 0 {
-		allMessages, err := s.Store.ListAIMessages(ctx, &store.FindAIMessage{})
-		if err == nil {
-			// Count non-SEPARATOR messages per conversation
-			for _, m := range allMessages {
-				if m.Type != store.AIMessageTypeSeparator {
-					messageCounts[m.ConversationID]++
-				}
-			}
-		}
-	}
-
 	response := &v1pb.ListAIConversationsResponse{
 		Conversations: make([]*v1pb.AIConversation, 0, len(conversations)),
 	}
 	for _, c := range conversations {
+		// Get block count from blocks
+		blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
+			ConversationID: &c.ID,
+		})
+		blockCount := int32(0)
+		if err == nil {
+			blockCount = int32(len(blocks))
+		}
+
 		pbConv := convertAIConversationFromStore(c)
-		pbConv.MessageCount = messageCounts[c.ID]
+		pbConv.BlockCount = blockCount
 		response.Conversations = append(response.Conversations, pbConv)
 	}
 
@@ -79,25 +69,18 @@ func (s *AIService) GetAIConversation(ctx context.Context, req *v1pb.GetAIConver
 	}
 
 	conversation := conversations[0]
-	messages, err := s.Store.ListAIMessages(ctx, &store.FindAIMessage{
+
+	// Load blocks from database
+	blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversation.ID,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list messages: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to list blocks: %v", err)
 	}
 
 	pbConversation := convertAIConversationFromStore(conversation)
-	pbConversation.Messages = make([]*v1pb.AIMessage, 0, len(messages))
-
-	// Count non-SEPARATOR messages for MessageCount
-	messageCount := 0
-	for _, m := range messages {
-		pbConversation.Messages = append(pbConversation.Messages, convertAIMessageFromStore(m))
-		if m.Type != store.AIMessageTypeSeparator {
-			messageCount++
-		}
-	}
-	pbConversation.MessageCount = int32(messageCount)
+	pbConversation.Blocks = convertBlocksFromStore(blocks)
+	pbConversation.BlockCount = int32(len(blocks))
 
 	return pbConversation, nil
 }
@@ -202,31 +185,30 @@ func (s *AIService) AddContextSeparator(ctx context.Context, req *v1pb.AddContex
 		return nil, status.Errorf(codes.NotFound, "conversation not found")
 	}
 
-	// Prevent duplicate SEPARATOR: check if the last message is already a SEPARATOR
-	messages, err := s.Store.ListAIMessages(ctx, &store.FindAIMessage{
+	// Prevent duplicate SEPARATOR: check if the last block is already a SEPARATOR
+	blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &req.ConversationId,
 	})
-	if err == nil && len(messages) > 0 {
-		// Messages are ordered by created_ts ASC, so last element is the newest
-		lastMessage := messages[len(messages)-1]
-		if lastMessage.Type == store.AIMessageTypeSeparator {
-			// Last message is already a SEPARATOR, silently succeed (idempotent)
+	if err == nil && len(blocks) > 0 {
+		lastBlock := blocks[len(blocks)-1]
+		if lastBlock.BlockType == store.AIBlockTypeContextSeparator {
+			// Last block is already a SEPARATOR, silently succeed (idempotent)
 			return &emptypb.Empty{}, nil
 		}
 	}
 
-	// Create SEPARATOR message using the conversation service
-	_, err = s.Store.CreateAIMessage(ctx, &store.AIMessage{
+	// Create SEPARATOR block
+	_, err = s.Store.CreateAIBlock(ctx, &store.CreateAIBlock{
 		UID:            shortuuid.New(),
 		ConversationID: req.ConversationId,
-		Type:           store.AIMessageTypeSeparator,
-		Role:           store.AIMessageRoleSystem,
-		Content:        "---", // Content marker for separator
-		Metadata:       emptyMetadata,
-		CreatedTs:      time.Now().Unix(),
+		BlockType:      store.AIBlockTypeContextSeparator,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs:     []store.UserInput{},
+		CreatedTs:      time.Now().UnixMilli(),
+		UpdatedTs:      time.Now().UnixMilli(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create separator message: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to create separator block: %v", err)
 	}
 
 	// Update conversation timestamp
@@ -288,20 +270,17 @@ func convertAIConversationFromStore(c *store.AIConversation) *v1pb.AIConversatio
 	}
 }
 
-func convertAIMessageFromStore(m *store.AIMessage) *v1pb.AIMessage {
-	return &v1pb.AIMessage{
-		Id:             m.ID,
-		Uid:            m.UID,
-		ConversationId: m.ConversationID,
-		Type:           string(m.Type),
-		Role:           string(m.Role),
-		Content:        m.Content,
-		Metadata:       m.Metadata,
-		CreatedTs:      m.CreatedTs,
+// convertBlocksFromStore converts store.AIBlock slices to protobuf Block slices.
+func convertBlocksFromStore(blocks []*store.AIBlock) []*v1pb.Block {
+	result := make([]*v1pb.Block, 0, len(blocks))
+	for _, b := range blocks {
+		result = append(result, convertBlockFromStore(b))
 	}
+	return result
 }
 
-// - SUMMARY messages are filtered out (never returned to frontend).
+// ListMessages returns blocks for a conversation.
+// ALL IN BLOCK! - Directly returns Blocks without conversion.
 func (s *AIService) ListMessages(ctx context.Context, req *v1pb.ListMessagesRequest) (*v1pb.ListMessagesResponse, error) {
 	// Parameter validation
 	if req.ConversationId == 0 {
@@ -309,8 +288,8 @@ func (s *AIService) ListMessages(ctx context.Context, req *v1pb.ListMessagesRequ
 	}
 
 	limit := req.Limit
-	if limit <= 0 || limit > MaxMessageLimit {
-		limit = MaxMessageLimit // Default and max limit
+	if limit <= 0 || limit > MaxBlockLimit {
+		limit = MaxBlockLimit // Default and max limit
 	}
 
 	// Get current user
@@ -328,37 +307,32 @@ func (s *AIService) ListMessages(ctx context.Context, req *v1pb.ListMessagesRequ
 		return nil, status.Error(codes.NotFound, "conversation not found")
 	}
 
-	// Load all messages from database
-	allMessages, err := s.Store.ListAIMessages(ctx, &store.FindAIMessage{
+	// Load all blocks from database
+	blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &req.ConversationId,
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to load messages")
+		return nil, status.Error(codes.Internal, "failed to load blocks")
 	}
 
-	// Filter out SUMMARY messages (SUMMARY is never returned to frontend)
-	var visibleMessages []*store.AIMessage
-	for _, msg := range allMessages {
-		if msg.Type != store.AIMessageTypeSummary {
-			visibleMessages = append(visibleMessages, msg)
-		}
-	}
+	// Convert to protobuf blocks
+	pbBlocks := convertBlocksFromStore(blocks)
 
-	// Calculate total MSG count (for total_count)
-	var totalMsgCount int32
-	for _, msg := range visibleMessages {
-		if msg.Type == store.AIMessageTypeMessage {
-			totalMsgCount++
+	// Calculate total MESSAGE type block count
+	var totalCount int32
+	for _, block := range pbBlocks {
+		if block.BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
+			totalCount++
 		}
 	}
 
 	// Determine starting position based on request type
 	var startIndex int
-	if req.LastMessageUid == "" {
-		// First load: from end, count back MaxMessageLimit MSG to find start position
+	if req.LastBlockUid == "" {
+		// First load: from end, count back MaxBlockLimit MESSAGE blocks to find start position
 		msgCount := 0
-		for i := len(visibleMessages) - 1; i >= 0; i-- {
-			if visibleMessages[i].Type == store.AIMessageTypeMessage {
+		for i := len(pbBlocks) - 1; i >= 0; i-- {
+			if pbBlocks[i].BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
 				msgCount++
 				if msgCount > int(limit) {
 					startIndex = i + 1
@@ -367,10 +341,10 @@ func (s *AIService) ListMessages(ctx context.Context, req *v1pb.ListMessagesRequ
 			}
 		}
 	} else {
-		// Incremental load: find position after lastMessageUid
+		// Incremental load: find position after lastBlockUid
 		found := false
-		for i, msg := range visibleMessages {
-			if msg.UID == req.LastMessageUid {
+		for i, block := range pbBlocks {
+			if block.Uid == req.LastBlockUid {
 				startIndex = i + 1
 				found = true
 				break
@@ -379,51 +353,45 @@ func (s *AIService) ListMessages(ctx context.Context, req *v1pb.ListMessagesRequ
 		if !found {
 			// UID not found - tell frontend to refresh
 			return &v1pb.ListMessagesResponse{
-				Messages:         []*v1pb.AIMessage{},
-				HasMore:          false,
-				TotalCount:       totalMsgCount,
-				LatestMessageUid: getLatestMessageUID(visibleMessages),
-				SyncRequired:     true,
+				Blocks:         []*v1pb.Block{},
+				HasMore:        false,
+				TotalCount:     totalCount,
+				LatestBlockUid: getLatestBlockUID(pbBlocks),
+				SyncRequired:   true,
 			}, nil
 		}
 	}
 
-	// Collect messages from startIndex, max MaxMessageLimit MSG (SEP included)
-	var result []*store.AIMessage
+	// Collect blocks from startIndex, max MaxBlockLimit MESSAGE blocks (SEPARATOR included)
+	var result []*v1pb.Block
 	msgCount := 0
-	for i := startIndex; i < len(visibleMessages) && msgCount < int(limit); i++ {
-		msg := visibleMessages[i]
-		result = append(result, msg)
-		if msg.Type == store.AIMessageTypeMessage {
+	for i := startIndex; i < len(pbBlocks) && msgCount < int(limit); i++ {
+		block := pbBlocks[i]
+		result = append(result, block)
+		if block.BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
 			msgCount++
 		}
 		// SEPARATOR is included but not counted
 	}
 
-	// Convert to protobuf format
-	var messages []*v1pb.AIMessage
-	for _, msg := range result {
-		messages = append(messages, convertAIMessageFromStore(msg))
-	}
-
 	return &v1pb.ListMessagesResponse{
-		Messages:         messages,
-		HasMore:          startIndex > 0, // More messages available before start index
-		TotalCount:       totalMsgCount,
-		LatestMessageUid: getLatestMessageUID(visibleMessages),
-		SyncRequired:     false,
+		Blocks:         result,
+		HasMore:        startIndex > 0,
+		TotalCount:     totalCount,
+		LatestBlockUid: getLatestBlockUID(pbBlocks),
+		SyncRequired:   false,
 	}, nil
 }
 
-// getLatestMessageUID returns the UID of the latest message.
-func getLatestMessageUID(messages []*store.AIMessage) string {
-	if len(messages) == 0 {
+// getLatestBlockUID returns the UID of the latest block.
+func getLatestBlockUID(blocks []*v1pb.Block) string {
+	if len(blocks) == 0 {
 		return ""
 	}
-	return messages[len(messages)-1].UID
+	return blocks[len(blocks)-1].Uid
 }
 
-// ClearConversationMessages deletes all messages in a conversation.
+// ClearConversationMessages deletes all blocks in a conversation.
 func (s *AIService) ClearConversationMessages(ctx context.Context, req *v1pb.ClearConversationMessagesRequest) (*emptypb.Empty, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
@@ -442,11 +410,21 @@ func (s *AIService) ClearConversationMessages(ctx context.Context, req *v1pb.Cle
 		return nil, status.Errorf(codes.NotFound, "conversation not found")
 	}
 
-	// Delete all messages in the conversation
-	if err := s.Store.DeleteAIMessage(ctx, &store.DeleteAIMessage{
+	// Delete all blocks in the conversation
+	blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &req.ConversationId,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to clear messages: %v", err)
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list blocks: %v", err)
+	}
+
+	for _, block := range blocks {
+		if err := s.Store.DeleteAIBlock(ctx, block.ID); err != nil {
+			slog.Default().Warn("Failed to delete block",
+				"block_id", block.ID,
+				"error", err,
+			)
+		}
 	}
 
 	// Update conversation timestamp

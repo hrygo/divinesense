@@ -12,28 +12,30 @@ import (
 	"log/slog"
 )
 
-// MessageReader defines the interface for reading messages from storage.
-type MessageReader interface {
-	ListAIMessages(ctx context.Context, find *store.FindAIMessage) ([]*store.AIMessage, error)
+// BlockReader defines the interface for reading blocks from storage.
+type BlockReader interface {
+	ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*store.AIBlock, error)
 }
 
-// MessageWriter defines the interface for writing messages to storage.
-type MessageWriter interface {
-	CreateAIMessage(ctx context.Context, create *store.AIMessage) (*store.AIMessage, error)
+// BlockWriter defines the interface for writing blocks to storage.
+type BlockWriter interface {
+	CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*store.AIBlock, error)
 }
 
 // ConversationSummarizer handles automatic conversation summarization.
 // When a conversation exceeds the message threshold, it generates a summary
-// and stores SEPARATOR + SUMMARY messages to optimize context for future LLM calls.
+// and stores SEPARATOR block to optimize context for future LLM calls.
+//
+// NOTE: ALL IN Block! - Now uses AIBlock instead of AIMessage.
 type ConversationSummarizer struct {
-	reader           MessageReader
-	writer           MessageWriter
+	reader           BlockReader
+	writer           BlockWriter
 	llm              ai.LLMService
-	messageThreshold int // Trigger summarization after this many MESSAGE types
+	messageThreshold int // Trigger summarization after this many blocks
 }
 
 // NewConversationSummarizer creates a new conversation summarizer.
-func NewConversationSummarizer(reader MessageReader, writer MessageWriter, llm ai.LLMService, threshold int) *ConversationSummarizer {
+func NewConversationSummarizer(reader BlockReader, writer BlockWriter, llm ai.LLMService, threshold int) *ConversationSummarizer {
 	if threshold <= 0 {
 		threshold = 11 // Default threshold
 	}
@@ -46,10 +48,10 @@ func NewConversationSummarizer(reader MessageReader, writer MessageWriter, llm a
 }
 
 // NewConversationSummarizerWithStore creates a summarizer with a single store for both read and write.
-// The store must implement both MessageReader and MessageWriter.
+// The store must implement both BlockReader and BlockWriter.
 func NewConversationSummarizerWithStore(store interface {
-	MessageReader
-	MessageWriter
+	BlockReader
+	BlockWriter
 }, llm ai.LLMService, threshold int) *ConversationSummarizer {
 	if threshold <= 0 {
 		threshold = 11
@@ -63,85 +65,75 @@ func NewConversationSummarizerWithStore(store interface {
 }
 
 // ShouldSummarize checks if a conversation needs summarization.
-// Returns (shouldSummarize, messageCountAfterLastSeparator).
+// Returns (shouldSummarize, blockCountAfterLastSeparator).
 func (s *ConversationSummarizer) ShouldSummarize(ctx context.Context, conversationID int32) (bool, int) {
-	messages, err := s.reader.ListAIMessages(ctx, &store.FindAIMessage{
+	blocks, err := s.reader.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversationID,
 	})
 	if err != nil {
 		return false, 0
 	}
 
-	// Count MESSAGE types after the last SEPARATOR
-	messageCount := 0
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Type == store.AIMessageTypeSeparator {
+	// Count MESSAGE type blocks after the last SEPARATOR
+	blockCount := 0
+	for i := len(blocks) - 1; i >= 0; i-- {
+		if blocks[i].BlockType == store.AIBlockTypeContextSeparator {
 			break
 		}
-		if messages[i].Type == store.AIMessageTypeMessage {
-			messageCount++
+		if blocks[i].BlockType == store.AIBlockTypeMessage {
+			blockCount++
 		}
 	}
 
-	return messageCount >= s.messageThreshold, messageCount
+	return blockCount >= s.messageThreshold, blockCount
 }
 
-// Summarize generates a summary and stores SEPARATOR + SUMMARY messages.
-// The SEPARATOR marks the context cutoff point, and SUMMARY stores the summary content
-// that will be used as a prefix in future LLM context building.
+// Summarize generates a summary and stores a SEPARATOR block.
+// The SEPARATOR marks the context cutoff point.
 func (s *ConversationSummarizer) Summarize(ctx context.Context, conversationID int32) error {
-	// 1. Load all messages from the conversation
-	messages, err := s.reader.ListAIMessages(ctx, &store.FindAIMessage{
+	// 1. Load all blocks from the conversation
+	blocks, err := s.reader.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversationID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to load messages: %w", err)
+		return fmt.Errorf("failed to load blocks: %w", err)
 	}
 
-	// 2. Get MESSAGE types after the last SEPARATOR
-	messagesToSummarize := s.getMessagesAfterLastSeparator(messages)
-	if len(messagesToSummarize) == 0 {
+	// 2. Get MESSAGE type blocks after the last SEPARATOR
+	blocksToSummarize := s.getBlocksAfterLastSeparator(blocks)
+	if len(blocksToSummarize) == 0 {
 		return nil
 	}
 
 	slog.Default().Info("Triggering conversation summarization",
 		"conversation_id", conversationID,
-		"message_count", len(messagesToSummarize),
+		"block_count", len(blocksToSummarize),
 	)
 
 	// 3. Generate summary content using LLM
-	summary, err := s.generateSummary(ctx, messagesToSummarize)
+	summary, err := s.generateSummary(ctx, blocksToSummarize)
 	if err != nil {
 		return fmt.Errorf("failed to generate summary: %w", err)
 	}
 
-	// 4. Insert SEPARATOR message (marks context cutoff point)
+	// 4. Insert SEPARATOR block (marks context cutoff point)
 	now := time.Now().UnixMilli()
-	_, err = s.writer.CreateAIMessage(ctx, &store.AIMessage{
+	_, err = s.writer.CreateAIBlock(ctx, &store.CreateAIBlock{
 		UID:            shortuuid.New(),
 		ConversationID: conversationID,
-		Type:           store.AIMessageTypeSeparator,
-		Role:           store.AIMessageRoleSystem,
-		Content:        "Context summarized",
-		Metadata:       "{}",
-		CreatedTs:      now,
+		BlockType:      store.AIBlockTypeContextSeparator,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs:     []store.UserInput{},
+		// Store summary in metadata for reference
+		Metadata: map[string]any{
+			"summary":    summary,
+			"summary_at": now,
+		},
+		CreatedTs: now,
+		UpdatedTs: now,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create separator: %w", err)
-	}
-
-	// 5. Insert SUMMARY message (stores summary for future context building)
-	_, err = s.writer.CreateAIMessage(ctx, &store.AIMessage{
-		UID:            shortuuid.New(),
-		ConversationID: conversationID,
-		Type:           store.AIMessageTypeSummary,
-		Role:           store.AIMessageRoleSystem,
-		Content:        summary,
-		Metadata:       "{}",
-		CreatedTs:      now + 1, // Ensure it comes after SEPARATOR
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create summary message: %w", err)
+		return fmt.Errorf("failed to create separator block: %w", err)
 	}
 
 	slog.Default().Info("Conversation summarization completed",
@@ -152,46 +144,53 @@ func (s *ConversationSummarizer) Summarize(ctx context.Context, conversationID i
 	return nil
 }
 
-// getMessagesAfterLastSeparator returns MESSAGE type messages after the last SEPARATOR.
-func (s *ConversationSummarizer) getMessagesAfterLastSeparator(messages []*store.AIMessage) []*store.AIMessage {
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Type == store.AIMessageTypeSeparator {
-			// Filter only MESSAGE types (exclude SUMMARY which may be after SEPARATOR)
-			var result []*store.AIMessage
-			for _, msg := range messages[i+1:] {
-				if msg.Type == store.AIMessageTypeMessage {
-					result = append(result, msg)
+// getBlocksAfterLastSeparator returns MESSAGE type blocks after the last SEPARATOR.
+func (s *ConversationSummarizer) getBlocksAfterLastSeparator(blocks []*store.AIBlock) []*store.AIBlock {
+	for i := len(blocks) - 1; i >= 0; i-- {
+		if blocks[i].BlockType == store.AIBlockTypeContextSeparator {
+			// Filter only MESSAGE types
+			var result []*store.AIBlock
+			for _, block := range blocks[i+1:] {
+				if block.BlockType == store.AIBlockTypeMessage {
+					result = append(result, block)
 				}
 			}
 			return result
 		}
 	}
-	// No SEPARATOR found, return all MESSAGE types
-	var result []*store.AIMessage
-	for _, msg := range messages {
-		if msg.Type == store.AIMessageTypeMessage {
-			result = append(result, msg)
+	// No SEPARATOR found, return all MESSAGE type blocks
+	var result []*store.AIBlock
+	for _, block := range blocks {
+		if block.BlockType == store.AIBlockTypeMessage {
+			result = append(result, block)
 		}
 	}
 	return result
 }
 
-// generateSummary uses LLM to generate a summary of the messages.
-func (s *ConversationSummarizer) generateSummary(ctx context.Context, messages []*store.AIMessage) (string, error) {
+// generateSummary uses LLM to generate a summary of the blocks.
+func (s *ConversationSummarizer) generateSummary(ctx context.Context, blocks []*store.AIBlock) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("请总结以下对话内容，提取关键信息和结论：\n\n")
 
-	for _, msg := range messages {
-		role := "用户"
-		if msg.Role == store.AIMessageRoleAssistant {
-			role = "助手"
+	for _, block := range blocks {
+		// Add user inputs
+		for _, input := range block.UserInputs {
+			content := input.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			sb.WriteString(fmt.Sprintf("[用户]: %s\n\n", content))
 		}
-		// Limit each message length to avoid excessive summary input
-		content := msg.Content
-		if len(content) > 500 {
-			content = content[:500] + "..."
+
+		// Add assistant content
+		if block.AssistantContent != "" {
+			content := block.AssistantContent
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			sb.WriteString(fmt.Sprintf("[助手]: %s\n\n", content))
 		}
-		sb.WriteString(fmt.Sprintf("[%s]: %s\n\n", role, content))
 	}
 
 	prompt := sb.String()

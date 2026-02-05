@@ -339,21 +339,12 @@ message AIConversation {
   bool pinned = 6;
   int64 created_ts = 7;
   int64 updated_ts = 8;
-  repeated AIMessage messages = 9;
-  int32 message_count = 10; // Total message count (excludes SEPARATOR messages)
+  repeated Block blocks = 9; // ALL IN Block! Blocks replace messages
+  int32 block_count = 10; // Total block count (includes all block types)
 }
 
-// AIMessage represents a single message in an AI conversation.
-message AIMessage {
-  int32 id = 1;
-  string uid = 2;
-  int32 conversation_id = 3;
-  string type = 4; // "MESSAGE" or "SEPARATOR"
-  string role = 5; // "USER", "ASSISTANT", or "SYSTEM"
-  string content = 6;
-  string metadata = 7; // JSON string
-  int64 created_ts = 8;
-}
+// AIMessage removed: ALL IN Block!
+// Use Block message instead for all conversation persistence.
 
 message ListAIConversationsRequest {}
 
@@ -390,16 +381,17 @@ message AddContextSeparatorRequest {
 // ListMessagesRequest is the request for ListMessages.
 message ListMessagesRequest {
   int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED]; // Conversation ID
-  int32 limit = 2; // Max messages to return (default: 100, max: 100)
-  string last_message_uid = 3; // Last message UID from previous page (for incremental sync)
+  int32 limit = 2; // Max blocks to return (default: 100, max: 100)
+  string last_block_uid = 3; // Last block UID from previous page (for incremental sync)
 }
 
 // ListMessagesResponse is the response for ListMessages.
+// NOTE: Named ListMessages for API compatibility, but returns Blocks.
 message ListMessagesResponse {
-  repeated AIMessage messages = 1; // Messages in the conversation
-  bool has_more = 2; // Whether more messages exist before this page
-  int32 total_count = 3; // Total count of MSG messages (excludes SEP/SUMMARY)
-  string latest_message_uid = 4; // UID of the latest message for sync validation
+  repeated Block blocks = 1; // Blocks in the conversation
+  bool has_more = 2; // Whether more blocks exist before this page
+  int32 total_count = 3; // Total count of MESSAGE type blocks
+  string latest_block_uid = 4; // UID of the latest block for sync validation
   bool sync_required = 5; // Whether client should re-sync (UID not found)
 }
 

@@ -81,25 +81,42 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal user_inputs: %w", err)
 	}
-	metadataJSON, err := json.Marshal(create.Metadata)
+	// Ensure metadata is never nil - convert to empty map if needed
+	// This prevents json.Marshal from producing "null" which can cause JSONB issues
+	metadata := create.Metadata
+	if metadata == nil {
+		metadata = make(map[string]any)
+	}
+	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	// Build INSERT query dynamically based on whether parent_block_id is provided
+	var parentFields string
+	var parentArgs []any
+
+	if create.ParentBlockID != nil {
+		parentFields = ", parent_block_id"
+		parentArgs = []any{*create.ParentBlockID}
+	}
+
+	// Build RETURNING clause dynamically
+	var returningFields string
+	if create.ParentBlockID != nil {
+		returningFields = ", parent_block_id, branch_path"
 	}
 
 	query := `
 		INSERT INTO ai_block (
 			uid, conversation_id, block_type, mode,
 			user_inputs, assistant_content, assistant_timestamp,
-			event_stream, session_stats, cc_session_id, status, metadata,
-			parent_block_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		RETURNING id, round_number, parent_block_id, branch_path, created_ts, updated_ts
+			event_stream, session_stats, cc_session_id, status, metadata` + parentFields + `
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12` + parentFields + `)
+		RETURNING id, round_number, created_ts, updated_ts` + returningFields + `
 	`
 
-	var block store.AIBlock
-	var parentBlockID sql.NullInt64
-	var branchPath sql.NullString
-	err = d.db.QueryRowContext(ctx, query,
+	args := []any{
 		uid,
 		create.ConversationID,
 		string(create.BlockType),
@@ -112,8 +129,30 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 		create.CCSessionID,
 		string(create.Status),
 		metadataJSON,
-		create.ParentBlockID,
-	).Scan(&block.ID, &block.RoundNumber, &parentBlockID, &branchPath, &block.CreatedTs, &block.UpdatedTs)
+	}
+	args = append(args, parentArgs...)
+
+	var block store.AIBlock
+
+	// Scan based on whether parent fields were requested
+	if create.ParentBlockID != nil {
+		var parentBlockID sql.NullInt64
+		var branchPath sql.NullString
+		err = d.db.QueryRowContext(ctx, query, args...).Scan(
+			&block.ID, &block.RoundNumber, &block.CreatedTs, &block.UpdatedTs,
+			&parentBlockID, &branchPath,
+		)
+		if parentBlockID.Valid {
+			block.ParentBlockID = &parentBlockID.Int64
+		}
+		if branchPath.Valid {
+			block.BranchPath = branchPath.String
+		}
+	} else {
+		err = d.db.QueryRowContext(ctx, query, args...).Scan(
+			&block.ID, &block.RoundNumber, &block.CreatedTs, &block.UpdatedTs,
+		)
+	}
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ai_block: %w", err)
@@ -128,12 +167,6 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 	block.EventStream = []store.BlockEvent{}
 	block.Status = create.Status
 	block.Metadata = create.Metadata
-	if parentBlockID.Valid {
-		block.ParentBlockID = &parentBlockID.Int64
-	}
-	if branchPath.Valid {
-		block.BranchPath = branchPath.String
-	}
 
 	return &block, nil
 }
@@ -144,7 +177,7 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       parent_block_id, branch_path, created_ts, updated_ts
+		       created_ts, updated_ts, parent_block_id, branch_path
 		FROM ai_block
 		WHERE id = $1
 	`
@@ -172,10 +205,10 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		&ccSessionID,
 		&block.Status,
 		&metadataJSON,
-		&parentBlockID,
-		&branchPath,
 		&block.CreatedTs,
 		&block.UpdatedTs,
+		&parentBlockID,
+		&branchPath,
 	)
 
 	if err != nil {
@@ -220,7 +253,7 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 
 // ListAIBlocks retrieves blocks for a conversation
 func (d *DB) ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*store.AIBlock, error) {
-	where, args := []string{"1 = 1"}, []any{1}
+	where, args := []string{"1 = 1"}, []any{} // Fixed: Initialize empty slice, not []any{1}
 
 	if find.ID != nil {
 		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *find.ID)
@@ -248,7 +281,7 @@ func (d *DB) ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*stor
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       parent_block_id, branch_path, created_ts, updated_ts
+		       created_ts, updated_ts, parent_block_id, branch_path
 		FROM ai_block
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY round_number ASC
@@ -318,8 +351,18 @@ func (d *DB) UpdateAIBlock(ctx context.Context, update *store.UpdateAIBlock) (*s
 		return d.GetAIBlock(ctx, update.ID)
 	}
 
-	// Merge metadata
-	set, args = append(set, "metadata = metadata || "+placeholder(len(args)+1)), append(args, update.Metadata)
+	// Merge metadata (needs to be JSON encoded for JSONB column)
+	// Ensure metadata is never nil - convert to empty map if needed
+	// This prevents json.Marshal from producing "null" which can cause issues
+	metadata := update.Metadata
+	if metadata == nil {
+		metadata = make(map[string]any)
+	}
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	set, args = append(set, "metadata = metadata || "+placeholder(len(args)+1)+"::jsonb"), append(args, metadataJSON)
 
 	args = append(args, update.ID)
 
@@ -500,7 +543,7 @@ func (d *DB) GetLatestAIBlock(ctx context.Context, conversationID int32) (*store
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       parent_block_id, branch_path, created_ts, updated_ts
+		       created_ts, updated_ts, parent_block_id, branch_path
 		FROM ai_block
 		WHERE conversation_id = $1
 		ORDER BY round_number DESC
@@ -535,7 +578,7 @@ func (d *DB) GetPendingAIBlocks(ctx context.Context) ([]*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       parent_block_id, branch_path, created_ts, updated_ts
+		       created_ts, updated_ts, parent_block_id, branch_path
 		FROM ai_block
 		WHERE status IN ('pending', 'streaming')
 		ORDER BY created_ts ASC
@@ -644,10 +687,10 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 		&ccSessionID,
 		&block.Status,
 		&metadataJSON,
-		&parentBlockID,
-		&branchPath,
 		&block.CreatedTs,
 		&block.UpdatedTs,
+		&parentBlockID,
+		&branchPath,
 	)
 
 	if err != nil {

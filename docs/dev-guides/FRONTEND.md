@@ -329,7 +329,7 @@ import { UnifiedMessageBlock } from "@/components/AIChat/UnifiedMessageBlock";
 - Block Header: 用户消息预览 + 时间戳 + 状态徽章
 - Block Body: 可折叠内容（思考/工具/结果/回答/会话统计）
 - Block Footer: 操作栏（复制/重新生成/删除）
-- 支持 5 种 Parrot 主题适配（MEMO/SCHEDULE/AMAZING/GEEK/EVOLUTION）
+- 支持 5 种 Parrot 主题适配（MEMO/SCHEDULE/AMAZING/GEEK/EVOLUTION）+ AUTO 路由标记
 - 自动折叠策略：新/最新 Block 展开，历史 Block 折叠
 
 ### MemoCard

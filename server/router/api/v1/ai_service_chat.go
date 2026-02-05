@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	agentpkg "github.com/hrygo/divinesense/ai/agent"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
@@ -219,15 +220,23 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	blockManager := aichat.NewBlockManager(s.Store)
 	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService, s.persister, blockManager)
 
-	// Configure chat router for auto-routing if intent classifier is enabled
+	// Configure chat router for auto-routing.
+	// Even without LLM intent classification, rule-based routing (keywords) is always available.
+	// Three-layer routing (rule + history + LLM) is used when IntentClassifier is enabled.
+	routerSvc := s.getRouterService()
+	var chatRouter *agentpkg.ChatRouter
 	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {
-		routerSvc := s.getRouterService()
-		chatRouter := aichat.NewChatRouter(s.IntentClassifierConfig, routerSvc)
-		parrotHandler.SetChatRouter(chatRouter)
-		slog.Info("Chat router enabled with three-layer routing",
+		// Full three-layer routing (rule + history + LLM)
+		chatRouter = aichat.NewChatRouter(s.IntentClassifierConfig, routerSvc)
+		slog.Info("Chat router enabled with three-layer routing (rule + history + LLM)",
 			"model", s.IntentClassifierConfig.Model,
 		)
+	} else {
+		// Basic rule-based routing (no LLM fallback)
+		chatRouter = aichat.NewChatRouter(nil, routerSvc)
+		slog.Info("Chat router enabled with rule-based routing (no LLM)")
 	}
+	parrotHandler.SetChatRouter(chatRouter)
 
 	return aichat.NewRoutingHandler(parrotHandler)
 }
@@ -298,6 +307,16 @@ func (s *eventCollectingStream) Send(resp *v1pb.ChatResponse) error {
 			// TODO: Move to a proper background worker pool with lifecycle management
 			bgCtx := context.WithoutCancel(s.Context())
 			go func() {
+				// Add panic recovery to prevent goroutine leaks
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Default().Error("Summarization goroutine panic",
+							"conversation_id", s.conversationID,
+							"panic", r,
+						)
+					}
+				}()
+
 				summarizer := s.service.getConversationSummarizer()
 				if shouldSummarize, count := summarizer.ShouldSummarize(bgCtx, s.conversationID); shouldSummarize {
 					slog.Default().Info("Conversation threshold reached, triggering summarization",

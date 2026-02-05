@@ -11,9 +11,6 @@ import (
 	"github.com/lithammer/shortuuid/v4"
 )
 
-// emptyMetadata is the default empty JSON object for message metadata.
-const emptyMetadata = "{}"
-
 // ChatEvent represents a chat event that can be processed by listeners.
 type ChatEvent struct {
 	Type               ChatEventType
@@ -207,11 +204,12 @@ func NewConversationService(store ConversationStore) *ConversationService {
 }
 
 // Subscribe registers event listeners for conversation persistence.
+//
+// NOTE: Message persistence is now handled by BlockManager in the main chat flow.
+// This service only handles conversation lifecycle events (start/create).
 func (s *ConversationService) Subscribe(bus *EventBus) {
 	bus.Subscribe(EventConversationStart, s.handleConversationStart)
-	bus.Subscribe(EventUserMessage, s.handleUserMessage)
-	bus.Subscribe(EventAssistantResponse, s.handleAssistantResponse)
-	bus.Subscribe(EventSeparator, s.handleSeparator)
+	// Message events removed: BlockManager now handles all message persistence
 }
 
 // handleConversationStart ensures a conversation exists for the chat.
@@ -252,65 +250,12 @@ func (s *ConversationService) handleConversationStart(ctx context.Context, event
 	return id, nil
 }
 
-// handleUserMessage saves a user message to the conversation.
-func (s *ConversationService) handleUserMessage(ctx context.Context, event *ChatEvent) (interface{}, error) {
-	_, err := s.store.CreateAIMessage(ctx, &store.AIMessage{
-		UID:            shortuuid.New(),
-		ConversationID: event.ConversationID,
-		Type:           store.AIMessageTypeMessage,
-		Role:           store.AIMessageRoleUser,
-		Content:        event.UserMessage,
-		Metadata:       emptyMetadata,
-		CreatedTs:      event.Timestamp,
-	})
-	if err != nil {
-		slog.Default().Error("Failed to save user message",
-			"conversation_id", event.ConversationID,
-			"error", err,
-		)
-	}
-	return nil, err
-}
-
-// handleAssistantResponse saves an assistant response to the conversation.
-func (s *ConversationService) handleAssistantResponse(ctx context.Context, event *ChatEvent) (interface{}, error) {
-	_, err := s.store.CreateAIMessage(ctx, &store.AIMessage{
-		UID:            shortuuid.New(),
-		ConversationID: event.ConversationID,
-		Type:           store.AIMessageTypeMessage,
-		Role:           store.AIMessageRoleAssistant,
-		Content:        event.AssistantResponse,
-		Metadata:       emptyMetadata,
-		CreatedTs:      event.Timestamp,
-	})
-	if err != nil {
-		slog.Default().Error("Failed to save assistant message",
-			"conversation_id", event.ConversationID,
-			"error", err,
-		)
-	}
-	return nil, err
-}
-
-// handleSeparator saves a separator message to the conversation.
-func (s *ConversationService) handleSeparator(ctx context.Context, event *ChatEvent) (interface{}, error) {
-	_, err := s.store.CreateAIMessage(ctx, &store.AIMessage{
-		UID:            shortuuid.New(),
-		ConversationID: event.ConversationID,
-		Type:           store.AIMessageTypeSeparator,
-		Role:           store.AIMessageRoleSystem,
-		Content:        event.SeparatorContent,
-		Metadata:       emptyMetadata,
-		CreatedTs:      event.Timestamp,
-	})
-	if err != nil {
-		slog.Default().Error("Failed to save separator message",
-			"conversation_id", event.ConversationID,
-			"error", err,
-		)
-	}
-	return nil, err
-}
+// Message persistence removed: BlockManager now handles all message persistence
+// in the main chat flow (handler.go).
+// The following methods were removed:
+// - handleUserMessage
+// - handleAssistantResponse
+// - handleSeparator
 
 // createConversation creates a new conversation.
 func (s *ConversationService) createConversation(ctx context.Context, event *ChatEvent) (int32, error) {
@@ -340,9 +285,11 @@ func (s *ConversationService) generateTitle() string {
 }
 
 // ConversationStore is the interface needed for conversation persistence.
+//
+// NOTE: Message persistence is now handled by BlockManager in the main chat flow.
+// This interface only handles conversation lifecycle (create/update/list).
 type ConversationStore interface {
 	CreateAIConversation(ctx context.Context, create *store.AIConversation) (*store.AIConversation, error)
 	ListAIConversations(ctx context.Context, find *store.FindAIConversation) ([]*store.AIConversation, error)
 	UpdateAIConversation(ctx context.Context, update *store.UpdateAIConversation) (*store.AIConversation, error)
-	CreateAIMessage(ctx context.Context, create *store.AIMessage) (*store.AIMessage, error)
 }

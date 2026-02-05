@@ -349,7 +349,8 @@ func (h *ParrotHandler) executeAgent(
 	var sessionTotalDuration int64
 
 	// Track tool calls for session summary
-	var toolsUsed []string
+	// Preallocate to avoid frequent reallocation during streaming
+	toolsUsed := make([]string, 0, 10)
 	var toolMu sync.Mutex
 
 	// Track total cost from session_stats event
@@ -439,9 +440,13 @@ func (h *ParrotHandler) executeAgent(
 				if h.persister != nil {
 					enqueued := h.persister.EnqueueSessionStatsData(sessionStatsData)
 					if !enqueued {
-						logger.Warn("Failed to enqueue session stats for persistence",
+						// Log as error since cost tracking data is lost
+						logger.Error("Failed to enqueue session stats - cost tracking will be inaccurate",
+							fmt.Errorf("queue full: size=%d", h.persister.QueueSize()),
 							slog.String("session_id", sessionStatsData.SessionID),
-							slog.Int("queue_size", h.persister.QueueSize()))
+							slog.Int("queue_size", h.persister.QueueSize()),
+							slog.Float64("total_cost_usd", sessionStatsData.TotalCostUSD),
+							slog.Int64("total_tokens", int64(sessionStatsData.TotalTokens)))
 					}
 				}
 			}
@@ -483,7 +488,10 @@ func (h *ParrotHandler) executeAgent(
 			// Append event asynchronously with error logging (don't block streaming)
 			// Note: Persistence failures are logged with structured "metric" attribute for monitoring/alerting
 			go func(blockID int64, evtType string) {
-				if err := h.blockManager.AppendEvent(ctx, blockID, evtType, dataStr, eventMetaForBlock); err != nil {
+				// Use WithoutCancel to detach from request context - allows persistence to complete
+				// even if the request is cancelled or the client disconnects
+				bgCtx := context.WithoutCancel(ctx)
+				if err := h.blockManager.AppendEvent(bgCtx, blockID, evtType, dataStr, eventMetaForBlock); err != nil {
 					logger.Warn("Failed to append event to block",
 						slog.String("metric", "ai.event_persistence_failure"), // Structured attribute for monitoring
 						slog.Int64("block_id", blockID),
@@ -803,10 +811,13 @@ func HandleError(err error) error {
 
 // NewChatRouter creates a new chat router for auto-routing based on intent classification.
 // Optionally accepts a router.Service for enhanced three-layer routing.
+// If cfg is nil, only rule-based routing is enabled (no LLM fallback).
 func NewChatRouter(cfg *ai.IntentClassifierConfig, routerSvc *router.Service) *agentpkg.ChatRouter {
-	return agentpkg.NewChatRouter(agentpkg.ChatRouterConfig{
-		APIKey:  cfg.APIKey,
-		BaseURL: cfg.BaseURL,
-		Model:   cfg.Model,
-	}, routerSvc)
+	routerCfg := agentpkg.ChatRouterConfig{}
+	if cfg != nil {
+		routerCfg.APIKey = cfg.APIKey
+		routerCfg.BaseURL = cfg.BaseURL
+		routerCfg.Model = cfg.Model
+	}
+	return agentpkg.NewChatRouter(routerCfg, routerSvc)
 }

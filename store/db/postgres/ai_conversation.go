@@ -114,11 +114,7 @@ func (d *DB) UpdateAIConversation(ctx context.Context, update *store.UpdateAICon
 }
 
 func (d *DB) DeleteAIConversation(ctx context.Context, delete *store.DeleteAIConversation) error {
-	// Delete messages first
-	if _, err := d.db.ExecContext(ctx, `DELETE FROM ai_message WHERE conversation_id = `+placeholder(1), delete.ID); err != nil {
-		return fmt.Errorf("failed to delete ai_messages: %w", err)
-	}
-	// Delete conversation
+	// Note: ai_block has CASCADE delete automatically
 	result, err := d.db.ExecContext(ctx, `DELETE FROM ai_conversation WHERE id = `+placeholder(1), delete.ID)
 	if err != nil {
 		return fmt.Errorf("failed to delete ai_conversation: %w", err)
@@ -132,78 +128,8 @@ func (d *DB) DeleteAIConversation(ctx context.Context, delete *store.DeleteAICon
 	return nil
 }
 
-func (d *DB) CreateAIMessage(ctx context.Context, create *store.AIMessage) (*store.AIMessage, error) {
-	fields := []string{"uid", "conversation_id", "type", "role", "content", "metadata", "created_ts"}
-	args := []any{create.UID, create.ConversationID, string(create.Type), string(create.Role), create.Content, create.Metadata, create.CreatedTs}
-
-	stmt := `INSERT INTO ai_message (` + strings.Join(fields, ", ") + `)
-		VALUES (` + placeholders(len(args)) + `)
-		RETURNING id`
-
-	if err := d.db.QueryRowContext(ctx, stmt, args...).Scan(&create.ID); err != nil {
-		return nil, fmt.Errorf("failed to create ai_message: %w", err)
-	}
-
-	return create, nil
-}
-
-func (d *DB) ListAIMessages(ctx context.Context, find *store.FindAIMessage) ([]*store.AIMessage, error) {
-	where, args := []string{"1 = 1"}, []any{}
-
-	if find.ID != nil {
-		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *find.ID)
-	}
-	if find.UID != nil {
-		where, args = append(where, "uid = "+placeholder(len(args)+1)), append(args, *find.UID)
-	}
-	if find.ConversationID != nil {
-		where, args = append(where, "conversation_id = "+placeholder(len(args)+1)), append(args, *find.ConversationID)
-	}
-
-	query := `SELECT id, uid, conversation_id, type, role, content, metadata, created_ts FROM ai_message WHERE ` + strings.Join(where, " AND ") + ` ORDER BY created_ts ASC`
-	rows, err := d.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list ai_messages: %w", err)
-	}
-	defer rows.Close()
-
-	list := make([]*store.AIMessage, 0)
-	for rows.Next() {
-		m := &store.AIMessage{}
-		var msgType, role string
-		if err := rows.Scan(&m.ID, &m.UID, &m.ConversationID, &msgType, &role, &m.Content, &m.Metadata, &m.CreatedTs); err != nil {
-			return nil, fmt.Errorf("failed to scan ai_message: %w", err)
-		}
-		m.Type = store.AIMessageType(msgType)
-		m.Role = store.AIMessageRole(role)
-		list = append(list, m)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate ai_messages: %w", err)
-	}
-
-	return list, nil
-}
-
-func (d *DB) DeleteAIMessage(ctx context.Context, delete *store.DeleteAIMessage) error {
-	where, args := []string{}, []any{}
-
-	if delete.ID != nil {
-		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *delete.ID)
-	}
-	if delete.ConversationID != nil {
-		where, args = append(where, "conversation_id = "+placeholder(len(args)+1)), append(args, *delete.ConversationID)
-	}
-
-	if len(where) == 0 {
-		return fmt.Errorf("no condition to delete")
-	}
-
-	stmt := `DELETE FROM ai_message WHERE ` + strings.Join(where, " AND ")
-	if _, err := d.db.ExecContext(ctx, stmt, args...); err != nil {
-		return fmt.Errorf("failed to delete ai_message: %w", err)
-	}
-
-	return nil
-}
+// ai_message functions removed: ALL IN Block!
+// Message persistence is now handled by BlockManager in the main chat flow.
+// - CreateAIMessage (removed)
+// - ListAIMessages (removed)
+// - DeleteAIMessage (removed)

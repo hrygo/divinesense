@@ -15,6 +15,9 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
+// emptyMetadata is the default empty JSON object for metadata.
+const emptyMetadata = "{}"
+
 // ListBlocks retrieves blocks for a conversation.
 func (s *AIService) ListBlocks(ctx context.Context, req *v1pb.ListBlocksRequest) (*v1pb.ListBlocksResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
@@ -381,6 +384,12 @@ func convertBlockFromStore(b *store.AIBlock) *v1pb.Block {
 	if b.SessionStats != nil {
 		pbBlock.SessionStats = convertSessionStatsFromStore(b.SessionStats)
 	}
+
+	// Convert tree branching fields
+	if b.ParentBlockID != nil {
+		pbBlock.ParentBlockId = *b.ParentBlockID
+	}
+	pbBlock.BranchPath = b.BranchPath
 
 	// Convert metadata to JSON string
 	pbBlock.Metadata = formatMetadata(b.Metadata)

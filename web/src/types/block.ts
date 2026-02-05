@@ -105,16 +105,18 @@ export function getBlockTypeName(type: BlockTypeEnum | string): string {
 
 /**
  * Get display name for block mode
+ * BlockMode is numeric: 0=UNSPECIFIED, 1=NORMAL, 2=GEEK, 3=EVOLUTION
  */
 export function getBlockModeName(mode: BlockModeEnum | string): string {
-  const modeStr = typeof mode === "string" ? mode : String(mode);
-  switch (modeStr) {
-    case String(BLOCK_MODE.NORMAL):
+  const modeNum = typeof mode === "number" ? mode : parseInt(String(mode), 10) || 0;
+  switch (modeNum) {
+    case 1: // BlockMode.NORMAL
       return "normal";
-    case String(BLOCK_MODE.GEEK):
+    case 2: // BlockMode.GEEK
       return "geek";
-    case String(BLOCK_MODE.EVOLUTION):
+    case 3: // BlockMode.EVOLUTION
       return "evolution";
+    case 0: // BlockMode.UNSPECIFIED
     default:
       return "unspecified";
   }
@@ -188,18 +190,25 @@ import { ParrotAgentType } from "./parrot";
  * Convert BlockMode to ParrotAgentType
  * Maps the unified Block model modes to Parrot agent types
  *
- * @param mode - The BlockMode enum value or string
- * @returns The corresponding ParrotAgentType
+ * Note: BlockMode and ParrotAgentType are independent concepts.
+ * - BlockMode: User-selected mode in UI (NORMAL/GEKE/EVOLUTION)
+ * - ParrotAgentType: Actual parrot agent handling the request
+ *
+ * @param mode - The BlockMode enum value
+ * @returns The corresponding ParrotAgentType (for display purposes only)
  */
 export function blockModeToParrotAgentType(mode: BlockModeEnum | string): ParrotAgentType {
-  const modeStr = typeof mode === "string" ? mode : String(mode);
-  switch (modeStr) {
-    case String(BLOCK_MODE.GEEK):
+  // BlockMode is a numeric enum from proto:
+  // UNSPECIFIED = 0, NORMAL = 1, GEEK = 2, EVOLUTION = 3
+  const modeNum = typeof mode === "number" ? mode : parseInt(String(mode), 10) || 0;
+  switch (modeNum) {
+    case 2: // BlockMode.GEEK → GEEK parrot
       return ParrotAgentType.GEEK;
-    case String(BLOCK_MODE.EVOLUTION):
+    case 3: // BlockMode.EVOLUTION → EVOLUTION parrot
       return ParrotAgentType.EVOLUTION;
-    case String(BLOCK_MODE.NORMAL):
+    case 1: // BlockMode.NORMAL → AUTO (routed by backend)
+    case 0: // BlockMode.UNSPECIFIED
     default:
-      return ParrotAgentType.AMAZING;
+      return ParrotAgentType.AUTO;
   }
 }

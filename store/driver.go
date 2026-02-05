@@ -96,11 +96,6 @@ type Driver interface {
 	UpdateAIConversation(ctx context.Context, update *UpdateAIConversation) (*AIConversation, error)
 	DeleteAIConversation(ctx context.Context, delete *DeleteAIConversation) error
 
-	// AIMessage model related methods.
-	CreateAIMessage(ctx context.Context, create *AIMessage) (*AIMessage, error)
-	ListAIMessages(ctx context.Context, find *FindAIMessage) ([]*AIMessage, error)
-	DeleteAIMessage(ctx context.Context, delete *DeleteAIMessage) error
-
 	// AIBlock model related methods (Unified Block Model).
 	CreateAIBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error)
 	GetAIBlock(ctx context.Context, id int64) (*AIBlock, error)

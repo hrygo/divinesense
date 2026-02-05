@@ -8,11 +8,11 @@
 // Timestamp Calculation Constants
 // ============================================================
 
-/** Multiplier for calculating round-based timestamps */
+/** Multiplier for calculating round-based timestamps (converts rounds to microseconds) */
 export const ROUND_TIMESTAMP_MULTIPLIER = 1_000_000;
 
-/** Offset in milliseconds between tool calls in the same round */
-export const TOOL_CALL_OFFSET_MS = 1000;
+/** Offset in microseconds between tool calls in the same round */
+export const TOOL_CALL_OFFSET_US = 1000;
 
 // ============================================================
 // UI Threshold Constants

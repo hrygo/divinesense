@@ -1,4 +1,5 @@
 import { Maximize2, Minimize2, Sparkles } from "lucide-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import { cn } from "@/lib/utils";
@@ -30,10 +31,22 @@ interface ChatHeaderProps {
 /**
  * 根据当前能力和状态获取动作描述
  */
-function getActionDescription(capability: CapabilityType, status: CapabilityStatus, t: (key: string) => string): string | null {
+function getActionDescription(
+  capability: CapabilityType,
+  status: CapabilityStatus,
+  mode: AIMode,
+  t: (key: string) => string,
+): string | null {
   if (status === "idle") return null;
 
   if (status === "thinking") {
+    // Use mode-specific thinking text
+    if (mode === "geek") {
+      return t("ai.geek_mode.thinking");
+    }
+    if (mode === "evolution") {
+      return t("ai.evolution_mode.thinking");
+    }
     return t("ai.states.thinking");
   }
 
@@ -113,7 +126,13 @@ export function ChatHeader({
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const assistantName = t("ai.assistant-name");
-  const actionDescription = getActionDescription(currentCapability, capabilityStatus, t);
+
+  // Memoize action description to avoid recalculation during rapid state changes
+  const actionDescription = useMemo(
+    () => getActionDescription(currentCapability, capabilityStatus, currentMode, t),
+    [currentCapability, capabilityStatus, currentMode, t],
+  );
+
   const modeStyle = getModeStyle(currentMode, t);
 
   return (
