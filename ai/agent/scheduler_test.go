@@ -309,7 +309,10 @@ func TestSchedulerAgentV2_Callback(t *testing.T) {
 		Return(mockToolCallResponse("schedule_query", queryArgs, "Checking..."), nil).
 		Once()
 
-	// Mock: Tool returns empty (called twice: once by tool.Run, once by handleScheduleQuery callback)
+	// Mock: FindSchedules is called twice during ExecuteWithCallback:
+	// 1. Once by the tool.Run() during agent execution
+	// 2. Once by the handleScheduleQuery callback that generates the tool_result event
+	// This verifies the callback mechanism correctly invokes the service for event generation.
 	mockSvc.On("FindSchedules", mock.Anything, int32(1), mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
 		Return([]*schedule.ScheduleInstance{}, nil).
 		Times(2)
