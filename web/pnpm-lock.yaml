@@ -192,6 +192,9 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^2.10.1
         version: 2.10.1
+      '@playwright/test':
+        specifier: ^1.58.1
+        version: 1.58.1
       '@types/d3':
         specifier: ^7.4.3
         version: 7.4.3
@@ -692,6 +695,11 @@ packages:
 
   '@mermaid-js/parser@0.6.3':
     resolution: {integrity: sha512-lnjOhe7zyHjc+If7yT4zoedx2vo4sHaTmtkl1+or8BRTnCtDmcTpAjpzDSfCZrshM5bCoz0GyidzadJAH1xobA==}
+
+  '@playwright/test@1.58.1':
+    resolution: {integrity: sha512-6LdVIUERWxQMmUSSQi0I53GgCBYgM2RpGngCPY7hSeju+VrKjq3lvs7HpJoPbDiY5QM5EYRtRX5fvrinnMAz3w==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -1987,6 +1995,11 @@ packages:
     resolution: {integrity: sha512-aTnihCmiMA0ItLJLCbrQYS9mzriopW24goFPgUnKAAmAlPogTSmFWqoBPMXzIfPb7bs04Hur5zEI4WYgLW3Sig==}
     engines: {node: '>=12'}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -2548,6 +2561,16 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  playwright-core@1.58.1:
+    resolution: {integrity: sha512-bcWzOaTxcW+VOOGBCQgnaKToLJ65d6AqfLVKEWvexyS3AS6rbXl+xdpYRMGSRBClPvyj44njOWoxjNdL/H9UNg==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.58.1:
+    resolution: {integrity: sha512-+2uTZHxSCcxjvGc5C891LrS1/NlxglGxzrC4seZiVjcYVQfUa87wBL6rTDqzGjuoWNjnBzRqKmF6zRYGMvQUaQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   points-on-curve@0.2.0:
     resolution: {integrity: sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A==}
@@ -3496,6 +3519,10 @@ snapshots:
   '@mermaid-js/parser@0.6.3':
     dependencies:
       langium: 3.3.1
+
+  '@playwright/test@1.58.1':
+    dependencies:
+      playwright: 1.58.1
 
   '@radix-ui/number@1.1.1': {}
 
@@ -4769,6 +4796,9 @@ snapshots:
       kapsule: 1.16.3
       lodash-es: 4.17.21
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -5589,6 +5619,14 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  playwright-core@1.58.1: {}
+
+  playwright@1.58.1:
+    dependencies:
+      playwright-core: 1.58.1
+    optionalDependencies:
+      fsevents: 2.3.2
 
   points-on-curve@0.2.0: {}
 

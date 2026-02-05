@@ -18,6 +18,8 @@ type AIBlock struct {
 	CCSessionID        string
 	Status             AIBlockStatus
 	Metadata           map[string]any
+	ParentBlockID      *int64 // Parent block ID for tree branching (null for root blocks)
+	BranchPath         string // Branch path for ordering (e.g., "0/1/3")
 	CreatedTs          int64
 	UpdatedTs          int64
 }
@@ -98,6 +100,7 @@ type CreateAIBlock struct {
 	Metadata       map[string]any
 	CCSessionID    string
 	Status         AIBlockStatus
+	ParentBlockID  *int64 // Parent block ID for forking (null for new root)
 	CreatedTs      int64
 	UpdatedTs      int64
 }
@@ -123,6 +126,7 @@ type FindAIBlock struct {
 	Status         *AIBlockStatus
 	Mode           *AIBlockMode
 	CCSessionID    *string
+	ParentBlockID  *int64 // Filter by parent block (for branch queries)
 }
 
 // AIBlockStore defines the interface for block storage operations

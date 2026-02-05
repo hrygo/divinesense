@@ -223,7 +223,7 @@ func (s *ConversationService) Subscribe(bus *EventBus) {
 func (s *ConversationService) handleConversationStart(ctx context.Context, event *ChatEvent) (interface{}, error) {
 	if event.ConversationID != 0 {
 		// Conversation already specified, just update timestamp
-		now := time.Now().Unix()
+		now := time.Now().UnixMilli()
 		_, err := s.store.UpdateAIConversation(ctx, &store.UpdateAIConversation{
 			ID:        event.ConversationID,
 			UpdatedTs: &now,

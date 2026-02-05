@@ -870,11 +870,15 @@ message Block {
   // Block status
   BlockStatus status = 13;
 
-  // Extension metadata
-  string metadata = 14; // JSON string
+  // Tree branching support (for edit & regenerate functionality)
+  int64 parent_block_id = 14;  // Parent block ID (null for root blocks)
+  string branch_path = 15;       // Branch path for ordering (e.g., "0/1/3")
 
-  int64 created_ts = 15;
-  int64 updated_ts = 16;
+  // Extension metadata
+  string metadata = 16; // JSON string
+
+  int64 created_ts = 17;
+  int64 updated_ts = 18;
 }
 
 // UserInput represents a single user input within a block.

@@ -91,12 +91,14 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 			uid, conversation_id, block_type, mode,
 			user_inputs, assistant_content, assistant_timestamp,
 			event_stream, session_stats, cc_session_id, status, metadata,
-			created_ts, updated_ts
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		RETURNING id, round_number, created_ts, updated_ts
+			parent_block_id, created_ts, updated_ts
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $15, $16)
+		RETURNING id, round_number, parent_block_id, branch_path, created_ts, updated_ts
 	`
 
 	var block store.AIBlock
+	var parentBlockID sql.NullInt64
+	var branchPath sql.NullString
 	err = d.db.QueryRowContext(ctx, query,
 		uid,
 		create.ConversationID,
@@ -110,9 +112,10 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 		create.CCSessionID,
 		string(create.Status),
 		metadataJSON,
+		create.ParentBlockID,
 		create.CreatedTs,
 		create.UpdatedTs,
-	).Scan(&block.ID, &block.RoundNumber, &block.CreatedTs, &block.UpdatedTs)
+	).Scan(&block.ID, &block.RoundNumber, &parentBlockID, &branchPath, &block.CreatedTs, &block.UpdatedTs)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ai_block: %w", err)
@@ -127,6 +130,12 @@ func (d *DB) CreateAIBlock(ctx context.Context, create *store.CreateAIBlock) (*s
 	block.EventStream = []store.BlockEvent{}
 	block.Status = create.Status
 	block.Metadata = create.Metadata
+	if parentBlockID.Valid {
+		block.ParentBlockID = &parentBlockID.Int64
+	}
+	if branchPath.Valid {
+		block.BranchPath = branchPath.String
+	}
 
 	return &block, nil
 }
@@ -137,7 +146,7 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts
+		       parent_block_id, branch_path, created_ts, updated_ts
 		FROM ai_block
 		WHERE id = $1
 	`
@@ -147,6 +156,8 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 	var assistantContent sql.NullString
 	var assistantTimestamp sql.NullInt64
 	var ccSessionID sql.NullString
+	var parentBlockID sql.NullInt64
+	var branchPath sql.NullString
 
 	err := d.db.QueryRowContext(ctx, query, id).Scan(
 		&block.ID,
@@ -163,6 +174,8 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		&ccSessionID,
 		&block.Status,
 		&metadataJSON,
+		&parentBlockID,
+		&branchPath,
 		&block.CreatedTs,
 		&block.UpdatedTs,
 	)
@@ -189,6 +202,12 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 	}
 	if ccSessionID.Valid {
 		block.CCSessionID = ccSessionID.String
+	}
+	if parentBlockID.Valid {
+		block.ParentBlockID = &parentBlockID.Int64
+	}
+	if branchPath.Valid {
+		block.BranchPath = branchPath.String
 	}
 	// Parse nullable session_stats JSONB
 	if sessionStatsJSON != nil {
@@ -223,12 +242,15 @@ func (d *DB) ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*stor
 	if find.CCSessionID != nil {
 		where, args = append(where, "cc_session_id = "+placeholder(len(args)+1)), append(args, *find.CCSessionID)
 	}
+	if find.ParentBlockID != nil {
+		where, args = append(where, "parent_block_id = "+placeholder(len(args)+1)), append(args, *find.ParentBlockID)
+	}
 
 	query := `
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts
+		       parent_block_id, branch_path, created_ts, updated_ts
 		FROM ai_block
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY round_number ASC
@@ -317,7 +339,7 @@ func (d *DB) AppendUserInput(ctx context.Context, blockID int64, input store.Use
 	query := `
 		UPDATE ai_block
 		SET user_inputs = user_inputs || $1::jsonb,
-		    updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT
+		    updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT
 		WHERE id = $2
 	`
 
@@ -352,7 +374,7 @@ func (d *DB) AppendEvent(ctx context.Context, blockID int64, event store.BlockEv
 	query := `
 		UPDATE ai_block
 		SET event_stream = event_stream || $1::jsonb,
-		    updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT
+		    updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT
 		WHERE id = $2
 	`
 
@@ -399,7 +421,7 @@ func (d *DB) AppendEventsBatch(ctx context.Context, blockID int64, events []stor
 	query := `
 		UPDATE ai_block
 		SET event_stream = event_stream || $1::jsonb,
-		    updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT
+		    updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT
 		WHERE id = $2
 	`
 
@@ -429,7 +451,7 @@ func (d *DB) UpdateAIBlockStatus(ctx context.Context, blockID int64, status stor
 	query := `
 		UPDATE ai_block
 		SET status = $1,
-		    updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT
+		    updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT
 		WHERE id = $2
 	`
 
@@ -480,7 +502,7 @@ func (d *DB) GetLatestAIBlock(ctx context.Context, conversationID int32) (*store
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts
+		       parent_block_id, branch_path, created_ts, updated_ts
 		FROM ai_block
 		WHERE conversation_id = $1
 		ORDER BY round_number DESC
@@ -515,7 +537,7 @@ func (d *DB) GetPendingAIBlocks(ctx context.Context) ([]*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts
+		       parent_block_id, branch_path, created_ts, updated_ts
 		FROM ai_block
 		WHERE status IN ('pending', 'streaming')
 		ORDER BY created_ts ASC
@@ -569,7 +591,7 @@ func (d *DB) CompleteBlock(
 			SET status = $1,
 			    assistant_content = $2,
 			    session_stats = $3,
-			    updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT
+			    updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT
 			WHERE id = $4
 		`
 
@@ -606,6 +628,8 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 	var assistantContent sql.NullString
 	var assistantTimestamp sql.NullInt64
 	var ccSessionID sql.NullString
+	var parentBlockID sql.NullInt64
+	var branchPath sql.NullString
 
 	err := rows.Scan(
 		&block.ID,
@@ -622,6 +646,8 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 		&ccSessionID,
 		&block.Status,
 		&metadataJSON,
+		&parentBlockID,
+		&branchPath,
 		&block.CreatedTs,
 		&block.UpdatedTs,
 	)
@@ -648,6 +674,12 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 	}
 	if ccSessionID.Valid {
 		block.CCSessionID = ccSessionID.String
+	}
+	if parentBlockID.Valid {
+		block.ParentBlockID = &parentBlockID.Int64
+	}
+	if branchPath.Valid {
+		block.BranchPath = branchPath.String
 	}
 	// Parse nullable session_stats JSONB
 	if sessionStatsJSON != nil {

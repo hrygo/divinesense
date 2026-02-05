@@ -32,7 +32,7 @@ func (m *BlockManager) CreateBlockForChat(
 	agentType AgentType,
 	mode BlockMode,
 ) (*store.AIBlock, error) {
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 
 	// All modes use MESSAGE type (context_separator is created separately)
 	blockType := store.AIBlockTypeMessage
@@ -85,7 +85,7 @@ func (m *BlockManager) AppendEvent(
 	event := store.BlockEvent{
 		Type:      eventType,
 		Content:   content,
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now().UnixMilli(),
 		Meta:      metadata,
 	}
 
@@ -116,7 +116,7 @@ func (m *BlockManager) AppendUserInput(
 ) error {
 	input := store.UserInput{
 		Content:   userInput,
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now().UnixMilli(),
 	}
 
 	if err := m.store.AppendUserInput(ctx, blockID, input); err != nil {
@@ -148,7 +148,7 @@ func (m *BlockManager) AppendEventsBatch(
 	}
 
 	// Add timestamps to all events
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	for i := range events {
 		if events[i].Timestamp == 0 {
 			events[i].Timestamp = now
@@ -182,7 +182,7 @@ func (m *BlockManager) UpdateBlockStatus(
 	assistantContent string,
 	sessionStats *store.SessionStats,
 ) error {
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	update := &store.UpdateAIBlock{
 		ID:               blockID,
 		Status:           &status,

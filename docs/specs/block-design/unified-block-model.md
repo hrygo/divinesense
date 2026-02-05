@@ -260,8 +260,15 @@ CREATE TABLE ai_block (
 
   -- 元数据
   metadata JSONB NOT NULL DEFAULT '{}',
-  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
-  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+
+  -- 树状分支支持 (Tree Branching)
+  parent_block_id BIGINT,  -- 父 Block ID，用于编辑重生成功能
+  branch_path TEXT,           -- 分支路径 (如 "0/1/2")，用于排序
+
+  -- 时间戳 (统一使用毫秒 Milliseconds)
+  -- ⚠️ 重要: 所有 _ts 字段均使用毫秒 (int64)，与前端 JavaScript Date.now() 保持一致
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT,
+  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT,
 
   -- 约束
   CONSTRAINT fk_ai_block_conversation
@@ -275,7 +282,9 @@ CREATE TABLE ai_block (
   CONSTRAINT chk_ai_block_status
     CHECK (status IN ('pending', 'streaming', 'completed', 'error')),
   CONSTRAINT uq_ai_block_conversation_round
-    UNIQUE (conversation_id, round_number)
+    UNIQUE (conversation_id, round_number),
+  CONSTRAINT chk_ai_block_parent
+    CHECK (parent_block_id IS NULL OR parent_block_id != id)  -- 防止自引用
 );
 
 -- 索引
@@ -285,15 +294,15 @@ CREATE INDEX idx_ai_block_mode ON ai_block(mode);
 CREATE INDEX idx_ai_block_status ON ai_block(status);
 CREATE INDEX idx_ai_block_cc_session ON ai_block(cc_session_id) WHERE cc_session_id IS NOT NULL;
 
--- JSONB 索引 (GIN)
-CREATE INDEX idx_ai_block_event_stream ON ai_block USING gin(event_stream);
-CREATE INDEX idx_ai_block_user_inputs ON ai_block USING gin(user_inputs);
+-- 树状分支索引
+CREATE INDEX idx_ai_block_parent ON ai_block(parent_block_id) WHERE parent_block_id IS NOT NULL;
+CREATE INDEX idx_ai_block_branch_path ON ai_block(branch_path) WHERE branch_path IS NOT NULL;
 
--- 触发器: 更新 updated_ts
+-- 触发器: 更新 updated_ts (使用毫秒)
 CREATE OR REPLACE FUNCTION update_ai_block_updated_ts()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT;
+  NEW.updated_ts = EXTRACT(EPOCH FROM NOW()) * 1000::BIGINT;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

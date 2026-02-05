@@ -116,7 +116,7 @@ func (s *ConversationSummarizer) Summarize(ctx context.Context, conversationID i
 	}
 
 	// 4. Insert SEPARATOR message (marks context cutoff point)
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	_, err = s.writer.CreateAIMessage(ctx, &store.AIMessage{
 		UID:            shortuuid.New(),
 		ConversationID: conversationID,
