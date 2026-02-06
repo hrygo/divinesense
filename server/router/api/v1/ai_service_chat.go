@@ -130,6 +130,12 @@ func (s *AIService) Chat(req *v1pb.ChatRequest, stream v1pb.AIService_ChatServer
 
 	// Emit user message event
 	// Emit user message event
+	slog.Info("ai.chat.user_message",
+		"user_id", user.ID,
+		"conversation_id", chatReq.ConversationID,
+		"message", req.Message,
+		"agent_type", chatReq.AgentType,
+	)
 	_, _ = eventBus.Publish(ctx, &aichat.ChatEvent{
 		Type:               aichat.EventUserMessage,
 		UserID:             user.ID,

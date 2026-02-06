@@ -387,13 +387,30 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 		go func() {
 			defer wg.Done()
 
-			safeCallback(EventTypeToolUse, "正在查询日程...")
-			p.TrackToolCall("schedule_query")
-
+			toolStart := time.Now()
+			toolName := p.scheduleQueryTool.Name() // Use tool.Name() instead of hardcoded string
 			input := fmt.Sprintf(`{"start_time": %q, "end_time": %q}`, plan.scheduleStartTime, plan.scheduleEndTime)
+
+			// Send structured tool_use event with EventWithMeta
+			if callbackSafe != nil {
+				meta := &EventMeta{
+					ToolName:     toolName,
+					Status:       "running",
+					InputSummary: input,
+				}
+				callbackSafe(EventTypeToolUse, &EventWithMeta{
+					EventType: EventTypeToolUse,
+					EventData:  toolName,
+					Meta:       meta,
+				})
+			}
+			p.TrackToolCall(toolName)
 
 			// Use structured result method
 			structuredResult, err := p.scheduleQueryTool.RunWithStructuredResult(ctx, input)
+
+			// Calculate duration once after tool execution completes
+			durationMs := time.Since(toolStart).Milliseconds()
 
 			mu.Lock()
 			defer mu.Unlock()
@@ -403,6 +420,18 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				atomic.AddInt32(&errorCount, 1)
 				if callbackSafe != nil {
 					callbackSafe(EventTypeError, fmt.Sprintf("日程查询失败: %v", err))
+					// Send error result with EventWithMeta
+					meta := &EventMeta{
+						ToolName:   toolName,
+						Status:     "error",
+						ErrorMsg:   err.Error(),
+						DurationMs: durationMs, // Use pre-calculated duration
+					}
+					callbackSafe(EventTypeToolResult, &EventWithMeta{
+						EventType: EventTypeToolResult,
+						EventData:  err.Error(),
+						Meta:       meta,
+					})
 				}
 				return
 			}
@@ -416,9 +445,20 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			}
 			results["schedule_query"] = string(jsonBytes)
 
-			// Send tool result for debugging
+			// Send structured tool_result event with EventWithMeta
 			if callbackSafe != nil {
-				callbackSafe(EventTypeToolResult, string(jsonBytes))
+				outputSummary := fmt.Sprintf("找到 %d 个日程", structuredResult.Count)
+				meta := &EventMeta{
+					ToolName:      toolName,
+					Status:        "success",
+					OutputSummary: outputSummary,
+					DurationMs:    durationMs, // Use pre-calculated duration
+				}
+				callbackSafe(EventTypeToolResult, &EventWithMeta{
+					EventType: EventTypeToolResult,
+					EventData:  string(jsonBytes),
+					Meta:       meta,
+				})
 
 				// Send structured schedule_query_result event for data tracking
 				scheduleQueryResult := ScheduleQueryResultData{
