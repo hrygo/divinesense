@@ -27,7 +27,6 @@ type CacheEntry struct {
 // - Improves perceived latency for common queries
 type RouterCache struct {
 	cache          *cache.LRUCache
-	mu             sync.RWMutex
 	defaultTTL     time.Duration
 	llmResultTTL   time.Duration // Longer TTL for LLM results (expensive)
 	hitCount       int64
