@@ -1,15 +1,16 @@
 package store
 
 type AIConversation struct {
-	UID       string
-	Title     string
-	ParrotID  string
-	RowStatus RowStatus
-	CreatedTs int64
-	UpdatedTs int64
-	ID        int32
-	CreatorID int32
-	Pinned    bool
+	UID        string
+	Title      string
+	ParrotID   string
+	RowStatus  RowStatus
+	CreatedTs  int64
+	UpdatedTs  int64
+	ID         int32
+	CreatorID  int32
+	Pinned     bool
+	BlockCount int32 // Number of blocks in this conversation (populated by ListAIConversations with JOIN)
 }
 
 type FindAIConversation struct {

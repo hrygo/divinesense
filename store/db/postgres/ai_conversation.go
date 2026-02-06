@@ -41,19 +41,30 @@ func (d *DB) ListAIConversations(ctx context.Context, find *store.FindAIConversa
 	where, args := []string{"1 = 1"}, []any{}
 
 	if find.ID != nil {
-		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *find.ID)
+		where, args = append(where, "c.id = "+placeholder(len(args)+1)), append(args, *find.ID)
 	}
 	if find.UID != nil {
-		where, args = append(where, "uid = "+placeholder(len(args)+1)), append(args, *find.UID)
+		where, args = append(where, "c.uid = "+placeholder(len(args)+1)), append(args, *find.UID)
 	}
 	if find.CreatorID != nil {
-		where, args = append(where, "creator_id = "+placeholder(len(args)+1)), append(args, *find.CreatorID)
+		where, args = append(where, "c.creator_id = "+placeholder(len(args)+1)), append(args, *find.CreatorID)
 	}
 	if find.Pinned != nil {
-		where, args = append(where, "pinned = "+placeholder(len(args)+1)), append(args, *find.Pinned)
+		where, args = append(where, "c.pinned = "+placeholder(len(args)+1)), append(args, *find.Pinned)
 	}
 
-	query := `SELECT id, uid, creator_id, title, parrot_id, pinned, created_ts, updated_ts FROM ai_conversation WHERE ` + strings.Join(where, " AND ") + ` ORDER BY updated_ts DESC`
+	// Use LEFT JOIN + COUNT to avoid N+1 query problem
+	// Single query returns conversations with their block counts
+	query := `
+		SELECT
+			c.id, c.uid, c.creator_id, c.title, c.parrot_id, c.pinned, c.created_ts, c.updated_ts,
+			COALESCE(COUNT(b.id), 0) as block_count
+		FROM ai_conversation c
+		LEFT JOIN ai_block b ON b.conversation_id = c.id
+		WHERE ` + strings.Join(where, " AND ") + `
+		GROUP BY c.id, c.uid, c.creator_id, c.title, c.parrot_id, c.pinned, c.created_ts, c.updated_ts
+		ORDER BY c.updated_ts DESC`
+
 	rows, err := d.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ai_conversations: %w", err)
@@ -63,7 +74,7 @@ func (d *DB) ListAIConversations(ctx context.Context, find *store.FindAIConversa
 	list := make([]*store.AIConversation, 0)
 	for rows.Next() {
 		c := &store.AIConversation{}
-		if err := rows.Scan(&c.ID, &c.UID, &c.CreatorID, &c.Title, &c.ParrotID, &c.Pinned, &c.CreatedTs, &c.UpdatedTs); err != nil {
+		if err := rows.Scan(&c.ID, &c.UID, &c.CreatorID, &c.Title, &c.ParrotID, &c.Pinned, &c.CreatedTs, &c.UpdatedTs, &c.BlockCount); err != nil {
 			return nil, fmt.Errorf("failed to scan ai_conversation: %w", err)
 		}
 		list = append(list, c)
