@@ -1,16 +1,16 @@
+import { create } from "@bufbuild/protobuf";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
-import { blockKeys, useForkBlock } from "@/hooks/useBlockQueries";
+import { useForkBlock } from "@/hooks/useBlockQueries";
 import { cn } from "@/lib/utils";
 import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
 // Phase 4: Import Block types
 import type { Block as AIBlock } from "@/types/block";
-import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isStreamingStatus, isErrorStatus } from "@/types/block";
+import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isErrorStatus, isStreamingStatus } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
-import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
-import type { UserInput } from "@/types/proto/api/v1/ai_service_pb";
+import { BlockType, UserInputSchema } from "@/types/proto/api/v1/ai_service_pb";
 // BlockEditDialog for editing user inputs
 import { BlockEditDialog, useBlockEditDialog } from "./BlockEditDialog";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -54,7 +54,8 @@ interface ChatMessagesProps {
   onCopyMessage?: (content: string) => void;
   onRegenerate?: () => void;
   onDeleteMessage?: (index: number) => void;
-  onSend?: (messageContent?: string) => void;
+  /** @deprecated Kept for potential future use */
+  _onSendProp?: (messageContent?: string) => void;
   children?: ReactNode;
   className?: string;
   amazingInsightCard?: ReactNode;
@@ -290,7 +291,7 @@ const ChatMessages = memo(function ChatMessages({
   onCopyMessage,
   onRegenerate,
   onDeleteMessage,
-  onSend,
+  _onSendProp,
   children,
   className,
   amazingInsightCard,
@@ -299,6 +300,9 @@ const ChatMessages = memo(function ChatMessages({
   blockSummary,
   conversationId,
 }: ChatMessagesProps) {
+  // Suppress unused variable warning - prop kept for potential future use
+  void _onSendProp;
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
@@ -428,13 +432,15 @@ const ChatMessages = memo(function ChatMessages({
 
   // Handle edit confirmation - call ForkBlock API with new user input
   const handleEditConfirm = useCallback(
-    async (editedMessage: string, blockId: bigint, convId: number) => {
+    async (editedMessage: string, blockId: bigint, _convId: number) => {
       try {
         // Create new UserInput with edited message
-        const newUserInput: UserInput = {
+        // Fix: Use create() to properly construct protobuf message with $typeName
+        const newUserInput = create(UserInputSchema, {
           content: editedMessage,
-          timestamp: Date.now(),
-        };
+          timestamp: BigInt(Date.now()),
+          metadata: "{}",
+        });
 
         // Fork block with replaced user input
         await forkBlock.mutateAsync({

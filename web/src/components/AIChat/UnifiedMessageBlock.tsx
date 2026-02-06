@@ -51,7 +51,7 @@ import {
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
-import { ConversationMessage } from "@/types/aichat";
+import { type AIMode, ConversationMessage } from "@/types/aichat";
 import { type BlockBranch } from "@/types/block";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BranchIndicator } from "./BranchIndicator";
@@ -355,23 +355,51 @@ function BlockHeader({
     return "border-l-4 border-l-transparent";
   }, [isStreaming, assistantMessage]);
 
-  // Geek/Evolution Mode Summary Info
-  // P0-A006: 所有模式都显示 Token/Cost 统计（不仅 GEEK/EVOLUTION）
-  const geekSummary = useMemo(() => {
+  // Mode-specific Session Summary Info
+  // 根据不同 Mode 展示差异化的统计信息
+  const modeSummary = useMemo(() => {
     if (!blockSummary) return null;
 
-    // 所有模式都显示成本
-    const cost = blockSummary.totalCostUSD ? `$${blockSummary.totalCostUSD.toFixed(4)}` : "";
-    // 所有模式都显示 tokens
-    const tokens =
-      blockSummary.totalInputTokens && blockSummary.totalOutputTokens
-        ? `${((blockSummary.totalInputTokens + blockSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
-        : "";
-    // 所有模式都显示时长
-    const time = blockSummary.totalDurationMs ? `${(blockSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
+    // 获取当前模式：优先使用 userMessage.metadata.mode，其次根据 parrotId 推断
+    const currentMode: AIMode =
+      userMessage.metadata?.mode || (parrotId === "GEEK" ? "geek" : parrotId === "EVOLUTION" ? "evolution" : "normal");
 
-    return { cost, tokens, time };
-  }, [blockSummary]);
+    // 通用格式化函数
+    const formatCost = (cost?: number) => (cost ? `$${cost.toFixed(4)}` : "");
+    const formatTokens = (input?: number, output?: number) => {
+      if (input && output) return `${((input + output) / 1000).toFixed(1)}k`;
+      return "";
+    };
+    const formatTime = (ms?: number) => (ms ? `${(ms / 1000).toFixed(1)}s` : "");
+
+    // 根据 mode 返回不同的统计信息
+    switch (currentMode) {
+      case "geek":
+        // Geek 模式：耗时 + 工具数（零 LLM 成本）
+        return {
+          primary: formatTime(blockSummary.totalDurationMs),
+          secondary: blockSummary.toolCallCount ? `${blockSummary.toolCallCount} 工具` : "",
+          icon: "clock",
+        };
+
+      case "evolution":
+        // Evolution 模式：耗时 + 变更文件数
+        return {
+          primary: formatTime(blockSummary.totalDurationMs),
+          secondary: blockSummary.filesModified ? `${blockSummary.filesModified} 文件` : "",
+          icon: "clock",
+        };
+
+      case "normal":
+      default:
+        // Normal 模式：Tokens + Cost（LLM 对话）
+        return {
+          primary: formatTokens(blockSummary.totalInputTokens, blockSummary.totalOutputTokens),
+          secondary: formatCost(blockSummary.totalCostUSD),
+          icon: "token",
+        };
+    }
+  }, [blockSummary, userMessage.metadata?.mode, parrotId]);
 
   return (
     <div
@@ -404,39 +432,61 @@ function BlockHeader({
 
       {/* Right: Timestamp + Badge + Block Summary + Toggle */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1 sm:ml-2">
-        {/* Block Summary stats - P0-A006: 所有模式都显示（不仅 GEEK/EVOLUTION） */}
-        {geekSummary && (
+        {/* Mode-specific Session Summary - 根据不同 Mode 展示差异化的统计信息 */}
+        {modeSummary && modeSummary.primary && (
           <>
             {/* Desktop: Full stats */}
             <div className="hidden lg:flex items-center gap-3 text-[11px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
-              <span className="font-semibold text-muted-foreground/80 uppercase tracking-wider text-[11px]">
-                {t("ai.unified_block.session")}
-              </span>
-              {geekSummary.time && (
-                <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
-                  <Clock className="w-3 h-3" /> {geekSummary.time}
-                </span>
+              {/* Normal 模式显示 Tokens + Cost */}
+              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") && (
+                <>
+                  {modeSummary.primary && (
+                    <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
+                      <Brain className="w-3 h-3" /> {modeSummary.primary}
+                    </span>
+                  )}
+                  {modeSummary.secondary && (
+                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
+                      <span className="font-bold">$</span> {modeSummary.secondary}
+                    </span>
+                  )}
+                </>
               )}
-              {geekSummary.tokens && (
-                <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
-                  <Brain className="w-3 h-3" /> {geekSummary.tokens}
-                </span>
-              )}
-              {geekSummary.cost && (
-                <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
-                  <span className="font-bold">$</span> {geekSummary.cost}
-                </span>
+              {/* Geek/Evolution 模式显示 耗时 + 工具数/文件数 */}
+              {(userMessage.metadata?.mode === "geek" || userMessage.metadata?.mode === "evolution") && (
+                <>
+                  {modeSummary.primary && (
+                    <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
+                      <Clock className="w-3 h-3" /> {modeSummary.primary}
+                    </span>
+                  )}
+                  {modeSummary.secondary && (
+                    <span
+                      className="flex items-center gap-1"
+                      title={userMessage.metadata?.mode === "geek" ? t("ai.stats.tool_calls") : t("ai.stats.files_modified")}
+                    >
+                      <Wrench className="w-3 h-3" /> {modeSummary.secondary}
+                    </span>
+                  )}
+                </>
               )}
             </div>
-            {/* Mobile: Simplified cost indicator */}
+            {/* Mobile: Simplified indicator */}
             <div className="lg:hidden flex items-center gap-1 text-[10px] font-mono opacity-80">
-              {geekSummary.cost && (
+              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") && modeSummary.secondary && (
                 <span className="flex items-center gap-0.5 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">
                   <span className="font-bold">$</span>
-                  {geekSummary.cost}
+                  {modeSummary.secondary}
                 </span>
               )}
-              {!geekSummary.cost && geekSummary.tokens && <span className="text-muted-foreground">{geekSummary.tokens}</span>}
+              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") &&
+                !modeSummary.secondary &&
+                modeSummary.primary && <span className="text-muted-foreground">{modeSummary.primary}</span>}
+              {(userMessage.metadata?.mode === "geek" || userMessage.metadata?.mode === "evolution") && modeSummary.primary && (
+                <span className="flex items-center gap-0.5 text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                  <Clock className="w-3 h-3" /> {modeSummary.primary}
+                </span>
+              )}
             </div>
           </>
         )}
@@ -904,21 +954,6 @@ function BlockBody({
                   themeColors.text,
                 )}
               >
-                {/* Floating Copy Button */}
-                <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => {
-                      if (assistantMessage) {
-                        navigator.clipboard.writeText(assistantMessage.content);
-                      }
-                    }}
-                    className="p-1.5 rounded-md bg-background/50 hover:bg-background border border-border/50 text-muted-foreground shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    title={t("common.copy")}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
                 {/* Markdown content */}
                 <div ref={contentRef} className="px-5 py-4">
                   <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-normal font-sans text-[15px]">

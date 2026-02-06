@@ -21,6 +21,7 @@ import type {
   DeleteBlockRequest,
   ListBlocksRequest,
   UpdateBlockRequest,
+  UserInput,
 } from "@/types/proto/api/v1/ai_service_pb";
 import {
   AppendEventRequestSchema,
@@ -679,15 +680,7 @@ export function useForkBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      blockId,
-      reason,
-      replaceUserInputs,
-    }: {
-      blockId: bigint;
-      reason?: string;
-      replaceUserInputs?: UserInput[];
-    }) => {
+    mutationFn: async ({ blockId, reason, replaceUserInputs }: { blockId: bigint; reason?: string; replaceUserInputs?: UserInput[] }) => {
       const response = await aiServiceClient.forkBlock({
         id: blockId,
         reason,

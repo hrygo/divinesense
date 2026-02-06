@@ -209,10 +209,7 @@ describe("useBlocksWithFallback", () => {
       totalCount: 0,
     });
 
-    const { result } = renderHook(
-      () => useBlocksWithFallback(123, undefined, { isActive: true }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBlocksWithFallback(123, undefined, { isActive: true }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 

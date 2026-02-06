@@ -88,6 +88,9 @@ export function extractThinkingSteps(eventStream: BlockEvent[] | undefined): Thi
  * Parses tool_use and tool_result events to build a complete picture
  * of tool invocations and their results.
  *
+ * Uses occurrence-based deduplication: if the same tool (by name) appears
+ * multiple times without a unique tool_id, only the last occurrence is kept.
+ *
  * @param eventStream - Array of BlockEvent objects
  * @returns Array of ToolCall objects
  */
@@ -96,7 +99,9 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
     return [];
   }
 
-  const toolCallsMap = new Map<string, ToolCall>();
+  // Map to store tool calls, using a deduplication key
+  // Priority: tool_id > name > occurrence-index
+  const toolCallsMap = new Map<string, { toolCall: ToolCall; occurrence: number }>();
 
   // Helper to safely extract string from unknown
   const asString = (val: unknown): string | undefined => {
@@ -126,14 +131,23 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
         meta = undefined;
       }
 
+      const toolName = asString(meta?.name) || event.content || "unknown";
+      const toolId = asString(meta?.tool_id);
+      const occurrence = asNumber(meta?.occurrence) ?? 0;
+
+      // Build deduplication key:
+      // - If tool_id exists: use it as unique key
+      // - Otherwise: use name + occurrence to distinguish multiple calls to same tool
+      const dedupeKey = toolId ? `id:${toolId}` : `name:${toolName}:occ:${occurrence}`;
+
       const toolCall: ToolCall = {
-        name: asString(meta?.name) || event.content || "unknown",
-        toolId: asString(meta?.tool_id),
+        name: toolName,
+        toolId,
         inputSummary: event.content || asString(meta?.input_summary),
       };
 
-      const toolId = toolCall.toolId || toolCall.name;
-      toolCallsMap.set(toolId, toolCall);
+      // Store tool call with its occurrence
+      toolCallsMap.set(dedupeKey, { toolCall, occurrence });
     } else if (event.type === "tool_result") {
       // Parse tool_result event
       let meta: Record<string, unknown> | undefined;
@@ -144,17 +158,25 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
       }
 
       const toolId = asString(meta?.tool_id);
-      if (toolId && toolCallsMap.has(toolId)) {
+      const occurrence = asNumber(meta?.occurrence) ?? 0;
+
+      // Find matching tool_use event by same dedupe key
+      const resultKey = toolId ? `id:${toolId}` : `name:${asString(meta?.name)}:occ:${occurrence}`;
+
+      if (toolCallsMap.has(resultKey)) {
         // Update existing tool call with result
-        const existing = toolCallsMap.get(toolId)!;
+        const existing = toolCallsMap.get(resultKey)!.toolCall;
         existing.outputSummary = event.content || asString(meta?.output_summary);
         existing.isError = asBool(meta?.is_error);
         existing.duration = asNumber(meta?.duration);
-        existing.exitCode = asNumber(meta?.exitCode);
+        existing.exitCode = asNumber(meta?.exit_code);
         existing.filePath = asString(meta?.file_path);
       }
     }
   }
 
-  return Array.from(toolCallsMap.values());
+  // Return tool calls sorted by occurrence (if available) or insertion order
+  return Array.from(toolCallsMap.values())
+    .sort((a, b) => a.occurrence - b.occurrence)
+    .map((item) => item.toolCall);
 }

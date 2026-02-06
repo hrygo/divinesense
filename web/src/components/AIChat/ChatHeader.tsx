@@ -2,8 +2,10 @@ import { Maximize2, Minimize2, Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
+import { HeaderSessionStats } from "@/components/AIChat/HeaderSessionStats";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
+import type { Block as AIBlock } from "@/types/block";
 import { CapabilityStatus, CapabilityType } from "@/types/capability";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
@@ -15,6 +17,8 @@ interface ChatHeaderProps {
   currentMode?: AIMode;
   immersiveMode?: boolean;
   onImmersiveModeToggle?: (enabled: boolean) => void;
+  /** Phase 4: Blocks for session stats display */
+  blocks?: AIBlock[];
 }
 
 /**
@@ -137,6 +141,7 @@ export function ChatHeader({
   currentMode = "normal",
   immersiveMode = false,
   onImmersiveModeToggle,
+  blocks,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const assistantName = t("ai.assistant-name");
@@ -185,8 +190,11 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right Section - Immersive Mode Toggle + Thinking indicator */}
+      {/* Right Section - Session Stats + Immersive Toggle + Thinking indicator */}
       <div className="flex items-center gap-2">
+        {/* Session Stats - PC only */}
+        <HeaderSessionStats blocks={blocks} mode={currentMode} />
+
         {/* Immersive Mode Toggle - Desktop only */}
         {onImmersiveModeToggle && (
           <button

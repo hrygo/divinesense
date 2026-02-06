@@ -138,25 +138,17 @@ describe("useBranchTree", () => {
       activeBranchPath: "0",
     });
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.branches).toEqual(mockBranches);
     expect(result.current.currentPath).toBe("0");
-    expect(aiServiceClient.listBlockBranches).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 1n }),
-    );
+    expect(aiServiceClient.listBlockBranches).toHaveBeenCalledWith(expect.objectContaining({ id: 1n }));
   });
 
   it("should return empty branches when no blockId provided", async () => {
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -165,10 +157,7 @@ describe("useBranchTree", () => {
   });
 
   it("should be disabled when conversationId is 0", () => {
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 0, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 0, blockId: 1 }), { wrapper });
 
     expect(result.current.isLoading).toBe(false);
     expect(aiServiceClient.listBlockBranches).not.toHaveBeenCalled();
@@ -180,10 +169,7 @@ describe("useBranchTree", () => {
       activeBranchPath: "",
     });
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     expect(result.current.isBranchSelectorOpen).toBe(false);
 
@@ -202,10 +188,7 @@ describe("useBranchTree", () => {
 
     vi.mocked(aiServiceClient.switchBranch).mockResolvedValue({});
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -229,10 +212,7 @@ describe("useBranchTree", () => {
 
     vi.mocked(aiServiceClient.deleteBranch).mockResolvedValue({});
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -277,10 +257,7 @@ describe("useBranchTree", () => {
 
     vi.mocked(aiServiceClient.forkBlock).mockResolvedValue(forkedBlock);
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -297,10 +274,7 @@ describe("useBranchTree", () => {
   });
 
   it("should throw error when forking without blockId", async () => {
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -318,18 +292,13 @@ describe("useBranchTree", () => {
         activeBranchPath: "0",
       });
 
-    const { result } = renderHook(
-      () => useBranchTree({ conversationId: 123, blockId: 1 }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(aiServiceClient.listBlockBranches).toHaveBeenCalledTimes(1);
 
     result.current.refreshBranches();
 
-    await waitFor(() =>
-      expect(aiServiceClient.listBlockBranches).toHaveBeenCalledTimes(2),
-    );
+    await waitFor(() => expect(aiServiceClient.listBlockBranches).toHaveBeenCalledTimes(2));
   });
 });
