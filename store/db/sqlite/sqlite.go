@@ -39,8 +39,8 @@ import (
 // ============================================================================
 
 type DB struct {
-	db              *sql.DB
-	profile         *profile.Profile
+	db                 *sql.DB
+	profile            *profile.Profile
 	vecExtensionLoaded bool // Track if sqlite-vec extension is loaded
 }
 
@@ -123,8 +123,8 @@ func NewDB(profile *profile.Profile) (store.Driver, error) {
 	sqliteDB.SetConnMaxIdleTime(0) // No idle timeout (personal use, always ready)
 
 	driver := DB{
-		db:                sqliteDB,
-		profile:           profile,
+		db:                 sqliteDB,
+		profile:            profile,
 		vecExtensionLoaded: vecLoaded,
 	}
 

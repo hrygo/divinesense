@@ -89,7 +89,6 @@ WEB_DIR ?= web
 .PHONY: check-embed-frontend check-embed-backend check-embed-all
 .PHONY: checksum verify-checksum
 .PHONY: build-sqlite-vec build-sqlite-vec-all
-.PHONY: version version-json version-verbose
 
 # ===========================================================================
 # Development Commands
@@ -305,7 +304,7 @@ test-runner: ## 运行 Runner 测试
 ##@ Build
 
 build: ## 构建后端
-	@echo "Building backend..."
+	@echo "Building backend with sqlite_load_extension tag..."
 	@go build -o $(BACKEND_BIN) ./$(BACKEND_CMD)
 	@if [ "$$(go env GOOS)" = "darwin" ] && command -v codesign >/dev/null 2>&1; then \
 		echo "Signing binary with ad-hoc signature..."; \
@@ -316,16 +315,6 @@ build-sqlite-vec: ## 构建 sqlite-vec 静态库（本机平台）
 	@echo "Building sqlite-vec static library for current platform..."
 	@chmod +x $(SCRIPT_DIR)/build-sqlite-vec-static.sh
 	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh
-
-ensure-sqlite-vec: ## 确保 sqlite-vec 静态库已下载（通过 go generate）
-	@echo "📦 Checking sqlite-vec static library..."
-	@cd store/db/sqlite && \
-	if [ ! -f ".lib/libvec0.a" ]; then \
-		echo "  → Not found, downloading from official releases..."; \
-		go generate -v ./...; \
-	else \
-		echo "  ✓ Found at store/db/sqlite/.lib/libvec0.a"; \
-	fi
 
 build-sqlite-vec-all: ## 构建所有平台的 sqlite-vec 静态库
 	@echo "Building sqlite-vec static libraries for all platforms..."
@@ -482,7 +471,7 @@ ci-backend: ## 后端 CI 检查 (go mod tidy + golangci-lint + test)
 	@echo "  → golangci-lint..."
 	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags="noui"
 	@echo "  → go test..."
-	@go test -short -timeout=30s -tags=noui ./...
+	@go test -short -timeout=30s -tags="noui" ./...
 	@echo "  ✅ Backend checks passed"
 
 ci-frontend: ## 前端 CI 检查 (lint + build)
