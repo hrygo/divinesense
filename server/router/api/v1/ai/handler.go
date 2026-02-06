@@ -329,12 +329,8 @@ func (h *ParrotHandler) executeAgent(
 			logger.Warn("Failed to create block, continuing without block",
 				slog.String("error", createErr.Error()),
 			)
-		} else {
-			logger.Info("Created block for chat round",
-				slog.Int64("block_id", currentBlock.ID),
-				slog.Int64("conversation_id", int64(req.ConversationID)),
-			)
 		}
+		// Note: BlockManager already logs "Created block for chat" with round_number
 	}
 
 	// Track events for logging (protected by countMu)
