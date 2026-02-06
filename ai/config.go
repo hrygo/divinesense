@@ -109,10 +109,11 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	}
 
 	// Intent Classifier configuration
-	// Uses SiliconFlow with a lightweight model for fast classification
+	// Uses SiliconFlow with Qwen2.5-7B-Instruct for fast, cost-effective classification
+	// This config is used by routerIntentLLMClient in ai_service.go
 	cfg.IntentClassifier = IntentClassifierConfig{
 		Enabled: p.AISiliconFlowAPIKey != "",
-		Model:   "Qwen/Qwen2.5-7B-Instruct", // Fast, cost-effective
+		Model:   "Qwen/Qwen2.5-7B-Instruct",
 		APIKey:  p.AISiliconFlowAPIKey,
 		BaseURL: p.AISiliconFlowBaseURL,
 	}

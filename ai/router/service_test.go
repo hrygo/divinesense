@@ -274,48 +274,6 @@ func TestHistoryMatcher_Similarity(t *testing.T) {
 	}
 }
 
-func TestLLMClassifier_ParseResponse(t *testing.T) {
-	classifier := NewLLMClassifier(nil)
-
-	tests := []struct {
-		name           string
-		response       string
-		expectedIntent Intent
-		expectError    bool
-	}{
-		{
-			name:           "Valid JSON",
-			response:       `{"intent": "schedule_create", "confidence": 0.95, "reasoning": "Contains time and meeting keywords"}`,
-			expectedIntent: IntentScheduleCreate,
-			expectError:    false,
-		},
-		{
-			name:           "Markdown wrapped JSON",
-			response:       "```json\n{\"intent\": \"memo_search\", \"confidence\": 0.85, \"reasoning\": \"Search keywords\"}\n```",
-			expectedIntent: IntentMemoSearch,
-			expectError:    false,
-		},
-		{
-			name:           "Invalid JSON",
-			response:       "This is not JSON",
-			expectedIntent: IntentUnknown,
-			expectError:    true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := classifier.parseResponse(tt.response)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedIntent, result.Intent)
-			}
-		})
-	}
-}
-
 func TestRuleMatcher_TimePatterns(t *testing.T) {
 	matcher := NewRuleMatcher()
 

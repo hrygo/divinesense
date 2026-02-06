@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	agentpkg "github.com/hrygo/divinesense/ai/agent"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
@@ -221,20 +220,16 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	parrotHandler := aichat.NewParrotHandler(factory, s.LLMService, s.persister, blockManager)
 
 	// Configure chat router for auto-routing.
-	// Even without LLM intent classification, rule-based routing (keywords) is always available.
-	// Three-layer routing (rule + history + LLM) is used when IntentClassifier is enabled.
+	// routerSvc provides three-layer routing (cache → rule → history → LLM).
+	// LLM layer is only active when IntentClassifierConfig is enabled.
 	routerSvc := s.getRouterService()
-	var chatRouter *agentpkg.ChatRouter
+	chatRouter := aichat.NewChatRouter(routerSvc)
 	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {
-		// Full three-layer routing (rule + history + LLM)
-		chatRouter = aichat.NewChatRouter(s.IntentClassifierConfig, routerSvc)
 		slog.Info("Chat router enabled with three-layer routing (rule + history + LLM)",
 			"model", s.IntentClassifierConfig.Model,
 		)
 	} else {
-		// Basic rule-based routing (no LLM fallback)
-		chatRouter = aichat.NewChatRouter(nil, routerSvc)
-		slog.Info("Chat router enabled with rule-based routing (no LLM)")
+		slog.Info("Chat router enabled with rule-based routing (no LLM fallback)")
 	}
 	parrotHandler.SetChatRouter(chatRouter)
 

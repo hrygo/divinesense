@@ -3,17 +3,27 @@ package router
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/hrygo/divinesense/ai/memory"
 )
 
-// Layer 3: LLM classification (~400ms) - fallback for remaining ~20%.
+// LLMClient defines the interface for LLM API calls.
+// Implemented by server layer to connect to SiliconFlow + Qwen.
+type LLMClient interface {
+	// Complete sends a completion request and returns the intent as a string.
+	Complete(ctx context.Context, prompt string, config ModelConfig) (string, error)
+}
+
+// Service implements three-layer routing: cache -> rule -> history -> LLM.
 type Service struct {
 	ruleMatcher    *RuleMatcher
 	historyMatcher *HistoryMatcher
-	llmClassifier  *LLMClassifier
+	llmClient      LLMClient // Direct LLM client (no wrapper layer)
 	memoryService  memory.MemoryService
 	cache          *RouterCache // Performance optimization: cache routing decisions
 }
@@ -30,7 +40,7 @@ func NewService(cfg Config) *Service {
 	svc := &Service{
 		ruleMatcher:    NewRuleMatcher(),
 		historyMatcher: NewHistoryMatcher(cfg.MemoryService),
-		llmClassifier:  NewLLMClassifier(cfg.LLMClient),
+		llmClient:      cfg.LLMClient,
 		memoryService:  cfg.MemoryService,
 	}
 
@@ -99,37 +109,36 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 	}
 
 	// Layer 3: LLM classification (fallback)
-	if s.llmClassifier != nil && s.llmClassifier.client != nil {
-		result, err := s.llmClassifier.Classify(ctx, input)
+	if s.llmClient != nil {
+		intent, confidence, err := s.llmClassify(ctx, input)
 		if err != nil {
 			slog.Warn("LLM classifier error", "error", err)
 			return IntentUnknown, 0, err
 		}
 
 		// Cache LLM results with longer TTL (expensive computation)
-		if s.cache != nil && result.Intent != IntentUnknown {
-			s.cache.Set(input, result.Intent, result.Confidence, "llm")
+		if s.cache != nil && intent != IntentUnknown {
+			s.cache.Set(input, intent, confidence, "llm")
 		}
 
 		slog.Debug("intent classified by LLM",
 			"input", truncate(input, 50),
-			"intent", result.Intent,
-			"confidence", result.Confidence,
-			"reasoning", result.Reasoning,
+			"intent", intent,
+			"confidence", confidence,
 			"latency_ms", time.Since(start).Milliseconds())
 
 		// Save successful classification to history
-		if userID > 0 && result.Intent != IntentUnknown && s.historyMatcher != nil {
+		if userID > 0 && intent != IntentUnknown && s.historyMatcher != nil {
 			go func() {
 				bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				if err := s.historyMatcher.SaveDecision(bgCtx, userID, input, result.Intent, true); err != nil {
+				if err := s.historyMatcher.SaveDecision(bgCtx, userID, input, intent, true); err != nil {
 					slog.Warn("failed to save routing decision", "error", err)
 				}
 			}()
 		}
 
-		return result.Intent, result.Confidence, nil
+		return intent, confidence, nil
 	}
 
 	// No match found
@@ -239,3 +248,82 @@ func (s *Service) ClearCache() {
 
 // Ensure Service implements RouterService.
 var _ RouterService = (*Service)(nil)
+
+// llmClassify performs LLM-based intent classification.
+// Expects LLMClient to return JSON with intent and confidence.
+func (s *Service) llmClassify(ctx context.Context, input string) (Intent, float32, error) {
+	// Build prompt for intent classification
+	prompt := fmt.Sprintf("用户输入: %s", input)
+
+	// Call LLM via client (server layer provides SiliconFlow + Qwen implementation)
+	// Model configuration is handled by the LLMClient implementation
+	config := ModelConfig{
+		Provider:    "siliconflow",
+		MaxTokens:   50,
+		Temperature: 0,
+	}
+
+	response, err := s.llmClient.Complete(ctx, prompt, config)
+	if err != nil {
+		return IntentUnknown, 0, fmt.Errorf("LLM request failed: %w", err)
+	}
+
+	// Parse response - extract intent and confidence from JSON
+	intent, confidence := s.parseLLMResponse(response)
+
+	return intent, confidence, nil
+}
+
+// llmJSONResponse is the expected JSON structure from LLM.
+type llmJSONResponse struct {
+	Intent     string  `json:"intent"`
+	Confidence float64 `json:"confidence"`
+}
+
+// parseLLMResponse parses LLM JSON response and extracts intent with confidence.
+func (s *Service) parseLLMResponse(response string) (Intent, float32) {
+	response = strings.TrimSpace(response)
+
+	// Try JSON format first
+	var jsonResp llmJSONResponse
+	if err := json.Unmarshal([]byte(response), &jsonResp); err == nil {
+		confidence := float32(jsonResp.Confidence)
+		if confidence <= 0 {
+			confidence = 0.8 // Default if LLM returns invalid confidence
+		}
+		return s.stringToIntent(jsonResp.Intent), confidence
+	}
+
+	// Fallback: plain text matching with default confidence
+	return s.stringToIntent(response), 0.8
+}
+
+// stringToIntent converts string to Intent enum.
+func (s *Service) stringToIntent(str string) Intent {
+	str = strings.ToLower(strings.TrimSpace(str))
+
+	// Remove common prefixes/quotes
+	str = strings.TrimPrefix(str, "\"")
+	str = strings.TrimSuffix(str, "\"")
+	str = strings.Trim(str, "`'")
+
+	switch str {
+	case "memo_search", "memosearch", "search":
+		return IntentMemoSearch
+	case "memo_create", "memocreate", "create_memo":
+		return IntentMemoCreate
+	case "schedule_query", "schedulequery", "query":
+		return IntentScheduleQuery
+	case "schedule_create", "schedulecreate", "create_schedule":
+		return IntentScheduleCreate
+	case "schedule_update", "scheduleupdate", "update":
+		return IntentScheduleUpdate
+	case "batch_schedule", "batchschedule", "batch":
+		return IntentBatchSchedule
+	case "amazing":
+		return IntentAmazing
+	default:
+		// Default to amazing for ambiguous inputs
+		return IntentAmazing
+	}
+}

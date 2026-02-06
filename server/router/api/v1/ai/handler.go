@@ -865,14 +865,7 @@ func HandleError(err error) error {
 }
 
 // NewChatRouter creates a new chat router for auto-routing based on intent classification.
-// Optionally accepts a router.Service for enhanced three-layer routing.
-// If cfg is nil, only rule-based routing is enabled (no LLM fallback).
-func NewChatRouter(cfg *ai.IntentClassifierConfig, routerSvc *router.Service) *agentpkg.ChatRouter {
-	routerCfg := agentpkg.ChatRouterConfig{}
-	if cfg != nil {
-		routerCfg.APIKey = cfg.APIKey
-		routerCfg.BaseURL = cfg.BaseURL
-		routerCfg.Model = cfg.Model
-	}
-	return agentpkg.NewChatRouter(routerCfg, routerSvc)
+// routerSvc is required and provides three-layer routing (cache → rule → history → LLM).
+func NewChatRouter(routerSvc *router.Service) *agentpkg.ChatRouter {
+	return agentpkg.NewChatRouter(routerSvc)
 }

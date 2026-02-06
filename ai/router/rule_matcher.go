@@ -41,8 +41,8 @@ func NewRuleMatcher() *RuleMatcher {
 			"日程": 2, "安排": 2, "会议": 2, "提醒": 2, "预约": 2,
 			"开会": 2, "约会": 2, "设置提醒": 3, "创建日程": 3,
 			// Supporting keywords (+1)
-			"今天": 1, "明天": 1, "后天": 1, "下周": 1, "本周": 1,
-			"上午": 1, "下午": 1, "晚上": 1, "点": 1,
+			"今天": 2, "明天": 2, "后天": 2, "下周": 2, "本周": 2,
+			"上午": 2, "下午": 2, "晚上": 2, "点": 2,
 		},
 		// Memo keywords: weight +2 for core, +1 for supporting
 		memoKeywords: map[string]int{
@@ -75,6 +75,12 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 	// Fast path: normalize once
 	lower := m.normalizeInput(input)
 
+	// FAST PATH: Time pattern + query pattern → schedule query (e.g., "明天有什么事情要做")
+	// This handles common schedule queries without requiring core keywords like "日程" or "安排"
+	if m.hasTimePattern(input) && queryPatternRegex.MatchString(lower) {
+		return IntentScheduleQuery, 0.85, true
+	}
+
 	// Calculate scores for each intent category
 	scheduleScore := m.calculateScore(lower, m.scheduleKeywords)
 	memoScore := m.calculateScore(lower, m.memoKeywords)
@@ -95,7 +101,7 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 	}
 
 	// Schedule needs both high score AND core schedule keyword
-	if scheduleScore >= 3 && hasCoreScheduleKeyword {
+	if scheduleScore >= 2 && hasCoreScheduleKeyword {
 		intent := m.determineScheduleIntent(lower, scheduleScore)
 		confidence := m.normalizeConfidence(scheduleScore, 6)
 		return intent, confidence, true
