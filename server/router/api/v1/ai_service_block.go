@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/lithammer/shortuuid/v4"
@@ -585,9 +586,26 @@ func (s *AIService) ForkBlock(ctx context.Context, req *v1pb.ForkBlockRequest) (
 		reason = *req.Reason
 	}
 
+	// Convert replace user inputs if provided
+	var replaceUserInputs []store.UserInput
+	if len(req.ReplaceUserInputs) > 0 {
+		replaceUserInputs = make([]store.UserInput, len(req.ReplaceUserInputs))
+		for i, ui := range req.ReplaceUserInputs {
+			replaceUserInputs[i] = store.UserInput{
+				Content:   ui.Content,
+				Timestamp: ui.Timestamp,
+				Metadata:  parseMetadata(ui.Metadata),
+			}
+		}
+	}
+
 	// Call store to fork block
-	newBlock, err := s.Store.ForkBlock(ctx, req.Id, reason)
+	newBlock, err := s.Store.ForkBlock(ctx, req.Id, reason, replaceUserInputs)
 	if err != nil {
+		// Check for validation errors (e.g., empty reason)
+		if strings.Contains(err.Error(), "cannot be empty") {
+			return nil, status.Errorf(codes.InvalidArgument, "fork reason: %v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "failed to fork block: %v", err)
 	}
 
@@ -596,6 +614,8 @@ func (s *AIService) ForkBlock(ctx context.Context, req *v1pb.ForkBlockRequest) (
 		"new_block_id", newBlock.ID,
 		"reason", reason,
 		"user_id", user.ID,
+		"replaced_inputs", len(replaceUserInputs) > 0,
+		"fork_type", newBlock.Metadata["fork_type"],
 	)
 
 	return convertBlockFromStore(newBlock), nil

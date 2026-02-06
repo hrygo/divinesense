@@ -456,6 +456,8 @@
       "edit": "Edit",
       "edit_title": "Edit User Input",
       "edit_description": "Edit your message to create a new branch and regenerate",
+      "message": "Message",
+      "edit_placeholder": "Enter your message...",
       "original_message": "Original Message",
       "edited_message": "Edited Message",
       "edit_warning": "Note: Editing will create a new branch. The original block will remain unchanged.",

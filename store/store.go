@@ -183,8 +183,8 @@ func (s *Store) DeleteToolMetrics(ctx context.Context, delete *DeleteToolMetrics
 
 // ========== Tree Branching Methods (tree-conversation-branching) ==========
 
-func (s *Store) ForkBlock(ctx context.Context, parentID int64, reason string) (*AIBlock, error) {
-	return s.driver.ForkBlock(ctx, parentID, reason)
+func (s *Store) ForkBlock(ctx context.Context, parentID int64, reason string, replaceUserInputs []UserInput) (*AIBlock, error) {
+	return s.driver.ForkBlock(ctx, parentID, reason, replaceUserInputs)
 }
 
 func (s *Store) ListChildBlocks(ctx context.Context, parentID int64) ([]*AIBlock, error) {

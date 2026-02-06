@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
@@ -11,6 +10,7 @@ import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isStreamingSt
 import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
+import type { UserInput } from "@/types/proto/api/v1/ai_service_pb";
 // BlockEditDialog for editing user inputs
 import { BlockEditDialog, useBlockEditDialog } from "./BlockEditDialog";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -420,45 +420,52 @@ const ChatMessages = memo(function ChatMessages({
   // Get translation function
   const { t } = useTranslation();
 
-  // Query client for cache invalidation after forking
-  const queryClient = useQueryClient();
-
   // Fork block mutation
   const forkBlock = useForkBlock();
 
   // Block edit dialog state management
   const editDialog = useBlockEditDialog();
 
-  // Handle edit confirmation - call ForkBlock API
+  // Handle edit confirmation - call ForkBlock API with new user input
   const handleEditConfirm = useCallback(
     async (editedMessage: string, blockId: bigint, convId: number) => {
       try {
+        // Create new UserInput with edited message
+        const newUserInput: UserInput = {
+          content: editedMessage,
+          timestamp: Date.now(),
+        };
+
+        // Fork block with replaced user input
         await forkBlock.mutateAsync({
           blockId,
           reason: `User edited message: "${editedMessage}"`,
+          replaceUserInputs: [newUserInput],
         });
 
-        // Invalidate blocks query to refetch after fork
-        queryClient.invalidateQueries({
-          queryKey: blockKeys.list(convId),
-        });
-
-        // Trigger AI regeneration with edited message
-        onSend?.(editedMessage);
-
+        // The forked block will appear in the block list with the new user input
+        // User can continue the conversation by sending a new message
         editDialog.closeDialog();
       } catch (error) {
         console.error("Failed to fork block:", error);
       }
     },
-    [forkBlock, queryClient, editDialog, onSend],
+    [forkBlock, editDialog],
   );
 
-  // Handle edit button click
+  // Handle edit button click - merge all user inputs for editing
   const handleEdit = useCallback(
-    (blockId: bigint, userMessage: string) => {
+    (blockId: bigint, block: MessageBlock) => {
       if (!conversationId) return;
-      editDialog.openDialog(blockId, conversationId, userMessage);
+
+      // Merge all user inputs (primary + additional) into a single message
+      const allInputs = [block.userMessage, ...(block.additionalUserInputs || [])];
+      const mergedMessage = allInputs
+        .map((msg) => msg.content)
+        .filter((content) => content)
+        .join("\n");
+
+      editDialog.openDialog(blockId, conversationId, mergedMessage);
     },
     [conversationId, editDialog],
   );
@@ -585,7 +592,7 @@ const ChatMessages = memo(function ChatMessages({
                 onCopy={onCopyMessage}
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
-                onEdit={blockId ? () => handleEdit(blockId, block.userMessage.content) : undefined}
+                onEdit={blockId ? () => handleEdit(blockId, block) : undefined}
                 blockId={blockId}
                 branchPath={branchPath}
               >

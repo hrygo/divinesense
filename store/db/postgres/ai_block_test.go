@@ -320,10 +320,17 @@ func (m *mockAIBlockStore) GetPendingBlocks(ctx context.Context) ([]*store.AIBlo
 }
 
 // ForkBlock creates a new block as a branch from an existing block.
-// The new block inherits the parent's conversation and user inputs.
-func (m *mockAIBlockStore) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+// The new block inherits the parent's conversation. User inputs can be optionally replaced.
+// If replaceUserInputs is nil, inherits parent's user inputs.
+// If replaceUserInputs is provided, uses the new user inputs (for message editing).
+func (m *mockAIBlockStore) ForkBlock(ctx context.Context, parentID int64, reason string, replaceUserInputs []store.UserInput) (*store.AIBlock, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Validate reason parameter
+	if reason == "" {
+		return nil, fmt.Errorf("fork reason cannot be empty")
+	}
 
 	parent, ok := m.blocks[parentID]
 	if !ok {
@@ -353,14 +360,23 @@ func (m *mockAIBlockStore) ForkBlock(ctx context.Context, parentID int64, reason
 		branchPath = fmt.Sprintf("%s/%d", parent.BranchPath, childCount)
 	}
 
-	// Copy parent's user inputs (inheritance)
-	copiedInputs := make([]store.UserInput, len(parent.UserInputs))
-	copy(copiedInputs, parent.UserInputs)
+	// Determine which user inputs to use: provided replacements or inherit from parent
+	userInputs := parent.UserInputs
+	if replaceUserInputs != nil && len(replaceUserInputs) > 0 {
+		userInputs = replaceUserInputs
+	}
 
-	// Copy parent's metadata
-	copiedMetadata := make(map[string]interface{})
+	// Prepare metadata: inherit parent's metadata and add fork information
+	metadata := make(map[string]interface{})
 	for k, v := range parent.Metadata {
-		copiedMetadata[k] = v
+		metadata[k] = v
+	}
+	metadata["forked_from"] = parentID
+	metadata["fork_reason"] = reason
+	if replaceUserInputs != nil && len(replaceUserInputs) > 0 {
+		metadata["fork_type"] = "edit"
+	} else {
+		metadata["fork_type"] = "branch"
 	}
 
 	block := &store.AIBlock{
@@ -370,13 +386,13 @@ func (m *mockAIBlockStore) ForkBlock(ctx context.Context, parentID int64, reason
 		RoundNumber:      parent.RoundNumber + 1, // Forks are in next round
 		BlockType:        parent.BlockType,
 		Mode:             parent.Mode,
-		UserInputs:       copiedInputs,
+		UserInputs:       userInputs,
 		AssistantContent: "",
 		EventStream:      []store.BlockEvent{},
 		SessionStats:     nil,
 		CCSessionID:      "", // Forks don't inherit CC session
 		Status:           store.AIBlockStatusPending,
-		Metadata:         copiedMetadata,
+		Metadata:         metadata,
 		ParentBlockID:    &parentID,
 		BranchPath:       branchPath,
 		CreatedTs:        time.Now().UnixMilli(),
@@ -1004,7 +1020,7 @@ func TestForkBlock_CreatesCorrectBranchStructure(t *testing.T) {
 
 	// Fork from parent using the ForkBlock method signature
 	forkReason := "Exploring alternative response"
-	forkedBlock, err := db.ForkBlock(ctx, parent.ID, forkReason)
+	forkedBlock, err := db.ForkBlock(ctx, parent.ID, forkReason, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, forkedBlock)
@@ -1057,7 +1073,7 @@ func TestForkBlock_SequentialForks(t *testing.T) {
 	// Fork multiple times from root
 	var forks []*store.AIBlock
 	for i := 0; i < 3; i++ {
-		fork, err := db.ForkBlock(ctx, root.ID, fmt.Sprintf("Fork %d", i))
+		fork, err := db.ForkBlock(ctx, root.ID, fmt.Sprintf("Fork %d", i), nil)
 		require.NoError(t, err)
 		require.NotNil(t, fork)
 		forks = append(forks, fork)
@@ -1099,11 +1115,11 @@ func TestForkBlock_NestedForks(t *testing.T) {
 	require.NoError(t, err)
 
 	// Fork from root -> fork1
-	fork1, err := db.ForkBlock(ctx, root.ID, "First fork")
+	fork1, err := db.ForkBlock(ctx, root.ID, "First fork", nil)
 	require.NoError(t, err)
 
 	// Fork from fork1 -> fork2 (nested fork)
-	fork2, err := db.ForkBlock(ctx, fork1.ID, "Nested fork")
+	fork2, err := db.ForkBlock(ctx, fork1.ID, "Nested fork", nil)
 	require.NoError(t, err)
 
 	// Verify parent relationships
@@ -1120,6 +1136,79 @@ func TestForkBlock_NestedForks(t *testing.T) {
 	// Verify fork2's path contains fork1's path as prefix
 	assert.Contains(t, fork2.BranchPath, fork1.BranchPath,
 		"Nested fork's path should contain parent's path")
+}
+
+// TestForkBlock_WithReplaceUserInputs verifies forking with user input replacement.
+// This tests the message editing scenario where a user edits their original message.
+func TestForkBlock_WithReplaceUserInputs(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create parent block with original user input
+	parent, err := db.CreateBlock(ctx, &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Original message", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	})
+	require.NoError(t, err)
+
+	// Fork with edited message (simulating user edit)
+	editedInputs := []store.UserInput{
+		{Content: "Edited message", Timestamp: 1234567900},
+	}
+	forkReason := `User edited message: "Edited message"`
+	forkedBlock, err := db.ForkBlock(ctx, parent.ID, forkReason, editedInputs)
+
+	require.NoError(t, err)
+	require.NotNil(t, forkedBlock)
+
+	// Verify forked block has replaced user inputs (not inherited)
+	assert.Equal(t, 1, len(forkedBlock.UserInputs),
+		"Forked block should have exactly one user input")
+	assert.Equal(t, "Edited message", forkedBlock.UserInputs[0].Content,
+		"Forked block should have the edited message, not the original")
+
+	// Verify metadata contains fork information
+	assert.Equal(t, parent.ID, forkedBlock.Metadata["forked_from"],
+		"Metadata should contain parent block ID")
+	assert.Equal(t, forkReason, forkedBlock.Metadata["fork_reason"],
+		"Metadata should contain fork reason")
+	assert.Equal(t, "edit", forkedBlock.Metadata["fork_type"],
+		"Metadata should indicate edit type")
+}
+
+// TestForkBlock_EmptyReason verifies that forking with an empty reason returns an error.
+func TestForkBlock_EmptyReason(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create parent block
+	parent, err := db.CreateBlock(ctx, &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Test", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	})
+	require.NoError(t, err)
+
+	// Try to fork with empty reason (should fail)
+	_, err = db.ForkBlock(ctx, parent.ID, "", nil)
+	assert.Error(t, err, "Forking with empty reason should return an error")
+	assert.Contains(t, err.Error(), "cannot be empty",
+		"Error message should mention that reason cannot be empty")
 }
 
 // ============================================================================
@@ -1148,15 +1237,15 @@ func TestArchiveInactiveBranches_ArchivesCorrectBlocks(t *testing.T) {
 	require.NoError(t, err)
 
 	// Fork from root to create branch "0"
-	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0")
+	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0", nil)
 	require.NoError(t, err)
 
 	// Fork from root to create branch "1"
-	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1")
+	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1", nil)
 	require.NoError(t, err)
 
 	// Fork from fork0 to create branch "0/0"
-	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0")
+	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0", nil)
 	require.NoError(t, err)
 
 	// Archive blocks not on path "0/0"
@@ -1202,13 +1291,13 @@ func TestBranchSwitching_UpdatesActivePath(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0")
+	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0", nil)
 	require.NoError(t, err)
 
-	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1")
+	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1", nil)
 	require.NoError(t, err)
 
-	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0")
+	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0", nil)
 	require.NoError(t, err)
 
 	// Initially, no blocks should be archived

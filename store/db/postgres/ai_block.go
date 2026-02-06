@@ -859,9 +859,21 @@ func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIB
 }
 
 // ForkBlock creates a new block as a branch from an existing block.
-// The new block inherits the parent's conversation and user inputs.
+// The new block inherits the parent's conversation. User inputs can be optionally replaced.
+//
+// Parameters:
+//   - parentID: ID of the parent block to fork from
+//   - reason: Reason for forking (e.g., "user_fork", "User edited message: ...")
+//   - replaceUserInputs: If non-nil, replaces parent's user inputs. If nil or empty, inherits from parent.
+//
+// The fork reason is stored in metadata for debugging and audit trail.
 // (tree-conversation-branching spec)
-func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string, replaceUserInputs []store.UserInput) (*store.AIBlock, error) {
+	// Validate reason parameter
+	if reason == "" {
+		return nil, fmt.Errorf("fork reason cannot be empty")
+	}
+
 	// First, get the parent block
 	parent, err := d.GetAIBlock(ctx, parentID)
 	if err != nil {
@@ -871,14 +883,35 @@ func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*sto
 		return nil, fmt.Errorf("parent block not found: %d", parentID)
 	}
 
+	// Determine which user inputs to use
+	// - Explicitly provided (non-nil, non-empty) → use replacements (user is editing)
+	// - Nil or empty array → inherit from parent (user is just branching)
+	userInputs := parent.UserInputs
+	if replaceUserInputs != nil && len(replaceUserInputs) > 0 {
+		userInputs = replaceUserInputs
+	}
+
+	// Prepare metadata: inherit parent's metadata and add fork reason
+	metadata := make(map[string]any)
+	for k, v := range parent.Metadata {
+		metadata[k] = v
+	}
+	metadata["forked_from"] = parentID
+	metadata["fork_reason"] = reason
+	if replaceUserInputs != nil && len(replaceUserInputs) > 0 {
+		metadata["fork_type"] = "edit"
+	} else {
+		metadata["fork_type"] = "branch"
+	}
+
 	// Create a new block with the parent's conversation ID and user inputs
 	// The database trigger will auto-generate the branch_path based on parent_block_id
 	uid := util.GenUUID()
-	userInputsJSON, err := json.Marshal(parent.UserInputs)
+	userInputsJSON, err := json.Marshal(userInputs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal user_inputs: %w", err)
 	}
-	metadataJSON, err := json.Marshal(parent.Metadata)
+	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
 	}
@@ -927,21 +960,17 @@ func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*sto
 	block.ConversationID = parent.ConversationID
 	block.BlockType = parent.BlockType
 	block.Mode = parent.Mode
-	block.UserInputs = parent.UserInputs
+	block.UserInputs = userInputs
 	block.EventStream = []store.BlockEvent{}
 	block.Status = store.AIBlockStatusPending
-	block.Metadata = parent.Metadata
+	block.Metadata = metadata
 	block.ParentBlockID = &parentID
 	if branchPath.Valid {
 		block.BranchPath = branchPath.String
 	}
 
-	slog.Info("Forked block",
-		"parent_id", parentID,
-		"new_block_id", block.ID,
-		"branch_path", block.BranchPath,
-		"reason", reason,
-	)
+	// Note: Logging is done at the service layer (ai_service_block.go)
+	// to avoid duplicate log entries and provide more context (user_id).
 
 	return &block, nil
 }

@@ -4375,6 +4375,10 @@ components:
                     type: string
                 reason:
                     type: string
+                replaceUserInputs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UserInput'
             description: ForkBlockRequest is the request for ForkBlock.
         GeneralSetting_CustomProfile:
             type: object

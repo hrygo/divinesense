@@ -672,14 +672,27 @@ export function useBlocksWithFallback(
  *
  * @param blockId - The parent block ID to fork from
  * @param reason - Optional reason for forking
+ * @param replaceUserInputs - Optional new user inputs to replace inherited ones (for message editing)
  * @returns Mutation with forked block data
  */
 export function useForkBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ blockId, reason }: { blockId: bigint; reason?: string }) => {
-      const response = await aiServiceClient.forkBlock({ id: blockId, reason });
+    mutationFn: async ({
+      blockId,
+      reason,
+      replaceUserInputs,
+    }: {
+      blockId: bigint;
+      reason?: string;
+      replaceUserInputs?: UserInput[];
+    }) => {
+      const response = await aiServiceClient.forkBlock({
+        id: blockId,
+        reason,
+        replaceUserInputs,
+      });
       return response;
     },
     onSuccess: (newBlock, _variables) => {

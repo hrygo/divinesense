@@ -689,34 +689,11 @@ func (h *ParrotHandler) executeAgent(
 		logger.Info("Agent: applied normal stats to BlockSummary")
 	}
 
-	// Safely send done marker
-	streamMu.Lock()
-	logger.Info("Agent: sending done marker with block summary",
-		slog.String("session_id", blockSummary.SessionId),
-		slog.Int64("duration_ms", blockSummary.TotalDurationMs),
-		slog.Int64("tool_calls", int64(blockSummary.ToolCallCount)),
-		slog.Bool("done", true),
-	)
-	// Phase 4: Include BlockId in done marker
-	var blockId int64
-	if currentBlock != nil {
-		blockId = currentBlock.ID
-	}
-	sendErr := stream.Send(&v1pb.ChatResponse{
-		Done:         true,
-		BlockSummary: blockSummary,
-		BlockId:      blockId,
-	})
-	streamMu.Unlock()
-
-	if sendErr != nil {
-		logger.Error("Agent: failed to send done marker", sendErr,
-			slog.String("error", sendErr.Error()))
-	} else {
-		logger.Info("Agent: done marker sent successfully")
-	}
-
-	// Phase 5: Complete or mark error on Block
+	// Phase 5: Complete or mark error on Block BEFORE sending done marker
+	// This ensures that when the frontend calls refetchBlocks() after receiving the done event,
+	// the Block's assistantContent is already persisted in the database.
+	// This fixes the "Initializing..." stuck issue caused by the race condition where
+	// refetchBlocks() executes before CompleteBlock() completes.
 	if currentBlock != nil && h.blockManager != nil {
 		assistantContentMu.Lock()
 		finalContent := assistantContent.String()
@@ -758,8 +735,40 @@ func (h *ParrotHandler) executeAgent(
 					slog.Int64("block_id", currentBlock.ID),
 					slog.String("error", completeErr.Error()),
 				)
+			} else {
+				logger.Info("Agent: block completed successfully",
+					slog.Int64("block_id", currentBlock.ID),
+					slog.Int("content_length", len(finalContent)),
+				)
 			}
 		}
+	}
+
+	// Safely send done marker AFTER Block is completed
+	streamMu.Lock()
+	logger.Info("Agent: sending done marker with block summary",
+		slog.String("session_id", blockSummary.SessionId),
+		slog.Int64("duration_ms", blockSummary.TotalDurationMs),
+		slog.Int64("tool_calls", int64(blockSummary.ToolCallCount)),
+		slog.Bool("done", true),
+	)
+	// Phase 4: Include BlockId in done marker
+	var blockId int64
+	if currentBlock != nil {
+		blockId = currentBlock.ID
+	}
+	sendErr := stream.Send(&v1pb.ChatResponse{
+		Done:         true,
+		BlockSummary: blockSummary,
+		BlockId:      blockId,
+	})
+	streamMu.Unlock()
+
+	if sendErr != nil {
+		logger.Error("Agent: failed to send done marker", sendErr,
+			slog.String("error", sendErr.Error()))
+	} else {
+		logger.Info("Agent: done marker sent successfully")
 	}
 
 	if sendErr != nil {

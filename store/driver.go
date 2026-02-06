@@ -135,7 +135,10 @@ type Driver interface {
 
 	// ========== Tree Branching Methods (tree-conversation-branching) ==========
 	// ForkBlock creates a new block as a branch from an existing block.
-	ForkBlock(ctx context.Context, parentID int64, reason string) (*AIBlock, error)
+	// The new block inherits the parent's conversation. User inputs can be optionally replaced.
+	// If replaceUserInputs is nil, inherits parent's user inputs.
+	// If replaceUserInputs is provided, uses the new user inputs (for message editing).
+	ForkBlock(ctx context.Context, parentID int64, reason string, replaceUserInputs []UserInput) (*AIBlock, error)
 	// ListChildBlocks lists all direct children of a block.
 	ListChildBlocks(ctx context.Context, parentID int64) ([]*AIBlock, error)
 	// GetActivePath retrieves the currently active branch path for a conversation.

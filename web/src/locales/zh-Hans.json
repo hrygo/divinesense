@@ -451,6 +451,8 @@
       "edit": "编辑",
       "edit_title": "编辑用户输入",
       "edit_description": "编辑您的消息以创建新分支并重新生成",
+      "message": "消息",
+      "edit_placeholder": "输入您的消息...",
       "original_message": "原始消息",
       "edited_message": "编辑后的消息",
       "edit_warning": "注意：编辑将创建一个新分支。原始 Block 将保持不变。",

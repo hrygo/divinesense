@@ -224,7 +224,7 @@ func (d *DB) CompleteBlock(ctx context.Context, blockID int64, assistantContent 
 // ========== Tree Branching Methods (tree-conversation-branching) ==========
 // SQLite does not support AI features including tree branching (see #9).
 
-func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string, replaceUserInputs []store.UserInput) (*store.AIBlock, error) {
 	return nil, errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
 }
 

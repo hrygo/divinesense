@@ -5758,11 +5758,12 @@ func (x *AppendEventRequest) GetEvent() *BlockEvent {
 
 // ForkBlockRequest is the request for ForkBlock.
 type ForkBlockRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`              // Parent block ID
-	Reason        *string                `protobuf:"bytes,2,opt,name=reason,proto3,oneof" json:"reason,omitempty"` // Optional reason for forking (e.g., "regenerate", "edit")
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                         // Parent block ID
+	Reason            *string                `protobuf:"bytes,2,opt,name=reason,proto3,oneof" json:"reason,omitempty"`                                            // Optional reason for forking (e.g., "regenerate", "edit")
+	ReplaceUserInputs []*UserInput           `protobuf:"bytes,3,rep,name=replace_user_inputs,json=replaceUserInputs,proto3" json:"replace_user_inputs,omitempty"` // Optional: replace inherited user inputs with new ones (for message editing)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ForkBlockRequest) Reset() {
@@ -5807,6 +5808,13 @@ func (x *ForkBlockRequest) GetReason() string {
 		return *x.Reason
 	}
 	return ""
+}
+
+func (x *ForkBlockRequest) GetReplaceUserInputs() []*UserInput {
+	if x != nil {
+		return x.ReplaceUserInputs
+	}
+	return nil
 }
 
 // ListBlockBranchesRequest is the request for ListBlockBranches.
@@ -6566,10 +6574,11 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x05input\x18\x02 \x01(\v2\x17.memos.api.v1.UserInputB\x03\xe0A\x02R\x05input\"^\n" +
 	"\x12AppendEventRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\x123\n" +
-	"\x05event\x18\x02 \x01(\v2\x18.memos.api.v1.BlockEventB\x03\xe0A\x02R\x05event\"O\n" +
+	"\x05event\x18\x02 \x01(\v2\x18.memos.api.v1.BlockEventB\x03\xe0A\x02R\x05event\"\x98\x01\n" +
 	"\x10ForkBlockRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\x12\x1b\n" +
-	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01B\t\n" +
+	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01\x12G\n" +
+	"\x13replace_user_inputs\x18\x03 \x03(\v2\x17.memos.api.v1.UserInputR\x11replaceUserInputsB\t\n" +
 	"\a_reason\"/\n" +
 	"\x18ListBlockBranchesRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\"\x80\x01\n" +
@@ -6821,94 +6830,95 @@ var file_api_v1_ai_service_proto_depIdxs = []int32{
 	5,  // 45: memos.api.v1.UpdateBlockRequest.status:type_name -> memos.api.v1.BlockStatus
 	72, // 46: memos.api.v1.AppendUserInputRequest.input:type_name -> memos.api.v1.UserInput
 	73, // 47: memos.api.v1.AppendEventRequest.event:type_name -> memos.api.v1.BlockEvent
-	85, // 48: memos.api.v1.ListBlockBranchesResponse.branches:type_name -> memos.api.v1.BlockBranch
-	70, // 49: memos.api.v1.BlockBranch.block:type_name -> memos.api.v1.Block
-	85, // 50: memos.api.v1.BlockBranch.children:type_name -> memos.api.v1.BlockBranch
-	9,  // 51: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
-	12, // 52: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
-	14, // 53: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
-	32, // 54: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
-	35, // 55: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
-	37, // 56: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
-	40, // 57: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
-	44, // 58: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
-	46, // 59: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
-	48, // 60: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
-	53, // 61: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
-	56, // 62: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
-	57, // 63: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
-	16, // 64: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
-	18, // 65: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
-	19, // 66: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
-	20, // 67: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
-	21, // 68: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
-	22, // 69: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
-	23, // 70: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
-	25, // 71: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
-	26, // 72: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
-	62, // 73: memos.api.v1.AIService.GetSessionStats:input_type -> memos.api.v1.GetSessionStatsRequest
-	63, // 74: memos.api.v1.AIService.ListSessionStats:input_type -> memos.api.v1.ListSessionStatsRequest
-	65, // 75: memos.api.v1.AIService.GetCostStats:input_type -> memos.api.v1.GetCostStatsRequest
-	88, // 76: memos.api.v1.AIService.GetUserCostSettings:input_type -> google.protobuf.Empty
-	69, // 77: memos.api.v1.AIService.SetUserCostSettings:input_type -> memos.api.v1.SetUserCostSettingsRequest
-	74, // 78: memos.api.v1.AIService.ListBlocks:input_type -> memos.api.v1.ListBlocksRequest
-	76, // 79: memos.api.v1.AIService.GetBlock:input_type -> memos.api.v1.GetBlockRequest
-	77, // 80: memos.api.v1.AIService.CreateBlock:input_type -> memos.api.v1.CreateBlockRequest
-	78, // 81: memos.api.v1.AIService.UpdateBlock:input_type -> memos.api.v1.UpdateBlockRequest
-	79, // 82: memos.api.v1.AIService.DeleteBlock:input_type -> memos.api.v1.DeleteBlockRequest
-	80, // 83: memos.api.v1.AIService.AppendUserInput:input_type -> memos.api.v1.AppendUserInputRequest
-	81, // 84: memos.api.v1.AIService.AppendEvent:input_type -> memos.api.v1.AppendEventRequest
-	82, // 85: memos.api.v1.AIService.ForkBlock:input_type -> memos.api.v1.ForkBlockRequest
-	83, // 86: memos.api.v1.AIService.ListBlockBranches:input_type -> memos.api.v1.ListBlockBranchesRequest
-	86, // 87: memos.api.v1.AIService.SwitchBranch:input_type -> memos.api.v1.SwitchBranchRequest
-	87, // 88: memos.api.v1.AIService.DeleteBranch:input_type -> memos.api.v1.DeleteBranchRequest
-	6,  // 89: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	6,  // 90: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	10, // 91: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
-	13, // 92: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
-	28, // 93: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
-	33, // 94: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
-	36, // 95: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
-	38, // 96: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
-	41, // 97: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
-	45, // 98: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
-	47, // 99: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
-	49, // 100: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
-	54, // 101: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
-	88, // 102: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
-	58, // 103: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
-	17, // 104: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
-	15, // 105: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
-	15, // 106: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
-	15, // 107: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
-	88, // 108: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
-	88, // 109: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
-	24, // 110: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
-	88, // 111: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
-	88, // 112: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
-	61, // 113: memos.api.v1.AIService.GetSessionStats:output_type -> memos.api.v1.SessionStats
-	64, // 114: memos.api.v1.AIService.ListSessionStats:output_type -> memos.api.v1.ListSessionStatsResponse
-	66, // 115: memos.api.v1.AIService.GetCostStats:output_type -> memos.api.v1.CostStats
-	68, // 116: memos.api.v1.AIService.GetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
-	68, // 117: memos.api.v1.AIService.SetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
-	75, // 118: memos.api.v1.AIService.ListBlocks:output_type -> memos.api.v1.ListBlocksResponse
-	70, // 119: memos.api.v1.AIService.GetBlock:output_type -> memos.api.v1.Block
-	70, // 120: memos.api.v1.AIService.CreateBlock:output_type -> memos.api.v1.Block
-	70, // 121: memos.api.v1.AIService.UpdateBlock:output_type -> memos.api.v1.Block
-	88, // 122: memos.api.v1.AIService.DeleteBlock:output_type -> google.protobuf.Empty
-	88, // 123: memos.api.v1.AIService.AppendUserInput:output_type -> google.protobuf.Empty
-	88, // 124: memos.api.v1.AIService.AppendEvent:output_type -> google.protobuf.Empty
-	70, // 125: memos.api.v1.AIService.ForkBlock:output_type -> memos.api.v1.Block
-	84, // 126: memos.api.v1.AIService.ListBlockBranches:output_type -> memos.api.v1.ListBlockBranchesResponse
-	88, // 127: memos.api.v1.AIService.SwitchBranch:output_type -> google.protobuf.Empty
-	88, // 128: memos.api.v1.AIService.DeleteBranch:output_type -> google.protobuf.Empty
-	7,  // 129: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
-	8,  // 130: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
-	91, // [91:131] is the sub-list for method output_type
-	51, // [51:91] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	72, // 48: memos.api.v1.ForkBlockRequest.replace_user_inputs:type_name -> memos.api.v1.UserInput
+	85, // 49: memos.api.v1.ListBlockBranchesResponse.branches:type_name -> memos.api.v1.BlockBranch
+	70, // 50: memos.api.v1.BlockBranch.block:type_name -> memos.api.v1.Block
+	85, // 51: memos.api.v1.BlockBranch.children:type_name -> memos.api.v1.BlockBranch
+	9,  // 52: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
+	12, // 53: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
+	14, // 54: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
+	32, // 55: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
+	35, // 56: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
+	37, // 57: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
+	40, // 58: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
+	44, // 59: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
+	46, // 60: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
+	48, // 61: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
+	53, // 62: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
+	56, // 63: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
+	57, // 64: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
+	16, // 65: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
+	18, // 66: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
+	19, // 67: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
+	20, // 68: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
+	21, // 69: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
+	22, // 70: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
+	23, // 71: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
+	25, // 72: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
+	26, // 73: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
+	62, // 74: memos.api.v1.AIService.GetSessionStats:input_type -> memos.api.v1.GetSessionStatsRequest
+	63, // 75: memos.api.v1.AIService.ListSessionStats:input_type -> memos.api.v1.ListSessionStatsRequest
+	65, // 76: memos.api.v1.AIService.GetCostStats:input_type -> memos.api.v1.GetCostStatsRequest
+	88, // 77: memos.api.v1.AIService.GetUserCostSettings:input_type -> google.protobuf.Empty
+	69, // 78: memos.api.v1.AIService.SetUserCostSettings:input_type -> memos.api.v1.SetUserCostSettingsRequest
+	74, // 79: memos.api.v1.AIService.ListBlocks:input_type -> memos.api.v1.ListBlocksRequest
+	76, // 80: memos.api.v1.AIService.GetBlock:input_type -> memos.api.v1.GetBlockRequest
+	77, // 81: memos.api.v1.AIService.CreateBlock:input_type -> memos.api.v1.CreateBlockRequest
+	78, // 82: memos.api.v1.AIService.UpdateBlock:input_type -> memos.api.v1.UpdateBlockRequest
+	79, // 83: memos.api.v1.AIService.DeleteBlock:input_type -> memos.api.v1.DeleteBlockRequest
+	80, // 84: memos.api.v1.AIService.AppendUserInput:input_type -> memos.api.v1.AppendUserInputRequest
+	81, // 85: memos.api.v1.AIService.AppendEvent:input_type -> memos.api.v1.AppendEventRequest
+	82, // 86: memos.api.v1.AIService.ForkBlock:input_type -> memos.api.v1.ForkBlockRequest
+	83, // 87: memos.api.v1.AIService.ListBlockBranches:input_type -> memos.api.v1.ListBlockBranchesRequest
+	86, // 88: memos.api.v1.AIService.SwitchBranch:input_type -> memos.api.v1.SwitchBranchRequest
+	87, // 89: memos.api.v1.AIService.DeleteBranch:input_type -> memos.api.v1.DeleteBranchRequest
+	6,  // 90: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	6,  // 91: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	10, // 92: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
+	13, // 93: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
+	28, // 94: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
+	33, // 95: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
+	36, // 96: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
+	38, // 97: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
+	41, // 98: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
+	45, // 99: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
+	47, // 100: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
+	49, // 101: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
+	54, // 102: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
+	88, // 103: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
+	58, // 104: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
+	17, // 105: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
+	15, // 106: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
+	15, // 107: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
+	15, // 108: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
+	88, // 109: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
+	88, // 110: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
+	24, // 111: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
+	88, // 112: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
+	88, // 113: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
+	61, // 114: memos.api.v1.AIService.GetSessionStats:output_type -> memos.api.v1.SessionStats
+	64, // 115: memos.api.v1.AIService.ListSessionStats:output_type -> memos.api.v1.ListSessionStatsResponse
+	66, // 116: memos.api.v1.AIService.GetCostStats:output_type -> memos.api.v1.CostStats
+	68, // 117: memos.api.v1.AIService.GetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	68, // 118: memos.api.v1.AIService.SetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	75, // 119: memos.api.v1.AIService.ListBlocks:output_type -> memos.api.v1.ListBlocksResponse
+	70, // 120: memos.api.v1.AIService.GetBlock:output_type -> memos.api.v1.Block
+	70, // 121: memos.api.v1.AIService.CreateBlock:output_type -> memos.api.v1.Block
+	70, // 122: memos.api.v1.AIService.UpdateBlock:output_type -> memos.api.v1.Block
+	88, // 123: memos.api.v1.AIService.DeleteBlock:output_type -> google.protobuf.Empty
+	88, // 124: memos.api.v1.AIService.AppendUserInput:output_type -> google.protobuf.Empty
+	88, // 125: memos.api.v1.AIService.AppendEvent:output_type -> google.protobuf.Empty
+	70, // 126: memos.api.v1.AIService.ForkBlock:output_type -> memos.api.v1.Block
+	84, // 127: memos.api.v1.AIService.ListBlockBranches:output_type -> memos.api.v1.ListBlockBranchesResponse
+	88, // 128: memos.api.v1.AIService.SwitchBranch:output_type -> google.protobuf.Empty
+	88, // 129: memos.api.v1.AIService.DeleteBranch:output_type -> google.protobuf.Empty
+	7,  // 130: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
+	8,  // 131: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
+	92, // [92:132] is the sub-list for method output_type
+	52, // [52:92] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_ai_service_proto_init() }

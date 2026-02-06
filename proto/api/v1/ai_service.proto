@@ -1045,6 +1045,7 @@ message AppendEventRequest {
 message ForkBlockRequest {
   int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Parent block ID
   optional string reason = 2; // Optional reason for forking (e.g., "regenerate", "edit")
+  repeated UserInput replace_user_inputs = 3; // Optional: replace inherited user inputs with new ones (for message editing)
 }
 
 // ListBlockBranchesRequest is the request for ListBlockBranches.

@@ -44,18 +44,31 @@
    * ======================================== */
 
   /* Interactive elements get pointer cursor */
-  button,
+  button:not(:disabled),
   a,
-  [role="button"],
-  [onclick],
-  [tabIndex]:not([tabIndex="-1"]) {
+  [role="button"]:not(:disabled),
+  [onclick] {
     cursor: pointer;
   }
 
   /* Disabled state uses not-allowed cursor */
   button:disabled,
+  [role="button"]:disabled,
   [aria-disabled="true"] {
     cursor: not-allowed;
+  }
+
+  /* Input elements should use text cursor by default */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea {
+    cursor: text;
+  }
+
+  /* Select dropdowns should use default cursor */
+  select,
+  [data-slot="select-trigger"],
+  [role="combobox"] {
+    cursor: default;
   }
 
   /* ========================================
