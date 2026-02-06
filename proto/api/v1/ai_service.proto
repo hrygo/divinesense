@@ -262,9 +262,7 @@ service AIService {
   // DeleteBranch deletes a block and all its descendants.
   // Used for pruning unwanted conversation branches.
   rpc DeleteBranch(DeleteBranchRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/api/v1/ai/blocks/{id}/branch"
-    };
+    option (google.api.http) = {delete: "/api/v1/ai/blocks/{id}/branch"};
   }
 }
 
