@@ -272,6 +272,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		// Track tool call (P1-A006)
 		p.TrackToolCall(toolCall)
 
+		// Track tool call (P1-A006)
+		p.TrackToolCall(toolCall)
+
 		var toolResult string
 		switch toolCall {
 		case "memo_search":
