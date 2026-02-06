@@ -102,7 +102,17 @@ export default defineConfig(({ mode }) => {
     },
   },
   optimizeDeps: {
-    include: ['core-js/actual', 'cytoscape', 'lodash-es', 'fuse.js', 'dayjs'],
+    include: [
+      'core-js/actual',
+      'cytoscape',
+      'lodash-es',
+      'fuse.js',
+      'dayjs',
+      'react',
+      'react-dom',
+      'react-i18next',
+      '@tanstack/react-query',
+    ],
   },
   };
 });
