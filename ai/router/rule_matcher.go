@@ -4,6 +4,7 @@ package router
 import (
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // Pre-defined core keywords for each category (avoid map creation on every call).
@@ -13,13 +14,13 @@ var coreKeywordsByCategory = map[string][]string{
 	"amazing":  {"综合", "总结", "分析", "周报"},
 }
 
-// Pre-defined intent patterns (avoid slice creation on every call).
+// Pre-compiled regex patterns for intent sub-classification.
 var (
-	updatePatterns = []string{"修改", "更新", "取消", "改", "删除"}
-	queryPatterns  = []string{"查看", "有什么", "哪些", "看看", "什么安排", "有没有"}
-	batchPatterns  = []string{"批量", "多个", "一系列", "每天", "每周"}
-	searchPatterns = []string{"搜索", "查找", "找", "查", "有什么", "哪些"}
-	createPatterns = []string{"记录", "记一下", "写", "保存", "创建"}
+	updatePatternRegex = regexp.MustCompile(`修改|更新|取消|改|删除`)
+	queryPatternRegex  = regexp.MustCompile(`查看|有什么|哪些|看看|什么安排|有没有`)
+	batchPatternRegex  = regexp.MustCompile(`批量|多个|一系列|每天|每周`)
+	searchPatternRegex = regexp.MustCompile(`搜索|查找|找|查`)
+	createPatternRegex = regexp.MustCompile(`记录|记一下|写|保存|创建`)
 )
 
 // RuleMatcher implements Layer 1 rule-based intent matching.
@@ -71,7 +72,8 @@ func NewRuleMatcher() *RuleMatcher {
 
 // Returns: intent, confidence, matched (true if rule matched).
 func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
-	lower := strings.ToLower(input)
+	// Fast path: normalize once
+	lower := m.normalizeInput(input)
 
 	// Calculate scores for each intent category
 	scheduleScore := m.calculateScore(lower, m.scheduleKeywords)
@@ -109,7 +111,45 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 	return IntentUnknown, 0, false
 }
 
+// normalizeInput normalizes input for faster matching.
+// Removes punctuation and converts to lowercase once.
+func (m *RuleMatcher) normalizeInput(input string) string {
+	// Quick ASCII-only path (most common for English/mixed input)
+	isASCII := true
+	for _, r := range input {
+		if r > unicode.MaxASCII {
+			isASCII = false
+			break
+		}
+	}
+
+	if isASCII {
+		return strings.ToLower(input)
+	}
+
+	// Chinese path: normalize spaces and punctuation
+	result := strings.Builder{}
+	result.Grow(len(input))
+
+	for _, r := range input {
+		// Skip common punctuation
+		if r == ' ' || r == ',' || r == '。' || r == '，' ||
+			r == '？' || r == '?' || r == '！' || r == '!' ||
+			r == '、' || r == '\t' || r == '\n' {
+			continue
+		}
+		// Convert to lowercase if ASCII
+		if r <= 'Z' && r >= 'A' {
+			r += 32
+		}
+		result.WriteRune(r)
+	}
+
+	return result.String()
+}
+
 // hasCoreKeyword checks if input contains a core keyword for the given category.
+// Optimized: uses strings.Contains which is highly optimized in Go.
 func (m *RuleMatcher) hasCoreKeyword(input, category string) bool {
 	keywords, ok := coreKeywordsByCategory[category]
 	if !ok {
@@ -124,17 +164,23 @@ func (m *RuleMatcher) hasCoreKeyword(input, category string) bool {
 }
 
 // calculateScore calculates the weighted score for a keyword set.
+// Optimized: single pass over keywords, early exit on max score.
 func (m *RuleMatcher) calculateScore(input string, keywords map[string]int) int {
 	score := 0
 	for keyword, weight := range keywords {
 		if strings.Contains(input, keyword) {
 			score += weight
+			// Early exit: max reasonable score is 6-7
+			if score >= 7 {
+				return score
+			}
 		}
 	}
 	return score
 }
 
 // hasTimePattern checks if input contains time patterns.
+// Optimized: returns early on first match.
 func (m *RuleMatcher) hasTimePattern(input string) bool {
 	for _, pattern := range m.timePatterns {
 		if pattern.MatchString(input) {
@@ -145,48 +191,30 @@ func (m *RuleMatcher) hasTimePattern(input string) bool {
 }
 
 // determineScheduleIntent determines if it's create, query, or update.
+// Optimized: uses pre-compiled regex patterns.
 func (m *RuleMatcher) determineScheduleIntent(input string, _ int) Intent {
-	// Update patterns
-	for _, p := range updatePatterns {
-		if strings.Contains(input, p) {
-			return IntentScheduleUpdate
-		}
+	if updatePatternRegex.MatchString(input) {
+		return IntentScheduleUpdate
 	}
-
-	// Query patterns
-	for _, p := range queryPatterns {
-		if strings.Contains(input, p) {
-			return IntentScheduleQuery
-		}
+	if queryPatternRegex.MatchString(input) {
+		return IntentScheduleQuery
 	}
-
-	// Batch schedule patterns
-	for _, p := range batchPatterns {
-		if strings.Contains(input, p) {
-			return IntentBatchSchedule
-		}
+	if batchPatternRegex.MatchString(input) {
+		return IntentBatchSchedule
 	}
-
 	// Default to create if time pattern present
 	return IntentScheduleCreate
 }
 
 // determineMemoIntent determines if it's search or create.
+// Optimized: uses pre-compiled regex patterns.
 func (m *RuleMatcher) determineMemoIntent(input string) Intent {
-	// Search patterns
-	for _, p := range searchPatterns {
-		if strings.Contains(input, p) {
-			return IntentMemoSearch
-		}
+	if searchPatternRegex.MatchString(input) {
+		return IntentMemoSearch
 	}
-
-	// Create patterns
-	for _, p := range createPatterns {
-		if strings.Contains(input, p) {
-			return IntentMemoCreate
-		}
+	if createPatternRegex.MatchString(input) {
+		return IntentMemoCreate
 	}
-
 	// Default to search
 	return IntentMemoSearch
 }

@@ -83,9 +83,7 @@ describe("BlockCostBadge", () => {
   });
 
   it("should apply custom className", () => {
-    const { container } = render(
-      <BlockCostBadge costEstimate={1000n} className="custom-class" />,
-    );
+    const { container } = render(<BlockCostBadge costEstimate={1000n} className="custom-class" />);
 
     expect(container.firstChild).toHaveClass("custom-class");
   });

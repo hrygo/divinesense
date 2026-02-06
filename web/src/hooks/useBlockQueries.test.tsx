@@ -7,25 +7,24 @@
  * - New features: token usage, cost tracking, branching
  */
 
-import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import {
-  useBlocks,
-  useBlock,
-  useCreateBlock,
-  useUpdateBlock,
-  useDeleteBlock,
-  useAppendEvent,
-  useStreamingBlock,
-  useBlocksWithFallback,
-  blockKeys,
-  toProtoBlockMode,
-  fromProtoBlockMode,
-  toProtoBlockType,
-  fromProtoBlockStatus,
-} from "./useBlockQueries";
+import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BlockMode, BlockStatus, BlockType } from "@/types/proto/api/v1/ai_service_pb";
+import {
+  blockKeys,
+  fromProtoBlockMode,
+  fromProtoBlockStatus,
+  toProtoBlockMode,
+  toProtoBlockType,
+  useAppendEvent,
+  useBlocks,
+  useBlocksWithFallback,
+  useCreateBlock,
+  useDeleteBlock,
+  useStreamingBlock,
+  useUpdateBlock,
+} from "./useBlockQueries";
 
 // Mock the aiServiceClient
 vi.mock("@/connect", () => ({
@@ -65,7 +64,7 @@ describe("blockKeys", () => {
   it("should generate consistent query keys", () => {
     expect(blockKeys.all).toEqual(["blocks"]);
     expect(blockKeys.lists()).toEqual(["blocks", "list"]);
-    expect(blockKeys.list(123, { isActive: true })).toEqual(["blocks", "list", 123, { isActive: true }]);
+    expect(blockKeys.list(123, {})).toEqual(["blocks", "list", 123, {}]);
     expect(blockKeys.details()).toEqual(["blocks", "detail"]);
     expect(blockKeys.detail(456)).toEqual(["blocks", "detail", 456]);
   });

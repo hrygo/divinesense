@@ -1,14 +1,18 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
+import { blockKeys, useForkBlock } from "@/hooks/useBlockQueries";
 import { cn } from "@/lib/utils";
 import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
 // Phase 4: Import Block types
 import type { Block as AIBlock } from "@/types/block";
-import { BLOCK_STATUS, blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName } from "@/types/block";
+import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isStreamingStatus, isErrorStatus } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
+// BlockEditDialog for editing user inputs
+import { BlockEditDialog, useBlockEditDialog } from "./BlockEditDialog";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
 // Event transformation utilities
 import { extractThinkingSteps, extractToolCalls, normalizeTimestamp, type ThinkingStep } from "./utils/eventTransformers";
@@ -22,7 +26,7 @@ function useStreamingStatus(blocks: AIBlock[] | undefined, isStreaming: boolean)
   return useMemo(() => {
     if (blocks && blocks.length > 0) {
       const lastAIBlock = blocks[blocks.length - 1];
-      return String(lastAIBlock.status) === String(BLOCK_STATUS.STREAMING);
+      return isStreamingStatus(lastAIBlock.status);
     }
     return isStreaming;
   }, [blocks, isStreaming]);
@@ -50,6 +54,7 @@ interface ChatMessagesProps {
   onCopyMessage?: (content: string) => void;
   onRegenerate?: () => void;
   onDeleteMessage?: (index: number) => void;
+  onSend?: (messageContent?: string) => void;
   children?: ReactNode;
   className?: string;
   amazingInsightCard?: ReactNode;
@@ -60,6 +65,8 @@ interface ChatMessagesProps {
   blockSummary?: BlockSummary;
   /** Phase 4: Block data support */
   blocks?: AIBlock[];
+  /** Conversation ID for Block API operations (e.g., fork) */
+  conversationId?: number;
 }
 
 const SCROLL_THRESHOLD = 150;
@@ -155,7 +162,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
       role: "assistant" as MessageRole,
       content: block.assistantContent || "",
       timestamp: normalizeTimestamp(block.updatedTs),
-      error: String(block.status) === String(BLOCK_STATUS.ERROR),
+      error: isErrorStatus(block.status),
       metadata: {
         mode: getBlockModeName(block.mode) as AIMode,
         // Parse eventStream to extract metadata for UI, translating i18n keys
@@ -283,12 +290,14 @@ const ChatMessages = memo(function ChatMessages({
   onCopyMessage,
   onRegenerate,
   onDeleteMessage,
+  onSend,
   children,
   className,
   amazingInsightCard,
   isStreaming = false,
   streamingContent = "",
   blockSummary,
+  conversationId,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -411,6 +420,49 @@ const ChatMessages = memo(function ChatMessages({
   // Get translation function
   const { t } = useTranslation();
 
+  // Query client for cache invalidation after forking
+  const queryClient = useQueryClient();
+
+  // Fork block mutation
+  const forkBlock = useForkBlock();
+
+  // Block edit dialog state management
+  const editDialog = useBlockEditDialog();
+
+  // Handle edit confirmation - call ForkBlock API
+  const handleEditConfirm = useCallback(
+    async (editedMessage: string, blockId: bigint, convId: number) => {
+      try {
+        await forkBlock.mutateAsync({
+          blockId,
+          reason: `User edited message: "${editedMessage}"`,
+        });
+
+        // Invalidate blocks query to refetch after fork
+        queryClient.invalidateQueries({
+          queryKey: blockKeys.list(convId),
+        });
+
+        // Trigger AI regeneration with edited message
+        onSend?.(editedMessage);
+
+        editDialog.closeDialog();
+      } catch (error) {
+        console.error("Failed to fork block:", error);
+      }
+    },
+    [forkBlock, queryClient, editDialog, onSend],
+  );
+
+  // Handle edit button click
+  const handleEdit = useCallback(
+    (blockId: bigint, userMessage: string) => {
+      if (!conversationId) return;
+      editDialog.openDialog(blockId, conversationId, userMessage);
+    },
+    [conversationId, editDialog],
+  );
+
   // Group messages into blocks
   // Phase 4: Use blocks if provided, otherwise fall back to items (backward compatibility)
   const messageBlocks = useMemo(() => {
@@ -481,7 +533,7 @@ const ChatMessages = memo(function ChatMessages({
       ref={scrollRef}
       onScroll={handleScrollThrottled}
       className={cn("flex-1 overflow-y-auto px-3 md:px-6 py-4 overscroll-contain", className)}
-      style={{ overflowAnchor: "auto", scrollbarGutter: "stable", contain: "layout style paint" }}
+      style={{ overflowAnchor: "auto", scrollbarGutter: "auto", contain: "layout style paint" }}
     >
       {children}
 
@@ -513,6 +565,12 @@ const ChatMessages = memo(function ChatMessages({
               }
             }
 
+            // Get blockId for edit functionality (when using blocks prop)
+            const blockId = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].id : undefined;
+
+            // Get branchPath from block (if available)
+            const branchPath = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].branchPath : undefined;
+
             return (
               <UnifiedMessageBlock
                 key={`${block.id}-${index}`}
@@ -527,6 +585,9 @@ const ChatMessages = memo(function ChatMessages({
                 onCopy={onCopyMessage}
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
+                onEdit={blockId ? () => handleEdit(blockId, block.userMessage.content) : undefined}
+                blockId={blockId}
+                branchPath={branchPath}
               >
                 {/* Typing cursor for streaming messages */}
                 {block.isLatest && isTyping && !block.assistantMessage?.error && (
@@ -557,6 +618,16 @@ const ChatMessages = memo(function ChatMessages({
 
       {/* Scroll anchor */}
       <div ref={endRef} className="h-px" />
+
+      {/* Block Edit Dialog */}
+      <BlockEditDialog
+        originalMessage={editDialog.originalMessage}
+        blockId={editDialog.blockId}
+        conversationId={editDialog.conversationId}
+        open={editDialog.open}
+        onOpenChange={editDialog.setOpen}
+        onConfirm={handleEditConfirm}
+      />
     </div>
   );
 });

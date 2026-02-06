@@ -19,6 +19,7 @@ import { ChatInput } from "@/components/AIChat/ChatInput";
 import { ChatMessages } from "@/components/AIChat/ChatMessages";
 import { ParrotHub } from "@/components/AIChat/ParrotHub";
 import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
+import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
@@ -64,6 +65,8 @@ interface UnifiedChatViewProps {
   immersiveMode: boolean;
   onImmersiveModeToggle: (enabled: boolean) => void;
   isAdmin?: boolean;
+  /** Conversation ID for Block API operations (e.g., fork) */
+  conversationId?: number;
 }
 
 function UnifiedChatView({
@@ -92,6 +95,7 @@ function UnifiedChatView({
   onModeChange,
   immersiveMode,
   onImmersiveModeToggle,
+  conversationId,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
 
@@ -137,6 +141,9 @@ function UnifiedChatView({
         onImmersiveModeToggle={onImmersiveModeToggle}
       />
 
+      {/* SessionBar - aggregated session statistics */}
+      <SessionBar blocks={blocks} blockSummary={blockSummary} />
+
       {/* Messages Area with Welcome */}
       <ChatMessages
         items={items}
@@ -145,12 +152,14 @@ function UnifiedChatView({
         currentParrotId={ParrotAgentType.AMAZING}
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
+        onSend={onSend}
         amazingInsightCard={
           currentCapability === CapabilityType.AMAZING && (deferredMemoResults.length > 0 || deferredScheduleResults.length > 0) ? (
             <AmazingInsightCard memos={deferredMemoResults[0]?.memos ?? []} schedules={deferredScheduleResults[0]?.schedules ?? []} />
           ) : undefined
         }
         blockSummary={blockSummary}
+        conversationId={conversationId}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
         {(blocks?.length ?? 0) === 0 && items.length === 0 && (
@@ -767,6 +776,7 @@ const AIChat = () => {
       immersiveMode={immersiveMode}
       onImmersiveModeToggle={toggleImmersiveMode}
       isAdmin={true}
+      conversationId={currentConversationIdNum}
     />
   );
 };

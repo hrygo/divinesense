@@ -5,15 +5,15 @@
  * - List branches for a block/conversation
  * - Switch to a different branch
  * - Delete a branch (with cascade option)
- * - Fork a new branch from a block
+ * - Fork a new block from a block
  * - UI state management for branch selector
  */
 
-import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { useBranchTree } from "./useBranchTree";
+import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BlockBranch } from "@/types/block";
+import { useBranchTree } from "./useBranchTree";
 
 // Mock the aiServiceClient
 vi.mock("@/connect", () => ({
@@ -50,16 +50,18 @@ describe("useBranchTree", () => {
   let queryClient: QueryClient;
   let wrapper: ReturnType<typeof createWrapper>;
 
-  const mockBranches: BlockBranch[] = [
+  const mockBranches = [
     {
+      $typeName: "memos.api.v1.BlockBranch" as const,
       block: {
+        $typeName: "memos.api.v1.Block" as const,
         id: 1n,
         uid: "block-1",
         conversationId: 123,
         roundNumber: 1,
         mode: 0,
         blockType: 0,
-        userInputs: [{ content: "Original", timestamp: 1000n }],
+        userInputs: [{ $typeName: "memos.api.v1.UserInput" as const, content: "Original", timestamp: 1000n, metadata: "{}" }],
         assistantContent: "Response",
         eventStream: [],
         status: 2,
@@ -76,19 +78,23 @@ describe("useBranchTree", () => {
         regenerationCount: 0,
         errorMessage: "",
         archivedAt: 0n,
+        sessionStats: undefined,
+        tokenUsage: undefined,
       },
       branchPath: "0",
       isActive: true,
       children: [
         {
+          $typeName: "memos.api.v1.BlockBranch" as const,
           block: {
+            $typeName: "memos.api.v1.Block" as const,
             id: 2n,
             uid: "block-2",
             conversationId: 123,
             roundNumber: 2,
             mode: 0,
             blockType: 0,
-            userInputs: [{ content: "Forked", timestamp: 2000n }],
+            userInputs: [{ $typeName: "memos.api.v1.UserInput" as const, content: "Forked", timestamp: 2000n, metadata: "{}" }],
             assistantContent: "Forked response",
             eventStream: [],
             status: 2,
@@ -105,6 +111,8 @@ describe("useBranchTree", () => {
             regenerationCount: 0,
             errorMessage: "",
             archivedAt: 0n,
+            sessionStats: undefined,
+            tokenUsage: undefined,
           },
           branchPath: "0/1",
           isActive: false,
@@ -112,7 +120,7 @@ describe("useBranchTree", () => {
         },
       ],
     },
-  ];
+  ] as BlockBranch[];
 
   beforeEach(() => {
     queryClient = createTestQueryClient();

@@ -342,6 +342,82 @@ ssh aliyun  # 重新登录
 
 ---
 
+## 空白页面滚动条溢出 (2026-02)
+
+### 问题描述
+AI 聊天页面在空白状态（无消息）时仍显示滚动条，虽然内容不多但存在滚动区域。
+
+### 根本原因
+
+**双重 padding + h-full 组合导致高度溢出**：
+
+```
+外层 ChatMessages:
+├── className: "flex-1 overflow-y-auto px-3 md:px-6 py-4"
+│   └── py-4 = 上下各 16px padding
+│
+内层 PartnerGreeting:
+├── className: "... h-full w-full px-6 py-8"
+│   ├── h-full = 100% 高度
+│   └── py-8 = 上下各 32px padding
+```
+
+**计算结果**：内层总高度 = 100% + 64px（上下 padding）→ 内容溢出 → 触发 `overflow-y-auto` 滚动条
+
+### 解决方案
+
+**1. ChatMessages.tsx** — 修改 `scrollbarGutter`：
+```tsx
+// 改动前：始终保留滚动条空间
+style={{ scrollbarGutter: "stable", ... }}
+
+// 改动后：按需显示
+style={{ scrollbarGutter: "auto", ... }}
+```
+
+**2. PartnerGreeting.tsx** — 修改 `h-full`：
+```tsx
+// 改动前：h-full 导致高度溢出
+className="... h-full w-full px-6 py-8"
+
+// 改动后：min-h-0 允许 flex 子元素正确收缩
+className="... min-h-0 w-full px-6 py-8"
+```
+
+### 经验教训
+
+| 问题 | 教练 |
+|:-----|:-----|
+| **h-full 在 flex 容器中的陷阱** | flex 子元素使用 `h-full` + padding 会溢出父容器 |
+| **min-h-0 的神奇作用** | 允许 flex 子元素正确收缩，同时保持 `justify-center` 居中效果 |
+| **scrollbarGutter: stable 的副作用** | 会始终保留滚动条空间，即使内容不需要滚动 |
+| **嵌套 padding 累积效应** | 外层 py-4 + 内层 py-8 = 实际内容高度超出 100% |
+
+### 预防措施
+
+1. **Flex 容器子元素规范**：
+   ```tsx
+   // ❌ 避免在 flex 子元素上使用 h-full + padding
+   <div className="h-full py-8">
+
+   // ✅ 使用 min-h-0 或 min-h-full
+   <div className="min-h-0 py-8">  // 允许收缩
+   <div className="min-h-full py-8"> // 至少撑满，但不溢出
+   ```
+
+2. **滚动容器规范**：
+   ```tsx
+   // 默认使用 auto，除非明确需要保留空间防止布局抖动
+   style={{ scrollbarGutter: "auto" }}
+   ```
+
+3. **调试技巧**：使用浏览器 DevTools 检查元素高度计算
+   - 查看盒模型（Box Model）中的总高度
+   - 检查 `offsetHeight` vs `clientHeight` 差值
+   - 监控父容器的 `scrollHeight` vs `clientHeight`
+
+---
+
 ## 贡献指南
 
 当你遇到一个新的调试问题时：

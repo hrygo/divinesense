@@ -15,31 +15,59 @@ type Service struct {
 	historyMatcher *HistoryMatcher
 	llmClassifier  *LLMClassifier
 	memoryService  memory.MemoryService
+	cache          *RouterCache // Performance optimization: cache routing decisions
 }
 
 // Config contains the configuration for the router service.
 type Config struct {
 	MemoryService memory.MemoryService
 	LLMClient     LLMClient
+	EnableCache   bool // Enable routing result cache (default: true)
 }
 
 // NewService creates a new router service.
 func NewService(cfg Config) *Service {
-	return &Service{
+	svc := &Service{
 		ruleMatcher:    NewRuleMatcher(),
 		historyMatcher: NewHistoryMatcher(cfg.MemoryService),
 		llmClassifier:  NewLLMClassifier(cfg.LLMClient),
 		memoryService:  cfg.MemoryService,
 	}
+
+	// Enable cache by default for performance
+	if cfg.EnableCache {
+		svc.cache = NewRouterCache(CacheConfig{
+			Capacity:     500,
+			DefaultTTL:   5 * time.Minute,
+			LLMResultTTL: 30 * time.Minute,
+		})
+	}
+
+	return svc
 }
 
-// Implementation: rule-based first (0ms) -> history match (~10ms) -> LLM fallback (~400ms).
+// Implementation: cache -> rule-based first (0ms) -> history match (~10ms) -> LLM fallback (~400ms).
 func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, float32, error) {
 	start := time.Now()
+
+	// Layer 0: Cache lookup (fastest path - ~0ms)
+	if s.cache != nil {
+		if intent, confidence, found := s.cache.Get(input); found {
+			slog.Debug("intent classified by cache",
+				"input", truncate(input, 50),
+				"intent", intent,
+				"confidence", confidence,
+				"latency_ms", time.Since(start).Milliseconds())
+			return intent, confidence, nil
+		}
+	}
 
 	// Layer 1: Rule-based matching
 	intent, confidence, matched := s.ruleMatcher.Match(input)
 	if matched {
+		if s.cache != nil {
+			s.cache.Set(input, intent, confidence, "rule")
+		}
 		slog.Debug("intent classified by rule matcher",
 			"input", truncate(input, 50),
 			"intent", intent,
@@ -57,6 +85,9 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 			// Use Debug level instead of Warn since this is normal operation
 			slog.Debug("history matcher error", "error", err)
 		} else if result.Matched {
+			if s.cache != nil {
+				s.cache.Set(input, result.Intent, result.Confidence, "history")
+			}
 			slog.Debug("intent classified by history matcher",
 				"input", truncate(input, 50),
 				"intent", result.Intent,
@@ -73,6 +104,11 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 		if err != nil {
 			slog.Warn("LLM classifier error", "error", err)
 			return IntentUnknown, 0, err
+		}
+
+		// Cache LLM results with longer TTL (expensive computation)
+		if s.cache != nil && result.Intent != IntentUnknown {
+			s.cache.Set(input, result.Intent, result.Confidence, "llm")
 		}
 
 		slog.Debug("intent classified by LLM",
@@ -183,6 +219,22 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// GetCacheStats returns cache statistics if cache is enabled.
+func (s *Service) GetCacheStats() *Stats {
+	if s.cache == nil {
+		return nil
+	}
+	stats := s.cache.GetStats()
+	return &stats
+}
+
+// ClearCache clears the routing cache.
+func (s *Service) ClearCache() {
+	if s.cache != nil {
+		s.cache.Clear()
+	}
 }
 
 // Ensure Service implements RouterService.

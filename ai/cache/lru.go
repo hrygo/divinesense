@@ -193,3 +193,10 @@ func (c *LRUCache) CleanupExpired() int {
 
 	return len(toDelete)
 }
+
+// Capacity returns the maximum capacity of the cache.
+func (c *LRUCache) Capacity() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.capacity
+}

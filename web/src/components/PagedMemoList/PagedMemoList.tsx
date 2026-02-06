@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { matchPath } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { userServiceClient } from "@/connect";
-import { useView } from "@/contexts/ViewContext";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { userKeys } from "@/hooks/useUserQueries";
@@ -82,7 +81,6 @@ function useAutoFetchWhenNotScrollable({
 
 const PagedMemoList = (props: Props) => {
   const t = useTranslate();
-  const { layout } = useView();
   const queryClient = useQueryClient();
 
   // Show memo editor only on the root route or home route
@@ -164,7 +162,7 @@ const PagedMemoList = (props: Props) => {
                 <MemoFilters />
               </>
             }
-            listMode={layout === "LIST"}
+            listMode={true}
           />
 
           {/* Loading indicator for pagination */}

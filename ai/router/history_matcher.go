@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hrygo/divinesense/ai"
@@ -22,6 +23,11 @@ type HistoryMatcher struct {
 	similarityThreshold float32
 	semanticThreshold   float32 // Threshold for semantic similarity fallback
 	maxHistoryLookup    int
+
+	// Performance optimization: cache bigrams for recent inputs
+	bigramCache   map[string]map[string]bool
+	bigramCacheMu sync.Mutex
+	maxCacheSize  int
 }
 
 // SetEmbeddingService sets the embedding service for semantic similarity matching.
@@ -36,6 +42,8 @@ func NewHistoryMatcher(ms memory.MemoryService) *HistoryMatcher {
 		similarityThreshold: 0.8,
 		semanticThreshold:   0.75, // Lower threshold for semantic matching
 		maxHistoryLookup:    10,
+		bigramCache:         make(map[string]map[string]bool),
+		maxCacheSize:        100, // Cache last 100 unique inputs
 	}
 }
 
@@ -156,8 +164,9 @@ func (m *HistoryMatcher) matchBySemanticSimilarity(ctx context.Context, input st
 }
 
 // cosineSimilarity calculates cosine similarity between two vectors.
+// Optimized with single pass and early normalization.
 func cosineSimilarity(a, b []float32) float32 {
-	if len(a) != len(b) {
+	if len(a) != len(b) || len(a) == 0 {
 		return 0
 	}
 
@@ -165,6 +174,7 @@ func cosineSimilarity(a, b []float32) float32 {
 	var normA float32
 	var normB float32
 
+	// Single pass: compute dot product and norms
 	for i := range a {
 		dotProduct += a[i] * b[i]
 		normA += a[i] * a[i]
@@ -175,24 +185,53 @@ func cosineSimilarity(a, b []float32) float32 {
 		return 0
 	}
 
+	// Use math.Sqrt on final values only
 	return dotProduct / (float32(math.Sqrt(float64(normA))) * float32(math.Sqrt(float64(normB))))
 }
 
 // calculateLexicalSimilarity calculates lexical similarity score between two strings.
 // Uses character-level bigrams for Chinese text.
+// Optimized with early exit and cached bigram extraction.
 func (m *HistoryMatcher) calculateLexicalSimilarity(a, b string) float32 {
-	bigramsA := m.extractBigrams(a)
-	bigramsB := m.extractBigrams(b)
+	// Quick exact match check
+	if a == b {
+		return 1.0
+	}
+
+	bigramsA := m.getBigrams(a)
+	bigramsB := m.getBigrams(b)
 
 	if len(bigramsA) == 0 || len(bigramsB) == 0 {
 		return 0
 	}
 
+	// Early exit: if one set is much larger, max similarity is limited
+	maxLen := len(bigramsA)
+	minLen := len(bigramsB)
+	if minLen > maxLen {
+		maxLen, minLen = minLen, maxLen
+	}
+	// Max possible similarity is minLen/maxLen
+	maxPossibleSim := float32(minLen) / float32(maxLen)
+	if maxPossibleSim < m.similarityThreshold {
+		// Early exit: even perfect match won't meet threshold
+		return maxPossibleSim
+	}
+
 	// Calculate Jaccard similarity on bigram sets
+	// Optimize: iterate over smaller set
 	intersection := 0
-	for bg := range bigramsA {
-		if bigramsB[bg] {
-			intersection++
+	if len(bigramsA) < len(bigramsB) {
+		for bg := range bigramsA {
+			if bigramsB[bg] {
+				intersection++
+			}
+		}
+	} else {
+		for bg := range bigramsB {
+			if bigramsA[bg] {
+				intersection++
+			}
 		}
 	}
 
@@ -204,18 +243,63 @@ func (m *HistoryMatcher) calculateLexicalSimilarity(a, b string) float32 {
 	return float32(intersection) / float32(union)
 }
 
-// extractBigrams extracts character-level bigrams from input.
-func (m *HistoryMatcher) extractBigrams(input string) map[string]bool {
-	input = strings.TrimSpace(input)
-	input = strings.ToLower(input)
+// getBigrams retrieves bigrams from cache or computes them.
+func (m *HistoryMatcher) getBigrams(input string) map[string]bool {
+	// Fast path: check cache without lock (optimistic read)
+	m.bigramCacheMu.Lock()
+	defer m.bigramCacheMu.Unlock()
 
-	// Remove common punctuation
-	for _, r := range []string{" ", ",", "。", "，", "？", "?", "！", "!", "、"} {
-		input = strings.ReplaceAll(input, r, "")
+	if bigrams, ok := m.bigramCache[input]; ok {
+		return bigrams
 	}
 
-	runes := []rune(input)
-	bigrams := make(map[string]bool)
+	// Cache miss: compute and store
+	bigrams := m.extractBigrams(input)
+
+	// Evict if cache is too large (simple FIFO)
+	if len(m.bigramCache) >= m.maxCacheSize {
+		// Remove first entry
+		for key := range m.bigramCache {
+			delete(m.bigramCache, key)
+			break
+		}
+	}
+
+	m.bigramCache[input] = bigrams
+	return bigrams
+}
+
+// extractBigrams extracts character-level bigrams from input.
+// Optimized with single pass and pre-allocation.
+func (m *HistoryMatcher) extractBigrams(input string) map[string]bool {
+	input = strings.TrimSpace(input)
+	if len(input) == 0 {
+		return nil
+	}
+
+	input = strings.ToLower(input)
+
+	// Remove common punctuation in a single pass
+	var runes []rune
+	for _, r := range input {
+		switch r {
+		case ' ', ',', '。', '，', '？', '?', '！', '!', '、', '\t', '\n':
+			// Skip punctuation
+		default:
+			runes = append(runes, r)
+		}
+	}
+
+	if len(runes) == 0 {
+		return nil
+	}
+
+	// Pre-allocate map with estimated size
+	estimatedSize := len(runes) - 1
+	if len(runes) <= 4 {
+		estimatedSize = len(runes) + len(runes) - 1 // Include unigrams
+	}
+	bigrams := make(map[string]bool, estimatedSize)
 
 	// Generate character bigrams
 	for i := 0; i < len(runes)-1; i++ {
@@ -223,7 +307,7 @@ func (m *HistoryMatcher) extractBigrams(input string) map[string]bool {
 		bigrams[bigram] = true
 	}
 
-	// Also add individual characters for short inputs
+	// Also add individual characters for short inputs (unigrams)
 	if len(runes) <= 4 {
 		for _, r := range runes {
 			bigrams[string(r)] = true

@@ -98,6 +98,30 @@ export function isActiveStatus(status: BlockStatusEnum | string | number): boole
 }
 
 /**
+ * Type guard for checking if a status is streaming (2)
+ */
+export function isStreamingStatus(status: BlockStatusEnum | string | number): boolean {
+  const statusNum = typeof status === "number" ? status : parseInt(String(status), 10) || 0;
+  return statusNum === 2;
+}
+
+/**
+ * Type guard for checking if a status is completed (3)
+ */
+export function isCompletedStatus(status: BlockStatusEnum | string | number): boolean {
+  const statusNum = typeof status === "number" ? status : parseInt(String(status), 10) || 0;
+  return statusNum === 3;
+}
+
+/**
+ * Type guard for checking if a status is error (4)
+ */
+export function isErrorStatus(status: BlockStatusEnum | string | number): boolean {
+  const statusNum = typeof status === "number" ? status : parseInt(String(status), 10) || 0;
+  return statusNum === 4;
+}
+
+/**
  * Get display name for block type
  */
 export function getBlockTypeName(type: BlockTypeEnum | string): string {

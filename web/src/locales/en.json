@@ -400,6 +400,8 @@
       "tool_result": "Result",
       "answer": "Answer",
       "error": "Error",
+      "done": "Done",
+      "pending": "Pending",
       "input": "Input",
       "output": "Output",
       "no_output": "No output yet...",
@@ -450,7 +452,32 @@
       "user_inputs": "User Inputs",
       "more_input": "appended",
       "more_inputs": "appended",
-      "expand_to_read_all": "Click to expand and read all"
+      "expand_to_read_all": "Click to expand and read all",
+      "edit": "Edit",
+      "edit_title": "Edit User Input",
+      "edit_description": "Edit your message to create a new branch and regenerate",
+      "original_message": "Original Message",
+      "edited_message": "Edited Message",
+      "edit_warning": "Note: Editing will create a new branch. The original block will remain unchanged.",
+      "cancel": "Cancel",
+      "create_branch": "Create Branch & Regenerate",
+      "branch_created": "Branch created successfully",
+      "duration": "Duration",
+      "cost": "Cost",
+      "tokens": "Tokens",
+      "branch_path": "Branch"
+    },
+    "session_bar": {
+      "title": "Session Stats",
+      "blocks_one": "{{count}} block",
+      "blocks_other": "{{count}} blocks",
+      "total_cost_tooltip": "Total cost for this session",
+      "total_tokens_tooltip": "Total tokens used",
+      "total_duration_tooltip": "Total session duration",
+      "tokens": "tokens",
+      "expand": "Expand session stats",
+      "collapse": "Collapse session stats",
+      "less_than_1s": "<1s"
     }
   },
   "auth": {

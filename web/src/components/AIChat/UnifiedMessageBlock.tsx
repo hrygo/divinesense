@@ -26,11 +26,12 @@ import {
   Brain,
   Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Clock,
   Copy,
   Loader2,
-  Terminal,
+  Pencil,
   User,
   Wrench,
   Zap,
@@ -115,9 +116,14 @@ export interface UnifiedMessageBlockProps {
   /** Actions */
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
+  /** Block ID for edit/fork operations */
+  blockId?: bigint;
   /** Branch-related props for tree conversation branching */
   branches?: BlockBranch[];
+  /** Branch path (e.g., "A.1", "B.2.3") for display */
+  branchPath?: string;
   isBranchActive?: boolean;
   onBranchClick?: () => void;
   /** Additional children to render in block body */
@@ -292,6 +298,8 @@ interface BlockHeaderProps {
   additionalUserInputs?: ConversationMessage[];
   /** Branch-related props */
   branches?: BlockBranch[];
+  /** Branch path (e.g., "A.1", "B.2.3") for display */
+  branchPath?: string;
   isBranchActive?: boolean;
   onBranchClick?: () => void;
 }
@@ -307,6 +315,7 @@ function BlockHeader({
   isStreaming,
   additionalUserInputs = [],
   branches,
+  branchPath,
   isBranchActive,
   onBranchClick,
 }: BlockHeaderProps) {
@@ -347,18 +356,22 @@ function BlockHeader({
   }, [isStreaming, assistantMessage]);
 
   // Geek/Evolution Mode Summary Info
+  // P0-A006: 所有模式都显示 Token/Cost 统计（不仅 GEEK/EVOLUTION）
   const geekSummary = useMemo(() => {
-    if (!blockSummary || (parrotId !== "GEEK" && parrotId !== "EVOLUTION")) return null;
+    if (!blockSummary) return null;
 
+    // 所有模式都显示成本
     const cost = blockSummary.totalCostUSD ? `$${blockSummary.totalCostUSD.toFixed(4)}` : "";
+    // 所有模式都显示 tokens
     const tokens =
       blockSummary.totalInputTokens && blockSummary.totalOutputTokens
         ? `${((blockSummary.totalInputTokens + blockSummary.totalOutputTokens) / 1000).toFixed(1)}k token`
         : "";
+    // 所有模式都显示时长
     const time = blockSummary.totalDurationMs ? `${(blockSummary.totalDurationMs / 1000).toFixed(1)}s` : "";
 
     return { cost, tokens, time };
-  }, [blockSummary, parrotId]);
+  }, [blockSummary]);
 
   return (
     <div
@@ -389,9 +402,9 @@ function BlockHeader({
         </div>
       </div>
 
-      {/* Right: Timestamp + Badge + Geek Summary + Toggle */}
+      {/* Right: Timestamp + Badge + Block Summary + Toggle */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1 sm:ml-2">
-        {/* Geek/Evolution Summary stats - Compact View */}
+        {/* Block Summary stats - P0-A006: 所有模式都显示（不仅 GEEK/EVOLUTION） */}
         {geekSummary && (
           <>
             {/* Desktop: Full stats */}
@@ -439,8 +452,10 @@ function BlockHeader({
           </span>
         )}
 
-        {/* Branch Indicator - shows when block has branches */}
-        {branches && branches.length > 0 && <BranchIndicator branches={branches} isActive={isBranchActive} onClick={onBranchClick} />}
+        {/* Branch Indicator - shows branch path or branch count */}
+        {(branchPath || (branches && branches.length > 0)) && (
+          <BranchIndicator branches={branches} branchPath={branchPath} isActive={isBranchActive} onClick={onBranchClick} />
+        )}
 
         <button
           type="button"
@@ -781,64 +796,84 @@ function BlockBody({
                   )}
                 </div>
 
-                {/* Card Container */}
+                {/* Card Container - Compact Two-Line Design */}
                 <div
                   className={cn(
-                    "rounded-lg border overflow-hidden transition-all duration-200",
+                    "rounded-lg border px-3 py-2 transition-all duration-200",
                     "bg-card hover:shadow-sm",
                     isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
-                    // Write operations get subtle highlighting
                   )}
                 >
-                  {/* Tool Header */}
-                  <div className="flex items-center justify-between px-3 py-2 bg-muted/20 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className={cn("font-semibold", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
+                  {/* Line 1: Tool Name + Status + Duration */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn("font-semibold text-sm", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
                         {callName}
                       </span>
-                      {typeof call === "object" && call.duration && (
-                        <span className="text-[11px] text-muted-foreground bg-background/50 px-1.5 py-0.5 rounded">
-                          {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
+                      {/* Status Indicator */}
+                      {result ? (
+                        result.isError ? (
+                          <span className="flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
+                            <AlertCircle className="w-3 h-3" /> {t("ai.events.error")}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
+                            <Check className="w-3 h-3" /> {t("ai.events.done")}
+                          </span>
+                        )
+                      ) : calling ? (
+                        <span className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
+                          <Loader2 className="w-3 h-3 animate-spin" /> {t("ai.events.running")}
                         </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">{t("ai.events.pending")}</span>
                       )}
                     </div>
-                    {typeof call === "object" && call.filePath && (
-                      <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={call.filePath}>
-                        {call.filePath}
+                    {/* Duration */}
+                    {typeof call === "object" && call.duration && (
+                      <span className="text-[11px] text-muted-foreground font-mono shrink-0">
+                        {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
                       </span>
                     )}
                   </div>
 
-                  {/* Tool Input Preview (Argument) */}
-                  {typeof call === "object" && call.inputSummary && (
-                    <div className="px-3 py-2 border-t border-border/30 bg-background/50">
-                      <div className="text-[11px] uppercase text-muted-foreground font-semibold mb-0.5">{t("ai.unified_block.input")}</div>
-                      <code className="text-xs text-muted-foreground/80 font-mono break-all line-clamp-2 hover:line-clamp-none transition-all">
+                  {/* Line 2: Function Call + Parameters (Compact) */}
+                  <div className="mt-1 flex items-center gap-2 min-w-0">
+                    {/* Function with params */}
+                    {typeof call === "object" && call.inputSummary ? (
+                      <code
+                        className={cn(
+                          "text-xs font-mono truncate block",
+                          isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
+                        )}
+                        title={call.inputSummary}
+                      >
                         {call.inputSummary}
                       </code>
-                    </div>
-                  )}
+                    ) : typeof call === "object" && call.filePath ? (
+                      <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={call.filePath}>
+                        {call.filePath}
+                      </code>
+                    ) : null}
+                  </div>
 
-                  {/* Tool Result (Output) */}
+                  {/* Expandable Output (only if has output) */}
                   {result && result.outputSummary && (
-                    <div className="px-3 py-2 border-t border-border/30 bg-muted/10">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="text-[11px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
-                          <Terminal className="w-3 h-3" /> {t("ai.unified_block.output")}
-                        </div>
-                        {result.isError && (
-                          <span className="text-[11px] bg-red-100 text-red-600 px-1.5 rounded font-medium">{t("ai.events.error")}</span>
-                        )}
-                      </div>
+                    <details className="group/details mt-2">
+                      <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1">
+                        <ChevronDown className="w-3 h-3 transition-transform group-open/details:rotate-0" />
+                        <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
+                        {t("ai.unified_block.output")}
+                      </summary>
                       <pre
                         className={cn(
-                          "text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-1.5 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
+                          "mt-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-2 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
                           result.isError && "text-red-600/90 bg-red-50/50",
                         )}
                       >
                         {result.outputSummary}
                       </pre>
-                    </div>
+                    </details>
                   )}
                 </div>
               </div>
@@ -994,11 +1029,14 @@ interface BlockFooterProps {
   onToggle: () => void;
   onCopy: () => void;
   onRegenerate?: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
   theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
+  /** 是否正在流式输出 - 流式输出时禁用编辑 */
+  isStreaming?: boolean;
 }
 
-function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, theme }: BlockFooterProps) {
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming }: BlockFooterProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1044,6 +1082,25 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, th
 
       {/* Right: Action Buttons */}
       <div className="flex items-center gap-2">
+        {/* P0-A001: Edit Button - 创建分支并重新生成 */}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={isStreaming}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              "hover:bg-black/10 dark:hover:bg-white/10",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              theme.badgeText,
+              isStreaming && "opacity-50 cursor-not-allowed",
+            )}
+            title={t("ai.unified_block.edit")}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">{t("ai.unified_block.edit")}</span>
+          </button>
+        )}
         {onRegenerate && (
           <button
             type="button"
@@ -1121,8 +1178,11 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   streamingPhase = null,
   onCopy,
   onRegenerate,
+  onEdit,
   onDelete,
+  blockId: _blockId,
   branches,
+  branchPath,
   isBranchActive,
   onBranchClick,
   children,
@@ -1206,6 +1266,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           isStreaming={isStreaming}
           additionalUserInputs={additionalUserInputs}
           branches={branches}
+          branchPath={branchPath}
           isBranchActive={isBranchActive}
           onBranchClick={onBranchClick}
         />
@@ -1233,8 +1294,10 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           onToggle={toggleCollapse}
           onCopy={handleCopy}
           onRegenerate={onRegenerate}
+          onEdit={onEdit}
           onDelete={onDelete}
           theme={blockTheme}
+          isStreaming={isStreaming}
         />
       </div>
     </div>
