@@ -94,6 +94,7 @@ make ci-check      # 模拟 CI
 | **前端开发** | @docs/dev-guides/FRONTEND.md          |
 | **部署**     | @docs/deployment/BINARY_DEPLOYMENT.md |
 | **调试问题** | @docs/research/DEBUG_LESSONS.md       |
+| **数据库迁移** | @store/migration/postgres/CLAUDE.md   |
 
 ---
 
