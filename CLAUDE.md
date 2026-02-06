@@ -45,6 +45,48 @@
 
 ## 工作流
 
+### 多任务管理（重要）
+
+> **原则**：始终使用 TODO LIST 跟踪多任务状态，避免"失忆"或迷失方向。
+
+**何时创建 TODO LIST**：
+- 分析日志/代码后发现**多个**优化点时
+- 用户要求"逐个击破"多个问题时
+- 任务预计超过 1 小时或包含多个步骤时
+
+**操作流程**：
+```bash
+# 1. 分析完成后，为每个子任务创建 TODO
+TaskCreate("优化项1标题", "详细描述...")
+TaskCreate("优化项2标题", "详细描述...")
+
+# 2. 查看当前任务列表
+TaskList
+
+# 3. 开始任务前，标记为 in_progress
+TaskUpdate(taskId, status="in_progress")
+
+# 4. 完成后标记为 completed
+TaskUpdate(taskId, status="completed")
+```
+
+**状态流转**：
+```
+pending → in_progress → completed
+    ↓                      ↓
+  (开始)                (完成/删除)
+```
+
+**示例**（本会话实践）：
+```
+用户：分析日志优化空间 → 发现 5 个问题
+AI：创建 4 个 TODO（第 1 个立即处理）
+    → #1 优化 SessionStats [pending]
+    → #2 合并数据库查询 [pending]     ← 下一个
+    → #3 修复零值日志 [pending]
+    → #4 删除重复日志 [pending]
+```
+
 ### 开发前
 ```bash
 make deps-all      # 安装依赖
@@ -68,6 +110,60 @@ make ci-check      # 模拟 CI
 ---
 
 ## 编码规范
+
+### DRY & SOLID 原则
+
+> **减法 > 加法**：优先通过删除重复代码、合并相似功能来优化架构，而非添加新的抽象层。
+
+#### DRY (Don't Repeat Yourself)
+
+**核心原则**：每一处知识在系统中都必须有单一、无歧义、权威的表示。
+
+```go
+// ❌ 违反 DRY：重复的逻辑
+func CreateMemo(name, content) { hashPassword(...) }
+func UpdateMemo(id, name, content) { hashPassword(...) }  // 重复
+func DeleteMemo(id) { hashPassword(...) }                   // 重复
+
+// ✅ 遵循 DRY：提取单一函数
+func (s *Service) hashPassword(pwd string) string { ... }
+```
+
+**实践案例**：
+- 路由逻辑统一：`ai/router/Service` 提供三层路由，`ai/agent/chat_router.go` 复用而非重复实现
+- 删除 492 行重复路由代码（v0.93.1）
+
+#### SOLID 原则
+
+| 原则 | 简记 | 说明 |
+|:-----|:-----|:-----|
+| **S** | 单一职责 | 每个模块只做一件事 |
+| **O** | 开闭原则 | 扩展开放，修改封闭 |
+| **L** | 里氏替换 | 子类可替换父类 |
+| **I** | 接口隔离 | 拆分胖接口，客户端只依赖需要的接口 |
+| **D** | 依赖倒置 | 依赖抽象而非具体实现 |
+
+```go
+// SRP + ISP：接口隔离，职责分离
+type LLMClient interface {
+    Complete(ctx, prompt, config) (string, error)  // 单一方法
+}
+
+// DIP：依赖接口，具体实现可替换
+type Service struct {
+    llmClient LLMClient  // 依赖抽象，非具体实现
+}
+
+// OCP：扩展新 LLM 无需修改 Service
+func (s *Service) SetLLMClient(client LLMClient) {
+    s.llmClient = client
+}
+```
+
+**实践案例**：
+- `router.LLMClient` 接口：定义清晰的契约
+- `routerLLMClient` / `routerIntentLLMClient`：可互换的实现
+- `router.Service` 通过接口依赖，而非直接依赖具体实现
 
 ### Go
 - 文件：`snake_case.go`
