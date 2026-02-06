@@ -212,63 +212,9 @@ start_backend() {
     # 等待后端启动
     echo -n "等待后端启动"
     if wait_for_port $BACKEND_PORT "后端" 30; then
-        # 获取实际监听端口的进程 PID（go run 可能产生子进程）
-        local actual_pid=$(lsof -ti ":$BACKEND_PORT" -sTCP:LISTEN 2>/dev/null | head -1)
-        if [ -n "$actual_pid" ]; then
-            echo $actual_pid > "$BACKEND_PID_FILE"
-            log_success "后端已启动 (PID: $actual_pid, http://localhost:$BACKEND_PORT)"
-        else
-            # 如果找不到监听进程，保留 shell PID
-            log_success "后端已启动 (PID: $shell_pid, http://localhost:$BACKEND_PORT)"
-        fi
-
-                if [ "$ai_tags" = "sqlite_vec" ]; then
+        log_success "后端已启动 (PID: $pid, http://localhost:$BACKEND_PORT)"
+        if [ "$ai_tags" = "sqlite_vec" ]; then
             echo "  → AI 模式已启用 (sqlite-vec)"
-        fi
-        return 0
-    else
-        log_error "后端启动失败，查看日志: $BACKEND_LOG"
-        rm -f "$BACKEND_PID_FILE"
-        return 1
-    fi
-}
-
-start_backend_force_rebuild() {
-    local status=$(backend_status)
-
-    case $status in
-        running)
-            log_info "后端已在运行 (PID: $(cat $BACKEND_PID_FILE))"
-            return 0
-            ;;
-    esac
-
-    log_info "启动后端（强制重新编译）..."
-
-    # 确保日志目录存在
-    mkdir -p "$(dirname "$BACKEND_LOG")"
-
-    # 加载环境变量
-    load_env
-
-    # 启动后端（后台运行）
-    nohup go run -tags=noui ./cmd/divinesense --mode dev --port $BACKEND_PORT \
-        > "$BACKEND_LOG" 2>&1 &
-
-    local shell_pid=$!
-    echo $shell_pid > "$BACKEND_PID_FILE"
-
-    # 等待后端启动
-    echo -n "等待后端启动"
-    if wait_for_port $BACKEND_PORT "后端" 30; then
-        # 获取实际监听端口的进程 PID（go run 可能产生子进程）
-        local actual_pid=$(lsof -ti ":$BACKEND_PORT" -sTCP:LISTEN 2>/dev/null | head -1)
-        if [ -n "$actual_pid" ]; then
-            echo $actual_pid > "$BACKEND_PID_FILE"
-            log_success "后端已启动 (PID: $actual_pid, http://localhost:$BACKEND_PORT)"
-        else
-            # 如果找不到监听进程，保留 shell PID
-            log_success "后端已启动 (PID: $shell_pid, http://localhost:$BACKEND_PORT)"
         fi
         return 0
     else
