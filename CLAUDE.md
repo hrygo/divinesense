@@ -1,150 +1,112 @@
 # CLAUDE.md
 
-> Claude Code 辅助开发的主要上下文文档。
+> DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 
-## 产品愿景
+## 第一性原理
 
-**DivineSense (神识)**：AI 代理驱动的个人「第二大脑」—— 通过智能代理自动化任务、过滤高价值信息、以技术杠杆提升生产力。
+**DivineSense (神识)** = AI 代理驱动的个人「第二大脑」
 
----
+```
+核心使命：通过智能代理自动化任务、过滤高价值信息、以技术杠杆提升生产力
 
-## 快速开始
-
-**默认端口**：`make start` → localhost:25173 (前端) / 28081 (后端) / 25432 (PostgreSQL)
-
-| 命令             | 作用                                  |
-| :--------------- | :------------------------------------ |
-| `make start`     | 启动全栈 (PostgreSQL + 后端 + 前端)   |
-| `make stop`      | 停止所有服务                          |
-| `make test`      | 运行后端测试                          |
-| `make build-all` | 构建二进制 + 静态资源                 |
-| `make check-all` | 运行所有预提交检查 (构建、测试、i18n) |
-
-**技术栈**：Go 1.25 + React 18 (Vite/Tailwind 4) + PostgreSQL (生产) / SQLite (开发)
-
-**主要编程语言**：Go（约 136K tokens）、TypeScript（约 64K tokens）、Markdown（约 61K tokens）。处理 Go 代码时，优先理解 Go 特定的模式和约定。
-
----
-
-## 架构概念
-
-### BlockMode 与 ParrotAgentType
-
-> **重要**：这两个是独立的、分离的架构概念，不要混淆或相互映射。
-
-| 架构概念 | 类型 | 说明 |
-|:---------|:-----|:-----|
-| **BlockMode** | NORMAL / TEMPLATE | Block 的模式类型，控制消息块的行为 |
-| **ParrotAgentType** | AUTO / MEMO / SCHEDULE / AMAZING / GEEK / EVOLUTION | AI 代理（鹦鹉）类型，决定使用哪只鹦鹉处理请求 |
-
-**关键规则**：
-- `BlockMode.NORMAL` ≠ `ParrotAgentType.AUTO`
-- `BlockMode` 描述消息块的结构模式
-- `ParrotAgentType.AUTO` 是后端路由标记，由后端三层路由决定使用哪只鹦鹉
-- 不要将 `BlockMode.NORMAL` 映射到 `ParrotAgentType.AUTO` 或混淆这些枚举
-
----
-
-## 核心规则
-
-### 1. Git 工作流 — 严格执行
-
-- **强制分支开发**：禁止直接在 `main` 修改，分支命名: `feat/`, `fix/`, `evolution/`
-- **强制 PR**：所有变更通过 Pull Request 合并，禁止 `git push origin main`
-- **提交前检查**：`make check-all` + `golangci-lint run` 通过后才允许提交
-
-详细规范 → @.claude/rules/git-workflow.md
-
-### 2. 国际化 (i18n)
-
-所有 UI 文本必须使用 `t("key")`，禁止硬编码。验证: `make check-i18n`
-
-详细规范 → @.claude/rules/i18n.md
-
-### 3. 代码风格
-
-- **Go**：`snake_case.go`，使用 `log/slog`
-- **React**：PascalCase 组件，`use` 前缀 Hooks
-- **Tailwind v4 陷阱**：禁用 `max-w-md`，使用 `max-w-[24rem]`
-
-详细规范 → @.claude/rules/code-style.md
-
-### 4. Lint 工作流
-
-**前端** (在 `web/` 目录下运行):
-```bash
-pnpm lint       # 检查 TypeScript + Biome 格式
-pnpm lint:fix   # 自动修复格式问题
+技术本质：Go 后端 + React 前端的单二进制分发应用
+架构核心：五位「鹦鹉」AI 代理 + 统一块模型 (Unified Block Model)
 ```
 
-**后端**:
+---
+
+## 架构原则
+
+### 核心概念映射
+
+| 概念     | 实体             | 关系                   |
+| :------- | :--------------- | :--------------------- |
+| **对话** | `AIConversation` | 包含多个 Block         |
+| **块**   | `AIBlock`        | 一个用户-AI 交互轮次   |
+| **代理** | `ParrotAgent`    | 处理用户请求的 AI 实体 |
+| **路由** | `ChatRouter`     | 决定使用哪只鹦鹉       |
+
+### 关键架构决策
+
+**1. BlockMode ≠ ParrotAgentType** （最常混淆）
+- `BlockMode.NORMAL/GEEK/EVOLUTION` — 消息块的结构模式
+- `ParrotAgentType.AUTO/MEMO/SCHEDULE/...` — 哪只鹦鹉处理请求
+- **无映射关系**：不要在代码中相互转换
+
+**2. AUTO 不是鹦鹉**
+- `AUTO` 是「请后端决定」的标记
+- 后端三层路由：规则匹配 → 历史感知 → LLM 降级
+
+**3. 数据库选择影响功能**
+- PostgreSQL → 完整 AI 功能（向量搜索、对话持久化）
+- SQLite → 仅开发环境，AI 功能禁用
+
+---
+
+## 工作流
+
+### 开发前
 ```bash
-go fmt ./...    # 格式化 Go 代码
-go vet ./...    # 静态分析
+make deps-all      # 安装依赖
+make start         # 启动全栈
 ```
 
-**Pre-commit Hook**:
-- 已配置 `.git/hooks/pre-commit` 自动运行格式检查
-- 提交前自动执行：`go fmt` + `go vet` + `pnpm lint:fix`
-- 如格式问题被自动修复，请 `git add` 变更后重新提交
+### 开发中
+```bash
+make check-all     # 提交前检查
+make ci-check      # 模拟 CI
+```
 
-### 5. 数据库策略
+### 提交流程
+1. `make check-all` 通过
+2. 分支命名：`feat/xxx`、`fix/xxx`、`evolution/xxx`
+3. 禁止直接 push 到 main
+4. 通过 PR 合并
 
-- **PostgreSQL**：生产环境，完整 AI 支持 (pgvector)
-- **SQLite**：开发环境，**不支持 AI 功能**
-- **未来支持**：详见 [#9](https://github.com/hrygo/divinesense/issues/9)
-
----
-
-## 文档索引
-
-| 领域     | 文件                                  | 参考时机              |
-| :------- | :------------------------------------ | :-------------------- |
-| **后端** | @docs/dev-guides/BACKEND_DB.md        | API、数据库、Docker   |
-| **前端** | @docs/dev-guides/FRONTEND.md          | 布局、Tailwind、组件  |
-| **架构** | @docs/dev-guides/ARCHITECTURE.md      | 项目结构、AI 代理     |
-| **部署** | @docs/deployment/BINARY_DEPLOYMENT.md | 二进制部署、Geek Mode |
-| **路径** | @docs/dev-guides/PROJECT_PATHS.md     | 项目目录结构速查      |
-| **任务** | @docs/dev-guides/COMMON_TASKS.md      | 常见开发任务步骤      |
-| **环境** | @.env.example                         | 环境变量配置          |
+详细规范：@.claude/rules/git-workflow.md
 
 ---
 
-## 元认知系统
+## 编码规范
 
-DivineSense 对自身知识状态、检索质量、代理决策的监控与反思机制。
+### Go
+- 文件：`snake_case.go`
+- 日志：`log/slog`
+- 错误：始终检查并处理
 
-详细内容 → @docs/specs/META_COGNITION.md
+### React/TypeScript
+- 组件：`PascalCase.tsx`
+- Hooks：`use` 前缀
+- 文本：`t("key")` 国际化
 
-**CLAUDE.md 自我进化原则**：本文档应随项目演进自动更新：
-- 新增 AI 代理 → 更新文档索引
-- 新增 Make 命令 → 更新快速开始
-- 架构变更 → 同步更新相关章节
-
----
-
-## 调试经验
-
-<details>
-<summary>📋 历史调试记录 (点击展开)</summary>
-
-记录开发过程中遇到的典型问题和解决方案，避免重复踩坑：
-
-- **Evolution Mode 路由失败** (2025-01): Protobuf JSON 序列化导致 `evolutionMode` 丢失
-- **前端布局宽度不统一** (2025-01): Tailwind v4 语义化类名陷阱、组件内部宽度限制
-- **Biome 格式检查失败** (2025-01): Import 顺序要求 react 第三方库优先、CSS 选择器逗号后需换行
-
-详细内容 → @docs/research/DEBUG_LESSONS.md
-
-</details>
+### Tailwind v4
+- ❌ `max-w-md/lg/xl` → 解析错误 (~16px)
+- ✅ `max-w-[24rem]` → 显式值
 
 ---
 
-## 产品功能
+## 导航索引
 
-- **笔记**：Markdown 编辑 (KaTeX/Mermaid)、语义搜索、AI 标签
-- **日程**：自然语言创建、冲突检测、多视图日历
-- **AI 代理**：灰灰 (笔记) / 金刚 (日程) / 惊奇 (综合)
-- **Geek Mode**：Claude Code CLI 直接集成
+| 任务         | 文档                                  |
+| :----------- | :------------------------------------ |
+| **理解架构** | @docs/dev-guides/ARCHITECTURE.md      |
+| **后端开发** | @docs/dev-guides/BACKEND_DB.md        |
+| **前端开发** | @docs/dev-guides/FRONTEND.md          |
+| **部署**     | @docs/deployment/BINARY_DEPLOYMENT.md |
+| **调试问题** | @docs/research/DEBUG_LESSONS.md       |
 
-详细功能 → @README.md
+---
+
+## 产品能力边界
+
+| 功能           | 状态                                 |
+| :------------- | :----------------------------------- |
+| 笔记           | ✅ Markdown + 语义搜索                |
+| 日程           | ✅ 自然语言 + 冲突检测                |
+| AI 代理        | ✅ 五位鹦鹉协同                       |
+| Geek Mode      | ✅ Claude Code CLI 集成，用于复杂任务 |
+| Evolution Mode | ✅ Claude Code CLI 集成，系统自我进化 |
+
+---
+
+*本文档随项目演进自动更新。新增功能时同步更新架构原则和导航索引。*
