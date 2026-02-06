@@ -540,8 +540,8 @@ func (s *llmService) Warmup(ctx context.Context) {
 	// temperature=0 ensures deterministic output
 	req := openai.ChatCompletionRequest{
 		Model:       s.model,
-		MaxTokens:   1,           // Minimum output for warmup
-		Temperature: 0,           // Deterministic, fastest
+		MaxTokens:   1, // Minimum output for warmup
+		Temperature: 0, // Deterministic, fastest
 		Messages: []openai.ChatCompletionMessage{
 			{Role: openai.ChatMessageRoleUser, Content: "Hi"},
 		},
