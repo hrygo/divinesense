@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -21,26 +20,27 @@ import (
 // SQLite is supported for development and client-side deployment.
 //
 // Supported Features:
-// - Full AI features: vector search, conversation persistence, episodic memory
-// - Vector search: application-layer cosine similarity (JSON-encoded vectors)
+// - Full AI features: vector search (via sqlite-vec), conversation persistence, episodic memory
+// - Vector search: sqlite-vec extension with vec0_distance() for efficient similarity search
 // - Full-text search: FTS5 (if available) with LIKE fallback
 // - All AI agent capabilities: memo, schedule, amazing agents
 //
 // Implementation Notes:
-// - Vectors stored as BLOB (JSON-encoded float32 arrays)
-// - Similarity computed in Go (not SQL) for pure Go compatibility
+// - Vectors stored in vec0 format for optimal performance
+// - Similarity computed using sqlite-vec's vec0_distance_L2 function
 // - JSONB fields replaced with TEXT (JSON strings)
-// - Performance suitable for <10k vectors; use PostgreSQL for larger datasets
+// - Requires CGO for sqlite-vec extension
+// - Performance suitable for large datasets (>100k vectors)
 //
 // When adding new features to SQLite:
 // 1. Maintain feature parity with PostgreSQL where feasible
 // 2. Document any performance limitations
-// 3. Use pure Go (modernc.org/sqlite) for easy cross-compilation
+// 3. Use mattn/go-sqlite3 with CGO for sqlite-vec support
 // ============================================================================
 
 type DB struct {
-	db                 *sql.DB
-	profile            *profile.Profile
+	db              *sql.DB
+	profile         *profile.Profile
 	vecExtensionLoaded bool // Track if sqlite-vec extension is loaded
 }
 
@@ -123,8 +123,8 @@ func NewDB(profile *profile.Profile) (store.Driver, error) {
 	sqliteDB.SetConnMaxIdleTime(0) // No idle timeout (personal use, always ready)
 
 	driver := DB{
-		db:                 sqliteDB,
-		profile:            profile,
+		db:                sqliteDB,
+		profile:           profile,
 		vecExtensionLoaded: vecLoaded,
 	}
 
