@@ -135,6 +135,11 @@ web: ## 启动前端开发服务器
 start: ## 一键启动所有服务 (使用 go run 开发模式)
 	@$(SCRIPT_DIR)/dev.sh start
 
+start-ai: ## 一键启动所有服务 (AI 模式，自动下载 sqlite-vec 静态库)
+	@echo "🤖 Preparing AI-enabled environment..."
+	@cd store/db/sqlite && $(MAKE) -s ensure-sqlite-vec
+	@AI_MODE=true $(SCRIPT_DIR)/dev.sh start
+
 stop: ## 一键停止所有服务
 	@$(SCRIPT_DIR)/dev.sh stop
 
@@ -311,6 +316,16 @@ build-sqlite-vec: ## 构建 sqlite-vec 静态库（本机平台）
 	@echo "Building sqlite-vec static library for current platform..."
 	@chmod +x $(SCRIPT_DIR)/build-sqlite-vec-static.sh
 	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh
+
+ensure-sqlite-vec: ## 确保 sqlite-vec 静态库已下载（通过 go generate）
+	@echo "📦 Checking sqlite-vec static library..."
+	@cd store/db/sqlite && \
+	if [ ! -f ".lib/libvec0.a" ]; then \
+		echo "  → Not found, downloading from official releases..."; \
+		go generate -v ./...; \
+	else \
+		echo "  ✓ Found at store/db/sqlite/.lib/libvec0.a"; \
+	fi
 
 build-sqlite-vec-all: ## 构建所有平台的 sqlite-vec 静态库
 	@echo "Building sqlite-vec static libraries for all platforms..."

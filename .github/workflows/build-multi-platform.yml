@@ -1,39 +1,58 @@
-name: Build Multi-Platform Binaries
+name: Build Multi-Platform with AI Support
 
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ${{ matrix.os }}
+
     strategy:
+      fail-fast: false
       matrix:
         include:
-          # macOS (intel)
+          # macOS Intel (x86_64)
           - os: macos-latest
-            target: darwin-amd64
+            goos: darwin
             goarch: amd64
-          # macOS (Apple Silicon)
+            zig_target: x86_64-macos-none
+            artifact_name: divinesense-darwin-amd64
+
+          # macOS ARM64 (Apple Silicon)
           - os: macos-latest
-            target: darwin-arm64
+            goos: darwin
             goarch: arm64
-          # Linux (amd64)
+            zig_target: aarch64-macos-none
+            artifact_name: divinesense-darwin-arm64
+
+          # Linux AMD64 (x86_64)
           - os: ubuntu-latest
-            target: linux-amd64
+            goos: linux
             goarch: amd64
-          # Linux (arm64)
+            zig_target: x86_64-linux-musl
+            artifact_name: divinesense-linux-amd64
+
+          # Linux ARM64 (aarch64)
           - os: ubuntu-latest
-            target: linux-arm64
+            goos: linux
             goarch: arm64
-          # Windows
-          - os: windows-latest
-            target: windows-amd64
-            goarch: amd64
+            zig_target: aarch64-linux-musl
+            artifact_name: divinesense-linux-arm64
 
     steps:
       - name: Checkout code
@@ -44,61 +63,196 @@ jobs:
         with:
           go-version: '1.25'
           cache: true
+          cache-dependency-path: go.sum
 
-      - name: Install dependencies (Ubuntu)
+      - name: Install Zig (for Linux cross-compilation)
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git
+        uses: goto-bus/setup-zig@v2
+        with:
+          version: 0.13.0
 
-      - name: Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Download sqlite-vec static library
         run: |
-          brew install sqlite3
+          echo "📦 Downloading sqlite-vec static library for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          cd store/db/sqlite
 
-      - name: Build sqlite-vec static library
-        run: |
-          ./scripts/build-sqlite-vec.sh
+          # Run go generate to download static library
+          # Note: GOOS/GOARCH affect the download URL
+          go generate -v ./...
 
-      - name: Build DivineSense
+          echo "✓ Download completed"
+          ls -lh .lib/libvec0.a
         env:
-          CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+
+      - name: Verify static library
         run: |
-          make build PROD=1
+          echo "🔍 Verifying sqlite-vec static library..."
+          cd store/db/sqlite
+
+          if [ ! -f ".lib/libvec0.a" ]; then
+            echo "❌ Static library not found!"
+            exit 1
+          fi
+
+          # Check file size (should be ~150KB for official builds)
+          size=$(wc -c < .lib/libvec0.a | tr -d ' ')
+          if [ "$size" -lt 100000 ]; then
+            echo "❌ Static library too small: $size bytes (corrupted?)"
+            exit 1
+          fi
+
+          echo "✓ Static library verified: $size bytes"
+        shell: bash
+
+      - name: Build with AI support (sqlite-vec)
+        run: |
+          echo "🔨 Building DivineSense with AI support..."
+          set -x
+
+          # Set cross-compilation environment for Linux
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            export CC="zig cc -target ${{ matrix.zig_target }}"
+            export CXX="zig c++ -target ${{ matrix.zig_target }}"
+          fi
+
+          # Build with sqlite_vec tag
+          CGO_ENABLED=1 \
+          GOOS=${{ matrix.goos }} \
+          GOARCH=${{ matrix.goarch }} \
+          go build -tags sqlite_vec \
+            -ldflags "-s -w -X main.Version=${{ github.ref_name }}" \
+            -o "${{ matrix.artifact_name }}" \
+            ./cmd/divinesense
+
+          # Verify build
+          if [ ! -f "${{ matrix.artifact_name }}" ]; then
+            echo "❌ Build failed: binary not found"
+            exit 1
+          fi
+
+          ls -lh "${{ matrix.artifact_name }}"
+
+          # Show binary info
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            file "${{ matrix.artifact_name }}"
+          else
+            ls -l "${{ matrix.artifact_name }}"
+          fi
+        shell: bash
+
+      - name: Test binary (optional)
+        if: matrix.goos == 'darwin' && matrix.goarch == 'arm64' && github.event_name == 'push'
+        run: |
+          echo "🧪 Testing binary..."
+          ./${{ matrix.artifact_name }} --version || true
+          ./${{ matrix.artifact_name }} --help
+          echo "✓ Binary is functional"
+
+      - name: Create checksums
+        run: |
+          echo "📝 Creating checksums..."
+          if [ "${{ matrix.goos }}" = "darwin" ]; then
+            shasum -a  "${{ matrix.artifact_name }}" > checksums.txt
+          else
+            sha256sum "${{ matrix.artifact_name }}" > checksums.txt
+          fi
+          cat checksums.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: divinesense-${{ matrix.target }}
-          path: divinesense*
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_name }}
+            checksums.txt
+          retention-days: 7
 
   release:
-    name: Create Release
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+
     permissions:
       contents: write
-    outputs:
-      release-url: ${{ steps.create_release.outputs.html_url }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: |
+            divinesense-*
+            checksums.txt
+
+      - name: Display artifacts
+        run: |
+          echo "📦 Downloaded artifacts:"
+          ls -lh
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          echo "📝 Generating release notes..."
+          cat > release_notes.md << 'EOF'
+          ## DivineSense ${{ github.ref_name }}
+
+          ### 🚀 AI Support Enabled
+
+          This release includes full AI support with sqlite-vec:
+          - Vector similarity search with vec0 virtual tables
+          - Conversation persistence and episodic memory
+          - Multi-agent AI system (MemoParrot, ScheduleParrot, AmazingParrot)
+
+          ### 📦 Available Platforms
+
+          - **macOS Intel**: divinesense-darwin-amd64
+          - **macOS ARM64 (Apple Silicon)**: divinesense-darwin-arm64
+          - **Linux AMD64**: divinesense-linux-amd64
+          - **Linux ARM64**: divinesense-linux-arm64
+
+          ### 🔧 Build Details
+
+          - Go version: 1.25
+          - sqlite-vec version: v0.1.7-alpha.2
+          - Build tags: sqlite_vec
+          - CGO enabled for static linking
+
+          ### 📚 Documentation
+
+          - [Usage Guide](https://github.com/hrygo/divinesense/blob/main/docs/dev-guides/SQLITE_VEC_USAGE_GUIDE.md)
+          - [Integration Details](https://github.com/hrygo/divinesense/blob/main/docs/research/SQLITE_VEC_OFFICIAL_RELEASES.md)
+
+          ---
+
+          **Full Changelog**: https://github.com/hrygo/divinesense/compare/${{ github.event.release.target_name }}...${{ github.ref_name }}
+          EOF
+
+          cat release_notes.md
 
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            divinesense-*
-            !divinesense-*.md
-          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
+          name: DivineSense ${{ github.ref_name }}
+          body_path: release_notes.md
           draft: false
           prerelease: false
+          generate_release_notes: false
+          files: |
+            divinesense-darwin-amd64
+            divinesense-darwin-arm64
+            divinesense-linux-amd64
+            divinesense-linux-arm64
+            checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output release URL
+        run: |
+          echo "🎉 Release created at: ${{ steps.create_release.outputs.html_url }}"

@@ -195,8 +195,15 @@ start_backend() {
     # 加载环境变量
     load_env
 
+    # 检测是否启用 AI 模式
+    local ai_tags="noui"
+    if [ "$DIVINESENSE_AI_MODE" = "true" ] || [ "$AI_MODE" = "true" ]; then
+        log_info "🤖 AI 模式已启用"
+        ai_tags="sqlite_vec"
+    fi
+
     # 启动后端（后台运行）
-    nohup go run -tags=noui ./cmd/divinesense --mode dev --port $BACKEND_PORT \
+    nohup go run -tags="$ai_tags" ./cmd/divinesense --mode dev --port $BACKEND_PORT \
         > "$BACKEND_LOG" 2>&1 &
 
     local shell_pid=$!
@@ -213,6 +220,10 @@ start_backend() {
         else
             # 如果找不到监听进程，保留 shell PID
             log_success "后端已启动 (PID: $shell_pid, http://localhost:$BACKEND_PORT)"
+        fi
+
+                if [ "$ai_tags" = "sqlite_vec" ]; then
+            echo "  → AI 模式已启用 (sqlite-vec)"
         fi
         return 0
     else
