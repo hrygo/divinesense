@@ -115,7 +115,7 @@ build_frontend() {
     log_success "Frontend built to web/dist/"
 }
 
-# Build backend for a platform
+# Build backend for a platform (without AI features)
 build_platform() {
     local platform=$1
     local GOOS=$(echo $platform | cut -d'/' -f1)
@@ -126,7 +126,7 @@ build_platform() {
     fi
     local output_path="${DIST_DIR}/${output_name}"
 
-    log_info "Building for ${platform}..."
+    log_info "Building for ${platform} (no AI)..."
 
     # Set cross-compilation environment
     export GOOS=$GOOS
@@ -167,8 +167,104 @@ build_platform() {
     fi
 }
 
+# Build backend for a platform with AI features (static linking)
+build_platform_with_ai() {
+    local platform=$1
+    local GOOS=$(echo $platform | cut -d'/' -f1)
+    local GOARCH=$(echo $platform | cut -d'/' -f2)
+    local output_name="divinesense-${VERSION}-${GOOS}-${GOARCH}-ai"
+    if [ "$GOOS" == "windows" ]; then
+        output_name="${output_name}.exe"
+    fi
+    local output_path="${DIST_DIR}/${output_name}"
+
+    log_info "Building for ${platform} (with AI)..."
+
+    # Check for static library
+    local static_lib="${PROJECT_ROOT}/internal/sqlite-vec/libvec0_${GOOS}_${GOARCH}.a"
+    if [ ! -f "${static_lib}" ]; then
+        log_warn "Static library not found: ${static_lib}"
+        log_warn "Skipping AI build for ${platform}"
+        log_info "Run 'make build-sqlite-vec-all' to build all static libraries"
+        return 0
+    fi
+
+    # Set cross-compilation environment
+    export GOOS=$GOOS
+    export GOARCH=$GOARCH
+    export CGO_ENABLED=1
+
+    # Use Zig for cross-compilation
+    if ! command -v zig &>/dev/null; then
+        log_warn "Zig compiler not found, skipping AI build for ${platform}"
+        return 0
+    fi
+
+    # Set Zig as C compiler
+    local zig_target=""
+    case "${GOOS}/${GOARCH}" in
+        "linux/amd64")
+            zig_target="x86_64-linux-musl"
+            ;;
+        "linux/arm64")
+            zig_target="aarch64-linux-musl"
+            ;;
+        "darwin/amd64")
+            zig_target="x86_64-macos-none"
+            ;;
+        "darwin/arm64")
+            zig_target="aarch64-macos-none"
+            ;;
+        "windows/amd64")
+            zig_target="x86_64-windows-msvc"
+            ;;
+        *)
+            log_warn "Unsupported platform: ${platform}"
+            return 0
+            ;;
+    esac
+
+    export CC=zig cc
+    export CXX=zig c++
+    export CGO_LDFLAGS="-L${PROJECT_ROOT}/internal/sqlite-vec -lvec0_${GOOS}_${GOARCH}"
+
+    # Build with static linking
+    cd "${PROJECT_ROOT}"
+    go build -tags sqlite_vec_static -ldflags "${LDFLAGS}" -o "${output_path}" ./cmd/divinesense
+
+    # Verify build
+    if [ -f "${output_path}" ]; then
+        local size=$(du -h "${output_path}" | cut -f1)
+        log_success "Built ${platform} (AI) → ${output_name} (${size})"
+    else
+        log_error "Failed to build ${platform} (AI)"
+        return 1
+    fi
+
+    # Sign macOS binaries to bypass Gatekeeper
+    if [ "$GOOS" == "darwin" ]; then
+        log_info "  Signing macOS binary with ad-hoc signature..."
+        if command -v codesign &>/dev/null; then
+            codesign --force --deep --sign - "${output_path}"
+            codesign -vv "${output_path}" 2>&1 | grep -E "(valid on disk|satisfies)" || true
+        else
+            log_warn "  codesign not found (macOS only). Binary will need xattr -cr on first run."
+        fi
+    fi
+
+    # Create checksum
+    if command -v sha256sum &>/dev/null; then
+        cd "${DIST_DIR}"
+        sha256sum "${output_name}" >> "${DIST_DIR}/checksums.txt"
+    elif command -v shasum &>/dev/null; then
+        cd "${DIST_DIR}"
+        shasum -a 256 "${output_name}" >> "${DIST_DIR}/checksums.txt"
+    fi
+}
+
 # Main build process
 main() {
+    local build_mode="${2:-no-ai}"  # no-ai, with-ai, both
     print_banner
     check_dependencies
 
@@ -184,7 +280,13 @@ main() {
 
     # Build for each platform
     for platform in "${PLATFORMS[@]}"; do
-        build_platform "$platform" || exit 1
+        if [ "$build_mode" = "no-ai" ] || [ "$build_mode" = "both" ]; then
+            build_platform "$platform" || exit 1
+        fi
+
+        if [ "$build_mode" = "with-ai" ] || [ "$build_mode" = "both" ]; then
+            build_platform_with_ai "$platform" || exit 1
+        fi
     done
 
     # Copy systemd service file
@@ -193,7 +295,7 @@ main() {
 
     echo ""
     log_success "=========================================="
-    log_success "Release build complete!"
+    log_success "Release build complete! (mode: ${build_mode})"
     log_success "=========================================="
     echo ""
     log_info "Output directory: ${DIST_DIR}"

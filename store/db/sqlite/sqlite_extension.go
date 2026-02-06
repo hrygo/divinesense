@@ -8,8 +8,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // loadExtension loads a SQLite extension using go-sqlite3's built-in LoadExtension method.

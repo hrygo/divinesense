@@ -88,6 +88,7 @@ WEB_DIR ?= web
 .PHONY: dev-logs dev-logs-backend dev-logs-frontend dev-logs-follow
 .PHONY: check-embed-frontend check-embed-backend check-embed-all
 .PHONY: checksum verify-checksum
+.PHONY: build-sqlite-vec build-sqlite-vec-all
 .PHONY: version version-json version-verbose
 
 # ===========================================================================
@@ -264,7 +265,7 @@ db-vector: ## 验证 pgvector 扩展
 
 test: ## 运行所有测试
 	@echo "Running tests..."
-	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -short -timeout 2m 2>&1 | grep -E "^(ok |FAIL|\?)" | tee test-summary.log
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -short -timeout 2m 2>&1 | grep -E "^(ok |FAIL|\?)" | tee test-summary.log
 	@echo ""
 	@echo "Test summary:"
 	@echo "  Passed: $$(grep -c '^ok ' test-summary.log || echo 0) packages"
@@ -278,19 +279,19 @@ test: ## 运行所有测试
 .PHONY: test-verbose
 test-verbose: ## 运行所有测试(详细输出)
 	@echo "Running tests with verbose output..."
-	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -v -timeout 2m
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -v -timeout 2m
 
 test-ai: ## 运行 AI 测试
 	@echo "Running AI tests..."
-	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test ./plugin/ai/... -v
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" ./plugin/ai/... -v
 
 test-embedding: ## 运行 Embedding 测试
 	@echo "Running Embedding tests..."
-	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test ./plugin/ai/... -run Embedding -v
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" ./plugin/ai/... -run Embedding -v
 
 test-runner: ## 运行 Runner 测试
 	@echo "Running Runner tests..."
-	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test ./server/runner/embedding/... -v
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" ./server/runner/embedding/... -v
 
 # ===========================================================================
 # Build Commands
@@ -300,12 +301,32 @@ test-runner: ## 运行 Runner 测试
 
 build: ## 构建后端
 	@echo "Building backend..."
-	@echo "Version: $(VERSION)"
-	@go build $(LDFLAGS) -o $(BACKEND_BIN) ./$(BACKEND_CMD)
+	@go build -o $(BACKEND_BIN) ./$(BACKEND_CMD)
 	@if [ "$$(go env GOOS)" = "darwin" ] && command -v codesign >/dev/null 2>&1; then \
 		echo "Signing binary with ad-hoc signature..."; \
 		codesign --force --deep --sign - $(BACKEND_BIN); \
 	fi
+
+build-sqlite-vec: ## 构建 sqlite-vec 静态库（本机平台）
+	@echo "Building sqlite-vec static library for current platform..."
+	@chmod +x $(SCRIPT_DIR)/build-sqlite-vec-static.sh
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh
+
+build-sqlite-vec-all: ## 构建所有平台的 sqlite-vec 静态库
+	@echo "Building sqlite-vec static libraries for all platforms..."
+	@chmod +x $(SCRIPT_DIR)/build-sqlite-vec-static.sh
+	@echo "Building for linux/amd64..."
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh linux amd64
+	@echo "Building for linux/arm64..."
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh linux arm64
+	@echo "Building for darwin/amd64..."
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh darwin amd64
+	@echo "Building for darwin/arm64..."
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh darwin arm64
+	@echo "Building for windows/amd64..."
+	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh windows amd64
+	@echo "✅ All sqlite-vec static libraries built successfully"
+	@ls -lh internal/sqlite-vec/*.a
 
 build-web: ## 构建前端
 	@echo "Building frontend..."
@@ -398,7 +419,7 @@ check-build: ## 检查编译
 
 check-test: ## 检查测试
 	@echo "Running tests..."
-	@go test -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -short -timeout 30s || { echo "Tests failed"; exit 1; }
+	@go test -tags="noui" $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -short -timeout 30s || { echo "Tests failed"; exit 1; }
 	@echo "Tests OK"
 
 check-i18n: ## 检查 i18n 翻译完整性 (强制)
@@ -444,9 +465,9 @@ ci-backend: ## 后端 CI 检查 (go mod tidy + golangci-lint + test)
 		fi; \
 		rm -f go.mod.bak go.sum.bak
 	@echo "  → golangci-lint..."
-	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags=noui
+	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags="noui"
 	@echo "  → go test..."
-	@go test -short -timeout=30s -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)")
+	@go test -short -timeout=30s -tags=noui ./...
 	@echo "  ✅ Backend checks passed"
 
 ci-frontend: ## 前端 CI 检查 (lint + build)
@@ -461,7 +482,7 @@ ci-frontend: ## 前端 CI 检查 (lint + build)
 
 lint: ## 运行 golangci-lint (使用 .golangci.yaml 配置)
 	@echo "Running golangci-lint..."
-	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags=noui || { echo "Linting failed"; exit 1; }
+	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags="noui" || { echo "Linting failed"; exit 1; }
 	@echo "Linting OK"
 
 vet: ## 运行 go vet
