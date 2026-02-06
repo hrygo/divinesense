@@ -81,6 +81,14 @@ const RETRY_CONFIG = {
   MAX_RETRY_DELAY: 30000,
 } as const;
 
+/**
+ * Cache data structure for block list queries
+ */
+interface BlockListCacheData {
+  blocks: Block[];
+  totalCount: number;
+}
+
 // Query keys factory for consistent cache management
 export const blockKeys = {
   all: ["blocks"] as const,

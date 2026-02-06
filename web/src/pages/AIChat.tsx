@@ -7,6 +7,7 @@ import { ChatHeader } from "@/components/AIChat/ChatHeader";
 import { ChatInput } from "@/components/AIChat/ChatInput";
 import { ChatMessages } from "@/components/AIChat/ChatMessages";
 import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
+import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
@@ -129,6 +130,9 @@ function UnifiedChatView({
         onImmersiveModeToggle={onImmersiveModeToggle}
         blocks={blocks}
       />
+
+      {/* SessionBar - aggregated session statistics */}
+      <SessionBar blocks={blocks} blockSummary={blockSummary} />
 
       {/* Messages Area with Welcome */}
       <ChatMessages
