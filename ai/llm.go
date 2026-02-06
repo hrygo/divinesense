@@ -506,6 +506,89 @@ func convertMessages(messages []Message) []openai.ChatCompletionMessage {
 	return llmMessages
 }
 
+// Warmup sends a lightweight ping request to establish and warm up the LLM connection.
+// This reduces latency for the first real request by pre-establishing TCP/TLS connections.
+// Warmup is non-blocking and logs warnings instead of failing if the ping request errors.
+//
+// Optimized for cost and performance:
+// - max_tokens=1 (minimum possible output)
+// - temperature=0 (deterministic, fastest)
+// - single token prompt ("Hi" → "Hi" or similar short response)
+//
+// 预热发送轻量 ping 请求以预热 LLM 连接。
+// 这会预先建立 TCP/TLS 连接，减少首次真实请求的延迟。
+// 预热是非阻塞的，如果 ping 请求失败只会记录警告而不会导致错误。
+//
+// 成本和性能优化：
+// - max_tokens=1（最小输出）
+// - temperature=0（确定性，最快）
+// - 单 token 提示（"Hi" → "Hi" 或类似短回复）
+func (s *llmService) Warmup(ctx context.Context) {
+	// Use a short timeout for warmup - don't block startup if provider is slow
+	warmupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	slog.Debug("LLM: starting connection warmup",
+		"provider", s.provider(),
+		"model", s.model,
+	)
+
+	startTime := time.Now()
+
+	// Direct API call with minimal parameters for cost/performance optimization
+	// max_tokens=1 ensures minimum cost and fastest response
+	// temperature=0 ensures deterministic output
+	req := openai.ChatCompletionRequest{
+		Model:       s.model,
+		MaxTokens:   1, // Minimum output for warmup
+		Temperature: 0, // Deterministic, fastest
+		Messages: []openai.ChatCompletionMessage{
+			{Role: openai.ChatMessageRoleUser, Content: "Hi"},
+		},
+	}
+
+	_, err := s.client.CreateChatCompletion(warmupCtx, req)
+
+	duration := time.Since(startTime)
+
+	if err != nil {
+		// Log warning but don't fail - warmup is best-effort
+		slog.Warn("LLM: warmup ping failed (service will still work, first request may be slower)",
+			"provider", s.provider(),
+			"model", s.model,
+			"error", err,
+			"duration_ms", duration.Milliseconds(),
+		)
+		return
+	}
+
+	slog.Info("LLM: connection warmed up successfully",
+		"provider", s.provider(),
+		"model", s.model,
+		"duration_ms", duration.Milliseconds(),
+	)
+}
+
+// provider returns the LLM provider name for logging.
+// Note: we use the model field as a hint since client.config is unexported.
+func (s *llmService) provider() string {
+	if s.model == "" {
+		return "unknown"
+	}
+	modelLower := strings.ToLower(s.model)
+	switch {
+	case strings.Contains(modelLower, "deepseek"):
+		return "deepseek"
+	case strings.Contains(modelLower, "gpt"):
+		return "openai"
+	case strings.Contains(modelLower, "qwen"):
+		return "siliconflow"
+	default:
+		// Fallback to detecting from model name patterns
+		return "llm"
+	}
+}
+
 // Helper for creating system prompts.
 func SystemPrompt(content string) Message {
 	return Message{Role: "system", Content: content}

@@ -243,7 +243,7 @@ describe("useBlocksWithFallback", () => {
   it("should indicate fallback when no blocks returned for active conversation", async () => {
     vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyListResponse());
 
-    const { result } = renderHook(() => useBlocksWithFallback(123, undefined, { isActive: true }), { wrapper });
+    const { result } = renderHook(() => useBlocksWithFallback(123, { isActive: true }), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 

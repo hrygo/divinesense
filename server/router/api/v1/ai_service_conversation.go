@@ -23,6 +23,7 @@ func (s *AIService) ListAIConversations(ctx context.Context, _ *v1pb.ListAIConve
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
 	}
 
+	// BlockCount is now populated by SQL JOIN in store layer (N+1 fix)
 	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
 		CreatorID: &user.ID,
 	})
@@ -34,17 +35,8 @@ func (s *AIService) ListAIConversations(ctx context.Context, _ *v1pb.ListAIConve
 		Conversations: make([]*v1pb.AIConversation, 0, len(conversations)),
 	}
 	for _, c := range conversations {
-		// Get block count from blocks
-		blocks, err := s.Store.ListAIBlocks(ctx, &store.FindAIBlock{
-			ConversationID: &c.ID,
-		})
-		blockCount := int32(0)
-		if err == nil {
-			blockCount = int32(len(blocks))
-		}
-
 		pbConv := convertAIConversationFromStore(c)
-		pbConv.BlockCount = blockCount
+		pbConv.BlockCount = c.BlockCount // Use pre-fetched block count
 		response.Conversations = append(response.Conversations, pbConv)
 	}
 

@@ -33,6 +33,7 @@ import {
   DeleteBlockRequestSchema,
   GetBlockRequestSchema,
   ListBlocksRequestSchema,
+  ListMessagesRequestSchema,
   UpdateBlockRequestSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
 
@@ -606,26 +607,30 @@ interface BlocksWithFallbackResult {
  * When Block API fails (network error, 404, etc.), this hook returns
  * an error state that signals the UI to fall back to ChatItem[].
  *
+ * Uses ListMessages API for better performance with pagination and incremental sync.
+ *
  * @param conversationId - The conversation ID to fetch blocks for
- * @param filters - Optional filters for the block list
+ * @param filters - Optional filters (ignored - ListMessages doesn't support them yet)
  * @param options - Additional options like isActive (for active conversations)
  * @returns BlocksWithFallbackResult with blocks, loading state, and error info
  */
 export function useBlocksWithFallback(
   conversationId: number,
-  filters?: Partial<ListBlocksRequest>,
+  // filters?: Partial<ListBlocksRequest>, // TODO: support status/mode/cc_session_id filters via ListMessages
   options?: { isActive?: boolean },
 ): BlocksWithFallbackResult {
   const is_active = options?.isActive ?? false;
 
   const query = useQuery({
-    queryKey: blockKeys.list(conversationId, filters),
+    queryKey: ["blocks", "messages", conversationId], // Separate key from listBlocks
     queryFn: async () => {
-      const request = create(ListBlocksRequestSchema, {
+      // Use ListMessages API instead of ListBlocks for pagination support
+      const request = create(ListMessagesRequestSchema, {
         conversationId,
-        ...filters,
+        limit: 100, // Default limit
+        lastBlockUid: "", // First load
       } as Record<string, unknown>);
-      const response = await aiServiceClient.listBlocks(request);
+      const response = await aiServiceClient.listMessages(request);
       return response;
     },
     enabled: conversationId > 0,

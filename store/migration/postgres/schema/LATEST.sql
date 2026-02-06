@@ -275,6 +275,292 @@ CREATE TRIGGER trigger_ai_conversation_updated_ts
   BEFORE UPDATE ON ai_conversation
   FOR EACH ROW
   EXECUTE FUNCTION update_ai_conversation_updated_ts();
+-- episodic_memory (V0.93.0)
+-- Stores episodic memories for AI agents to learn from past interactions
+CREATE TABLE episodic_memory (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+  agent_type VARCHAR(20) NOT NULL,
+  user_input TEXT NOT NULL,
+  outcome VARCHAR(20) NOT NULL DEFAULT 'success',
+  summary TEXT,
+  importance REAL DEFAULT 0.5,
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  CONSTRAINT fk_episodic_memory_user
+    FOREIGN KEY (user_id)
+    REFERENCES "user"(id)
+    ON DELETE CASCADE,
+  CONSTRAINT chk_episodic_memory_outcome
+    CHECK (outcome IN ('success', 'failure')),
+  CONSTRAINT chk_episodic_memory_agent_type
+    CHECK (agent_type IN ('memo', 'schedule', 'amazing', 'assistant')),
+  CONSTRAINT chk_episodic_memory_importance
+    CHECK (importance >= 0 AND importance <= 1)
+);
+
+-- Indexes for episodic_memory
+CREATE INDEX idx_episodic_memory_user_time ON episodic_memory(user_id, timestamp DESC);
+CREATE INDEX idx_episodic_memory_agent ON episodic_memory(agent_type);
+CREATE INDEX idx_episodic_memory_importance ON episodic_memory(user_id, importance DESC);
+
+COMMENT ON TABLE episodic_memory IS 'Stores episodic memories for AI agents to learn from past interactions';
+COMMENT ON COLUMN episodic_memory.agent_type IS 'Type of agent: memo, schedule, amazing, or assistant';
+COMMENT ON COLUMN episodic_memory.outcome IS 'Result of the interaction: success or failure';
+COMMENT ON COLUMN episodic_memory.importance IS 'Importance score from 0 to 1, used for memory prioritization';
+-- user_preferences (V0.93.0)
+-- Stores user preferences for AI personalization
+CREATE TABLE user_preferences (
+  user_id INTEGER PRIMARY KEY,
+  preferences JSONB NOT NULL DEFAULT '{}',
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  CONSTRAINT fk_user_preferences_user
+    FOREIGN KEY (user_id)
+    REFERENCES "user"(id)
+    ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION update_user_preferences_updated_ts()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_user_preferences_updated_ts
+  BEFORE UPDATE ON user_preferences
+  FOR EACH ROW
+  EXECUTE FUNCTION update_user_preferences_updated_ts();
+
+CREATE INDEX idx_user_preferences_gin ON user_preferences USING gin(preferences);
+
+COMMENT ON TABLE user_preferences IS 'Stores user preferences for AI personalization';
+COMMENT ON COLUMN user_preferences.preferences IS 'JSONB containing timezone, default_duration, preferred_times, frequent_locations, communication_style, tag_preferences, and custom_settings';
+
+-- conversation_context (V0.93.0)
+-- Stores conversation context for AI session persistence and recovery
+CREATE TABLE conversation_context (
+  id SERIAL PRIMARY KEY,
+  session_id VARCHAR(64) NOT NULL UNIQUE,
+  user_id INTEGER NOT NULL,
+  agent_type VARCHAR(20) NOT NULL,
+  channel_type VARCHAR(20) NOT NULL DEFAULT 'web',
+  context_data JSONB NOT NULL DEFAULT '{}',
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  CONSTRAINT fk_conversation_context_user
+    FOREIGN KEY (user_id)
+    REFERENCES "user"(id)
+    ON DELETE CASCADE,
+  CONSTRAINT chk_conversation_context_agent_type
+    CHECK (agent_type IN ('memo', 'schedule', 'amazing', 'assistant')),
+  CONSTRAINT chk_conversation_context_channel_type
+    CHECK (channel_type IN ('web', 'telegram', 'whatsapp', 'dingtalk'))
+);
+
+CREATE INDEX idx_conversation_context_user ON conversation_context(user_id);
+CREATE INDEX idx_conversation_context_updated ON conversation_context(updated_ts DESC);
+CREATE INDEX idx_conversation_context_channel_type ON conversation_context(channel_type);
+
+CREATE OR REPLACE FUNCTION update_conversation_context_updated_ts()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_conversation_context_updated_ts
+  BEFORE UPDATE ON conversation_context
+  FOR EACH ROW
+  EXECUTE FUNCTION update_conversation_context_updated_ts();
+
+COMMENT ON TABLE conversation_context IS 'Stores conversation context for AI session persistence and recovery';
+COMMENT ON COLUMN conversation_context.session_id IS 'Unique session identifier';
+COMMENT ON COLUMN conversation_context.context_data IS 'JSONB containing messages, metadata, and other context information';
+COMMENT ON COLUMN conversation_context.channel_type IS 'Origin channel: web, telegram, whatsapp, dingtalk';
+
+-- agent_metrics and tool_metrics (V0.93.0)
+-- Hourly aggregated metrics for A/B testing and performance monitoring
+CREATE TABLE agent_metrics (
+  id SERIAL PRIMARY KEY,
+  hour_bucket TIMESTAMP NOT NULL,
+  agent_type VARCHAR(20) NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 0,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  latency_sum_ms BIGINT NOT NULL DEFAULT 0,
+  latency_p50_ms INTEGER,
+  latency_p95_ms INTEGER,
+  errors JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_agent_metrics_hour_type UNIQUE (hour_bucket, agent_type)
+);
+
+CREATE INDEX idx_agent_metrics_hour ON agent_metrics (hour_bucket DESC);
+
+CREATE TABLE tool_metrics (
+  id SERIAL PRIMARY KEY,
+  hour_bucket TIMESTAMP NOT NULL,
+  tool_name VARCHAR(50) NOT NULL,
+  call_count INTEGER NOT NULL DEFAULT 0,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  latency_sum_ms BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_tool_metrics_hour_name UNIQUE (hour_bucket, tool_name)
+);
+
+CREATE INDEX idx_tool_metrics_hour ON tool_metrics (hour_bucket DESC);
+
+-- chat_app_credential (V0.93.0)
+-- Stores credentials for chat app integrations (Telegram, WhatsApp, DingTalk)
+CREATE TABLE chat_app_credential (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  platform TEXT NOT NULL,
+  platform_user_id TEXT NOT NULL,
+  platform_chat_id TEXT,
+  access_token TEXT,
+  app_secret TEXT,
+  webhook_url TEXT,
+  enabled BOOLEAN DEFAULT true,
+  created_ts BIGINT NOT NULL,
+  updated_ts BIGINT NOT NULL,
+  UNIQUE(user_id, platform),
+  CONSTRAINT fk_chat_app_credential_user
+    FOREIGN KEY (user_id)
+    REFERENCES "user"(id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_chat_app_credential_user ON chat_app_credential(user_id);
+CREATE INDEX idx_chat_app_credential_platform ON chat_app_credential(platform);
+CREATE INDEX idx_chat_app_credential_platform_user_id ON chat_app_credential(platform, platform_user_id);
+
+COMMENT ON TABLE chat_app_credential IS 'Stores credentials for chat app integrations (Telegram, WhatsApp, DingTalk)';
+COMMENT ON COLUMN chat_app_credential.platform IS 'Platform name: telegram, whatsapp, dingtalk';
+COMMENT ON COLUMN chat_app_credential.platform_user_id IS 'Platform-specific user identifier';
+COMMENT ON COLUMN chat_app_credential.platform_chat_id IS 'Platform-specific chat ID for direct messaging';
+COMMENT ON COLUMN chat_app_credential.access_token IS 'Encrypted OAuth/Bot token';
+COMMENT ON COLUMN chat_app_credential.webhook_url IS 'Webhook URL (DingTalk only)';
+COMMENT ON COLUMN chat_app_credential.app_secret IS 'Additional secret for platforms that require it (e.g., DingTalk AppSecret)';
+
+-- =============================================================================
+-- Unified Block Model - ai_block (V0.93.0)
+-- Core table for unified conversation block storage
+-- =============================================================================
+CREATE TABLE ai_block (
+  id BIGSERIAL PRIMARY KEY,
+  uid TEXT NOT NULL UNIQUE,
+  conversation_id INTEGER NOT NULL,
+  round_number INTEGER NOT NULL DEFAULT 0,
+  block_type TEXT NOT NULL DEFAULT 'message',
+  mode TEXT NOT NULL DEFAULT 'normal',
+  user_inputs JSONB NOT NULL DEFAULT '[]',
+  assistant_content TEXT,
+  assistant_timestamp BIGINT,
+  event_stream JSONB NOT NULL DEFAULT '[]',
+  session_stats JSONB,
+  cc_session_id TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  parent_block_id BIGINT DEFAULT 0,
+  branch_path TEXT,
+  user_feedback TEXT,
+  regeneration_count INTEGER DEFAULT 0,
+  error_message TEXT,
+  model_version TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  cost_estimate BIGINT DEFAULT 0,
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()),
+  archived_at BIGINT DEFAULT 0,
+  CONSTRAINT fk_ai_block_conversation
+    FOREIGN KEY (conversation_id)
+    REFERENCES ai_conversation(id)
+    ON DELETE CASCADE,
+  CONSTRAINT chk_ai_block_type
+    CHECK (block_type IN ('message', 'context_separator')),
+  CONSTRAINT chk_ai_block_mode
+    CHECK (mode IN ('normal', 'geek', 'evolution')),
+  CONSTRAINT chk_ai_block_status
+    CHECK (status IN ('pending', 'streaming', 'completed', 'error'))
+);
+
+-- Indexes for ai_block
+CREATE INDEX idx_ai_block_conversation ON ai_block(conversation_id);
+CREATE INDEX idx_ai_block_created ON ai_block(created_ts ASC);
+CREATE INDEX idx_ai_block_round ON ai_block(conversation_id, round_number);
+CREATE INDEX idx_ai_block_status ON ai_block(status) WHERE status != 'completed';
+CREATE INDEX idx_ai_block_cc_session ON ai_block(cc_session_id) WHERE cc_session_id IS NOT NULL;
+CREATE INDEX idx_ai_block_conversation_status_round ON ai_block(conversation_id, status, round_number);
+CREATE INDEX idx_ai_block_pending_streaming ON ai_block(conversation_id) WHERE status IN ('pending', 'streaming');
+CREATE INDEX idx_ai_block_event_stream ON ai_block USING gin(event_stream);
+CREATE INDEX idx_ai_block_user_inputs ON ai_block USING gin(user_inputs);
+CREATE INDEX idx_ai_block_cc_session_conversation ON ai_block(cc_session_id, conversation_id) WHERE cc_session_id IS NOT NULL;
+CREATE INDEX idx_ai_block_parent ON ai_block(parent_block_id) WHERE parent_block_id IS NOT NULL;
+CREATE INDEX idx_ai_block_branch_path ON ai_block(branch_path) WHERE branch_path IS NOT NULL;
+CREATE INDEX idx_ai_block_cost ON ai_block(cost_estimate) WHERE cost_estimate > 0;
+CREATE INDEX idx_ai_block_feedback ON ai_block(user_feedback) WHERE user_feedback IS NOT NULL;
+CREATE INDEX idx_ai_block_archived ON ai_block(archived_at) WHERE archived_at IS NOT NULL;
+CREATE INDEX idx_ai_block_model ON ai_block(model_version) WHERE model_version IS NOT NULL;
+
+-- Update timestamp trigger
+CREATE OR REPLACE FUNCTION update_ai_block_updated_ts()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_ai_block_updated_ts
+  BEFORE UPDATE ON ai_block
+  FOR EACH ROW
+  EXECUTE FUNCTION update_ai_block_updated_ts();
+
+-- Auto-increment round_number trigger
+CREATE OR REPLACE FUNCTION ai_block_auto_round_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.round_number = 0 THEN
+    SELECT COALESCE(MAX(round_number), 0) + 1
+    INTO NEW.round_number
+    FROM ai_block
+    WHERE conversation_id = NEW.conversation_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_ai_block_auto_round
+  BEFORE INSERT ON ai_block
+  FOR EACH ROW
+  EXECUTE FUNCTION ai_block_auto_round_number();
+
+-- Compatibility view for ai_message
+CREATE VIEW v_ai_message AS
+SELECT
+  id,
+  uid,
+  conversation_id,
+  'MESSAGE' as type,
+  CASE
+    WHEN block_type = 'context_separator' THEN 'SEPARATOR'
+    ELSE 'MESSAGE'
+  END as message_type,
+  CASE
+    WHEN jsonb_array_length(user_inputs) > 0
+    THEN (user_inputs->0->>'content')
+    ELSE ''
+  END as user_content,
+  assistant_content as content,
+  metadata,
+  created_ts
+FROM ai_block
+WHERE block_type = 'message';
+
+
 -- =============================================================================
 -- Agent Session Stats (V0.54.0)
 -- =============================================================================

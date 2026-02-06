@@ -162,6 +162,12 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 	for iteration := 0; iteration < a.config.MaxIterations; iteration++ {
 		iterStart := time.Now()
 
+		// Send thinking event before first LLM call to reduce perceived latency
+		// This is especially important for cold-start scenarios where the first LLM call can take 3-5 seconds
+		if iteration == 0 && callback != nil {
+			callback(EventTypeThinking, "")
+		}
+
 		// Call LLM with tools
 		resp, stats, err := a.llm.ChatWithTools(ctx, messages, a.toolDescriptors())
 		if err != nil {

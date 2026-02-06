@@ -7,6 +7,7 @@ import { ChatHeader } from "@/components/AIChat/ChatHeader";
 import { ChatInput } from "@/components/AIChat/ChatInput";
 import { ChatMessages } from "@/components/AIChat/ChatMessages";
 import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
+import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
@@ -129,6 +130,9 @@ function UnifiedChatView({
         onImmersiveModeToggle={onImmersiveModeToggle}
         blocks={blocks}
       />
+
+      {/* SessionBar - mobile only (PC 端 SessionStats 已整合到 ChatHeader) */}
+      <SessionBar blocks={blocks} blockSummary={blockSummary} className="lg:hidden" />
 
       {/* Messages Area with Welcome */}
       <ChatMessages
@@ -272,7 +276,6 @@ const AIChat = () => {
     refetch: refetchBlocks,
   } = useBlocksWithFallback(
     currentConversationIdNum,
-    undefined, // No filters - get all blocks
     { isActive: shouldAutoRefreshBlocks }, // Only auto-refresh when not streaming
   );
 

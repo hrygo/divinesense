@@ -329,12 +329,8 @@ func (h *ParrotHandler) executeAgent(
 			logger.Warn("Failed to create block, continuing without block",
 				slog.String("error", createErr.Error()),
 			)
-		} else {
-			logger.Info("Created block for chat round",
-				slog.Int64("block_id", currentBlock.ID),
-				slog.Int64("conversation_id", int64(req.ConversationID)),
-			)
 		}
+		// Note: BlockManager already logs "Created block for chat" with round_number
 	}
 
 	// Track events for logging (protected by countMu)
@@ -610,10 +606,18 @@ func (h *ParrotHandler) executeAgent(
 		}
 		if normalProvider, ok := agent.(normalStatsGetter); ok && normalProvider != nil {
 			normalStats = normalProvider.GetSessionStats()
-			logger.Info("Agent: got normal stats from NormalSessionStatsProvider",
-				slog.Int("prompt_tokens", normalStats.PromptTokens),
-				slog.Int("completion_tokens", normalStats.CompletionTokens),
-				slog.Int64("duration_ms", normalStats.TotalDurationMs))
+			// For tool-based agents, token stats are always zero - log tool metrics instead
+			if normalStats.PromptTokens == 0 && normalStats.CompletionTokens == 0 {
+				logger.Info("Agent: tool-based agent stats",
+					slog.Int("tool_calls", normalStats.ToolCallCount),
+					slog.Int64("duration_ms", normalStats.TotalDurationMs),
+					slog.String("agent_type", "tool_based"))
+			} else {
+				logger.Info("Agent: got normal stats from NormalSessionStatsProvider",
+					slog.Int("prompt_tokens", normalStats.PromptTokens),
+					slog.Int("completion_tokens", normalStats.CompletionTokens),
+					slog.Int64("duration_ms", normalStats.TotalDurationMs))
+			}
 		} else {
 			logger.Info("Agent: agent does not provide session stats")
 		}
@@ -690,13 +694,21 @@ func (h *ParrotHandler) executeAgent(
 		if statsSnapshot.TotalCostMilliCents > 0 {
 			blockSummary.TotalCostUsd = float64(statsSnapshot.TotalCostMilliCents) / 100000
 		}
-		logger.Info("Agent: applied normal stats to BlockSummary",
-			slog.Int("prompt_tokens", statsSnapshot.PromptTokens),
-			slog.Int("completion_tokens", statsSnapshot.CompletionTokens),
-			slog.Int64("duration_ms", statsSnapshot.TotalDurationMs),
-			slog.Int64("cost_milli_cents", statsSnapshot.TotalCostMilliCents),
-			slog.Float64("cost_usd", blockSummary.TotalCostUsd),
-		)
+		// Log meaningful stats based on agent type
+		if statsSnapshot.PromptTokens == 0 && statsSnapshot.CompletionTokens == 0 {
+			logger.Info("Agent: tool-based agent completed",
+				slog.Int("tool_calls", statsSnapshot.ToolCallCount),
+				slog.String("tools", formatToolsList(statsSnapshot.ToolsUsed)),
+				slog.Int64("duration_ms", statsSnapshot.TotalDurationMs))
+		} else {
+			logger.Info("Agent: applied normal stats to BlockSummary",
+				slog.Int("prompt_tokens", statsSnapshot.PromptTokens),
+				slog.Int("completion_tokens", statsSnapshot.CompletionTokens),
+				slog.Int64("duration_ms", statsSnapshot.TotalDurationMs),
+				slog.Int64("cost_milli_cents", statsSnapshot.TotalCostMilliCents),
+				slog.Float64("cost_usd", blockSummary.TotalCostUsd),
+			)
+		}
 	}
 
 	// Phase 5: Complete or mark error on Block BEFORE sending done marker
@@ -865,14 +877,16 @@ func HandleError(err error) error {
 }
 
 // NewChatRouter creates a new chat router for auto-routing based on intent classification.
-// Optionally accepts a router.Service for enhanced three-layer routing.
-// If cfg is nil, only rule-based routing is enabled (no LLM fallback).
-func NewChatRouter(cfg *ai.IntentClassifierConfig, routerSvc *router.Service) *agentpkg.ChatRouter {
-	routerCfg := agentpkg.ChatRouterConfig{}
-	if cfg != nil {
-		routerCfg.APIKey = cfg.APIKey
-		routerCfg.BaseURL = cfg.BaseURL
-		routerCfg.Model = cfg.Model
+// routerSvc is required and provides three-layer routing (cache → rule → history → LLM).
+func NewChatRouter(routerSvc *router.Service) *agentpkg.ChatRouter {
+	return agentpkg.NewChatRouter(routerSvc)
+}
+
+// formatToolsList formats a list of tool names for logging.
+// Example: ["schedule_query", "schedule_add"] → "schedule_query, schedule_add"
+func formatToolsList(tools []string) string {
+	if len(tools) == 0 {
+		return "none"
 	}
-	return agentpkg.NewChatRouter(routerCfg, routerSvc)
+	return strings.Join(tools, ", ")
 }

@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime/debug"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	pkgerrors "github.com/pkg/errors"
@@ -102,8 +104,9 @@ func NewLoggingInterceptor(logStacktrace bool) *LoggingInterceptor {
 
 func (in *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		start := time.Now()
 		resp, err := next(ctx, req)
-		in.log(req.Spec().Procedure, err)
+		in.log(req.Spec().Procedure, err, start)
 		return resp, err
 	}
 }
@@ -116,26 +119,49 @@ func (*LoggingInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFun
 	return next // Streaming not used in this service
 }
 
-func (in *LoggingInterceptor) log(procedure string, err error) {
-	level, msg := in.classifyError(err)
-	attrs := []slog.Attr{slog.String("method", procedure)}
+// shortenServiceName removes the "memos.api.v1." prefix from procedure names
+// for cleaner logs. E.g., "memos.api.v1.AuthService/GetCurrentUser" -> "AuthService/GetCurrentUser"
+func shortenServiceName(procedure string) string {
+	// Remove common prefix
+	prefix := "/memos.api.v1."
+	if strings.HasPrefix(procedure, prefix) {
+		return strings.TrimPrefix(procedure, prefix)
+	}
+	// Fallback: remove leading slash if present
+	return strings.TrimPrefix(procedure, "/")
+}
+
+func (in *LoggingInterceptor) log(procedure string, err error, start time.Time) {
+	duration := time.Since(start)
+	level, status := in.classifyError(err)
+	shortName := shortenServiceName(procedure)
+
+	// Build log attributes with consistent naming
+	attrs := []slog.Attr{
+		slog.String("type", "API"),
+		slog.String("method", shortName),
+		slog.String("status", status),
+		slog.Int64("duration_ms", duration.Milliseconds()),
+	}
+
 	if err != nil {
 		attrs = append(attrs, slog.String("error", err.Error()))
 		if in.logStacktrace {
 			attrs = append(attrs, slog.String("stacktrace", fmt.Sprintf("%+v", err)))
 		}
 	}
-	slog.LogAttrs(context.Background(), level, msg, attrs...)
+
+	slog.LogAttrs(context.Background(), level, "", attrs...)
 }
 
 func (*LoggingInterceptor) classifyError(err error) (slog.Level, string) {
 	if err == nil {
-		return slog.LevelInfo, "OK"
+		return slog.LevelInfo, "ok"
 	}
 
 	var connectErr *connect.Error
 	if !pkgerrors.As(err, &connectErr) {
-		return slog.LevelError, "unknown error"
+		return slog.LevelError, "unknown_error"
 	}
 
 	// Client errors (expected, log at INFO)
@@ -150,10 +176,10 @@ func (*LoggingInterceptor) classifyError(err error) (slog.Level, string) {
 		connect.CodeFailedPrecondition,
 		connect.CodeAborted,
 		connect.CodeOutOfRange:
-		return slog.LevelWarn, "client error"
+		return slog.LevelWarn, "client_error"
 	default:
 		// Server errors
-		return slog.LevelError, "server error"
+		return slog.LevelError, "server_error"
 	}
 }
 

@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"log/slog"
 
@@ -86,6 +87,16 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 							"provider", aiConfig.LLM.Provider,
 							"model", aiConfig.LLM.Model,
 						)
+						// Warmup LLM connection asynchronously to reduce first-request latency
+						// This is best-effort: warmup failures don't affect service startup
+						go func() {
+							warmupCtx, warmupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+							defer warmupCancel()
+							// Type assertion to access Warmup method (implementation detail)
+							if warmupable, ok := llmService.(interface{ Warmup(ctx context.Context) }); ok {
+								warmupable.Warmup(warmupCtx)
+							}
+						}()
 					}
 				}
 

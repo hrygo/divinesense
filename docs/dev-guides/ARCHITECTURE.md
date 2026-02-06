@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已验证 (2026-02-05) | **最后检查**: v0.93.0 (Unified Block Model)
+> **保鲜状态**: ✅ 已验证 (2026-02-07) | **最后检查**: v0.93.1 (路由优化 + 模型策略修正)
 
 ## 项目概述
 
@@ -17,7 +17,7 @@ DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 A
 | 后端   | Go 1.25, Echo, Connect RPC, pgvector                                                                 |
 | 前端   | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query                               |
 | 数据库 | PostgreSQL 16+（生产），SQLite（开发，**无 AI**）[#9](https://github.com/hrygo/divinesense/issues/9) |
-| AI     | DeepSeek V3（LLM），SiliconFlow（Embedding、Reranker）                                               |
+| AI     | **DeepSeek**（对话 LLM），**SiliconFlow**（Embedding、意图分类、Reranker）                              |
 
 ---
 
@@ -102,9 +102,10 @@ divinesense/
    - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **AI 核心模块** (`ai/`)：
-   - LLM 提供商：DeepSeek、OpenAI、Ollama
-   - Embedding：SiliconFlow (BAAI/bge-m3)、OpenAI
-   - Reranker：BAAI/bge-reranker-v2-m3
+   - **对话 LLM**：DeepSeek (`deepseek-chat`)
+   - **Embedding**：SiliconFlow (`BAAI/bge-m3`, 1024 维)
+   - **意图分类**：SiliconFlow (`Qwen/Qwen2.5-7B-Instruct`)
+   - **Reranker**：SiliconFlow (`BAAI/bge-reranker-v2-m3`)
    - 所有 AI 功能可选（由 `DIVINESENSE_AI_ENABLED` 控制）
    - 包含从 `server/ai/` 和 `server/retrieval/` 迁移的嵌入和检索功能
 
@@ -280,9 +281,9 @@ git push --no-verify
 
 ### 代理路由器
 
-**位置**：`ai/agent/chat_router.go`
+**位置**：`ai/agent/chat_router.go` + `ai/router/service.go`
 
-ChatRouter 实现**三层**意图分类系统：
+ChatRouter 实现**四层**意图分类系统：
 
 ```
 用户输入 → EvolutionMode? ─Yes→ EvolutionParrot（自我进化）
@@ -299,24 +300,40 @@ ChatRouter 实现**三层**意图分类系统：
                   ↓
            ChatRouter.Route()
                   ↓
-           routerService? ─Yes→ 三层路由
-                  │          (规则 + 历史 + LLM)
-                  │
-                  No（向后兼容）
+           router.Service.ClassifyIntent()
                   ↓
-           routeByRules()     ← 快速路径（0ms）
-                  ↓
-         匹配成功? ─Yes→ 返回（置信度 ≥0.80）
-                  │
-                  No
-                  ↓
-           routeByLLM()       ← 慢速路径（~400ms）
-                  ↓
-         Qwen2.5-7B-Instruct
-         （严格 JSON Schema）
+    ┌─────────────────────────────────────┐
+    │  Layer 0: Cache (LRU, 0ms)          │  → Hit? 返回缓存结果
+    │  Layer 1: RuleMatcher (0ms)        │  → Match? 返回
+    │  Layer 2: HistoryMatcher (~10ms)   │  → Match? 返回
+    │  Layer 3: LLM Classifier (~400ms)   │  → 返回 JSON {intent, confidence}
+    └─────────────────────────────────────┘
                   ↓
            路由结果（MEMO/SCHEDULE/AMAZING）
 ```
+
+**Layer 0: Cache (LRU)**
+- 容量：500 条
+- TTL：规则匹配结果 5 分钟，LLM 结果 30 分钟
+- 延迟：~0ms
+
+**Layer 1: RuleMatcher (关键词匹配)**
+- 时间词权重：2（今天、明天、后天、下周、本周、上午、下午、晚上、点）
+- 核心关键词权重：2（日程、安排、会议、提醒、预约、开会）
+- 快速路径：时间词 + 查询词 → `schedule_query` (如："明天有什么事情要做")
+- 延迟：~0ms
+
+**Layer 2: HistoryMatcher (对话历史)**
+- 基于用户历史对话的向量相似度匹配
+- 存储表：`conversation_context`
+- 延迟：~10ms
+
+**Layer 3: LLM Classifier**
+- Provider: SiliconFlow
+- Model: `Qwen/Qwen2.5-7B-Instruct`
+- Token: 50, Temperature: 0
+- 输出格式：JSON Schema `{intent, confidence}`
+- 延迟：~400ms
 
 **EvolutionMode 最高优先级路由**：
 - 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
@@ -334,20 +351,19 @@ ChatRouter 实现**三层**意图分类系统：
 - 所有用户可用
 - 实现：`server/router/api/v1/ai/handler.go` 中的 `handleGeekMode()`
 
-**三层路由**（当 `router.Service` 已配置时）：
-1. **规则匹配**（0ms）：常见模式的关键词匹配
-2. **历史感知**（~10ms）：对话上下文匹配
-3. **LLM 降级**（~400ms）：模糊输入的语义理解
+### AI 模型策略总览
 
-**规则匹配**：
-- 日程关键词：`日程`、`schedule`、`会议`、`meeting`、`提醒`、`remind`、时间词（`今天`、`明天`、`周X`、`点`、`分`）
-- 笔记关键词：`笔记`、`memo`、`note`、`搜索`、`search`、`查找`、`find`、`写过`、`关于`
-- Amazing 关键词：`综合`、`总结`、`summary`、`本周工作`、`周报`
+| 功能 | 提供商 | 模型 | 用途 |
+|:-----|:-------|:-----|:-----|
+| **对话 LLM** | DeepSeek | `deepseek-chat` | 主对话生成 |
+| **向量 Embedding** | SiliconFlow | `BAAI/bge-m3` | 语义搜索（1024维） |
+| **意图分类** | SiliconFlow | `Qwen/Qwen2.5-7B-Instruct` | 路由意图分类 |
+| **重排 Rerank** | SiliconFlow | `BAAI/bge-reranker-v2-m3` | 检索结果精炼 |
 
-**LLM 降级**：
-- 模型：`Qwen/Qwen2.5-7B-Instruct`（通过 SiliconFlow）
-- 最大 token：30（最小化响应）
-- 严格 JSON Schema：`{"route": "memo|schedule|amazing", "confidence": 0.0-1.0}`
+**策略说明**：
+- **意图分类独立模型**：使用轻量级 Qwen2.5-7B-Instruct（而非主对话 LLM），实现快速、低成本的分类
+- **成本优化**：意图分类 Token 限制为 50，Temperature 0（确定性输出）
+- **输出格式**：JSON Schema `{intent, confidence}` 确保结构化响应
 
 ### 代理工具
 
@@ -764,14 +780,26 @@ pending ──▶ streaming ──▶ completed
 DIVINESENSE_DRIVER=postgres
 DIVINESENSE_DSN=postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable
 
-# AI
+# AI 开关
 DIVINESENSE_AI_ENABLED=true
-DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
-DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
-DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
+
+# 对话 LLM (DeepSeek)
 DIVINESENSE_AI_LLM_PROVIDER=deepseek
 DIVINESENSE_AI_LLM_MODEL=deepseek-chat
 DIVINESENSE_AI_DEEPSEEK_API_KEY=your_key
+
+# 向量 Embedding (SiliconFlow)
+DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
+DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
+DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
+DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
+
+# 意图分类 (SiliconFlow + Qwen)
+DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
+DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
+
+# 重排 Reranker (SiliconFlow)
+DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
 DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
 DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 ```
