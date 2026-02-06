@@ -144,7 +144,8 @@ func (s *Server) Shutdown(ctx context.Context) {
 
 func (s *Server) StartBackgroundRunners(ctx context.Context) {
 	// Start embedding runner if AI is enabled
-	if s.Profile.IsAIEnabled() && s.Profile.Driver == "postgres" {
+	// AI features are supported on PostgreSQL (with pgvector) and SQLite (with application-layer vector search)
+	if s.Profile.IsAIEnabled() && (s.Profile.Driver == "postgres" || s.Profile.Driver == "sqlite") {
 		aiConfig := ai.NewConfigFromProfile(s.Profile)
 		if err := aiConfig.Validate(); err == nil {
 			embeddingService, err := ai.NewEmbeddingService(&aiConfig.Embedding)

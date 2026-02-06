@@ -36,9 +36,11 @@ type MemoWithScore struct {
 
 // VectorSearchOptions represents the options for vector search.
 type VectorSearchOptions struct {
-	Vector []float32
-	Limit  int
-	UserID int32
+	Vector        []float32
+	Limit         int
+	UserID        int32
+	CreatedAfter  int64 // Optional: only search memos created after this timestamp
+	MaxCandidates int   // Optional: maximum candidates to fetch (default: limit * 10)
 }
 
 // Validate validates the VectorSearchOptions.

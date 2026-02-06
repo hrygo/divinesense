@@ -390,10 +390,15 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 		limit = opts.Limit
 	}
 
+	// Optimize: Only search memos from the last 90 days to reduce candidates
+	// This significantly improves performance for large datasets
+	ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
+
 	vectorResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-		UserID: opts.UserID,
-		Vector: queryVector,
-		Limit:  limit,
+		UserID:       opts.UserID,
+		Vector:       queryVector,
+		Limit:        limit,
+		CreatedAfter: ninetyDaysAgo, // Only search recent memos
 	})
 	if err != nil {
 		opts.Logger.ErrorContext(ctx, "Vector search failed",
@@ -415,11 +420,13 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 
 	// 根据质量决定是否扩展
 	if quality == MediumQuality && opts.Limit > 5 {
-		// 扩展到 Top 20
+		// 扩展到 Top 20 (with same time filter for consistency)
+		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 		moreResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-			UserID: opts.UserID,
-			Vector: queryVector,
-			Limit:  20,
+			UserID:       opts.UserID,
+			Vector:       queryVector,
+			Limit:        20,
+			CreatedAfter: ninetyDaysAgo,
 		})
 		if err == nil {
 			// 合并结果
@@ -610,10 +617,13 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 			return
 		}
 
+		// Add time filter for optimized performance
+		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 		results, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-			UserID: opts.UserID,
-			Vector: queryVector,
-			Limit:  20,
+			UserID:       opts.UserID,
+			Vector:       queryVector,
+			Limit:        20,
+			CreatedAfter: ninetyDaysAgo,
 		})
 		select {
 		case <-ctx.Done():

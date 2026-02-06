@@ -158,7 +158,21 @@ func (p *Profile) Validate() error {
 	p.Data = dataDir
 	if p.Driver == "sqlite" && p.DSN == "" {
 		dbFile := fmt.Sprintf("divinesense_%s.db", p.Mode)
-		p.DSN = filepath.Join(dataDir, dbFile)
+		// Add _loc=auto and _allow_load_extension=1 for sqlite-vec support
+		p.DSN = filepath.Join(dataDir, dbFile) + "?_loc=auto&_allow_load_extension=1"
+	} else if p.Driver == "sqlite" && p.DSN != "" {
+		// Ensure _loc=auto and _allow_load_extension=1 are set for custom DSN
+		separator := "?"
+		if strings.Contains(p.DSN, "?") {
+			separator = "&"
+		}
+		if !strings.Contains(p.DSN, "_loc=") {
+			p.DSN += separator + "_loc=auto"
+			separator = "&"
+		}
+		if !strings.Contains(p.DSN, "_allow_load_extension=") {
+			p.DSN += separator + "_allow_load_extension=1"
+		}
 	}
 
 	return nil

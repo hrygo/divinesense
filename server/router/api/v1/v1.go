@@ -66,7 +66,8 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 	}
 
 	// Initialize AI service if enabled
-	if profile.IsAIEnabled() && profile.Driver == "postgres" {
+	// AI features are supported on PostgreSQL (with pgvector) and SQLite (with application-layer vector search)
+	if profile.IsAIEnabled() && (profile.Driver == "postgres" || profile.Driver == "sqlite") {
 		aiConfig := ai.NewConfigFromProfile(profile)
 		if err := aiConfig.Validate(); err == nil {
 			embeddingService, err := ai.NewEmbeddingService(&aiConfig.Embedding)
