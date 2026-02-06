@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sashabaranov/go-openai"
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/memory"
@@ -18,6 +17,7 @@ import (
 	"github.com/hrygo/divinesense/server/middleware"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
+	"github.com/sashabaranov/go-openai"
 )
 
 // jsonMap is a map[string]any that implements json.Marshaler for OpenAI compatibility.

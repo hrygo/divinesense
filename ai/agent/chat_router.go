@@ -66,7 +66,6 @@ func (r *ChatRouter) Route(ctx context.Context, input string) (*ChatRouteResult,
 	}, nil
 }
 
-
 // mapIntentToRouteType converts router.Intent to ChatRouteType.
 // Uses the canonical IntentToAgentType mapping from router package.
 func mapIntentToRouteType(intent router.Intent) ChatRouteType {
