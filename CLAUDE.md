@@ -1,8 +1,12 @@
 # CLAUDE.md
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
+>
+> **保鲜状态**: ✅ 2026-02-07 v0.93.1 | **架构**: Go + React 单二进制 | **AI**: 五位鹦鹉代理
 
-## 第一性原理
+---
+
+## 🎯 第一性原理
 
 **DivineSense (神识)** = AI 代理驱动的个人「第二大脑」
 
@@ -15,7 +19,68 @@
 
 ---
 
-## 架构原则
+## 🧠 SOTA Agent 工程实践
+
+> **本节定义大模型 Agent 的核心工作范式，确保与 SOTA 能力对齐**
+
+### 思考协议 (Thinking Protocol)
+
+**显式思考 > 隐式推理**：在复杂决策前，先输出思考过程。
+
+```
+任务 → 分析 → 方案 → 执行 → 验证
+         ↑         ↓
+         └── 修订 ──┘
+```
+
+**何时显式思考**：
+- ✅ 架构变更、影响多个模块
+- ✅ 陌生领域或不确定的 API
+- ✅ 需要用户确认的方案
+- ❌ 单一文件的简单修改
+- ❌ 明确的 lint 错误修复
+
+### 工具使用策略
+
+| 工具 | 使用场景 | 避免使用 |
+|:-----|:---------|:---------|
+| `Task(Explore)` | 理解代码库结构、寻找文件模式 | 查找具体文件（用Glob） |
+| `Task(Plan)` | 实现方案设计、多步骤任务 | 单一bug修复 |
+| `AskUserQuestion` | 架构决策、多个可行方案 | 技术细节选择 |
+| `TaskCreate/Update` | 3+个子任务、>1小时工作 | 单一直接任务 |
+| `Bash` | git操作、测试、构建 | 文件操作（用专用工具） |
+
+**核心原则**：
+- 优先使用专用工具（Glob > grep, Read > cat, Edit > sed）
+- 并行调用独立工具减少延迟
+- 探索性任务用Task工具，精确操作用专用工具
+
+### 元认知：卡住时的应对
+
+```
+┌─────────────────────────────────────────┐
+│  遇到问题？遵循此流程（自愈协议）        │
+├─────────────────────────────────────────┤
+│  1. 重读问题 → 确保理解正确             │
+│  2. 画图/拆解 → 可视化关系              │
+│  3. 澄清歧义 → AskUserQuestion          │
+│  4. 展示置信度 → 不确定时说明            │
+│  5. 记录学习点 → 更新文档                │
+└─────────────────────────────────────────┘
+```
+
+### SOTA 推理模式
+
+| 模式 | 适用场景 | 实现 |
+|:-----|:---------|:-----|
+| **Chain-of-Thought** | 复杂逻辑推理 | 先输出分析步骤，再给结论 |
+| **ReAct** | 工具调用任务 | Thought → Action → Observation 循环 |
+| **Self-Refinement** | 代码生成 | 初稿 → 自审 → 修正 |
+| **Few-Shot** | 格式化输出 | 给出2-3个示例 |
+
+---
+
+## 🏗️ 架构原则
 
 ### 核心概念映射
 
@@ -26,183 +91,124 @@
 | **代理** | `ParrotAgent`    | 处理用户请求的 AI 实体 |
 | **路由** | `ChatRouter`     | 决定使用哪只鹦鹉       |
 
-### 关键架构决策
+### 关键架构决策（常混淆）
 
-**1. BlockMode ≠ ParrotAgentType** （最常混淆）
-- `BlockMode.NORMAL/GEEK/EVOLUTION` — 消息块的结构模式
-- `ParrotAgentType.AUTO/MEMO/SCHEDULE/...` — 哪只鹦鹉处理请求
-- **无映射关系**：不要在代码中相互转换
+| 决策点 | 误区 | 正确理解 |
+|:-------|:-----|:---------|
+| **BlockMode vs AgentType** | 认为有映射关系 | 两者独立：Mode是结构模式，AgentType是处理者 |
+| **AUTO 的本质** | 是一只鹦鹉 | 是"请后端路由"的标记，非鹦鹉 |
+| **数据库选择** | SQLite可用于生产 | SQLite仅开发，生产需PostgreSQL |
 
-**2. AUTO 不是鹦鹉**
-- `AUTO` 是「请后端决定」的标记
-- 后端三层路由：规则匹配 → 历史感知 → LLM 降级
-
-**3. 数据库选择影响功能**
-- PostgreSQL → 完整 AI 功能（向量搜索、对话持久化）
-- SQLite → 仅开发环境，AI 功能禁用
+**路由四层**（v0.93.1）：
+```
+用户输入 → Cache (0ms) → Rule (0ms) → History (~10ms) → LLM (~400ms)
+           ↓              ↓            ↓               ↓
+        LRU命中        关键词       对话上下文      Qwen2.5-7B
+```
 
 ---
 
-## 工作流
+## 🔄 工作流
 
-### 多任务管理（重要）
+### 多任务管理（TODO LIST）
 
 > **原则**：始终使用 TODO LIST 跟踪多任务状态，避免"失忆"或迷失方向。
 
-**何时创建 TODO LIST**：
-- 分析日志/代码后发现**多个**优化点时
-- 用户要求"逐个击破"多个问题时
-- 任务预计超过 1 小时或包含多个步骤时
+**何时创建**：
+- 发现**3+**个优化点
+- 用户要求"逐个击破"
+- 任务预计 > 1 小时
 
 **操作流程**：
-```bash
-# 1. 分析完成后，为每个子任务创建 TODO
-TaskCreate("优化项1标题", "详细描述...")
-TaskCreate("优化项2标题", "详细描述...")
-
-# 2. 查看当前任务列表
-TaskList
-
-# 3. 开始任务前，标记为 in_progress
-TaskUpdate(taskId, status="in_progress")
-
-# 4. 完成后标记为 completed
-TaskUpdate(taskId, status="completed")
+```
+TaskCreate("标题", "描述") → TaskList → TaskUpdate(id, in_progress)
+                                                        ↓
+                                               TaskUpdate(id, completed)
 ```
 
 **状态流转**：
 ```
 pending → in_progress → completed
     ↓                      ↓
-  (开始)                (完成/删除)
+  (开始)                (完成)
 ```
 
-**示例**（本会话实践）：
-```
-用户：分析日志优化空间 → 发现 5 个问题
-AI：创建 4 个 TODO（第 1 个立即处理）
-    → #1 优化 SessionStats [pending]
-    → #2 合并数据库查询 [pending]     ← 下一个
-    → #3 修复零值日志 [pending]
-    → #4 删除重复日志 [pending]
-```
+### 开发命令速查
 
-### 开发前
-```bash
-make deps-all      # 安装依赖
-make start         # 启动全栈
-```
-
-### 开发中
-```bash
-make check-all     # 提交前检查
-make ci-check      # 模拟 CI
-```
+| 阶段 | 命令 | 说明 |
+|:-----|:-----|:-----|
+| **启动** | `make start` | 全栈服务（DB + 后端 + 前端） |
+| **检查** | `make check-all` | 提交前完整检查 |
+| **CI** | `make ci-check` | 模拟 CI 环境 |
+| **测试** | `make test-ai` | AI 相关测试 |
 
 ### 提交流程
-1. `make check-all` 通过
-2. 分支命名：`feat/xxx`、`fix/xxx`、`evolution/xxx`
+```
+1. make check-all 通过
+2. 分支命名：feat/xxx、fix/xxx、evolution/xxx
 3. 禁止直接 push 到 main
 4. 通过 PR 合并
-
+```
 详细规范：@.claude/rules/git-workflow.md
 
 ---
 
-## 编码规范
+## 📐 编码规范
 
-### DRY & SOLID 原则
+### 核心原则
 
 > **减法 > 加法**：优先通过删除重复代码、合并相似功能来优化架构，而非添加新的抽象层。
 
-#### DRY (Don't Repeat Yourself)
-
-**核心原则**：每一处知识在系统中都必须有单一、无歧义、权威的表示。
-
-```go
-// ❌ 违反 DRY：重复的逻辑
-func CreateMemo(name, content) { hashPassword(...) }
-func UpdateMemo(id, name, content) { hashPassword(...) }  // 重复
-func DeleteMemo(id) { hashPassword(...) }                   // 重复
-
-// ✅ 遵循 DRY：提取单一函数
-func (s *Service) hashPassword(pwd string) string { ... }
-```
-
-**实践案例**：
-- 路由逻辑统一：`ai/router/Service` 提供三层路由，`ai/agent/chat_router.go` 复用而非重复实现
-- 删除 492 行重复路由代码（v0.93.1）
-
-#### SOLID 原则
-
-| 原则 | 简记 | 说明 |
+| 原则 | 简记 | 实践 |
 |:-----|:-----|:-----|
-| **S** | 单一职责 | 每个模块只做一件事 |
-| **O** | 开闭原则 | 扩展开放，修改封闭 |
-| **L** | 里氏替换 | 子类可替换父类 |
-| **I** | 接口隔离 | 拆分胖接口，客户端只依赖需要的接口 |
-| **D** | 依赖倒置 | 依赖抽象而非具体实现 |
+| **DRY** | 不重复 | 提取公共逻辑，v0.93.1删除492行重复代码 |
+| **SOLID-S** | 单一职责 | 每个模块只做一件事 |
+| **SOLID-O** | 开闭原则 | 扩展开放，修改封闭 |
+| **SOLID-D** | 依赖倒置 | 依赖接口而非实现 |
 
 ```go
-// SRP + ISP：接口隔离，职责分离
+// ✅ DIP + ISP：依赖抽象，接口隔离
 type LLMClient interface {
-    Complete(ctx, prompt, config) (string, error)  // 单一方法
+    Complete(ctx, prompt, config) (string, error)
 }
 
-// DIP：依赖接口，具体实现可替换
-type Service struct {
-    llmClient LLMClient  // 依赖抽象，非具体实现
-}
-
-// OCP：扩展新 LLM 无需修改 Service
-func (s *Service) SetLLMClient(client LLMClient) {
-    s.llmClient = client
-}
+// 可替换的实现
+type routerLLMClient struct{ llm LLMService }
+type routerIntentLLMClient struct{ apiKey, baseURL, model string }
 ```
 
-**实践案例**：
-- `router.LLMClient` 接口：定义清晰的契约
-- `routerLLMClient` / `routerIntentLLMClient`：可互换的实现
-- `router.Service` 通过接口依赖，而非直接依赖具体实现
+### 语言规范
 
-### Go
-- 文件：`snake_case.go`
-- 日志：`log/slog`
-- 错误：始终检查并处理
-
-### React/TypeScript
-- 组件：`PascalCase.tsx`
-- Hooks：`use` 前缀
-- 文本：`t("key")` 国际化
-
-### Tailwind v4
-- ❌ `max-w-md/lg/xl` → 解析错误 (~16px)
-- ✅ `max-w-[24rem]` → 显式值
+| Go | React/TypeScript | Tailwind v4 |
+|:---|:-----------------|:------------|
+| `snake_case.go` | `PascalCase.tsx` | ❌ `max-w-md` → ✅ `max-w-[24rem]` |
+| `log/slog` | `use` 前缀 | 显式值避免~16px解析错误 |
+| 始终检查错误 | `t("key")` 国际化 | |
 
 ---
 
-## 导航索引
+## 📚 导航索引
 
-| 任务         | 文档                                  |
-| :----------- | :------------------------------------ |
-| **理解架构** | @docs/dev-guides/ARCHITECTURE.md      |
-| **后端开发** | @docs/dev-guides/BACKEND_DB.md        |
-| **前端开发** | @docs/dev-guides/FRONTEND.md          |
-| **部署**     | @docs/deployment/BINARY_DEPLOYMENT.md |
-| **调试问题** | @docs/research/DEBUG_LESSONS.md       |
-| **数据库迁移** | @store/migration/postgres/CLAUDE.md   |
+| 任务 | 文档 |
+|:-----|:-----|
+| **理解架构** | @docs/dev-guides/ARCHITECTURE.md |
+| **后端开发** | @docs/dev-guides/BACKEND_DB.md |
+| **前端开发** | @docs/dev-guides/FRONTEND.md |
+| **部署** | @docs/deployment/BINARY_DEPLOYMENT.md |
+| **调试问题** | @docs/research/DEBUG_LESSONS.md |
+| **数据库迁移** | @store/migration/postgres/CLAUDE.md |
 
 ---
 
-## 产品能力边界
+## 🎯 产品能力边界
 
-| 功能           | 状态                                 |
-| :------------- | :----------------------------------- |
-| 笔记           | ✅ Markdown + 语义搜索                |
-| 日程           | ✅ 自然语言 + 冲突检测                |
-| AI 代理        | ✅ 五位鹦鹉协同                       |
-| Geek Mode      | ✅ Claude Code CLI 集成，用于复杂任务 |
-| Evolution Mode | ✅ Claude Code CLI 集成，系统自我进化 |
+| 功能 | 状态 |
+|:-----|:-----|
+| 笔记 | ✅ Markdown + 语义搜索 |
+| 日程 | ✅ 自然语言 + 冲突检测 |
+| AI 代理 | ✅ 五位鹦鹉协同 |
+| Geek Mode | ✅ Claude Code CLI 集成 |
+| Evolution Mode | ✅ 系统自我进化 |
 
 ---
 
