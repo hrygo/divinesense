@@ -165,12 +165,6 @@ type routerIntentLLMClient struct {
 	model   string
 }
 
-// llmResponse is the structured response from LLM.
-type llmResponse struct {
-	Intent     string  `json:"intent"`
-	Confidence float64 `json:"confidence"`
-}
-
 func (c *routerIntentLLMClient) Complete(ctx context.Context, prompt string, config router.ModelConfig) (string, error) {
 	// Build classification prompt with JSON schema
 	systemPrompt := `You are an intent classifier. Analyze the user input and return a JSON response:
