@@ -6,6 +6,7 @@
 
 import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { afterEach } from "vitest";
 
 // Cleanup after each test
 afterEach(() => {
@@ -13,7 +14,7 @@ afterEach(() => {
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
+globalThis.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}
@@ -21,22 +22,22 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
   unobserve() {}
-} as any;
+} as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any;
+} as unknown as typeof ResizeObserver;
 
 // Mock requestAnimationFrame
-global.requestAnimationFrame = (callback: FrameRequestCallback) => {
+globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
   return setTimeout(callback, 0) as unknown as number;
 };
 
-global.cancelAnimationFrame = (id: number) => {
+globalThis.cancelAnimationFrame = (id: number) => {
   clearTimeout(id);
 };
 

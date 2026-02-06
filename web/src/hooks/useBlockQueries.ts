@@ -42,6 +42,7 @@ import {
 
 /**
  * Cache data structure for block list queries
+ * @internal
  */
 interface BlockListCacheData {
   blocks: Block[];
@@ -79,14 +80,6 @@ const RETRY_CONFIG = {
   /** Maximum retry delay in milliseconds */
   MAX_RETRY_DELAY: 30000,
 } as const;
-
-/**
- * Cache data structure for block list queries
- */
-interface BlockListCacheData {
-  blocks: Block[];
-  totalCount: number;
-}
 
 // Query keys factory for consistent cache management
 export const blockKeys = {

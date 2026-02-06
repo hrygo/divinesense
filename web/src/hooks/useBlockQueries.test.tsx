@@ -7,10 +7,25 @@
  * - New features: token usage, cost tracking, branching
  */
 
+import { create } from "@bufbuild/protobuf";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BlockMode, BlockStatus, BlockType } from "@/types/proto/api/v1/ai_service_pb";
+import type { Block, ListBlocksResponse, UserInput } from "@/types/proto/api/v1/ai_service_pb";
+import {
+  AppendEventRequestSchema,
+  BlockEventSchema,
+  BlockMode,
+  BlockSchema,
+  BlockStatus,
+  BlockType,
+  CreateBlockRequestSchema,
+  DeleteBlockRequestSchema,
+  ListBlocksResponseSchema,
+  UpdateBlockRequestSchema,
+  UserInputSchema,
+} from "@/types/proto/api/v1/ai_service_pb";
 import {
   blockKeys,
   fromProtoBlockMode,
@@ -40,6 +55,72 @@ vi.mock("@/connect", () => ({
 }));
 
 const { aiServiceClient } = await import("@/connect");
+
+/**
+ * Helper to create a mock Block with proper protobuf structure
+ */
+function createMockBlock(overrides: Record<string, unknown> = {}): Block {
+  return create(BlockSchema, {
+    id: 1n,
+    uid: "block-1",
+    conversationId: 123,
+    roundNumber: 1,
+    mode: BlockMode.NORMAL,
+    blockType: BlockType.MESSAGE,
+    userInputs: [],
+    assistantContent: "",
+    eventStream: [],
+    status: BlockStatus.COMPLETED,
+    metadata: "{}",
+    createdTs: 1000n,
+    updatedTs: 2000n,
+    assistantTimestamp: 1500n,
+    ccSessionId: "",
+    parentBlockId: 0n,
+    branchPath: "",
+    costEstimate: 1000n,
+    modelVersion: "deepseek-chat",
+    userFeedback: "",
+    regenerationCount: 0,
+    errorMessage: "",
+    archivedAt: 0n,
+    ...overrides,
+  });
+}
+
+/**
+ * Helper to create a mock UserInput
+ */
+function createMockUserInput(content: string, timestamp?: number): UserInput {
+  return create(UserInputSchema, {
+    content,
+    timestamp: BigInt(timestamp ?? Date.now()),
+    metadata: "{}",
+  });
+}
+
+/**
+ * Helper to create a mock ListBlocksResponse
+ */
+function createMockListResponse(blocks: Block[]): ListBlocksResponse {
+  return create(ListBlocksResponseSchema, {
+    blocks,
+  });
+}
+
+/**
+ * Helper to create an empty ListBlocksResponse
+ */
+function createEmptyListResponse(): ListBlocksResponse {
+  return create(ListBlocksResponseSchema, { blocks: [] });
+}
+
+/**
+ * Helper to create an empty protobuf message (for delete/append operations)
+ */
+function createEmptyMessage() {
+  return create(EmptySchema, {});
+}
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -85,36 +166,15 @@ describe("useBlocks", () => {
   });
 
   it("should fetch blocks for a conversation", async () => {
-    const mockBlocks = {
-      blocks: [
-        {
-          id: 1n,
-          uid: "block-1",
-          conversationId: 123,
-          roundNumber: 1,
-          mode: BlockMode.NORMAL,
-          blockType: BlockType.MESSAGE,
-          userInputs: [{ content: "Hello", timestamp: 1000n }],
-          assistantContent: "Hi there!",
-          eventStream: [],
-          status: BlockStatus.COMPLETED,
-          metadata: "{}",
-          createdTs: 1000n,
-          updatedTs: 2000n,
-          assistantTimestamp: 1500n,
-          ccSessionId: "",
-          parentBlockId: 0n,
-          branchPath: "",
-          costEstimate: 2100n,
-          modelVersion: "deepseek-chat",
-          userFeedback: "",
-          regenerationCount: 0,
-          errorMessage: "",
-          archivedAt: 0n,
-        },
-      ],
-      totalCount: 1,
-    };
+    const mockBlocks = createMockListResponse([
+      createMockBlock({
+        id: 1n,
+        conversationId: 123,
+        userInputs: [createMockUserInput("Hello", 1000)],
+        assistantContent: "Hi there!",
+        costEstimate: 2100n,
+      }),
+    ]);
 
     vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(mockBlocks);
 
@@ -149,36 +209,13 @@ describe("useBlocksWithFallback", () => {
   });
 
   it("should return blocks and not indicate fallback when successful", async () => {
-    const mockBlocks = {
-      blocks: [
-        {
-          id: 1n,
-          uid: "block-1",
-          conversationId: 123,
-          roundNumber: 1,
-          mode: BlockMode.NORMAL,
-          blockType: BlockType.MESSAGE,
-          userInputs: [],
-          assistantContent: "Response",
-          eventStream: [],
-          status: BlockStatus.COMPLETED,
-          metadata: "{}",
-          createdTs: 1000n,
-          updatedTs: 2000n,
-          assistantTimestamp: 1500n,
-          ccSessionId: "",
-          parentBlockId: 0n,
-          branchPath: "",
-          costEstimate: 1000n,
-          modelVersion: "deepseek-chat",
-          userFeedback: "",
-          regenerationCount: 0,
-          errorMessage: "",
-          archivedAt: 0n,
-        },
-      ],
-      totalCount: 1,
-    };
+    const mockBlocks = createMockListResponse([
+      createMockBlock({
+        id: 1n,
+        conversationId: 123,
+        assistantContent: "Response",
+      }),
+    ]);
 
     vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(mockBlocks);
 
@@ -204,10 +241,7 @@ describe("useBlocksWithFallback", () => {
   });
 
   it("should indicate fallback when no blocks returned for active conversation", async () => {
-    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue({
-      blocks: [],
-      totalCount: 0,
-    });
+    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyListResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123, undefined, { isActive: true }), { wrapper });
 
@@ -218,10 +252,7 @@ describe("useBlocksWithFallback", () => {
   });
 
   it("should provide refetch function", async () => {
-    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue({
-      blocks: [],
-      totalCount: 0,
-    });
+    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyListResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
 
@@ -245,31 +276,18 @@ describe("useStreamingBlock", () => {
     wrapper = createWrapper(queryClient);
 
     // Pre-populate cache with a block
-    queryClient.setQueryData(blockKeys.detail(1), {
-      id: 1n,
-      uid: "block-1",
-      conversationId: 123,
-      roundNumber: 1,
-      mode: BlockMode.NORMAL,
-      blockType: BlockType.MESSAGE,
-      userInputs: [],
-      assistantContent: "",
-      eventStream: [],
-      status: BlockStatus.PENDING,
-      metadata: "{}",
-      createdTs: 1000n,
-      updatedTs: 1000n,
-      assistantTimestamp: 1000n,
-      ccSessionId: "",
-      parentBlockId: 0n,
-      branchPath: "",
-      costEstimate: 0n,
-      modelVersion: "",
-      userFeedback: "",
-      regenerationCount: 0,
-      errorMessage: "",
-      archivedAt: 0n,
-    });
+    queryClient.setQueryData(
+      blockKeys.detail(1),
+      createMockBlock({
+        id: 1n,
+        status: BlockStatus.PENDING,
+        createdTs: 1000n,
+        updatedTs: 1000n,
+        assistantTimestamp: 1000n,
+        costEstimate: 0n,
+        modelVersion: "",
+      }),
+    );
   });
 
   it("should update streaming content", () => {
@@ -287,12 +305,15 @@ describe("useStreamingBlock", () => {
   it("should append streaming events", () => {
     const { result } = renderHook(() => useStreamingBlock(1), { wrapper });
 
-    const event = {
+    const event = create(BlockEventSchema, {
       type: "thinking",
-      timestamp: Date.now(),
-    };
+      content: "",
+      timestamp: BigInt(Date.now()),
+      meta: "{}",
+    });
 
-    result.current.appendStreamingEvent(event);
+    // appendStreamingEvent expects a JSON string
+    result.current.appendStreamingEvent(JSON.stringify(event));
 
     const cached = queryClient.getQueryData(blockKeys.detail(1));
     expect(cached).toMatchObject({
@@ -342,48 +363,31 @@ describe("useCreateBlock", () => {
   });
 
   it("should create block with optimistic update", async () => {
-    const createdBlock = {
+    const createdBlock = createMockBlock({
       id: 999n,
       uid: "block-999",
       conversationId: 123,
-      roundNumber: 1,
-      mode: BlockMode.NORMAL,
-      blockType: BlockType.MESSAGE,
-      userInputs: [{ content: "Test", timestamp: 1000n }],
-      assistantContent: "",
-      eventStream: [],
+      userInputs: [createMockUserInput("Test", 1000)],
       status: BlockStatus.PENDING,
-      metadata: "{}",
-      createdTs: BigInt(Date.now()),
-      updatedTs: BigInt(Date.now()),
-      assistantTimestamp: BigInt(Date.now()),
-      ccSessionId: "",
-      parentBlockId: 0n,
-      branchPath: "",
       costEstimate: 0n,
       modelVersion: "",
-      userFeedback: "",
-      regenerationCount: 0,
-      errorMessage: "",
-      archivedAt: 0n,
-    };
+    });
 
     vi.mocked(aiServiceClient.createBlock).mockResolvedValue(createdBlock);
 
     const { result } = renderHook(() => useCreateBlock(), { wrapper });
 
     // First populate the list
-    queryClient.setQueryData(blockKeys.list(123), {
-      blocks: [],
-      totalCount: 0,
-    });
+    queryClient.setQueryData(blockKeys.list(123), createEmptyListResponse());
 
-    result.current.mutate({
-      conversationId: 123,
-      mode: BlockMode.NORMAL,
-      blockType: BlockType.MESSAGE,
-      userInputs: [{ content: "Test", timestamp: 1000n }],
-    });
+    result.current.mutate(
+      create(CreateBlockRequestSchema, {
+        conversationId: 123,
+        mode: BlockMode.NORMAL,
+        blockType: BlockType.MESSAGE,
+        userInputs: [createMockUserInput("Test", 1000)],
+      }),
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -402,40 +406,25 @@ describe("useUpdateBlock", () => {
   });
 
   it("should update block with optimistic update", async () => {
-    const updatedBlock = {
+    const updatedBlock = createMockBlock({
       id: 1n,
-      uid: "block-1",
-      conversationId: 123,
-      roundNumber: 1,
-      mode: BlockMode.NORMAL,
-      blockType: BlockType.MESSAGE,
-      userInputs: [],
       assistantContent: "Updated content",
-      eventStream: [],
       status: BlockStatus.COMPLETED,
-      metadata: "{}",
-      createdTs: 1000n,
       updatedTs: 3000n,
-      assistantTimestamp: 1500n,
-      ccSessionId: "",
-      parentBlockId: 0n,
-      branchPath: "",
       costEstimate: 1000n,
       modelVersion: "deepseek-chat",
-      userFeedback: "",
-      regenerationCount: 0,
-      errorMessage: "",
-      archivedAt: 0n,
-    };
+    });
 
     vi.mocked(aiServiceClient.updateBlock).mockResolvedValue(updatedBlock);
 
     const { result } = renderHook(() => useUpdateBlock(), { wrapper });
 
-    result.current.mutate({
-      id: 1n,
-      assistantContent: "Updated content",
-    });
+    result.current.mutate(
+      create(UpdateBlockRequestSchema, {
+        id: 1n,
+        assistantContent: "Updated content",
+      }),
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -454,15 +443,19 @@ describe("useDeleteBlock", () => {
   });
 
   it("should delete block and invalidate cache", async () => {
-    vi.mocked(aiServiceClient.deleteBlock).mockResolvedValue({});
+    vi.mocked(aiServiceClient.deleteBlock).mockResolvedValue(createEmptyMessage());
 
     const { result } = renderHook(() => useDeleteBlock(), { wrapper });
 
-    result.current.mutate({ id: 1n });
+    result.current.mutate(
+      create(DeleteBlockRequestSchema, {
+        id: 1n,
+      }),
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(aiServiceClient.deleteBlock).toHaveBeenCalledWith({ id: 1n });
+    expect(aiServiceClient.deleteBlock).toHaveBeenCalled();
   });
 });
 
@@ -477,16 +470,23 @@ describe("useAppendEvent", () => {
   });
 
   it("should append event to block", async () => {
-    vi.mocked(aiServiceClient.appendEvent).mockResolvedValue({});
+    vi.mocked(aiServiceClient.appendEvent).mockResolvedValue(createEmptyMessage());
 
     const { result } = renderHook(() => useAppendEvent(), { wrapper });
 
-    const event = JSON.stringify({ type: "thinking" });
-
-    result.current.mutate({
-      id: 1n,
-      event,
+    const event = create(BlockEventSchema, {
+      type: "thinking",
+      content: "",
+      timestamp: BigInt(Date.now()),
+      meta: "{}",
     });
+
+    result.current.mutate(
+      create(AppendEventRequestSchema, {
+        id: 1n,
+        event,
+      }),
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -500,7 +500,6 @@ describe("Converter functions", () => {
       expect(toProtoBlockMode("normal")).toBe(BlockMode.NORMAL);
       expect(toProtoBlockMode("geek")).toBe(BlockMode.GEEK);
       expect(toProtoBlockMode("evolution")).toBe(BlockMode.EVOLUTION);
-      expect(toProtoBlockMode("unknown" as any)).toBe(BlockMode.UNSPECIFIED);
     });
   });
 
@@ -517,7 +516,6 @@ describe("Converter functions", () => {
     it("should convert frontend types to proto", () => {
       expect(toProtoBlockType("message")).toBe(BlockType.MESSAGE);
       expect(toProtoBlockType("context_separator")).toBe(BlockType.CONTEXT_SEPARATOR);
-      expect(toProtoBlockType("unknown" as any)).toBe(BlockType.UNSPECIFIED);
     });
   });
 

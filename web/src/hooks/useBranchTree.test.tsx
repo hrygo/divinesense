@@ -9,10 +9,23 @@
  * - UI state management for branch selector
  */
 
+import { create } from "@bufbuild/protobuf";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BlockBranch } from "@/types/block";
+import type { Block, BlockBranch, ListBlockBranchesResponse } from "@/types/proto/api/v1/ai_service_pb";
+import {
+  BlockBranchSchema,
+  BlockMode,
+  BlockSchema,
+  BlockStatus,
+  BlockType,
+  ForkBlockRequestSchema,
+  ListBlockBranchesResponseSchema,
+  SwitchBranchRequestSchema,
+  UserInputSchema,
+} from "@/types/proto/api/v1/ai_service_pb";
 import { useBranchTree } from "./useBranchTree";
 
 // Mock the aiServiceClient
@@ -46,81 +59,97 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+/**
+ * Helper to create a mock Block with proper protobuf structure
+ */
+function createMockBlock(overrides: Record<string, unknown> = {}): Block {
+  return create(BlockSchema, {
+    id: 1n,
+    uid: "block-1",
+    conversationId: 123,
+    roundNumber: 1,
+    mode: BlockMode.NORMAL,
+    blockType: BlockType.MESSAGE,
+    userInputs: [],
+    assistantContent: "",
+    eventStream: [],
+    status: BlockStatus.COMPLETED,
+    metadata: "{}",
+    createdTs: 1000n,
+    updatedTs: 2000n,
+    assistantTimestamp: 1500n,
+    ccSessionId: "",
+    parentBlockId: 0n,
+    branchPath: "",
+    costEstimate: 1000n,
+    modelVersion: "deepseek-chat",
+    userFeedback: "",
+    regenerationCount: 0,
+    errorMessage: "",
+    archivedAt: 0n,
+    ...overrides,
+  });
+}
+
+/**
+ * Helper to create a mock BlockBranch
+ */
+function createMockBranch(block: Block, branchPath: string, isActive: boolean, children: BlockBranch[] = []): BlockBranch {
+  return create(BlockBranchSchema, {
+    block,
+    branchPath,
+    isActive,
+    children,
+  });
+}
+
+/**
+ * Helper to create a mock ListBlockBranchesResponse
+ */
+function createMockListBranchesResponse(branches: BlockBranch[], activeBranchPath: string): ListBlockBranchesResponse {
+  return create(ListBlockBranchesResponseSchema, {
+    branches,
+    activeBranchPath,
+  });
+}
+
+/**
+ * Helper to create an empty response (for switchBranch/deleteBranch)
+ */
+function createEmptyResponse() {
+  return create(EmptySchema, {});
+}
+
 describe("useBranchTree", () => {
   let queryClient: QueryClient;
   let wrapper: ReturnType<typeof createWrapper>;
 
   const mockBranches = [
-    {
-      $typeName: "memos.api.v1.BlockBranch" as const,
-      block: {
-        $typeName: "memos.api.v1.Block" as const,
+    createMockBranch(
+      createMockBlock({
         id: 1n,
-        uid: "block-1",
-        conversationId: 123,
-        roundNumber: 1,
-        mode: 0,
-        blockType: 0,
-        userInputs: [{ $typeName: "memos.api.v1.UserInput" as const, content: "Original", timestamp: 1000n, metadata: "{}" }],
+        userInputs: [create(UserInputSchema, { content: "Original", timestamp: 1000n, metadata: "{}" })],
         assistantContent: "Response",
-        eventStream: [],
-        status: 2,
-        metadata: "{}",
-        createdTs: 1000n,
-        updatedTs: 2000n,
-        assistantTimestamp: 1500n,
-        ccSessionId: "",
-        parentBlockId: 0n,
         branchPath: "0",
-        costEstimate: 1000n,
-        modelVersion: "deepseek-chat",
-        userFeedback: "",
-        regenerationCount: 0,
-        errorMessage: "",
-        archivedAt: 0n,
-        sessionStats: undefined,
-        tokenUsage: undefined,
-      },
-      branchPath: "0",
-      isActive: true,
-      children: [
-        {
-          $typeName: "memos.api.v1.BlockBranch" as const,
-          block: {
-            $typeName: "memos.api.v1.Block" as const,
+      }),
+      "0",
+      true,
+      [
+        createMockBranch(
+          createMockBlock({
             id: 2n,
-            uid: "block-2",
-            conversationId: 123,
-            roundNumber: 2,
-            mode: 0,
-            blockType: 0,
-            userInputs: [{ $typeName: "memos.api.v1.UserInput" as const, content: "Forked", timestamp: 2000n, metadata: "{}" }],
+            userInputs: [create(UserInputSchema, { content: "Forked", timestamp: 2000n, metadata: "{}" })],
             assistantContent: "Forked response",
-            eventStream: [],
-            status: 2,
-            metadata: "{}",
-            createdTs: 2000n,
-            updatedTs: 3000n,
-            assistantTimestamp: 2500n,
-            ccSessionId: "",
-            parentBlockId: 1n,
             branchPath: "0/1",
+            parentBlockId: 1n,
             costEstimate: 500n,
-            modelVersion: "deepseek-chat",
-            userFeedback: "",
-            regenerationCount: 0,
-            errorMessage: "",
-            archivedAt: 0n,
-            sessionStats: undefined,
-            tokenUsage: undefined,
-          },
-          branchPath: "0/1",
-          isActive: false,
-          children: [],
-        },
+          }),
+          "0/1",
+          false,
+        ),
       ],
-    },
-  ] as BlockBranch[];
+    ),
+  ];
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
@@ -133,10 +162,7 @@ describe("useBranchTree", () => {
   });
 
   it("should fetch branches for a block", async () => {
-    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue({
-      branches: mockBranches,
-      activeBranchPath: "0",
-    });
+    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue(createMockListBranchesResponse(mockBranches, "0"));
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
@@ -164,10 +190,7 @@ describe("useBranchTree", () => {
   });
 
   it("should open and close branch selector", () => {
-    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue({
-      branches: [],
-      activeBranchPath: "",
-    });
+    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue(createMockListBranchesResponse([], ""));
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
@@ -181,12 +204,9 @@ describe("useBranchTree", () => {
   });
 
   it("should switch branch", async () => {
-    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue({
-      branches: mockBranches,
-      activeBranchPath: "0",
-    });
+    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue(createMockListBranchesResponse(mockBranches, "0"));
 
-    vi.mocked(aiServiceClient.switchBranch).mockResolvedValue({});
+    vi.mocked(aiServiceClient.switchBranch).mockResolvedValue(createEmptyResponse());
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
@@ -197,7 +217,7 @@ describe("useBranchTree", () => {
     await waitFor(() => expect(result.current.isSwitching).toBe(true));
 
     expect(aiServiceClient.switchBranch).toHaveBeenCalledWith(
-      expect.objectContaining({
+      create(SwitchBranchRequestSchema, {
         conversationId: 123,
         targetBranchPath: "0/1",
       }),
@@ -205,12 +225,9 @@ describe("useBranchTree", () => {
   });
 
   it("should delete branch", async () => {
-    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue({
-      branches: mockBranches,
-      activeBranchPath: "0",
-    });
+    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue(createMockListBranchesResponse(mockBranches, "0"));
 
-    vi.mocked(aiServiceClient.deleteBranch).mockResolvedValue({});
+    vi.mocked(aiServiceClient.deleteBranch).mockResolvedValue(createEmptyResponse());
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
@@ -224,36 +241,15 @@ describe("useBranchTree", () => {
   });
 
   it("should fork block with reason", async () => {
-    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue({
-      branches: mockBranches,
-      activeBranchPath: "0",
-    });
+    vi.mocked(aiServiceClient.listBlockBranches).mockResolvedValue(createMockListBranchesResponse(mockBranches, "0"));
 
-    const forkedBlock = {
+    const forkedBlock = createMockBlock({
       id: 3n,
       uid: "block-3",
-      conversationId: 123,
-      roundNumber: 2,
-      mode: 0,
-      blockType: 0,
-      userInputs: [{ content: "Original", timestamp: 1000n }],
-      assistantContent: "",
-      eventStream: [],
-      status: 0,
-      metadata: "{}",
-      createdTs: BigInt(Date.now()),
-      updatedTs: BigInt(Date.now()),
-      assistantTimestamp: BigInt(Date.now()),
-      ccSessionId: "",
-      parentBlockId: 1n,
+      userInputs: [create(UserInputSchema, { content: "Original", timestamp: 1000n, metadata: "{}" })],
       branchPath: "0/2",
-      costEstimate: 0n,
-      modelVersion: "",
-      userFeedback: "",
-      regenerationCount: 0,
-      errorMessage: "",
-      archivedAt: 0n,
-    };
+      parentBlockId: 1n,
+    });
 
     vi.mocked(aiServiceClient.forkBlock).mockResolvedValue(forkedBlock);
 
@@ -266,7 +262,7 @@ describe("useBranchTree", () => {
     await waitFor(() => expect(result.current.isForking).toBe(true));
 
     expect(aiServiceClient.forkBlock).toHaveBeenCalledWith(
-      expect.objectContaining({
+      create(ForkBlockRequestSchema, {
         id: 1n,
         reason: "Trying a different approach",
       }),
@@ -283,14 +279,8 @@ describe("useBranchTree", () => {
 
   it("should refresh branches", async () => {
     vi.mocked(aiServiceClient.listBlockBranches)
-      .mockResolvedValueOnce({
-        branches: mockBranches,
-        activeBranchPath: "0",
-      })
-      .mockResolvedValueOnce({
-        branches: [...mockBranches, mockBranches[0]],
-        activeBranchPath: "0",
-      });
+      .mockResolvedValueOnce(createMockListBranchesResponse(mockBranches, "0"))
+      .mockResolvedValueOnce(createMockListBranchesResponse([...mockBranches, mockBranches[0]], "0"));
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
