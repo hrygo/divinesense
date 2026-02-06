@@ -131,8 +131,8 @@ function UnifiedChatView({
         blocks={blocks}
       />
 
-      {/* SessionBar - aggregated session statistics */}
-      <SessionBar blocks={blocks} blockSummary={blockSummary} />
+      {/* SessionBar - mobile only (PC 端 SessionStats 已整合到 ChatHeader) */}
+      <SessionBar blocks={blocks} blockSummary={blockSummary} className="lg:hidden" />
 
       {/* Messages Area with Welcome */}
       <ChatMessages
