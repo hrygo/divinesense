@@ -54,6 +54,10 @@ const (
 	AIService_DeleteBlock_FullMethodName               = "/memos.api.v1.AIService/DeleteBlock"
 	AIService_AppendUserInput_FullMethodName           = "/memos.api.v1.AIService/AppendUserInput"
 	AIService_AppendEvent_FullMethodName               = "/memos.api.v1.AIService/AppendEvent"
+	AIService_ForkBlock_FullMethodName                 = "/memos.api.v1.AIService/ForkBlock"
+	AIService_ListBlockBranches_FullMethodName         = "/memos.api.v1.AIService/ListBlockBranches"
+	AIService_SwitchBranch_FullMethodName              = "/memos.api.v1.AIService/SwitchBranch"
+	AIService_DeleteBranch_FullMethodName              = "/memos.api.v1.AIService/DeleteBranch"
 )
 
 // AIServiceClient is the client API for AIService service.
@@ -130,6 +134,19 @@ type AIServiceClient interface {
 	AppendUserInput(ctx context.Context, in *AppendUserInputRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// AppendEvent appends an event to the block's event stream.
 	AppendEvent(ctx context.Context, in *AppendEventRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ForkBlock creates a new block as a branch from an existing block.
+	// The new block inherits the parent's conversation and user inputs,
+	// allowing the user to regenerate a different AI response.
+	ForkBlock(ctx context.Context, in *ForkBlockRequest, opts ...grpc.CallOption) (*Block, error)
+	// ListBlockBranches lists all child blocks of a given block.
+	// Returns the tree structure showing all branches from this block.
+	ListBlockBranches(ctx context.Context, in *ListBlockBranchesRequest, opts ...grpc.CallOption) (*ListBlockBranchesResponse, error)
+	// SwitchBranch switches the active branch for a conversation.
+	// Updates the branch_path to make the specified block the active leaf.
+	SwitchBranch(ctx context.Context, in *SwitchBranchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// DeleteBranch deletes a block and all its descendants.
+	// Used for pruning unwanted conversation branches.
+	DeleteBranch(ctx context.Context, in *DeleteBranchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type aIServiceClient struct {
@@ -489,6 +506,46 @@ func (c *aIServiceClient) AppendEvent(ctx context.Context, in *AppendEventReques
 	return out, nil
 }
 
+func (c *aIServiceClient) ForkBlock(ctx context.Context, in *ForkBlockRequest, opts ...grpc.CallOption) (*Block, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Block)
+	err := c.cc.Invoke(ctx, AIService_ForkBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) ListBlockBranches(ctx context.Context, in *ListBlockBranchesRequest, opts ...grpc.CallOption) (*ListBlockBranchesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBlockBranchesResponse)
+	err := c.cc.Invoke(ctx, AIService_ListBlockBranches_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) SwitchBranch(ctx context.Context, in *SwitchBranchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_SwitchBranch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) DeleteBranch(ctx context.Context, in *DeleteBranchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_DeleteBranch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AIServiceServer is the server API for AIService service.
 // All implementations must embed UnimplementedAIServiceServer
 // for forward compatibility.
@@ -563,6 +620,19 @@ type AIServiceServer interface {
 	AppendUserInput(context.Context, *AppendUserInputRequest) (*emptypb.Empty, error)
 	// AppendEvent appends an event to the block's event stream.
 	AppendEvent(context.Context, *AppendEventRequest) (*emptypb.Empty, error)
+	// ForkBlock creates a new block as a branch from an existing block.
+	// The new block inherits the parent's conversation and user inputs,
+	// allowing the user to regenerate a different AI response.
+	ForkBlock(context.Context, *ForkBlockRequest) (*Block, error)
+	// ListBlockBranches lists all child blocks of a given block.
+	// Returns the tree structure showing all branches from this block.
+	ListBlockBranches(context.Context, *ListBlockBranchesRequest) (*ListBlockBranchesResponse, error)
+	// SwitchBranch switches the active branch for a conversation.
+	// Updates the branch_path to make the specified block the active leaf.
+	SwitchBranch(context.Context, *SwitchBranchRequest) (*emptypb.Empty, error)
+	// DeleteBranch deletes a block and all its descendants.
+	// Used for pruning unwanted conversation branches.
+	DeleteBranch(context.Context, *DeleteBranchRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAIServiceServer()
 }
 
@@ -674,6 +744,18 @@ func (UnimplementedAIServiceServer) AppendUserInput(context.Context, *AppendUser
 }
 func (UnimplementedAIServiceServer) AppendEvent(context.Context, *AppendEventRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendEvent not implemented")
+}
+func (UnimplementedAIServiceServer) ForkBlock(context.Context, *ForkBlockRequest) (*Block, error) {
+	return nil, status.Error(codes.Unimplemented, "method ForkBlock not implemented")
+}
+func (UnimplementedAIServiceServer) ListBlockBranches(context.Context, *ListBlockBranchesRequest) (*ListBlockBranchesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBlockBranches not implemented")
+}
+func (UnimplementedAIServiceServer) SwitchBranch(context.Context, *SwitchBranchRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SwitchBranch not implemented")
+}
+func (UnimplementedAIServiceServer) DeleteBranch(context.Context, *DeleteBranchRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBranch not implemented")
 }
 func (UnimplementedAIServiceServer) mustEmbedUnimplementedAIServiceServer() {}
 func (UnimplementedAIServiceServer) testEmbeddedByValue()                   {}
@@ -1301,6 +1383,78 @@ func _AIService_AppendEvent_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_ForkBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForkBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).ForkBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_ForkBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).ForkBlock(ctx, req.(*ForkBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_ListBlockBranches_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBlockBranchesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).ListBlockBranches(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_ListBlockBranches_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).ListBlockBranches(ctx, req.(*ListBlockBranchesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_SwitchBranch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SwitchBranchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).SwitchBranch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_SwitchBranch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).SwitchBranch(ctx, req.(*SwitchBranchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_DeleteBranch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBranchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).DeleteBranch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_DeleteBranch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).DeleteBranch(ctx, req.(*DeleteBranchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AIService_ServiceDesc is the grpc.ServiceDesc for AIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1439,6 +1593,22 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AppendEvent",
 			Handler:    _AIService_AppendEvent_Handler,
+		},
+		{
+			MethodName: "ForkBlock",
+			Handler:    _AIService_ForkBlock_Handler,
+		},
+		{
+			MethodName: "ListBlockBranches",
+			Handler:    _AIService_ListBlockBranches_Handler,
+		},
+		{
+			MethodName: "SwitchBranch",
+			Handler:    _AIService_SwitchBranch_Handler,
+		},
+		{
+			MethodName: "DeleteBranch",
+			Handler:    _AIService_DeleteBranch_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -555,3 +555,206 @@ func convertSessionStatsToStore(stats *v1pb.SessionStats) *store.SessionStats {
 		ErrorMessage:         stats.ErrorMessage,
 	}
 }
+
+// ========== Tree Branching Handlers (Issue #79) ==========
+
+// ForkBlock creates a new block as a branch from an existing block.
+func (s *AIService) ForkBlock(ctx context.Context, req *v1pb.ForkBlockRequest) (*v1pb.Block, error) {
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Get parent block and verify ownership
+	parentBlock, err := s.Store.GetAIBlock(ctx, req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "parent block not found: %v", err)
+	}
+
+	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+		ID:        &parentBlock.ConversationID,
+		CreatorID: &user.ID,
+	})
+	if err != nil || len(conversations) == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "access denied to this block")
+	}
+
+	// Determine reason for fork (default to "user_fork")
+	reason := "user_fork"
+	if req.Reason != nil && *req.Reason != "" {
+		reason = *req.Reason
+	}
+
+	// Call store to fork block
+	newBlock, err := s.Store.ForkBlock(ctx, req.Id, reason)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to fork block: %v", err)
+	}
+
+	slog.Info("Forked block",
+		"parent_id", req.Id,
+		"new_block_id", newBlock.ID,
+		"reason", reason,
+		"user_id", user.ID,
+	)
+
+	return convertBlockFromStore(newBlock), nil
+}
+
+// ListBlockBranches lists all child blocks of a given block.
+func (s *AIService) ListBlockBranches(ctx context.Context, req *v1pb.ListBlockBranchesRequest) (*v1pb.ListBlockBranchesResponse, error) {
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Get root block and verify ownership
+	rootBlock, err := s.Store.GetAIBlock(ctx, req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "root block not found: %v", err)
+	}
+
+	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+		ID:        &rootBlock.ConversationID,
+		CreatorID: &user.ID,
+	})
+	if err != nil || len(conversations) == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "access denied to this block")
+	}
+
+	// Get all child blocks recursively
+	children, err := s.Store.ListChildBlocks(ctx, req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list child blocks: %v", err)
+	}
+
+	// Get active path for this conversation
+	activePath := ""
+	activeBlocks, err := s.Store.GetActivePath(ctx, rootBlock.ConversationID)
+	if err == nil && len(activeBlocks) > 0 {
+		// Build active path from branch_path of latest block
+		for _, b := range activeBlocks {
+			if b.BranchPath != "" {
+				activePath = b.BranchPath
+			}
+		}
+	}
+
+	// Build branch tree structure
+	branches := buildBranchTree(children, activePath)
+
+	return &v1pb.ListBlockBranchesResponse{
+		Branches:         branches,
+		ActiveBranchPath: activePath,
+	}, nil
+}
+
+// SwitchBranch switches the active branch for a conversation.
+func (s *AIService) SwitchBranch(ctx context.Context, req *v1pb.SwitchBranchRequest) (*emptypb.Empty, error) {
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Verify conversation ownership
+	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+		ID:        &req.ConversationId,
+		CreatorID: &user.ID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get conversation: %v", err)
+	}
+	if len(conversations) == 0 {
+		return nil, status.Errorf(codes.NotFound, "conversation not found")
+	}
+
+	// Archive all blocks that are not on the target branch
+	// This is done by setting archived_at for blocks with different branch paths
+	now := time.Now().Unix()
+	if err := s.Store.ArchiveInactiveBranches(ctx, req.ConversationId, req.TargetBranchPath, now); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to switch branch: %v", err)
+	}
+
+	slog.Info("Switched branch",
+		"conversation_id", req.ConversationId,
+		"target_branch_path", req.TargetBranchPath,
+		"user_id", user.ID,
+	)
+
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteBranch deletes a block and all its descendants.
+func (s *AIService) DeleteBranch(ctx context.Context, req *v1pb.DeleteBranchRequest) (*emptypb.Empty, error) {
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Get block and verify ownership
+	block, err := s.Store.GetAIBlock(ctx, req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "block not found: %v", err)
+	}
+
+	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+		ID:        &block.ConversationID,
+		CreatorID: &user.ID,
+	})
+	if err != nil || len(conversations) == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "access denied to this block")
+	}
+
+	// Delete branch with optional cascade
+	if err := s.Store.DeleteBranch(ctx, req.Id, req.Cascade); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete branch: %v", err)
+	}
+
+	slog.Info("Deleted branch",
+		"block_id", req.Id,
+		"cascade", req.Cascade,
+		"user_id", user.ID,
+	)
+
+	return &emptypb.Empty{}, nil
+}
+
+// buildBranchTree builds a hierarchical tree structure from flat block list.
+func buildBranchTree(blocks []*store.AIBlock, activePath string) []*v1pb.BlockBranch {
+	// Create a map from parent ID to children
+	childrenMap := make(map[int64][]*store.AIBlock)
+
+	for _, b := range blocks {
+		if b.ParentBlockID != nil {
+			childrenMap[*b.ParentBlockID] = append(childrenMap[*b.ParentBlockID], b)
+		}
+	}
+
+	// Build tree recursively
+	result := make([]*v1pb.BlockBranch, 0, len(blocks))
+
+	for _, b := range blocks {
+		branch := convertBlockToBranch(b, childrenMap, activePath)
+		result = append(result, branch)
+	}
+
+	return result
+}
+
+// convertBlockToBranch converts a block to BlockBranch with recursive children.
+func convertBlockToBranch(b *store.AIBlock, childrenMap map[int64][]*store.AIBlock, activePath string) *v1pb.BlockBranch {
+	branch := &v1pb.BlockBranch{
+		Block:      convertBlockFromStore(b),
+		BranchPath: b.BranchPath,
+		IsActive:   b.BranchPath == activePath,
+		Children:   []*v1pb.BlockBranch{},
+	}
+
+	// Recursively add children
+	children := childrenMap[b.ID]
+	for _, child := range children {
+		branch.Children = append(branch.Children, convertBlockToBranch(child, childrenMap, activePath))
+	}
+
+	return branch
+}

@@ -5,7 +5,7 @@ import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import { CapabilityStatus, CapabilityType } from "@/types/capability";
-import { ModeCycleButton } from "./ModeCycleButton";
+import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
 interface ChatHeaderProps {
   isThinking?: boolean;
@@ -13,10 +13,8 @@ interface ChatHeaderProps {
   currentCapability?: CapabilityType;
   capabilityStatus?: CapabilityStatus;
   currentMode?: AIMode;
-  onModeChange?: (mode: AIMode) => void;
   immersiveMode?: boolean;
   onImmersiveModeToggle?: (enabled: boolean) => void;
-  isAdmin?: boolean;
 }
 
 /**
@@ -67,48 +65,66 @@ function getActionDescription(
 }
 
 /**
- * 根据当前模式获取样式配置
+ * 根据当前模式获取 ParrotAgentType
+ */
+function modeToParrotType(mode: AIMode): ParrotAgentType {
+  switch (mode) {
+    case "geek":
+      return ParrotAgentType.GEEK;
+    case "evolution":
+      return ParrotAgentType.EVOLUTION;
+    default:
+      return ParrotAgentType.AMAZING; // Normal mode uses AMAZING theme
+  }
+}
+
+/**
+ * 根据当前模式获取样式配置 - 使用 PARROT_THEMES
  */
 function getModeStyle(mode: AIMode, t: (key: string) => string) {
+  const parrotType = modeToParrotType(mode);
+  const theme = PARROT_THEMES[parrotType];
+
   switch (mode) {
     case "geek":
       return {
-        border: "border-green-500/20",
-        bg: "bg-green-50/50 dark:bg-green-950/20",
-        text: "text-green-600 dark:text-green-400",
+        border: "border-sky-200 dark:border-slate-700",
+        bg: theme.headerBg,
+        text: theme.text,
         name: "font-mono",
-        avatarBorder: "border-green-500/30",
-        avatarBg: "bg-green-500/10",
-        statusText: "text-green-600 dark:text-green-400",
-        statusDot: "bg-green-500",
+        avatarBorder: "border-sky-500/30",
+        avatarBg: "bg-sky-500/10",
+        statusText: theme.text,
+        statusDot: "bg-sky-500",
         statusPrefix: t("ai.mode.geek_status"),
-        thinking: "text-green-600 dark:text-green-400",
+        thinking: theme.text,
       };
     case "evolution":
       return {
-        border: "border-purple-500/30",
-        bg: "bg-purple-50/50 dark:bg-purple-950/20",
-        text: "text-purple-600 dark:text-purple-400",
-        name: "bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent",
-        avatarBorder: "border-purple-500/40",
-        avatarBg: "bg-purple-500/15",
-        statusText: "text-purple-600 dark:text-purple-400",
-        statusDot: "bg-purple-500",
+        border: "border-emerald-200 dark:border-emerald-700",
+        bg: theme.headerBg,
+        text: theme.text,
+        name: "bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent",
+        avatarBorder: "border-emerald-500/40",
+        avatarBg: "bg-emerald-500/15",
+        statusText: theme.text,
+        statusDot: "bg-emerald-500",
         statusPrefix: t("ai.mode.evolution_status"),
-        thinking: "text-purple-600 dark:text-purple-400",
+        thinking: theme.text,
       };
     default:
+      // Normal mode - use amber theme
       return {
-        border: "",
-        bg: "",
-        text: "",
+        border: "border-amber-200 dark:border-amber-700",
+        bg: PARROT_THEMES.NORMAL.headerBg,
+        text: PARROT_THEMES.NORMAL.text,
         name: "",
         avatarBorder: "",
         avatarBg: "",
-        statusText: "",
-        statusDot: "",
+        statusText: PARROT_THEMES.NORMAL.text,
+        statusDot: "bg-amber-500",
         statusPrefix: "",
-        thinking: "text-primary",
+        thinking: PARROT_THEMES.NORMAL.text,
       };
   }
 }
@@ -119,10 +135,8 @@ export function ChatHeader({
   currentCapability = CapabilityType.AUTO,
   capabilityStatus = "idle",
   currentMode = "normal",
-  onModeChange,
   immersiveMode = false,
   onImmersiveModeToggle,
-  isAdmin = true,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const assistantName = t("ai.assistant-name");
@@ -138,9 +152,7 @@ export function ChatHeader({
   return (
     <header
       className={cn(
-        "flex items-center justify-between px-4 h-14 shrink-0 transition-all",
-        "border-b border-border/80",
-        "bg-background/80 backdrop-blur-sm",
+        "flex items-center justify-between px-4 h-14 shrink-0 transition-colors border-b border-border/80 backdrop-blur-sm",
         modeStyle.border,
         modeStyle.bg,
         className,
@@ -173,7 +185,7 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right Section - Immersive Mode Toggle + Mode Cycle Button + Thinking indicator */}
+      {/* Right Section - Immersive Mode Toggle + Thinking indicator */}
       <div className="flex items-center gap-2">
         {/* Immersive Mode Toggle - Desktop only */}
         {onImmersiveModeToggle && (
@@ -189,7 +201,6 @@ export function ChatHeader({
             {immersiveMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         )}
-        <ModeCycleButton currentMode={currentMode} onModeChange={onModeChange ?? (() => {})} variant="header" isAdmin={isAdmin} />
         {isThinking && (
           <div className="flex items-center gap-1.5 text-sm">
             <Sparkles className={cn("w-4 h-4 animate-pulse", modeStyle.thinking)} />

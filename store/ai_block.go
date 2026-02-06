@@ -20,8 +20,27 @@ type AIBlock struct {
 	Metadata           map[string]any
 	ParentBlockID      *int64 // Parent block ID for tree branching (null for root blocks)
 	BranchPath         string // Branch path for ordering (e.g., "0/1/3")
-	CreatedTs          int64
-	UpdatedTs          int64
+	// Token usage statistics (P1-A006: LLM Stats Collection)
+	TokenUsage *TokenUsage
+	// Cost estimation (ai-block-fields-extension)
+	CostEstimate      int64  // In milli-cents (1/1000 of a US cent)
+	ModelVersion      string // LLM model used (e.g., "deepseek-chat")
+	UserFeedback      string // User feedback: "thumbs_up", "thumbs_down", or custom
+	RegenerationCount int32  // Number of times this block was regenerated
+	ErrorMessage      string // Error message if status = ERROR
+	ArchivedAt        *int64 // Timestamp when block was archived (null if active)
+	CreatedTs         int64
+	UpdatedTs         int64
+}
+
+// TokenUsage represents detailed token usage for a single block or LLM call.
+// Added for P1-A006: LLM Stats Collection for Normal Mode.
+type TokenUsage struct {
+	PromptTokens     int32 `json:"prompt_tokens"`
+	CompletionTokens int32 `json:"completion_tokens"`
+	TotalTokens      int32 `json:"total_tokens"`
+	CacheReadTokens  int32 `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens int32 `json:"cache_write_tokens,omitempty"`
 }
 
 // AIBlockType represents the block type
@@ -101,8 +120,12 @@ type CreateAIBlock struct {
 	CCSessionID    string
 	Status         AIBlockStatus
 	ParentBlockID  *int64 // Parent block ID for forking (null for new root)
-	CreatedTs      int64
-	UpdatedTs      int64
+	// New fields for block extensions
+	TokenUsage   *TokenUsage
+	CostEstimate int64
+	ModelVersion string
+	CreatedTs    int64
+	UpdatedTs    int64
 }
 
 // UpdateAIBlock represents the input for updating a block
@@ -116,6 +139,14 @@ type UpdateAIBlock struct {
 	Status           *AIBlockStatus // Update status
 	Metadata         map[string]any // Merge metadata
 	UpdatedTs        *int64         // Update timestamp
+	// New fields for block extensions
+	TokenUsage        *TokenUsage // Update token usage
+	CostEstimate      *int64      // Update cost estimate
+	ModelVersion      *string     // Update model version
+	UserFeedback      *string     // Update user feedback
+	RegenerationCount *int32      // Update regeneration count
+	ErrorMessage      *string     // Update error message
+	ArchivedAt        *int64      // Archive this block
 }
 
 // FindAIBlock represents the filter for finding blocks
@@ -163,4 +194,23 @@ type AIBlockStore interface {
 
 	// GetPendingBlocks retrieves all pending/streaming blocks for cleanup
 	GetPendingBlocks(ctx context.Context) ([]*AIBlock, error)
+
+	// ========== Tree Branching Methods (tree-conversation-branching) ==========
+
+	// ForkBlock creates a new block as a branch from an existing block.
+	// The new block inherits the parent's conversation and user inputs.
+	ForkBlock(ctx context.Context, parentID int64, reason string) (*AIBlock, error)
+
+	// ListChildBlocks lists all direct children of a block.
+	ListChildBlocks(ctx context.Context, parentID int64) ([]*AIBlock, error)
+
+	// GetActivePath retrieves the currently active branch path for a conversation.
+	GetActivePath(ctx context.Context, conversationID int32) ([]*AIBlock, error)
+
+	// DeleteBranch deletes a block and all its descendants.
+	DeleteBranch(ctx context.Context, blockID int64, cascade bool) error
+
+	// ArchiveInactiveBranches archives blocks not on the active branch path.
+	// This sets archived_at timestamp for blocks that don't match the target path.
+	ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error
 }

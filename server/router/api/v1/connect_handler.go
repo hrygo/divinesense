@@ -761,3 +761,49 @@ func (s *ConnectServiceHandler) AppendEvent(ctx context.Context, req *connect.Re
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// ========== Tree Branching Methods (tree-conversation-branching) ==========
+
+func (s *ConnectServiceHandler) ForkBlock(ctx context.Context, req *connect.Request[v1pb.ForkBlockRequest]) (*connect.Response[v1pb.Block], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.ForkBlock(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) ListBlockBranches(ctx context.Context, req *connect.Request[v1pb.ListBlockBranchesRequest]) (*connect.Response[v1pb.ListBlockBranchesResponse], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.ListBlockBranches(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) SwitchBranch(ctx context.Context, req *connect.Request[v1pb.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.SwitchBranch(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *ConnectServiceHandler) DeleteBranch(ctx context.Context, req *connect.Request[v1pb.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.DeleteBranch(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}

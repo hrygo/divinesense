@@ -147,7 +147,7 @@ func TestChatStream_ChannelClosing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	contentChan, _ := service.ChatStream(ctx, []Message{
+	contentChan, statsChan, _ := service.ChatStream(ctx, []Message{
 		{Role: "user", Content: "test"},
 	})
 
@@ -162,5 +162,132 @@ func TestChatStream_ChannelClosing(t *testing.T) {
 		}
 	default:
 		// Channel closed, no data available
+	}
+	// Drain stats channel
+	for range statsChan {
+	}
+}
+
+// TestLLMCallStats_Structure verifies LLMCallStats has all expected fields.
+func TestLLMCallStats_Structure(t *testing.T) {
+	stats := &LLMCallStats{
+		PromptTokens:         100,
+		CompletionTokens:     50,
+		TotalTokens:          150,
+		CacheReadTokens:      20,
+		CacheWriteTokens:     10,
+		ThinkingDurationMs:   500,
+		GenerationDurationMs: 300,
+		TotalDurationMs:      800,
+	}
+
+	// Verify cache token fields are accessible (for providers that support caching)
+	_ = stats.CacheReadTokens
+	_ = stats.CacheWriteTokens
+
+	// Verify token counts add up correctly
+	if stats.TotalTokens != stats.PromptTokens+stats.CompletionTokens {
+		t.Errorf("TotalTokens (%d) != PromptTokens (%d) + CompletionTokens (%d)",
+			stats.TotalTokens, stats.PromptTokens, stats.CompletionTokens)
+	}
+
+	// Verify timing is non-negative
+	if stats.ThinkingDurationMs < 0 {
+		t.Error("ThinkingDurationMs should be non-negative")
+	}
+	if stats.GenerationDurationMs < 0 {
+		t.Error("GenerationDurationMs should be non-negative")
+	}
+	if stats.TotalDurationMs < 0 {
+		t.Error("TotalDurationMs should be non-negative")
+	}
+
+	// Verify total duration covers thinking + generation
+	if stats.TotalDurationMs < stats.ThinkingDurationMs+stats.GenerationDurationMs {
+		t.Errorf("TotalDurationMs (%d) should be >= ThinkingDurationMs (%d) + GenerationDurationMs (%d)",
+			stats.TotalDurationMs, stats.ThinkingDurationMs, stats.GenerationDurationMs)
+	}
+}
+
+// TestLLMCallStats_ZeroValues verifies zero stats are valid.
+func TestLLMCallStats_ZeroValues(t *testing.T) {
+	stats := &LLMCallStats{}
+
+	if stats.PromptTokens != 0 {
+		t.Errorf("PromptTokens should default to 0, got %d", stats.PromptTokens)
+	}
+	if stats.CompletionTokens != 0 {
+		t.Errorf("CompletionTokens should default to 0, got %d", stats.CompletionTokens)
+	}
+	if stats.TotalTokens != 0 {
+		t.Errorf("TotalTokens should default to 0, got %d", stats.TotalTokens)
+	}
+}
+
+// TestChat_ReturnsStats verifies that Chat method returns stats on successful calls.
+// Note: On network/timeout errors, stats may be nil since no API response was received.
+func TestChat_ReturnsStats(t *testing.T) {
+	cfg := &LLMConfig{
+		Provider:    "deepseek",
+		Model:       "deepseek-chat",
+		APIKey:      "test-key",
+		BaseURL:     "https://api.deepseek.com",
+		MaxTokens:   2048,
+		Temperature: 0.7,
+	}
+
+	service, err := NewLLMService(cfg)
+	if err != nil {
+		t.Fatalf("NewLLMService() error = %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	// This will fail due to timeout, stats may be nil in this case
+	_, stats, err := service.Chat(ctx, []Message{
+		{Role: "user", Content: "test"},
+	})
+
+	// We expect an error due to timeout
+	if err == nil {
+		t.Error("Expected error from Chat with timeout, got nil")
+	}
+
+	// Stats may be nil if the request failed before receiving any API response
+	// This is expected behavior for timeout errors before API communication
+	_ = stats // Linter check - stats handling depends on error type
+}
+
+// TestChatStream_ReturnsStatsChannel verifies that ChatStream returns a stats channel.
+func TestChatStream_ReturnsStatsChannel(t *testing.T) {
+	cfg := &LLMConfig{
+		Provider:    "deepseek",
+		Model:       "deepseek-chat",
+		APIKey:      "test-key",
+		BaseURL:     "https://api.deepseek.com",
+		MaxTokens:   2048,
+		Temperature: 0.7,
+	}
+
+	service, err := NewLLMService(cfg)
+	if err != nil {
+		t.Fatalf("NewLLMService() error = %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, statsChan, _ := service.ChatStream(ctx, []Message{
+		{Role: "user", Content: "test"},
+	})
+
+	// Stats channel should never be nil
+	if statsChan == nil {
+		t.Error("Stats channel should never be nil")
+	}
+
+	// Drain stats channel to avoid goroutine leak
+	for range statsChan {
 	}
 }

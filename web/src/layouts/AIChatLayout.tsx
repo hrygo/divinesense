@@ -2,7 +2,6 @@ import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AIChatSidebar } from "@/components/AIChat/AIChatSidebar";
-import { ModeCycleButton } from "@/components/AIChat/ModeCycleButton";
 import { ModeThemeProvider } from "@/components/AIChat/ModeThemeProvider";
 import NavigationDrawer from "@/components/NavigationDrawer";
 import RouteHeaderImage from "@/components/RouteHeaderImage";
@@ -12,6 +11,7 @@ import { AIChatProvider, useAIChat } from "@/contexts/AIChatContext";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
+import { PARROT_THEMES } from "@/types/parrot";
 
 /**
  * AI Chat Layout - 优化的聊天布局
@@ -31,55 +31,61 @@ import type { AIMode } from "@/types/aichat";
  * @see docs/research/layout-spacing-unification.md
  */
 
-// Helper function to get mode-specific styles
+// Helper function to get mode-specific styles using PARROT_THEMES
 function getModeStyles(mode: AIMode) {
   switch (mode) {
-    case "geek":
+    case "geek": {
+      const theme = PARROT_THEMES.GEEK;
       return {
-        headerBorder: "border-green-500/30",
-        headerBg: "bg-green-950/20 dark:bg-green-950/40",
-        headerAccent: "after:bg-gradient-to-r after:from-transparent via-green-500 to-transparent",
-        sidebarBorder: "border-green-500/30",
-        sidebarBg: "bg-green-950/10 dark:bg-green-950/20",
-        contentBg: "bg-green-50/30 dark:bg-green-950/10",
-        iconColor: "text-green-600 dark:text-green-400",
-        dotColor: "bg-green-500",
+        headerBorder: "border-sky-200 dark:border-slate-700",
+        headerBg: theme.headerBg,
+        headerAccent: "after:bg-gradient-to-r after:from-transparent via-sky-500 to-transparent",
+        sidebarBorder: theme.cardBorder,
+        sidebarBg: theme.inputBg,
+        contentBg: theme.bubbleBg,
+        iconColor: theme.text,
+        dotColor: "bg-sky-500",
         monoFont: true,
         modeLabel: "GEEK",
       };
-    case "evolution":
+    }
+    case "evolution": {
+      const theme = PARROT_THEMES.EVOLUTION;
       return {
-        headerBorder: "border-purple-500/30",
-        headerBg: "bg-purple-950/20 dark:bg-purple-950/40",
-        headerAccent: "after:bg-gradient-to-r after:from-transparent via-purple-500 to-transparent",
-        sidebarBorder: "border-purple-500/30",
-        sidebarBg: "bg-purple-950/10 dark:bg-purple-950/20",
-        contentBg: "bg-purple-50/30 dark:bg-purple-950/10",
-        iconColor: "text-purple-600 dark:text-purple-400",
-        dotColor: "bg-purple-500",
+        headerBorder: "border-emerald-200 dark:border-emerald-700",
+        headerBg: theme.headerBg,
+        headerAccent: "after:bg-gradient-to-r after:from-transparent via-emerald-500 to-transparent",
+        sidebarBorder: theme.cardBorder,
+        sidebarBg: theme.inputBg,
+        contentBg: theme.bubbleBg,
+        iconColor: theme.text,
+        dotColor: "bg-emerald-500",
         monoFont: true,
         modeLabel: "EVOLUTION",
       };
-    default:
+    }
+    default: {
+      const theme = PARROT_THEMES.NORMAL;
       return {
-        headerBorder: "border-zinc-200 dark:border-zinc-800",
-        headerBg: "bg-white dark:bg-zinc-900",
+        headerBorder: theme.inputBorder,
+        headerBg: theme.headerBg,
         headerAccent: "",
-        sidebarBorder: "border-zinc-200/80 dark:border-zinc-800/80",
-        sidebarBg: "bg-zinc-50/95 dark:bg-zinc-900/95",
-        contentBg: "bg-white dark:bg-zinc-900",
-        iconColor: "",
-        dotColor: "",
+        sidebarBorder: theme.cardBorder,
+        sidebarBg: theme.inputBg,
+        contentBg: theme.bubbleBg,
+        iconColor: theme.text,
+        dotColor: "bg-amber-500",
         monoFont: false,
         modeLabel: "",
       };
+    }
   }
 }
 
 const AIChatLayoutContent = () => {
   const lg = useMediaQuery("lg");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { state, setMode } = useAIChat();
+  const { state } = useAIChat();
   const currentMode = state.currentMode || "normal";
   const immersiveMode = state.immersiveMode || false;
 
@@ -138,12 +144,8 @@ const AIChatLayoutContent = () => {
           <RouteHeaderImage mode={currentMode} />
         </div>
 
-        {/* Right - Mode Toggle + Sidebar Toggle */}
-        <div className="absolute right-0 top-0 bottom-0 px-3 flex items-center gap-1">
-          {/* Mode Cycle Button - Mobile only */}
-          <div className="lg:hidden">
-            <ModeCycleButton currentMode={currentMode} onModeChange={setMode} variant="mobile" isAdmin={true} />
-          </div>
+        {/* Right - Sidebar Toggle */}
+        <div className="absolute right-0 top-0 bottom-0 px-3 flex items-center">
           <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
             <SheetContent
               side="right"

@@ -220,3 +220,26 @@ func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIB
 func (d *DB) CompleteBlock(ctx context.Context, blockID int64, assistantContent string, sessionStats *store.SessionStats) error {
 	return errors.New("AIBlock not supported in SQLite (use PostgreSQL for AI features)")
 }
+
+// ========== Tree Branching Methods (tree-conversation-branching) ==========
+// SQLite does not support AI features including tree branching (see #9).
+
+func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+	return nil, errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListChildBlocks(ctx context.Context, parentID int64) ([]*store.AIBlock, error) {
+	return nil, errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) GetActivePath(ctx context.Context, conversationID int32) ([]*store.AIBlock, error) {
+	return nil, errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) DeleteBranch(ctx context.Context, blockID int64, cascade bool) error {
+	return errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error {
+	return errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}

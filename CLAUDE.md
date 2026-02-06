@@ -22,6 +22,27 @@
 
 **技术栈**：Go 1.25 + React 18 (Vite/Tailwind 4) + PostgreSQL (生产) / SQLite (开发)
 
+**主要编程语言**：Go（约 136K tokens）、TypeScript（约 64K tokens）、Markdown（约 61K tokens）。处理 Go 代码时，优先理解 Go 特定的模式和约定。
+
+---
+
+## 架构概念
+
+### BlockMode 与 ParrotAgentType
+
+> **重要**：这两个是独立的、分离的架构概念，不要混淆或相互映射。
+
+| 架构概念 | 类型 | 说明 |
+|:---------|:-----|:-----|
+| **BlockMode** | NORMAL / TEMPLATE | Block 的模式类型，控制消息块的行为 |
+| **ParrotAgentType** | AUTO / MEMO / SCHEDULE / AMAZING / GEEK / EVOLUTION | AI 代理（鹦鹉）类型，决定使用哪只鹦鹉处理请求 |
+
+**关键规则**：
+- `BlockMode.NORMAL` ≠ `ParrotAgentType.AUTO`
+- `BlockMode` 描述消息块的结构模式
+- `ParrotAgentType.AUTO` 是后端路由标记，由后端三层路由决定使用哪只鹦鹉
+- 不要将 `BlockMode.NORMAL` 映射到 `ParrotAgentType.AUTO` 或混淆这些枚举
+
 ---
 
 ## 核心规则

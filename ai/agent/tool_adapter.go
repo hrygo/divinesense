@@ -162,10 +162,11 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 		iterStart := time.Now()
 
 		// Call LLM with tools
-		resp, err := a.llm.ChatWithTools(ctx, messages, a.toolDescriptors())
+		resp, stats, err := a.llm.ChatWithTools(ctx, messages, a.toolDescriptors())
 		if err != nil {
 			return "", fmt.Errorf("LLM call failed (iteration %d): %w", iteration+1, err)
 		}
+		_ = stats // TODO: accumulate stats in session
 
 		// Check if LLM wants to call tools
 		hasStructuredToolCalls := len(resp.ToolCalls) > 0

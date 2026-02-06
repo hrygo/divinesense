@@ -31,6 +31,7 @@ type MemoParrot struct {
 	cache          *LRUCache
 	memoSearchTool *tools.MemoSearchTool
 	userID         int32
+	*BaseParrot    // Embedded for stats accumulation (P1-A006)
 }
 
 // NewMemoParrot creates a new memo parrot agent.
@@ -62,6 +63,7 @@ func NewMemoParrot(
 		cache:          NewLRUCache(DefaultCacheEntries, DefaultCacheTTL),
 		userID:         userID,
 		memoSearchTool: memoSearchTool,
+		BaseParrot:     NewBaseParrot("memo"),
 	}, nil
 }
 
@@ -69,6 +71,17 @@ func NewMemoParrot(
 // Name 返回鹦鹉名称。
 func (p *MemoParrot) Name() string {
 	return "memo" // ParrotAgentType AGENT_TYPE_MEMO
+}
+
+// getModelName returns the model name used for LLM calls.
+// getModelName 返回用于 LLM 调用的模型名称。
+func (p *MemoParrot) getModelName() string {
+	// Get model name from LLM service if available
+	if llmWithModel, ok := p.llm.(interface{ GetModelName() string }); ok {
+		return llmWithModel.GetModelName()
+	}
+	// Default fallback
+	return "deepseek-chat"
 }
 
 // recordMetrics records prompt usage metrics for the memo agent.
@@ -179,7 +192,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 		// Get LLM response
 		// Note: We use synchronous Chat here for internal ReAct reasoning (Thinking/Tool Use)
 		// but we optimize the final answer to be streaming for better UX.
-		response, err := p.llm.Chat(ctx, messages)
+		response, stats, err := p.llm.Chat(ctx, messages)
 		if err != nil {
 			slog.Error("MemoParrot: LLM call failed",
 				"user_id", p.userID,
@@ -188,6 +201,10 @@ func (p *MemoParrot) ExecuteWithCallback(
 			)
 			p.recordMetrics(startTime, promptVersion, false)
 			return NewParrotError(p.Name(), "Chat", err)
+		}
+		// Track LLM call stats (P1-A006)
+		if stats != nil {
+			p.TrackLLMCall(stats, p.getModelName())
 		}
 
 		slog.Debug("MemoParrot: LLM response received",
@@ -239,6 +256,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		if callbackSafe != nil {
 			callbackSafe(EventTypeToolUse, fmt.Sprintf("正在搜索: %s", toolCall))
 		}
+
+		// Track tool call (P1-A006)
+		p.TrackToolCall(toolCall)
 
 		var toolResult string
 		switch toolCall {
@@ -390,6 +410,15 @@ func (p *MemoParrot) parseToolCall(response string) (string, string, string, err
 // GetStats 返回笔记助手鹦鹉的缓存统计信息。
 func (p *MemoParrot) GetStats() CacheStats {
 	return p.cache.Stats()
+}
+
+// GetSessionStats returns the accumulated session statistics.
+// GetSessionStats 返回累积的会话统计信息。
+func (p *MemoParrot) GetSessionStats() *NormalSessionStats {
+	if p.BaseParrot == nil {
+		return nil
+	}
+	return p.BaseParrot.GetSessionStats()
 }
 
 // SelfDescribe returns the memo parrot's metacognitive understanding of itself.

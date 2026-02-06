@@ -184,6 +184,12 @@ export function useCreateBlock() {
         ccSessionId: "",
         parentBlockId: BigInt(0),
         branchPath: "",
+        costEstimate: BigInt(0),
+        modelVersion: "",
+        userFeedback: "",
+        regenerationCount: 0,
+        errorMessage: "",
+        archivedAt: BigInt(0),
       };
 
       // Optimistically update cache

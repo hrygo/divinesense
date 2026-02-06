@@ -736,6 +736,8 @@ pending ──▶ streaming ──▶ completed
 
 **详细规格**：[Unified Block Model 规格](../specs/unified-block-model.md)
 
+**界面设计**：[AI Chat 界面架构](AI_CHAT_INTERFACE.md) - 包含完整的 UI 布局、组件层级和交互设计
+
 ---
 
 ## AI 数据库架构（PostgreSQL）

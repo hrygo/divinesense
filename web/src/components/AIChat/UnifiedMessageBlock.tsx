@@ -40,7 +40,6 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-// Import constants
 import {
   BADGE_WIDTH_OFFSET,
   HEADER_VISUAL_WIDTH,
@@ -52,7 +51,9 @@ import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSumma
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
 import { ConversationMessage } from "@/types/aichat";
+import { type BlockBranch } from "@/types/block";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
+import { BranchIndicator } from "./BranchIndicator";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
@@ -115,6 +116,10 @@ export interface UnifiedMessageBlockProps {
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
+  /** Branch-related props for tree conversation branching */
+  branches?: BlockBranch[];
+  isBranchActive?: boolean;
+  onBranchClick?: () => void;
   /** Additional children to render in block body */
   children?: ReactNode;
   className?: string;
@@ -285,6 +290,10 @@ interface BlockHeaderProps {
   isStreaming?: boolean;
   /** 追加的用户输入列表 (支持多个) */
   additionalUserInputs?: ConversationMessage[];
+  /** Branch-related props */
+  branches?: BlockBranch[];
+  isBranchActive?: boolean;
+  onBranchClick?: () => void;
 }
 
 function BlockHeader({
@@ -297,6 +306,9 @@ function BlockHeader({
   isCollapsed,
   isStreaming,
   additionalUserInputs = [],
+  branches,
+  isBranchActive,
+  onBranchClick,
 }: BlockHeaderProps) {
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
@@ -427,6 +439,9 @@ function BlockHeader({
           </span>
         )}
 
+        {/* Branch Indicator - shows when block has branches */}
+        {branches && branches.length > 0 && <BranchIndicator branches={branches} isActive={isBranchActive} onClick={onBranchClick} />}
+
         <button
           type="button"
           className={cn(
@@ -476,13 +491,20 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
 
   return (
     <div className="relative group">
-      {/* Timeline Node */}
-      <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60">
+      {/* Timeline Node - 统一使用 -left-[2rem] 确保与其他 section 对齐 */}
+      <div className="absolute -left-[2rem] top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60">
         <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
       </div>
 
       {/* Section Header */}
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center justify-between mb-3">
+        {/* Section Title */}
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <User className="w-3.5 h-3.5" />
+          <span>{t("ai.unified_block.user_inputs") || "用户输入"}</span>
+        </div>
+
+        {/* Expand/Collapse Button */}
         {(isLongContent || hasMultiple) && (
           <button
             type="button"
@@ -677,7 +699,7 @@ function BlockBody({
             <div className="relative group">
               <div
                 className={cn(
-                  "absolute -left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
+                  "absolute -left-[2rem] top-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
                   streamingPhase === "thinking"
                     ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/10"
                     : "bg-muted text-muted-foreground group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500",
@@ -745,7 +767,7 @@ function BlockBody({
                 {/* Timeline Node */}
                 <div
                   className={cn(
-                    "absolute -left-8 top-0 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border transition-all",
+                    "absolute -left-[2rem] top-0 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border transition-all",
                     calling
                       ? "bg-purple-100 dark:bg-purple-900/40 border-purple-500 animate-pulse"
                       : "bg-card border-border group-hover:border-purple-400/50",
@@ -829,7 +851,7 @@ function BlockBody({
             <div className="relative pt-2">
               <div
                 className={cn(
-                  "absolute -left-8 top-3.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
+                  "absolute -left-[2rem] top-3.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
                   streamingPhase === "answer"
                     ? "bg-amber-100 dark:bg-amber-900/40 border border-amber-500 animate-pulse text-amber-600"
                     : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-500",
@@ -939,7 +961,7 @@ function BlockBody({
           {/* 4. Error Section */}
           {hasError && (
             <div className="relative group">
-              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-red-200 dark:group-hover:bg-red-900/50">
+              <div className="absolute -left-[2rem] top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-red-200 dark:group-hover:bg-red-900/50">
                 <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
               </div>
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
@@ -953,7 +975,7 @@ function BlockBody({
           {/* 5. Block Summary (Detailed view for all modes if present) */}
           {blockSummary && (
             <div className="relative">
-              <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-500 flex items-center justify-center shrink-0 z-10 transition-colors">
+              <div className="absolute -left-[2rem] top-1 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-500 flex items-center justify-center shrink-0 z-10 transition-colors">
                 <BarChart3 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
               </div>
               <div className="pl-0">
@@ -1100,6 +1122,9 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   onCopy,
   onRegenerate,
   onDelete,
+  branches,
+  isBranchActive,
+  onBranchClick,
   children,
   className,
 }: UnifiedMessageBlockProps) {
@@ -1180,6 +1205,9 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           isCollapsed={collapsed}
           isStreaming={isStreaming}
           additionalUserInputs={additionalUserInputs}
+          branches={branches}
+          isBranchActive={isBranchActive}
+          onBranchClick={onBranchClick}
         />
       </div>
 

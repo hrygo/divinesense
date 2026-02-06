@@ -145,6 +145,61 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}/branch:
+        delete:
+            tags:
+                - AIService
+            description: |-
+                DeleteBranch deletes a block and all its descendants.
+                 Used for pruning unwanted conversation branches.
+            operationId: AIService_DeleteBranch
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: cascade
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}/branches:
+        get:
+            tags:
+                - AIService
+            description: |-
+                ListBlockBranches lists all child blocks of a given block.
+                 Returns the tree structure showing all branches from this block.
+            operationId: AIService_ListBlockBranches
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListBlockBranchesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/blocks/{id}/events:
         post:
             tags:
@@ -167,6 +222,40 @@ paths:
                 "200":
                     description: OK
                     content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/blocks/{id}/fork:
+        post:
+            tags:
+                - AIService
+            description: |-
+                ForkBlock creates a new block as a branch from an existing block.
+                 The new block inherits the parent's conversation and user inputs,
+                 allowing the user to regenerate a different AI response.
+            operationId: AIService_ForkBlock
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ForkBlockRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Block'
                 default:
                     description: Default error response
                     content:
@@ -448,6 +537,37 @@ paths:
                     application/json:
                         schema:
                             $ref: '#/components/schemas/AddContextSeparatorRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/ai/conversations/{conversationId}/switch-branch:
+        post:
+            tags:
+                - AIService
+            description: |-
+                SwitchBranch switches the active branch for a conversation.
+                 Updates the branch_path to make the specified block the active leaf.
+            operationId: AIService_SwitchBranch
+            parameters:
+                - name: conversationId
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: int32
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SwitchBranchRequest'
                 required: true
             responses:
                 "200":
@@ -3796,6 +3916,28 @@ components:
                     description: Tree branching support (for edit & regenerate functionality)
                 branchPath:
                     type: string
+                tokenUsage:
+                    allOf:
+                        - $ref: '#/components/schemas/TokenUsage'
+                    description: Token usage statistics (for all modes)
+                costEstimate:
+                    type: string
+                    description: 'Cost estimation (in milli-cents: 1/1000 of a US cent)'
+                modelVersion:
+                    type: string
+                    description: Model information
+                userFeedback:
+                    type: string
+                    description: User feedback and regeneration
+                regenerationCount:
+                    type: integer
+                    format: int32
+                errorMessage:
+                    type: string
+                    description: Error tracking
+                archivedAt:
+                    type: string
+                    description: Archival support
                 metadata:
                     type: string
                     description: Extension metadata
@@ -3807,6 +3949,20 @@ components:
                 Block represents a single conversation block (round).
                  A block contains user inputs and the AI's response, along with
                  an event stream tracking the AI's thinking process.
+        BlockBranch:
+            type: object
+            properties:
+                block:
+                    $ref: '#/components/schemas/Block'
+                branchPath:
+                    type: string
+                isActive:
+                    type: boolean
+                children:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BlockBranch'
+            description: BlockBranch represents a branch in the conversation tree.
         BlockEvent:
             type: object
             properties:
@@ -4210,6 +4366,16 @@ components:
                     type: string
                 avatarUrl:
                     type: string
+        ForkBlockRequest:
+            required:
+                - id
+            type: object
+            properties:
+                id:
+                    type: string
+                reason:
+                    type: string
+            description: ForkBlockRequest is the request for ForkBlock.
         GeneralSetting_CustomProfile:
             type: object
             properties:
@@ -4608,6 +4774,16 @@ components:
                     type: integer
                     description: The total count of attachments (may be approximate).
                     format: int32
+        ListBlockBranchesResponse:
+            type: object
+            properties:
+                branches:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BlockBranch'
+                activeBranchPath:
+                    type: string
+            description: ListBlockBranchesResponse is the response for ListBlockBranches.
         ListBlocksResponse:
             type: object
             properties:
@@ -5803,6 +5979,37 @@ components:
                     items:
                         type: string
             description: SuggestTagsResponse is the response for SuggestTags.
+        SwitchBranchRequest:
+            required:
+                - conversationId
+                - targetBranchPath
+            type: object
+            properties:
+                conversationId:
+                    type: integer
+                    format: int32
+                targetBranchPath:
+                    type: string
+            description: SwitchBranchRequest is the request for SwitchBranch.
+        TokenUsage:
+            type: object
+            properties:
+                promptTokens:
+                    type: integer
+                    format: int32
+                completionTokens:
+                    type: integer
+                    format: int32
+                totalTokens:
+                    type: integer
+                    format: int32
+                cacheReadTokens:
+                    type: integer
+                    format: int32
+                cacheWriteTokens:
+                    type: integer
+                    format: int32
+            description: TokenUsage represents detailed token usage for a single block or LLM call.
         UpdateAIConversationRequest:
             type: object
             properties:

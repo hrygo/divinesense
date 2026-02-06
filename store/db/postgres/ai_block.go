@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/hrygo/divinesense/internal/util"
@@ -177,18 +178,28 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts, parent_block_id, branch_path
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
 		FROM ai_block
 		WHERE id = $1
 	`
 
 	var block store.AIBlock
 	var userInputsJSON, eventStreamJSON, sessionStatsJSON, metadataJSON []byte
+	var tokenUsageJSON []byte
 	var assistantContent sql.NullString
 	var assistantTimestamp sql.NullInt64
 	var ccSessionID sql.NullString
 	var parentBlockID sql.NullInt64
 	var branchPath sql.NullString
+	// New fields for block extensions (ai-block-fields-extension)
+	var costEstimate sql.NullInt64
+	var modelVersion sql.NullString
+	var userFeedback sql.NullString
+	var regenerationCount sql.NullInt32
+	var errorMessage sql.NullString
+	var archivedAt sql.NullInt64
 
 	err := d.db.QueryRowContext(ctx, query, id).Scan(
 		&block.ID,
@@ -209,6 +220,13 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 		&block.UpdatedTs,
 		&parentBlockID,
 		&branchPath,
+		&tokenUsageJSON,
+		&costEstimate,
+		&modelVersion,
+		&userFeedback,
+		&regenerationCount,
+		&errorMessage,
+		&archivedAt,
 	)
 
 	if err != nil {
@@ -239,6 +257,32 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 	}
 	if branchPath.Valid {
 		block.BranchPath = branchPath.String
+	}
+	// Parse nullable token_usage JSONB (P1-A006)
+	if tokenUsageJSON != nil {
+		var usage store.TokenUsage
+		if err := json.Unmarshal(tokenUsageJSON, &usage); err == nil {
+			block.TokenUsage = &usage
+		}
+	}
+	// Parse new fields (ai-block-fields-extension)
+	if costEstimate.Valid {
+		block.CostEstimate = costEstimate.Int64
+	}
+	if modelVersion.Valid {
+		block.ModelVersion = modelVersion.String
+	}
+	if userFeedback.Valid {
+		block.UserFeedback = userFeedback.String
+	}
+	if regenerationCount.Valid {
+		block.RegenerationCount = regenerationCount.Int32
+	}
+	if errorMessage.Valid {
+		block.ErrorMessage = errorMessage.String
+	}
+	if archivedAt.Valid {
+		block.ArchivedAt = &archivedAt.Int64
 	}
 	// Parse nullable session_stats JSONB
 	if sessionStatsJSON != nil {
@@ -281,7 +325,9 @@ func (d *DB) ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*stor
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts, parent_block_id, branch_path
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
 		FROM ai_block
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY round_number ASC
@@ -345,6 +391,32 @@ func (d *DB) UpdateAIBlock(ctx context.Context, update *store.UpdateAIBlock) (*s
 	}
 	if update.UpdatedTs != nil {
 		set, args = append(set, "updated_ts = "+placeholder(len(args)+1)), append(args, *update.UpdatedTs)
+	}
+	// Update new fields (ai-block-fields-extension)
+	if update.TokenUsage != nil {
+		tokenUsageJSON, err := json.Marshal(update.TokenUsage)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal token_usage: %w", err)
+		}
+		set, args = append(set, "token_usage = "+placeholder(len(args)+1)), append(args, tokenUsageJSON)
+	}
+	if update.CostEstimate != nil {
+		set, args = append(set, "cost_estimate = "+placeholder(len(args)+1)), append(args, *update.CostEstimate)
+	}
+	if update.ModelVersion != nil {
+		set, args = append(set, "model_version = "+placeholder(len(args)+1)), append(args, *update.ModelVersion)
+	}
+	if update.UserFeedback != nil {
+		set, args = append(set, "user_feedback = "+placeholder(len(args)+1)), append(args, *update.UserFeedback)
+	}
+	if update.RegenerationCount != nil {
+		set, args = append(set, "regeneration_count = "+placeholder(len(args)+1)), append(args, *update.RegenerationCount)
+	}
+	if update.ErrorMessage != nil {
+		set, args = append(set, "error_message = "+placeholder(len(args)+1)), append(args, *update.ErrorMessage)
+	}
+	if update.ArchivedAt != nil {
+		set, args = append(set, "archived_at = "+placeholder(len(args)+1)), append(args, *update.ArchivedAt)
 	}
 
 	if len(set) == 0 {
@@ -543,7 +615,9 @@ func (d *DB) GetLatestAIBlock(ctx context.Context, conversationID int32) (*store
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts, parent_block_id, branch_path
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
 		FROM ai_block
 		WHERE conversation_id = $1
 		ORDER BY round_number DESC
@@ -578,7 +652,9 @@ func (d *DB) GetPendingAIBlocks(ctx context.Context) ([]*store.AIBlock, error) {
 		SELECT id, uid, conversation_id, round_number, block_type, mode,
 		       user_inputs, assistant_content, assistant_timestamp,
 		       event_stream, session_stats, cc_session_id, status, metadata,
-		       created_ts, updated_ts, parent_block_id, branch_path
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
 		FROM ai_block
 		WHERE status IN ('pending', 'streaming')
 		ORDER BY created_ts ASC
@@ -666,11 +742,19 @@ func (d *DB) CompleteBlock(
 func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 	var block store.AIBlock
 	var userInputsJSON, eventStreamJSON, sessionStatsJSON, metadataJSON []byte
+	var tokenUsageJSON []byte
 	var assistantContent sql.NullString
 	var assistantTimestamp sql.NullInt64
 	var ccSessionID sql.NullString
 	var parentBlockID sql.NullInt64
 	var branchPath sql.NullString
+	// New fields for block extensions (ai-block-fields-extension)
+	var costEstimate sql.NullInt64
+	var modelVersion sql.NullString
+	var userFeedback sql.NullString
+	var regenerationCount sql.NullInt32
+	var errorMessage sql.NullString
+	var archivedAt sql.NullInt64
 
 	err := rows.Scan(
 		&block.ID,
@@ -691,6 +775,13 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 		&block.UpdatedTs,
 		&parentBlockID,
 		&branchPath,
+		&tokenUsageJSON,
+		&costEstimate,
+		&modelVersion,
+		&userFeedback,
+		&regenerationCount,
+		&errorMessage,
+		&archivedAt,
 	)
 
 	if err != nil {
@@ -722,6 +813,32 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 	if branchPath.Valid {
 		block.BranchPath = branchPath.String
 	}
+	// Parse nullable token_usage JSONB (P1-A006)
+	if tokenUsageJSON != nil {
+		var usage store.TokenUsage
+		if err := json.Unmarshal(tokenUsageJSON, &usage); err == nil {
+			block.TokenUsage = &usage
+		}
+	}
+	// Parse new fields (ai-block-fields-extension)
+	if costEstimate.Valid {
+		block.CostEstimate = costEstimate.Int64
+	}
+	if modelVersion.Valid {
+		block.ModelVersion = modelVersion.String
+	}
+	if userFeedback.Valid {
+		block.UserFeedback = userFeedback.String
+	}
+	if regenerationCount.Valid {
+		block.RegenerationCount = regenerationCount.Int32
+	}
+	if errorMessage.Valid {
+		block.ErrorMessage = errorMessage.String
+	}
+	if archivedAt.Valid {
+		block.ArchivedAt = &archivedAt.Int64
+	}
 	// Parse nullable session_stats JSONB
 	if sessionStatsJSON != nil {
 		var stats store.SessionStats
@@ -739,4 +856,314 @@ func scanAIBlock(rows *sql.Rows) (*store.AIBlock, error) {
 // getNextRoundNumber query. This function now delegates to CreateAIBlock.
 func (d *DB) CreateAIBlockWithRound(ctx context.Context, create *store.CreateAIBlock) (*store.AIBlock, error) {
 	return d.CreateAIBlock(ctx, create)
+}
+
+// ForkBlock creates a new block as a branch from an existing block.
+// The new block inherits the parent's conversation and user inputs.
+// (tree-conversation-branching spec)
+func (d *DB) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+	// First, get the parent block
+	parent, err := d.GetAIBlock(ctx, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent block: %w", err)
+	}
+	if parent == nil {
+		return nil, fmt.Errorf("parent block not found: %d", parentID)
+	}
+
+	// Create a new block with the parent's conversation ID and user inputs
+	// The database trigger will auto-generate the branch_path based on parent_block_id
+	uid := util.GenUUID()
+	userInputsJSON, err := json.Marshal(parent.UserInputs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal user_inputs: %w", err)
+	}
+	metadataJSON, err := json.Marshal(parent.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	query := `
+		INSERT INTO ai_block (
+			uid, conversation_id, block_type, mode,
+			user_inputs, assistant_content, assistant_timestamp,
+			event_stream, session_stats, cc_session_id, status, metadata,
+			parent_block_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		RETURNING id, round_number, branch_path, created_ts, updated_ts
+	`
+
+	var block store.AIBlock
+	var branchPath sql.NullString
+
+	err = d.db.QueryRowContext(ctx, query,
+		uid,
+		parent.ConversationID,
+		string(parent.BlockType),
+		string(parent.Mode),
+		userInputsJSON,
+		nil,          // assistant_content - empty initially
+		0,            // assistant_timestamp
+		[]byte("[]"), // event_stream
+		nil,          // session_stats
+		"",           // cc_session_id - not inherited
+		store.AIBlockStatusPending,
+		metadataJSON,
+		parentID,
+	).Scan(
+		&block.ID,
+		&block.RoundNumber,
+		&branchPath,
+		&block.CreatedTs,
+		&block.UpdatedTs,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fork block: %w", err)
+	}
+
+	// Set remaining fields
+	block.UID = uid
+	block.ConversationID = parent.ConversationID
+	block.BlockType = parent.BlockType
+	block.Mode = parent.Mode
+	block.UserInputs = parent.UserInputs
+	block.EventStream = []store.BlockEvent{}
+	block.Status = store.AIBlockStatusPending
+	block.Metadata = parent.Metadata
+	block.ParentBlockID = &parentID
+	if branchPath.Valid {
+		block.BranchPath = branchPath.String
+	}
+
+	slog.Info("Forked block",
+		"parent_id", parentID,
+		"new_block_id", block.ID,
+		"branch_path", block.BranchPath,
+		"reason", reason,
+	)
+
+	return &block, nil
+}
+
+// ListChildBlocks lists all direct children of a block.
+// (tree-conversation-branching spec)
+func (d *DB) ListChildBlocks(ctx context.Context, parentID int64) ([]*store.AIBlock, error) {
+	query := `
+		SELECT id, uid, conversation_id, round_number, block_type, mode,
+		       user_inputs, assistant_content, assistant_timestamp,
+		       event_stream, session_stats, cc_session_id, status, metadata,
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
+		FROM ai_block
+		WHERE parent_block_id = $1
+		ORDER BY round_number ASC
+	`
+
+	rows, err := d.db.QueryContext(ctx, query, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list child blocks: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]*store.AIBlock, 0)
+	for rows.Next() {
+		block, err := scanAIBlock(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan child block: %w", err)
+		}
+		list = append(list, block)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate child blocks: %w", err)
+	}
+
+	return list, nil
+}
+
+// GetActivePath retrieves the currently active branch path for a conversation.
+// Returns blocks ordered by branch_path to show the active conversation flow.
+// (tree-conversation-branching spec)
+func (d *DB) GetActivePath(ctx context.Context, conversationID int32) ([]*store.AIBlock, error) {
+	// Query blocks that are not archived (active blocks)
+	// and order by round_number to get the conversation flow
+	query := `
+		SELECT id, uid, conversation_id, round_number, block_type, mode,
+		       user_inputs, assistant_content, assistant_timestamp,
+		       event_stream, session_stats, cc_session_id, status, metadata,
+		       created_ts, updated_ts, parent_block_id, branch_path,
+		       token_usage, cost_estimate, model_version, user_feedback,
+		       regeneration_count, error_message, archived_at
+		FROM ai_block
+		WHERE conversation_id = $1 AND archived_at IS NULL
+		ORDER BY round_number ASC
+	`
+
+	rows, err := d.db.QueryContext(ctx, query, conversationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active path: %w", err)
+	}
+	defer rows.Close()
+
+	path := make([]*store.AIBlock, 0)
+	for rows.Next() {
+		block, err := scanAIBlock(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan block in path: %w", err)
+		}
+		path = append(path, block)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate active path: %w", err)
+	}
+
+	return path, nil
+}
+
+// DeleteBranch deletes a block and all its descendants.
+// If cascade is true, recursively delete all descendants.
+// If cascade is false, only delete the specified block.
+// (tree-conversation-branching spec)
+func (d *DB) DeleteBranch(ctx context.Context, blockID int64, cascade bool) error {
+	if cascade {
+		// Recursive delete: delete all descendants first
+		// First, find all children
+		children, err := d.ListChildBlocks(ctx, blockID)
+		if err != nil {
+			return fmt.Errorf("failed to list children for cascade delete: %w", err)
+		}
+
+		// Recursively delete each child branch
+		for _, child := range children {
+			if err := d.DeleteBranch(ctx, child.ID, true); err != nil {
+				return fmt.Errorf("failed to delete child branch %d: %w", child.ID, err)
+			}
+		}
+	}
+
+	// Delete the block itself
+	query := `DELETE FROM ai_block WHERE id = $1`
+	result, err := d.db.ExecContext(ctx, query, blockID)
+	if err != nil {
+		return fmt.Errorf("failed to delete block: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("block not found: %d", blockID)
+	}
+
+	slog.Info("Deleted branch",
+		"block_id", blockID,
+		"cascade", cascade,
+	)
+
+	return nil
+}
+
+// ArchiveInactiveBranches archives blocks not on the active branch path.
+// Sets archived_at timestamp for blocks that don't match the target path.
+// The target path format is "0/1/3" where each number is a branch index.
+// (tree-conversation-branching spec)
+func (d *DB) ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error {
+	// Get all blocks for this conversation
+	blocks, err := d.ListAIBlocks(ctx, &store.FindAIBlock{
+		ConversationID: &conversationID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list blocks: %w", err)
+	}
+
+	// Parse target path into segments for comparison
+	targetSegments := parseBranchPath(targetPath)
+
+	// Archive blocks that are not on the target path
+	for _, block := range blocks {
+		// Skip already archived blocks
+		if block.ArchivedAt != nil {
+			continue
+		}
+
+		// Check if this block's path is on the target path
+		blockSegments := parseBranchPath(block.BranchPath)
+
+		// A block is on the target path if its path is a prefix of target path
+		// or if target path starts with block's path
+		if !isPathOnActiveBranch(blockSegments, targetSegments) {
+			// Archive this block
+			query := `UPDATE ai_block SET archived_at = $1, updated_ts = $2 WHERE id = $3`
+			_, err := d.db.ExecContext(ctx, query, archivedAt, archivedAt, block.ID)
+			if err != nil {
+				return fmt.Errorf("failed to archive block %d: %w", block.ID, err)
+			}
+			slog.Debug("Archived inactive branch block",
+				"block_id", block.ID,
+				"branch_path", block.BranchPath,
+				"target_path", targetPath,
+			)
+		}
+	}
+
+	slog.Info("Archived inactive branches",
+		"conversation_id", conversationID,
+		"target_path", targetPath,
+		"archived_at", archivedAt,
+	)
+
+	return nil
+}
+
+// parseBranchPath parses a branch path string into segments.
+func parseBranchPath(path string) []int {
+	if path == "" {
+		return []int{}
+	}
+
+	parts := strings.Split(path, "/")
+	segments := make([]int, 0, len(parts))
+	for _, p := range parts {
+		if num, err := strconv.Atoi(p); err == nil {
+			segments = append(segments, num)
+		}
+	}
+	return segments
+}
+
+// isPathOnActiveBranch checks if a block's path is on the active branch.
+// A block is on the active branch if its path is a prefix of the active path
+// or if the active path starts with the block's path.
+func isPathOnActiveBranch(blockPath, activePath []int) bool {
+	// If either is empty, consider it on the path
+	if len(blockPath) == 0 || len(activePath) == 0 {
+		return true
+	}
+
+	// Block is on active path if it's a prefix of active path
+	if len(blockPath) <= len(activePath) {
+		for i := 0; i < len(blockPath); i++ {
+			if blockPath[i] != activePath[i] {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Also check if active path is a prefix of block path
+	// (for blocks that are descendants of the active path)
+	if len(activePath) < len(blockPath) {
+		for i := 0; i < len(activePath); i++ {
+			if activePath[i] != blockPath[i] {
+				return false
+			}
+		}
+		return true
+	}
+
+	return false
 }

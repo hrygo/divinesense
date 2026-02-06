@@ -192,6 +192,21 @@ func (m *BlockManager) UpdateBlockStatus(
 
 	if sessionStats != nil {
 		update.SessionStats = sessionStats
+
+		// P1-A006: Convert SessionStats to TokenUsage for ai_block token_usage column
+		// This ensures token usage is persisted in the JSONB field for future analysis
+		update.TokenUsage = &store.TokenUsage{
+			PromptTokens:     int32(sessionStats.InputTokens),
+			CompletionTokens: int32(sessionStats.OutputTokens),
+			TotalTokens:      int32(sessionStats.TotalTokens),
+			CacheReadTokens:  int32(sessionStats.CacheReadTokens),
+			CacheWriteTokens: int32(sessionStats.CacheWriteTokens),
+		}
+
+		// ai-block-fields-extension: Set model_version
+		if sessionStats.ModelUsed != "" {
+			update.ModelVersion = &sessionStats.ModelUsed
+		}
 	}
 
 	block, err := m.store.UpdateAIBlock(ctx, update)

@@ -133,6 +133,18 @@ type Driver interface {
 	ListToolMetrics(ctx context.Context, find *FindToolMetrics) ([]*ToolMetrics, error)
 	DeleteToolMetrics(ctx context.Context, delete *DeleteToolMetrics) error
 
+	// ========== Tree Branching Methods (tree-conversation-branching) ==========
+	// ForkBlock creates a new block as a branch from an existing block.
+	ForkBlock(ctx context.Context, parentID int64, reason string) (*AIBlock, error)
+	// ListChildBlocks lists all direct children of a block.
+	ListChildBlocks(ctx context.Context, parentID int64) ([]*AIBlock, error)
+	// GetActivePath retrieves the currently active branch path for a conversation.
+	GetActivePath(ctx context.Context, conversationID int32) ([]*AIBlock, error)
+	// DeleteBranch deletes a block and all its descendants.
+	DeleteBranch(ctx context.Context, blockID int64, cascade bool) error
+	// ArchiveInactiveBranches archives blocks not on the active branch path.
+	ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error
+
 	// AgentStatsStore provides session statistics persistence.
 	AgentStatsStore() AgentStatsStore
 

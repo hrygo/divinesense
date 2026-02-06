@@ -17,22 +17,24 @@ type MockLLM struct {
 	mock.Mock
 }
 
-func (m *MockLLM) Chat(ctx context.Context, messages []ai.Message) (string, error) {
+func (m *MockLLM) Chat(ctx context.Context, messages []ai.Message) (string, *ai.LLMCallStats, error) {
 	args := m.Called(ctx, messages)
-	return args.String(0), args.Error(1)
+	return args.String(0), nil, args.Error(1)
 }
 
-func (m *MockLLM) ChatStream(ctx context.Context, messages []ai.Message) (<-chan string, <-chan error) {
+func (m *MockLLM) ChatStream(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error) {
 	args := m.Called(ctx, messages)
-	return args.Get(0).(<-chan string), args.Get(1).(<-chan error)
+	statsChan := make(chan *ai.LLMCallStats, 1)
+	close(statsChan)
+	return args.Get(0).(<-chan string), statsChan, args.Get(1).(<-chan error)
 }
 
-func (m *MockLLM) ChatWithTools(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, error) {
+func (m *MockLLM) ChatWithTools(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error) {
 	args := m.Called(ctx, messages, tools)
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return nil, nil, args.Error(1)
 	}
-	return args.Get(0).(*ai.ChatResponse), args.Error(1)
+	return args.Get(0).(*ai.ChatResponse), nil, args.Error(1)
 }
 
 // MockScheduleService implements schedule.Service for testing.

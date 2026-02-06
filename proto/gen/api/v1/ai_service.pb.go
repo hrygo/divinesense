@@ -4834,6 +4834,19 @@ type Block struct {
 	// Tree branching support (for edit & regenerate functionality)
 	ParentBlockId int64  `protobuf:"varint,14,opt,name=parent_block_id,json=parentBlockId,proto3" json:"parent_block_id,omitempty"` // Parent block ID (null for root blocks)
 	BranchPath    string `protobuf:"bytes,15,opt,name=branch_path,json=branchPath,proto3" json:"branch_path,omitempty"`             // Branch path for ordering (e.g., "0/1/3")
+	// Token usage statistics (for all modes)
+	TokenUsage *TokenUsage `protobuf:"bytes,19,opt,name=token_usage,json=tokenUsage,proto3" json:"token_usage,omitempty"` // Detailed token usage for this block
+	// Cost estimation (in milli-cents: 1/1000 of a US cent)
+	CostEstimate int64 `protobuf:"varint,20,opt,name=cost_estimate,json=costEstimate,proto3" json:"cost_estimate,omitempty"` // Estimated cost in milli-cents
+	// Model information
+	ModelVersion string `protobuf:"bytes,21,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"` // LLM model used (e.g., "deepseek-chat", "gpt-4")
+	// User feedback and regeneration
+	UserFeedback      string `protobuf:"bytes,22,opt,name=user_feedback,json=userFeedback,proto3" json:"user_feedback,omitempty"`                 // User feedback: "thumbs_up", "thumbs_down", or custom feedback
+	RegenerationCount int32  `protobuf:"varint,23,opt,name=regeneration_count,json=regenerationCount,proto3" json:"regeneration_count,omitempty"` // Number of times this block was regenerated
+	// Error tracking
+	ErrorMessage string `protobuf:"bytes,24,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // Error message if status = ERROR
+	// Archival support
+	ArchivedAt int64 `protobuf:"varint,25,opt,name=archived_at,json=archivedAt,proto3" json:"archived_at,omitempty"` // Timestamp when block was archived (0 if active)
 	// Extension metadata
 	Metadata      string `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string
 	CreatedTs     int64  `protobuf:"varint,17,opt,name=created_ts,json=createdTs,proto3" json:"created_ts,omitempty"`
@@ -4977,6 +4990,55 @@ func (x *Block) GetBranchPath() string {
 	return ""
 }
 
+func (x *Block) GetTokenUsage() *TokenUsage {
+	if x != nil {
+		return x.TokenUsage
+	}
+	return nil
+}
+
+func (x *Block) GetCostEstimate() int64 {
+	if x != nil {
+		return x.CostEstimate
+	}
+	return 0
+}
+
+func (x *Block) GetModelVersion() string {
+	if x != nil {
+		return x.ModelVersion
+	}
+	return ""
+}
+
+func (x *Block) GetUserFeedback() string {
+	if x != nil {
+		return x.UserFeedback
+	}
+	return ""
+}
+
+func (x *Block) GetRegenerationCount() int32 {
+	if x != nil {
+		return x.RegenerationCount
+	}
+	return 0
+}
+
+func (x *Block) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *Block) GetArchivedAt() int64 {
+	if x != nil {
+		return x.ArchivedAt
+	}
+	return 0
+}
+
 func (x *Block) GetMetadata() string {
 	if x != nil {
 		return x.Metadata
@@ -4998,6 +5060,83 @@ func (x *Block) GetUpdatedTs() int64 {
 	return 0
 }
 
+// TokenUsage represents detailed token usage for a single block or LLM call.
+type TokenUsage struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	PromptTokens     int32                  `protobuf:"varint,1,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`               // Input tokens
+	CompletionTokens int32                  `protobuf:"varint,2,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`   // Output tokens
+	TotalTokens      int32                  `protobuf:"varint,3,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`                  // Total tokens
+	CacheReadTokens  int32                  `protobuf:"varint,4,opt,name=cache_read_tokens,json=cacheReadTokens,proto3" json:"cache_read_tokens,omitempty"`    // Tokens read from cache
+	CacheWriteTokens int32                  `protobuf:"varint,5,opt,name=cache_write_tokens,json=cacheWriteTokens,proto3" json:"cache_write_tokens,omitempty"` // Tokens written to cache
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TokenUsage) Reset() {
+	*x = TokenUsage{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TokenUsage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TokenUsage) ProtoMessage() {}
+
+func (x *TokenUsage) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TokenUsage.ProtoReflect.Descriptor instead.
+func (*TokenUsage) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *TokenUsage) GetPromptTokens() int32 {
+	if x != nil {
+		return x.PromptTokens
+	}
+	return 0
+}
+
+func (x *TokenUsage) GetCompletionTokens() int32 {
+	if x != nil {
+		return x.CompletionTokens
+	}
+	return 0
+}
+
+func (x *TokenUsage) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *TokenUsage) GetCacheReadTokens() int32 {
+	if x != nil {
+		return x.CacheReadTokens
+	}
+	return 0
+}
+
+func (x *TokenUsage) GetCacheWriteTokens() int32 {
+	if x != nil {
+		return x.CacheWriteTokens
+	}
+	return 0
+}
+
 // UserInput represents a single user input within a block.
 type UserInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -5010,7 +5149,7 @@ type UserInput struct {
 
 func (x *UserInput) Reset() {
 	*x = UserInput{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[65]
+	mi := &file_api_v1_ai_service_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5022,7 +5161,7 @@ func (x *UserInput) String() string {
 func (*UserInput) ProtoMessage() {}
 
 func (x *UserInput) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[65]
+	mi := &file_api_v1_ai_service_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5035,7 +5174,7 @@ func (x *UserInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserInput.ProtoReflect.Descriptor instead.
 func (*UserInput) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{65}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *UserInput) GetContent() string {
@@ -5073,7 +5212,7 @@ type BlockEvent struct {
 
 func (x *BlockEvent) Reset() {
 	*x = BlockEvent{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[66]
+	mi := &file_api_v1_ai_service_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5085,7 +5224,7 @@ func (x *BlockEvent) String() string {
 func (*BlockEvent) ProtoMessage() {}
 
 func (x *BlockEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[66]
+	mi := &file_api_v1_ai_service_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5098,7 +5237,7 @@ func (x *BlockEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockEvent.ProtoReflect.Descriptor instead.
 func (*BlockEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{66}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *BlockEvent) GetType() string {
@@ -5142,7 +5281,7 @@ type ListBlocksRequest struct {
 
 func (x *ListBlocksRequest) Reset() {
 	*x = ListBlocksRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[67]
+	mi := &file_api_v1_ai_service_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5154,7 +5293,7 @@ func (x *ListBlocksRequest) String() string {
 func (*ListBlocksRequest) ProtoMessage() {}
 
 func (x *ListBlocksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[67]
+	mi := &file_api_v1_ai_service_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5167,7 +5306,7 @@ func (x *ListBlocksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBlocksRequest.ProtoReflect.Descriptor instead.
 func (*ListBlocksRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{67}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListBlocksRequest) GetConversationId() int32 {
@@ -5208,7 +5347,7 @@ type ListBlocksResponse struct {
 
 func (x *ListBlocksResponse) Reset() {
 	*x = ListBlocksResponse{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[68]
+	mi := &file_api_v1_ai_service_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5220,7 +5359,7 @@ func (x *ListBlocksResponse) String() string {
 func (*ListBlocksResponse) ProtoMessage() {}
 
 func (x *ListBlocksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[68]
+	mi := &file_api_v1_ai_service_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5233,7 +5372,7 @@ func (x *ListBlocksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBlocksResponse.ProtoReflect.Descriptor instead.
 func (*ListBlocksResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{68}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListBlocksResponse) GetBlocks() []*Block {
@@ -5253,7 +5392,7 @@ type GetBlockRequest struct {
 
 func (x *GetBlockRequest) Reset() {
 	*x = GetBlockRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[69]
+	mi := &file_api_v1_ai_service_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5265,7 +5404,7 @@ func (x *GetBlockRequest) String() string {
 func (*GetBlockRequest) ProtoMessage() {}
 
 func (x *GetBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[69]
+	mi := &file_api_v1_ai_service_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5278,7 +5417,7 @@ func (x *GetBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBlockRequest.ProtoReflect.Descriptor instead.
 func (*GetBlockRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{69}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *GetBlockRequest) GetId() int64 {
@@ -5303,7 +5442,7 @@ type CreateBlockRequest struct {
 
 func (x *CreateBlockRequest) Reset() {
 	*x = CreateBlockRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[70]
+	mi := &file_api_v1_ai_service_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5315,7 +5454,7 @@ func (x *CreateBlockRequest) String() string {
 func (*CreateBlockRequest) ProtoMessage() {}
 
 func (x *CreateBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[70]
+	mi := &file_api_v1_ai_service_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5328,7 +5467,7 @@ func (x *CreateBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBlockRequest.ProtoReflect.Descriptor instead.
 func (*CreateBlockRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{70}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *CreateBlockRequest) GetConversationId() int32 {
@@ -5389,7 +5528,7 @@ type UpdateBlockRequest struct {
 
 func (x *UpdateBlockRequest) Reset() {
 	*x = UpdateBlockRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[71]
+	mi := &file_api_v1_ai_service_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5401,7 +5540,7 @@ func (x *UpdateBlockRequest) String() string {
 func (*UpdateBlockRequest) ProtoMessage() {}
 
 func (x *UpdateBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[71]
+	mi := &file_api_v1_ai_service_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5414,7 +5553,7 @@ func (x *UpdateBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateBlockRequest.ProtoReflect.Descriptor instead.
 func (*UpdateBlockRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{71}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *UpdateBlockRequest) GetId() int64 {
@@ -5476,7 +5615,7 @@ type DeleteBlockRequest struct {
 
 func (x *DeleteBlockRequest) Reset() {
 	*x = DeleteBlockRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[72]
+	mi := &file_api_v1_ai_service_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5488,7 +5627,7 @@ func (x *DeleteBlockRequest) String() string {
 func (*DeleteBlockRequest) ProtoMessage() {}
 
 func (x *DeleteBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[72]
+	mi := &file_api_v1_ai_service_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5501,7 +5640,7 @@ func (x *DeleteBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBlockRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBlockRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{72}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *DeleteBlockRequest) GetId() int64 {
@@ -5522,7 +5661,7 @@ type AppendUserInputRequest struct {
 
 func (x *AppendUserInputRequest) Reset() {
 	*x = AppendUserInputRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[73]
+	mi := &file_api_v1_ai_service_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5534,7 +5673,7 @@ func (x *AppendUserInputRequest) String() string {
 func (*AppendUserInputRequest) ProtoMessage() {}
 
 func (x *AppendUserInputRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[73]
+	mi := &file_api_v1_ai_service_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5547,7 +5686,7 @@ func (x *AppendUserInputRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendUserInputRequest.ProtoReflect.Descriptor instead.
 func (*AppendUserInputRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{73}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *AppendUserInputRequest) GetId() int64 {
@@ -5575,7 +5714,7 @@ type AppendEventRequest struct {
 
 func (x *AppendEventRequest) Reset() {
 	*x = AppendEventRequest{}
-	mi := &file_api_v1_ai_service_proto_msgTypes[74]
+	mi := &file_api_v1_ai_service_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5587,7 +5726,7 @@ func (x *AppendEventRequest) String() string {
 func (*AppendEventRequest) ProtoMessage() {}
 
 func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_ai_service_proto_msgTypes[74]
+	mi := &file_api_v1_ai_service_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5600,7 +5739,7 @@ func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEventRequest.ProtoReflect.Descriptor instead.
 func (*AppendEventRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{74}
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *AppendEventRequest) GetId() int64 {
@@ -5615,6 +5754,332 @@ func (x *AppendEventRequest) GetEvent() *BlockEvent {
 		return x.Event
 	}
 	return nil
+}
+
+// ForkBlockRequest is the request for ForkBlock.
+type ForkBlockRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`              // Parent block ID
+	Reason        *string                `protobuf:"bytes,2,opt,name=reason,proto3,oneof" json:"reason,omitempty"` // Optional reason for forking (e.g., "regenerate", "edit")
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForkBlockRequest) Reset() {
+	*x = ForkBlockRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForkBlockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForkBlockRequest) ProtoMessage() {}
+
+func (x *ForkBlockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForkBlockRequest.ProtoReflect.Descriptor instead.
+func (*ForkBlockRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *ForkBlockRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ForkBlockRequest) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+// ListBlockBranchesRequest is the request for ListBlockBranches.
+type ListBlockBranchesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // Root block ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBlockBranchesRequest) Reset() {
+	*x = ListBlockBranchesRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBlockBranchesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBlockBranchesRequest) ProtoMessage() {}
+
+func (x *ListBlockBranchesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBlockBranchesRequest.ProtoReflect.Descriptor instead.
+func (*ListBlockBranchesRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *ListBlockBranchesRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+// ListBlockBranchesResponse is the response for ListBlockBranches.
+type ListBlockBranchesResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Branches         []*BlockBranch         `protobuf:"bytes,1,rep,name=branches,proto3" json:"branches,omitempty"`
+	ActiveBranchPath string                 `protobuf:"bytes,2,opt,name=active_branch_path,json=activeBranchPath,proto3" json:"active_branch_path,omitempty"` // Currently active branch path
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ListBlockBranchesResponse) Reset() {
+	*x = ListBlockBranchesResponse{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBlockBranchesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBlockBranchesResponse) ProtoMessage() {}
+
+func (x *ListBlockBranchesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBlockBranchesResponse.ProtoReflect.Descriptor instead.
+func (*ListBlockBranchesResponse) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ListBlockBranchesResponse) GetBranches() []*BlockBranch {
+	if x != nil {
+		return x.Branches
+	}
+	return nil
+}
+
+func (x *ListBlockBranchesResponse) GetActiveBranchPath() string {
+	if x != nil {
+		return x.ActiveBranchPath
+	}
+	return ""
+}
+
+// BlockBranch represents a branch in the conversation tree.
+type BlockBranch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Block         *Block                 `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`                             // The block at this branch position
+	BranchPath    string                 `protobuf:"bytes,2,opt,name=branch_path,json=branchPath,proto3" json:"branch_path,omitempty"` // Path from root to this block (e.g., "0/1/3")
+	IsActive      bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`      // Whether this is the currently active branch
+	Children      []*BlockBranch         `protobuf:"bytes,4,rep,name=children,proto3" json:"children,omitempty"`                       // Child branches
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BlockBranch) Reset() {
+	*x = BlockBranch{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BlockBranch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BlockBranch) ProtoMessage() {}
+
+func (x *BlockBranch) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BlockBranch.ProtoReflect.Descriptor instead.
+func (*BlockBranch) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *BlockBranch) GetBlock() *Block {
+	if x != nil {
+		return x.Block
+	}
+	return nil
+}
+
+func (x *BlockBranch) GetBranchPath() string {
+	if x != nil {
+		return x.BranchPath
+	}
+	return ""
+}
+
+func (x *BlockBranch) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *BlockBranch) GetChildren() []*BlockBranch {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
+// SwitchBranchRequest is the request for SwitchBranch.
+type SwitchBranchRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ConversationId   int32                  `protobuf:"varint,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	TargetBranchPath string                 `protobuf:"bytes,2,opt,name=target_branch_path,json=targetBranchPath,proto3" json:"target_branch_path,omitempty"` // Target branch to activate
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SwitchBranchRequest) Reset() {
+	*x = SwitchBranchRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SwitchBranchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SwitchBranchRequest) ProtoMessage() {}
+
+func (x *SwitchBranchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SwitchBranchRequest.ProtoReflect.Descriptor instead.
+func (*SwitchBranchRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *SwitchBranchRequest) GetConversationId() int32 {
+	if x != nil {
+		return x.ConversationId
+	}
+	return 0
+}
+
+func (x *SwitchBranchRequest) GetTargetBranchPath() string {
+	if x != nil {
+		return x.TargetBranchPath
+	}
+	return ""
+}
+
+// DeleteBranchRequest is the request for DeleteBranch.
+type DeleteBranchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`           // Block ID to delete (and all descendants)
+	Cascade       bool                   `protobuf:"varint,2,opt,name=cascade,proto3" json:"cascade,omitempty"` // If true, delete all descendants; otherwise only delete this block
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteBranchRequest) Reset() {
+	*x = DeleteBranchRequest{}
+	mi := &file_api_v1_ai_service_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteBranchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteBranchRequest) ProtoMessage() {}
+
+func (x *DeleteBranchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_ai_service_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteBranchRequest.ProtoReflect.Descriptor instead.
+func (*DeleteBranchRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_ai_service_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *DeleteBranchRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *DeleteBranchRequest) GetCascade() bool {
+	if x != nil {
+		return x.Cascade
+	}
+	return false
 }
 
 var File_api_v1_ai_service_proto protoreflect.FileDescriptor
@@ -6013,7 +6478,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x1a_per_session_threshold_usdB\x10\n" +
 	"\x0e_alert_enabledB\x0e\n" +
 	"\f_alert_emailB\x0f\n" +
-	"\r_alert_in_app\"\xea\x05\n" +
+	"\r_alert_in_app\"\x89\b\n" +
 	"\x05Block\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12'\n" +
@@ -6033,12 +6498,28 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x06status\x18\r \x01(\x0e2\x19.memos.api.v1.BlockStatusR\x06status\x12&\n" +
 	"\x0fparent_block_id\x18\x0e \x01(\x03R\rparentBlockId\x12\x1f\n" +
 	"\vbranch_path\x18\x0f \x01(\tR\n" +
-	"branchPath\x12\x1a\n" +
+	"branchPath\x129\n" +
+	"\vtoken_usage\x18\x13 \x01(\v2\x18.memos.api.v1.TokenUsageR\n" +
+	"tokenUsage\x12#\n" +
+	"\rcost_estimate\x18\x14 \x01(\x03R\fcostEstimate\x12#\n" +
+	"\rmodel_version\x18\x15 \x01(\tR\fmodelVersion\x12#\n" +
+	"\ruser_feedback\x18\x16 \x01(\tR\fuserFeedback\x12-\n" +
+	"\x12regeneration_count\x18\x17 \x01(\x05R\x11regenerationCount\x12#\n" +
+	"\rerror_message\x18\x18 \x01(\tR\ferrorMessage\x12\x1f\n" +
+	"\varchived_at\x18\x19 \x01(\x03R\n" +
+	"archivedAt\x12\x1a\n" +
 	"\bmetadata\x18\x10 \x01(\tR\bmetadata\x12\x1d\n" +
 	"\n" +
 	"created_ts\x18\x11 \x01(\x03R\tcreatedTs\x12\x1d\n" +
 	"\n" +
-	"updated_ts\x18\x12 \x01(\x03R\tupdatedTs\"_\n" +
+	"updated_ts\x18\x12 \x01(\x03R\tupdatedTs\"\xdb\x01\n" +
+	"\n" +
+	"TokenUsage\x12#\n" +
+	"\rprompt_tokens\x18\x01 \x01(\x05R\fpromptTokens\x12+\n" +
+	"\x11completion_tokens\x18\x02 \x01(\x05R\x10completionTokens\x12!\n" +
+	"\ftotal_tokens\x18\x03 \x01(\x05R\vtotalTokens\x12*\n" +
+	"\x11cache_read_tokens\x18\x04 \x01(\x05R\x0fcacheReadTokens\x12,\n" +
+	"\x12cache_write_tokens\x18\x05 \x01(\x05R\x10cacheWriteTokens\"_\n" +
 	"\tUserInput\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x1a\n" +
@@ -6085,7 +6566,28 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x05input\x18\x02 \x01(\v2\x17.memos.api.v1.UserInputB\x03\xe0A\x02R\x05input\"^\n" +
 	"\x12AppendEventRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\x123\n" +
-	"\x05event\x18\x02 \x01(\v2\x18.memos.api.v1.BlockEventB\x03\xe0A\x02R\x05event*7\n" +
+	"\x05event\x18\x02 \x01(\v2\x18.memos.api.v1.BlockEventB\x03\xe0A\x02R\x05event\"O\n" +
+	"\x10ForkBlockRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\x12\x1b\n" +
+	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01B\t\n" +
+	"\a_reason\"/\n" +
+	"\x18ListBlockBranchesRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\"\x80\x01\n" +
+	"\x19ListBlockBranchesResponse\x125\n" +
+	"\bbranches\x18\x01 \x03(\v2\x19.memos.api.v1.BlockBranchR\bbranches\x12,\n" +
+	"\x12active_branch_path\x18\x02 \x01(\tR\x10activeBranchPath\"\xad\x01\n" +
+	"\vBlockBranch\x12)\n" +
+	"\x05block\x18\x01 \x01(\v2\x13.memos.api.v1.BlockR\x05block\x12\x1f\n" +
+	"\vbranch_path\x18\x02 \x01(\tR\n" +
+	"branchPath\x12\x1b\n" +
+	"\tis_active\x18\x03 \x01(\bR\bisActive\x125\n" +
+	"\bchildren\x18\x04 \x03(\v2\x19.memos.api.v1.BlockBranchR\bchildren\"v\n" +
+	"\x13SwitchBranchRequest\x12,\n" +
+	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\x121\n" +
+	"\x12target_branch_path\x18\x02 \x01(\tB\x03\xe0A\x02R\x10targetBranchPath\"D\n" +
+	"\x13DeleteBranchRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\x03B\x03\xe0A\x02R\x02id\x12\x18\n" +
+	"\acascade\x18\x02 \x01(\bR\acascade*7\n" +
 	"\x11ScheduleQueryMode\x12\b\n" +
 	"\x04AUTO\x10\x00\x12\f\n" +
 	"\bSTANDARD\x10\x01\x12\n" +
@@ -6117,7 +6619,7 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x14BLOCK_STATUS_PENDING\x10\x01\x12\x1a\n" +
 	"\x16BLOCK_STATUS_STREAMING\x10\x02\x12\x1a\n" +
 	"\x16BLOCK_STATUS_COMPLETED\x10\x03\x12\x16\n" +
-	"\x12BLOCK_STATUS_ERROR\x10\x042\xe6!\n" +
+	"\x12BLOCK_STATUS_ERROR\x10\x042\xe3%\n" +
 	"\tAIService\x12y\n" +
 	"\x0eSemanticSearch\x12#.memos.api.v1.SemanticSearchRequest\x1a$.memos.api.v1.SemanticSearchResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/ai/search\x12v\n" +
 	"\vSuggestTags\x12 .memos.api.v1.SuggestTagsRequest\x1a!.memos.api.v1.SuggestTagsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/ai/suggest-tags\x12[\n" +
@@ -6154,7 +6656,11 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\vUpdateBlock\x12 .memos.api.v1.UpdateBlockRequest\x1a\x13.memos.api.v1.Block\"!\x82\xd3\xe4\x93\x02\x1b:\x01*2\x16/api/v1/ai/blocks/{id}\x12g\n" +
 	"\vDeleteBlock\x12 .memos.api.v1.DeleteBlockRequest\x1a\x16.google.protobuf.Empty\"\x1e\x82\xd3\xe4\x93\x02\x18*\x16/api/v1/ai/blocks/{id}\x12y\n" +
 	"\x0fAppendUserInput\x12$.memos.api.v1.AppendUserInputRequest\x1a\x16.google.protobuf.Empty\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/ai/blocks/{id}/inputs\x12q\n" +
-	"\vAppendEvent\x12 .memos.api.v1.AppendEventRequest\x1a\x16.google.protobuf.Empty\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/ai/blocks/{id}/events2\xaa\x02\n" +
+	"\vAppendEvent\x12 .memos.api.v1.AppendEventRequest\x1a\x16.google.protobuf.Empty\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/ai/blocks/{id}/events\x12h\n" +
+	"\tForkBlock\x12\x1e.memos.api.v1.ForkBlockRequest\x1a\x13.memos.api.v1.Block\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/ai/blocks/{id}/fork\x12\x8d\x01\n" +
+	"\x11ListBlockBranches\x12&.memos.api.v1.ListBlockBranchesRequest\x1a'.memos.api.v1.ListBlockBranchesResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/ai/blocks/{id}/branches\x12\x8e\x01\n" +
+	"\fSwitchBranch\x12!.memos.api.v1.SwitchBranchRequest\x1a\x16.google.protobuf.Empty\"C\x82\xd3\xe4\x93\x02=:\x01*\"8/api/v1/ai/conversations/{conversation_id}/switch-branch\x12p\n" +
+	"\fDeleteBranch\x12!.memos.api.v1.DeleteBranchRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/ai/blocks/{id}/branch2\xaa\x02\n" +
 	"\x14ScheduleAgentService\x12\x7f\n" +
 	"\x04Chat\x12&.memos.api.v1.ScheduleAgentChatRequest\x1a'.memos.api.v1.ScheduleAgentChatResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/schedule-agent/chat\x12\x90\x01\n" +
 	"\n" +
@@ -6174,7 +6680,7 @@ func file_api_v1_ai_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_v1_ai_service_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 75)
+var file_api_v1_ai_service_proto_msgTypes = make([]protoimpl.MessageInfo, 82)
 var file_api_v1_ai_service_proto_goTypes = []any{
 	(ScheduleQueryMode)(0),                   // 0: memos.api.v1.ScheduleQueryMode
 	(AgentType)(0),                           // 1: memos.api.v1.AgentType
@@ -6247,17 +6753,24 @@ var file_api_v1_ai_service_proto_goTypes = []any{
 	(*UserCostSettings)(nil),                 // 68: memos.api.v1.UserCostSettings
 	(*SetUserCostSettingsRequest)(nil),       // 69: memos.api.v1.SetUserCostSettingsRequest
 	(*Block)(nil),                            // 70: memos.api.v1.Block
-	(*UserInput)(nil),                        // 71: memos.api.v1.UserInput
-	(*BlockEvent)(nil),                       // 72: memos.api.v1.BlockEvent
-	(*ListBlocksRequest)(nil),                // 73: memos.api.v1.ListBlocksRequest
-	(*ListBlocksResponse)(nil),               // 74: memos.api.v1.ListBlocksResponse
-	(*GetBlockRequest)(nil),                  // 75: memos.api.v1.GetBlockRequest
-	(*CreateBlockRequest)(nil),               // 76: memos.api.v1.CreateBlockRequest
-	(*UpdateBlockRequest)(nil),               // 77: memos.api.v1.UpdateBlockRequest
-	(*DeleteBlockRequest)(nil),               // 78: memos.api.v1.DeleteBlockRequest
-	(*AppendUserInputRequest)(nil),           // 79: memos.api.v1.AppendUserInputRequest
-	(*AppendEventRequest)(nil),               // 80: memos.api.v1.AppendEventRequest
-	(*emptypb.Empty)(nil),                    // 81: google.protobuf.Empty
+	(*TokenUsage)(nil),                       // 71: memos.api.v1.TokenUsage
+	(*UserInput)(nil),                        // 72: memos.api.v1.UserInput
+	(*BlockEvent)(nil),                       // 73: memos.api.v1.BlockEvent
+	(*ListBlocksRequest)(nil),                // 74: memos.api.v1.ListBlocksRequest
+	(*ListBlocksResponse)(nil),               // 75: memos.api.v1.ListBlocksResponse
+	(*GetBlockRequest)(nil),                  // 76: memos.api.v1.GetBlockRequest
+	(*CreateBlockRequest)(nil),               // 77: memos.api.v1.CreateBlockRequest
+	(*UpdateBlockRequest)(nil),               // 78: memos.api.v1.UpdateBlockRequest
+	(*DeleteBlockRequest)(nil),               // 79: memos.api.v1.DeleteBlockRequest
+	(*AppendUserInputRequest)(nil),           // 80: memos.api.v1.AppendUserInputRequest
+	(*AppendEventRequest)(nil),               // 81: memos.api.v1.AppendEventRequest
+	(*ForkBlockRequest)(nil),                 // 82: memos.api.v1.ForkBlockRequest
+	(*ListBlockBranchesRequest)(nil),         // 83: memos.api.v1.ListBlockBranchesRequest
+	(*ListBlockBranchesResponse)(nil),        // 84: memos.api.v1.ListBlockBranchesResponse
+	(*BlockBranch)(nil),                      // 85: memos.api.v1.BlockBranch
+	(*SwitchBranchRequest)(nil),              // 86: memos.api.v1.SwitchBranchRequest
+	(*DeleteBranchRequest)(nil),              // 87: memos.api.v1.DeleteBranchRequest
+	(*emptypb.Empty)(nil),                    // 88: google.protobuf.Empty
 }
 var file_api_v1_ai_service_proto_depIdxs = []int32{
 	11, // 0: memos.api.v1.SemanticSearchResponse.results:type_name -> memos.api.v1.SearchResult
@@ -6292,98 +6805,110 @@ var file_api_v1_ai_service_proto_depIdxs = []int32{
 	67, // 29: memos.api.v1.CostStats.daily_breakdown:type_name -> memos.api.v1.DailyCostData
 	3,  // 30: memos.api.v1.Block.block_type:type_name -> memos.api.v1.BlockType
 	4,  // 31: memos.api.v1.Block.mode:type_name -> memos.api.v1.BlockMode
-	71, // 32: memos.api.v1.Block.user_inputs:type_name -> memos.api.v1.UserInput
-	72, // 33: memos.api.v1.Block.event_stream:type_name -> memos.api.v1.BlockEvent
+	72, // 32: memos.api.v1.Block.user_inputs:type_name -> memos.api.v1.UserInput
+	73, // 33: memos.api.v1.Block.event_stream:type_name -> memos.api.v1.BlockEvent
 	61, // 34: memos.api.v1.Block.session_stats:type_name -> memos.api.v1.SessionStats
 	5,  // 35: memos.api.v1.Block.status:type_name -> memos.api.v1.BlockStatus
-	5,  // 36: memos.api.v1.ListBlocksRequest.status:type_name -> memos.api.v1.BlockStatus
-	4,  // 37: memos.api.v1.ListBlocksRequest.mode:type_name -> memos.api.v1.BlockMode
-	70, // 38: memos.api.v1.ListBlocksResponse.blocks:type_name -> memos.api.v1.Block
-	3,  // 39: memos.api.v1.CreateBlockRequest.block_type:type_name -> memos.api.v1.BlockType
-	4,  // 40: memos.api.v1.CreateBlockRequest.mode:type_name -> memos.api.v1.BlockMode
-	71, // 41: memos.api.v1.CreateBlockRequest.user_inputs:type_name -> memos.api.v1.UserInput
-	72, // 42: memos.api.v1.UpdateBlockRequest.event_stream:type_name -> memos.api.v1.BlockEvent
-	61, // 43: memos.api.v1.UpdateBlockRequest.session_stats:type_name -> memos.api.v1.SessionStats
-	5,  // 44: memos.api.v1.UpdateBlockRequest.status:type_name -> memos.api.v1.BlockStatus
-	71, // 45: memos.api.v1.AppendUserInputRequest.input:type_name -> memos.api.v1.UserInput
-	72, // 46: memos.api.v1.AppendEventRequest.event:type_name -> memos.api.v1.BlockEvent
-	9,  // 47: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
-	12, // 48: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
-	14, // 49: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
-	32, // 50: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
-	35, // 51: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
-	37, // 52: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
-	40, // 53: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
-	44, // 54: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
-	46, // 55: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
-	48, // 56: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
-	53, // 57: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
-	56, // 58: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
-	57, // 59: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
-	16, // 60: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
-	18, // 61: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
-	19, // 62: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
-	20, // 63: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
-	21, // 64: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
-	22, // 65: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
-	23, // 66: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
-	25, // 67: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
-	26, // 68: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
-	62, // 69: memos.api.v1.AIService.GetSessionStats:input_type -> memos.api.v1.GetSessionStatsRequest
-	63, // 70: memos.api.v1.AIService.ListSessionStats:input_type -> memos.api.v1.ListSessionStatsRequest
-	65, // 71: memos.api.v1.AIService.GetCostStats:input_type -> memos.api.v1.GetCostStatsRequest
-	81, // 72: memos.api.v1.AIService.GetUserCostSettings:input_type -> google.protobuf.Empty
-	69, // 73: memos.api.v1.AIService.SetUserCostSettings:input_type -> memos.api.v1.SetUserCostSettingsRequest
-	73, // 74: memos.api.v1.AIService.ListBlocks:input_type -> memos.api.v1.ListBlocksRequest
-	75, // 75: memos.api.v1.AIService.GetBlock:input_type -> memos.api.v1.GetBlockRequest
-	76, // 76: memos.api.v1.AIService.CreateBlock:input_type -> memos.api.v1.CreateBlockRequest
-	77, // 77: memos.api.v1.AIService.UpdateBlock:input_type -> memos.api.v1.UpdateBlockRequest
-	78, // 78: memos.api.v1.AIService.DeleteBlock:input_type -> memos.api.v1.DeleteBlockRequest
-	79, // 79: memos.api.v1.AIService.AppendUserInput:input_type -> memos.api.v1.AppendUserInputRequest
-	80, // 80: memos.api.v1.AIService.AppendEvent:input_type -> memos.api.v1.AppendEventRequest
-	6,  // 81: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	6,  // 82: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
-	10, // 83: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
-	13, // 84: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
-	28, // 85: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
-	33, // 86: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
-	36, // 87: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
-	38, // 88: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
-	41, // 89: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
-	45, // 90: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
-	47, // 91: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
-	49, // 92: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
-	54, // 93: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
-	81, // 94: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
-	58, // 95: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
-	17, // 96: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
-	15, // 97: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
-	15, // 98: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
-	15, // 99: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
-	81, // 100: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
-	81, // 101: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
-	24, // 102: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
-	81, // 103: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
-	81, // 104: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
-	61, // 105: memos.api.v1.AIService.GetSessionStats:output_type -> memos.api.v1.SessionStats
-	64, // 106: memos.api.v1.AIService.ListSessionStats:output_type -> memos.api.v1.ListSessionStatsResponse
-	66, // 107: memos.api.v1.AIService.GetCostStats:output_type -> memos.api.v1.CostStats
-	68, // 108: memos.api.v1.AIService.GetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
-	68, // 109: memos.api.v1.AIService.SetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
-	74, // 110: memos.api.v1.AIService.ListBlocks:output_type -> memos.api.v1.ListBlocksResponse
-	70, // 111: memos.api.v1.AIService.GetBlock:output_type -> memos.api.v1.Block
-	70, // 112: memos.api.v1.AIService.CreateBlock:output_type -> memos.api.v1.Block
-	70, // 113: memos.api.v1.AIService.UpdateBlock:output_type -> memos.api.v1.Block
-	81, // 114: memos.api.v1.AIService.DeleteBlock:output_type -> google.protobuf.Empty
-	81, // 115: memos.api.v1.AIService.AppendUserInput:output_type -> google.protobuf.Empty
-	81, // 116: memos.api.v1.AIService.AppendEvent:output_type -> google.protobuf.Empty
-	7,  // 117: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
-	8,  // 118: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
-	83, // [83:119] is the sub-list for method output_type
-	47, // [47:83] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	71, // 36: memos.api.v1.Block.token_usage:type_name -> memos.api.v1.TokenUsage
+	5,  // 37: memos.api.v1.ListBlocksRequest.status:type_name -> memos.api.v1.BlockStatus
+	4,  // 38: memos.api.v1.ListBlocksRequest.mode:type_name -> memos.api.v1.BlockMode
+	70, // 39: memos.api.v1.ListBlocksResponse.blocks:type_name -> memos.api.v1.Block
+	3,  // 40: memos.api.v1.CreateBlockRequest.block_type:type_name -> memos.api.v1.BlockType
+	4,  // 41: memos.api.v1.CreateBlockRequest.mode:type_name -> memos.api.v1.BlockMode
+	72, // 42: memos.api.v1.CreateBlockRequest.user_inputs:type_name -> memos.api.v1.UserInput
+	73, // 43: memos.api.v1.UpdateBlockRequest.event_stream:type_name -> memos.api.v1.BlockEvent
+	61, // 44: memos.api.v1.UpdateBlockRequest.session_stats:type_name -> memos.api.v1.SessionStats
+	5,  // 45: memos.api.v1.UpdateBlockRequest.status:type_name -> memos.api.v1.BlockStatus
+	72, // 46: memos.api.v1.AppendUserInputRequest.input:type_name -> memos.api.v1.UserInput
+	73, // 47: memos.api.v1.AppendEventRequest.event:type_name -> memos.api.v1.BlockEvent
+	85, // 48: memos.api.v1.ListBlockBranchesResponse.branches:type_name -> memos.api.v1.BlockBranch
+	70, // 49: memos.api.v1.BlockBranch.block:type_name -> memos.api.v1.Block
+	85, // 50: memos.api.v1.BlockBranch.children:type_name -> memos.api.v1.BlockBranch
+	9,  // 51: memos.api.v1.AIService.SemanticSearch:input_type -> memos.api.v1.SemanticSearchRequest
+	12, // 52: memos.api.v1.AIService.SuggestTags:input_type -> memos.api.v1.SuggestTagsRequest
+	14, // 53: memos.api.v1.AIService.Chat:input_type -> memos.api.v1.ChatRequest
+	32, // 54: memos.api.v1.AIService.GetRelatedMemos:input_type -> memos.api.v1.GetRelatedMemosRequest
+	35, // 55: memos.api.v1.AIService.GetParrotSelfCognition:input_type -> memos.api.v1.GetParrotSelfCognitionRequest
+	37, // 56: memos.api.v1.AIService.ListParrots:input_type -> memos.api.v1.ListParrotsRequest
+	40, // 57: memos.api.v1.AIService.DetectDuplicates:input_type -> memos.api.v1.DetectDuplicatesRequest
+	44, // 58: memos.api.v1.AIService.MergeMemos:input_type -> memos.api.v1.MergeMemosRequest
+	46, // 59: memos.api.v1.AIService.LinkMemos:input_type -> memos.api.v1.LinkMemosRequest
+	48, // 60: memos.api.v1.AIService.GetKnowledgeGraph:input_type -> memos.api.v1.GetKnowledgeGraphRequest
+	53, // 61: memos.api.v1.AIService.GetDueReviews:input_type -> memos.api.v1.GetDueReviewsRequest
+	56, // 62: memos.api.v1.AIService.RecordReview:input_type -> memos.api.v1.RecordReviewRequest
+	57, // 63: memos.api.v1.AIService.GetReviewStats:input_type -> memos.api.v1.GetReviewStatsRequest
+	16, // 64: memos.api.v1.AIService.ListAIConversations:input_type -> memos.api.v1.ListAIConversationsRequest
+	18, // 65: memos.api.v1.AIService.GetAIConversation:input_type -> memos.api.v1.GetAIConversationRequest
+	19, // 66: memos.api.v1.AIService.CreateAIConversation:input_type -> memos.api.v1.CreateAIConversationRequest
+	20, // 67: memos.api.v1.AIService.UpdateAIConversation:input_type -> memos.api.v1.UpdateAIConversationRequest
+	21, // 68: memos.api.v1.AIService.DeleteAIConversation:input_type -> memos.api.v1.DeleteAIConversationRequest
+	22, // 69: memos.api.v1.AIService.AddContextSeparator:input_type -> memos.api.v1.AddContextSeparatorRequest
+	23, // 70: memos.api.v1.AIService.ListMessages:input_type -> memos.api.v1.ListMessagesRequest
+	25, // 71: memos.api.v1.AIService.ClearConversationMessages:input_type -> memos.api.v1.ClearConversationMessagesRequest
+	26, // 72: memos.api.v1.AIService.StopChat:input_type -> memos.api.v1.StopChatRequest
+	62, // 73: memos.api.v1.AIService.GetSessionStats:input_type -> memos.api.v1.GetSessionStatsRequest
+	63, // 74: memos.api.v1.AIService.ListSessionStats:input_type -> memos.api.v1.ListSessionStatsRequest
+	65, // 75: memos.api.v1.AIService.GetCostStats:input_type -> memos.api.v1.GetCostStatsRequest
+	88, // 76: memos.api.v1.AIService.GetUserCostSettings:input_type -> google.protobuf.Empty
+	69, // 77: memos.api.v1.AIService.SetUserCostSettings:input_type -> memos.api.v1.SetUserCostSettingsRequest
+	74, // 78: memos.api.v1.AIService.ListBlocks:input_type -> memos.api.v1.ListBlocksRequest
+	76, // 79: memos.api.v1.AIService.GetBlock:input_type -> memos.api.v1.GetBlockRequest
+	77, // 80: memos.api.v1.AIService.CreateBlock:input_type -> memos.api.v1.CreateBlockRequest
+	78, // 81: memos.api.v1.AIService.UpdateBlock:input_type -> memos.api.v1.UpdateBlockRequest
+	79, // 82: memos.api.v1.AIService.DeleteBlock:input_type -> memos.api.v1.DeleteBlockRequest
+	80, // 83: memos.api.v1.AIService.AppendUserInput:input_type -> memos.api.v1.AppendUserInputRequest
+	81, // 84: memos.api.v1.AIService.AppendEvent:input_type -> memos.api.v1.AppendEventRequest
+	82, // 85: memos.api.v1.AIService.ForkBlock:input_type -> memos.api.v1.ForkBlockRequest
+	83, // 86: memos.api.v1.AIService.ListBlockBranches:input_type -> memos.api.v1.ListBlockBranchesRequest
+	86, // 87: memos.api.v1.AIService.SwitchBranch:input_type -> memos.api.v1.SwitchBranchRequest
+	87, // 88: memos.api.v1.AIService.DeleteBranch:input_type -> memos.api.v1.DeleteBranchRequest
+	6,  // 89: memos.api.v1.ScheduleAgentService.Chat:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	6,  // 90: memos.api.v1.ScheduleAgentService.ChatStream:input_type -> memos.api.v1.ScheduleAgentChatRequest
+	10, // 91: memos.api.v1.AIService.SemanticSearch:output_type -> memos.api.v1.SemanticSearchResponse
+	13, // 92: memos.api.v1.AIService.SuggestTags:output_type -> memos.api.v1.SuggestTagsResponse
+	28, // 93: memos.api.v1.AIService.Chat:output_type -> memos.api.v1.ChatResponse
+	33, // 94: memos.api.v1.AIService.GetRelatedMemos:output_type -> memos.api.v1.GetRelatedMemosResponse
+	36, // 95: memos.api.v1.AIService.GetParrotSelfCognition:output_type -> memos.api.v1.GetParrotSelfCognitionResponse
+	38, // 96: memos.api.v1.AIService.ListParrots:output_type -> memos.api.v1.ListParrotsResponse
+	41, // 97: memos.api.v1.AIService.DetectDuplicates:output_type -> memos.api.v1.DetectDuplicatesResponse
+	45, // 98: memos.api.v1.AIService.MergeMemos:output_type -> memos.api.v1.MergeMemosResponse
+	47, // 99: memos.api.v1.AIService.LinkMemos:output_type -> memos.api.v1.LinkMemosResponse
+	49, // 100: memos.api.v1.AIService.GetKnowledgeGraph:output_type -> memos.api.v1.GetKnowledgeGraphResponse
+	54, // 101: memos.api.v1.AIService.GetDueReviews:output_type -> memos.api.v1.GetDueReviewsResponse
+	88, // 102: memos.api.v1.AIService.RecordReview:output_type -> google.protobuf.Empty
+	58, // 103: memos.api.v1.AIService.GetReviewStats:output_type -> memos.api.v1.GetReviewStatsResponse
+	17, // 104: memos.api.v1.AIService.ListAIConversations:output_type -> memos.api.v1.ListAIConversationsResponse
+	15, // 105: memos.api.v1.AIService.GetAIConversation:output_type -> memos.api.v1.AIConversation
+	15, // 106: memos.api.v1.AIService.CreateAIConversation:output_type -> memos.api.v1.AIConversation
+	15, // 107: memos.api.v1.AIService.UpdateAIConversation:output_type -> memos.api.v1.AIConversation
+	88, // 108: memos.api.v1.AIService.DeleteAIConversation:output_type -> google.protobuf.Empty
+	88, // 109: memos.api.v1.AIService.AddContextSeparator:output_type -> google.protobuf.Empty
+	24, // 110: memos.api.v1.AIService.ListMessages:output_type -> memos.api.v1.ListMessagesResponse
+	88, // 111: memos.api.v1.AIService.ClearConversationMessages:output_type -> google.protobuf.Empty
+	88, // 112: memos.api.v1.AIService.StopChat:output_type -> google.protobuf.Empty
+	61, // 113: memos.api.v1.AIService.GetSessionStats:output_type -> memos.api.v1.SessionStats
+	64, // 114: memos.api.v1.AIService.ListSessionStats:output_type -> memos.api.v1.ListSessionStatsResponse
+	66, // 115: memos.api.v1.AIService.GetCostStats:output_type -> memos.api.v1.CostStats
+	68, // 116: memos.api.v1.AIService.GetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	68, // 117: memos.api.v1.AIService.SetUserCostSettings:output_type -> memos.api.v1.UserCostSettings
+	75, // 118: memos.api.v1.AIService.ListBlocks:output_type -> memos.api.v1.ListBlocksResponse
+	70, // 119: memos.api.v1.AIService.GetBlock:output_type -> memos.api.v1.Block
+	70, // 120: memos.api.v1.AIService.CreateBlock:output_type -> memos.api.v1.Block
+	70, // 121: memos.api.v1.AIService.UpdateBlock:output_type -> memos.api.v1.Block
+	88, // 122: memos.api.v1.AIService.DeleteBlock:output_type -> google.protobuf.Empty
+	88, // 123: memos.api.v1.AIService.AppendUserInput:output_type -> google.protobuf.Empty
+	88, // 124: memos.api.v1.AIService.AppendEvent:output_type -> google.protobuf.Empty
+	70, // 125: memos.api.v1.AIService.ForkBlock:output_type -> memos.api.v1.Block
+	84, // 126: memos.api.v1.AIService.ListBlockBranches:output_type -> memos.api.v1.ListBlockBranchesResponse
+	88, // 127: memos.api.v1.AIService.SwitchBranch:output_type -> google.protobuf.Empty
+	88, // 128: memos.api.v1.AIService.DeleteBranch:output_type -> google.protobuf.Empty
+	7,  // 129: memos.api.v1.ScheduleAgentService.Chat:output_type -> memos.api.v1.ScheduleAgentChatResponse
+	8,  // 130: memos.api.v1.ScheduleAgentService.ChatStream:output_type -> memos.api.v1.ScheduleAgentStreamResponse
+	91, // [91:131] is the sub-list for method output_type
+	51, // [51:91] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_ai_service_proto_init() }
@@ -6393,14 +6918,15 @@ func file_api_v1_ai_service_proto_init() {
 	}
 	file_api_v1_ai_service_proto_msgTypes[14].OneofWrappers = []any{}
 	file_api_v1_ai_service_proto_msgTypes[63].OneofWrappers = []any{}
-	file_api_v1_ai_service_proto_msgTypes[71].OneofWrappers = []any{}
+	file_api_v1_ai_service_proto_msgTypes[72].OneofWrappers = []any{}
+	file_api_v1_ai_service_proto_msgTypes[76].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_ai_service_proto_rawDesc), len(file_api_v1_ai_service_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   75,
+			NumMessages:   82,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

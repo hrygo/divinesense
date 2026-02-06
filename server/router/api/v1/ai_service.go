@@ -138,7 +138,8 @@ func (c *routerLLMClient) Complete(ctx context.Context, prompt string, config ro
 	// Apply model configuration for the LLM call
 	// Note: Currently the LLM service uses global configuration, but config.MaxTokens
 	// and config.Temperature are available here for future per-request configuration.
-	return c.llm.Chat(ctx, messages)
+	result, _, err := c.llm.Chat(ctx, messages)
+	return result, err
 }
 
 // getCurrentUser gets the authenticated user from context.

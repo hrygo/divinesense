@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Clock, DollarSign, FileEdit, Wrench, XCircle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type Block } from "@/types/block";
 
 interface SessionSummaryData {
   sessionId?: string;
@@ -192,4 +193,95 @@ export function CompactSessionSummary({ summary, className }: CompactSessionSumm
       {summary.toolCallCount && summary.toolCallCount > 0 && <span>🔧 {summary.toolCallCount} calls</span>}
     </div>
   );
+}
+
+/**
+ * Convert Block to SessionSummaryData for normal mode display
+ *
+ * Extracts token usage and timing data from a Block for display in SessionSummaryPanel
+ */
+export function blockToSessionSummary(block: Block): SessionSummaryData {
+  const tokenUsage = block.tokenUsage;
+  const sessionStats = block.sessionStats;
+
+  // Use tokenUsage from Block (normal mode) or fall back to sessionStats
+  const inputTokens = tokenUsage?.promptTokens || sessionStats?.inputTokens || 0;
+  const outputTokens = tokenUsage?.completionTokens || sessionStats?.outputTokens || 0;
+  const cacheRead = tokenUsage?.cacheReadTokens || sessionStats?.cacheReadTokens || 0;
+  const cacheWrite = tokenUsage?.cacheWriteTokens || sessionStats?.cacheWriteTokens || 0;
+
+  // Use sessionStats timing for Geek/Evolution, or Block metadata for normal mode
+  // Normal mode blocks may have timing in metadata JSON
+  let thinkingMs: number | undefined;
+  let generationMs: number | undefined;
+  let totalMs: number | undefined;
+  let toolCount: number | undefined;
+
+  // Convert bigint to number if available
+  if (sessionStats?.thinkingDurationMs) {
+    thinkingMs = Number(sessionStats.thinkingDurationMs);
+  }
+  if (sessionStats?.generationDurationMs) {
+    generationMs = Number(sessionStats.generationDurationMs);
+  }
+  if (sessionStats?.totalDurationMs) {
+    totalMs = Number(sessionStats.totalDurationMs);
+  }
+  if (sessionStats?.toolCallCount !== undefined) {
+    toolCount = sessionStats.toolCallCount;
+  }
+
+  // For normal mode, try to extract from metadata if sessionStats is not available
+  if (!totalMs && block.metadata) {
+    try {
+      const meta = JSON.parse(block.metadata);
+      thinkingMs = meta.thinking_duration_ms;
+      generationMs = meta.generation_duration_ms;
+      totalMs = meta.total_duration_ms;
+      toolCount = meta.tool_call_count;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Calculate cost from cost_estimate (in milli-cents) or sessionStats
+  let costUSD: number | undefined;
+  if (block.costEstimate && block.costEstimate > 0n) {
+    // Convert milli-cents to USD: divide by 100000
+    costUSD = Number(block.costEstimate) / 100000;
+  } else if (sessionStats?.totalCostUsd) {
+    costUSD = sessionStats.totalCostUsd;
+  }
+
+  return {
+    sessionId: block.ccSessionId || undefined,
+    totalDurationMs: totalMs,
+    thinkingDurationMs: thinkingMs,
+    generationDurationMs: generationMs,
+    totalInputTokens: inputTokens,
+    totalOutputTokens: outputTokens,
+    totalCacheWriteTokens: cacheWrite,
+    totalCacheReadTokens: cacheRead,
+    toolCallCount: toolCount,
+    toolsUsed: sessionStats?.toolsUsed,
+    filesModified: sessionStats?.filesModified,
+    filePaths: sessionStats?.filePaths,
+    totalCostUSD: costUSD,
+    status: block.status === 4 ? "error" : block.status === 3 ? "success" : undefined,
+  };
+}
+
+/**
+ * NormalModeBlockSummary - Session summary for normal mode blocks
+ *
+ * Wraps SessionSummaryPanel with data extracted from a Block
+ */
+interface NormalModeBlockSummaryProps {
+  block: Block;
+  className?: string;
+}
+
+export function NormalModeBlockSummary({ block, className }: NormalModeBlockSummaryProps) {
+  const summary = blockToSessionSummary(block);
+  return <SessionSummaryPanel summary={summary} className={className} />;
 }

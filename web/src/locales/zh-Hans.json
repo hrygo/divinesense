@@ -476,7 +476,34 @@
     }
   },
   "chat": {
-    "new": "新对话"
+    "new": "新对话",
+    "block-summary": {
+      "tokens": "令牌",
+      "total-tokens": "总计",
+      "input-tokens": "输入",
+      "output-tokens": "输出",
+      "cache-read": "缓存读取",
+      "cache-write": "缓存写入",
+      "estimated-cost": "预估成本",
+      "cost-estimate": "成本估算",
+      "model-version": "模型",
+      "thinking-time": "思考时间",
+      "generation-time": "生成时间",
+      "total-time": "总时间"
+    },
+    "branches": {
+      "title": "对话分支",
+      "branches-available": "可用 {{count}} 个分支",
+      "branches-available_plural": "可用 {{count}} 个分支",
+      "switch-to": "切换到",
+      "current-branch": "当前分支",
+      "create-branch": "创建分支",
+      "delete-branch": "删除分支",
+      "confirm-delete": "确定要删除此分支吗？",
+      "confirm-delete-desc": "这将删除此分支及其所有后代。",
+      "branch-path": "路径",
+      "no-branches": "无可用分支"
+    }
   },
   "duplicate": {
     "found-similar": "发现相似笔记",

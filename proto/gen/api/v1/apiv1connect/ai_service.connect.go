@@ -122,6 +122,15 @@ const (
 	AIServiceAppendUserInputProcedure = "/memos.api.v1.AIService/AppendUserInput"
 	// AIServiceAppendEventProcedure is the fully-qualified name of the AIService's AppendEvent RPC.
 	AIServiceAppendEventProcedure = "/memos.api.v1.AIService/AppendEvent"
+	// AIServiceForkBlockProcedure is the fully-qualified name of the AIService's ForkBlock RPC.
+	AIServiceForkBlockProcedure = "/memos.api.v1.AIService/ForkBlock"
+	// AIServiceListBlockBranchesProcedure is the fully-qualified name of the AIService's
+	// ListBlockBranches RPC.
+	AIServiceListBlockBranchesProcedure = "/memos.api.v1.AIService/ListBlockBranches"
+	// AIServiceSwitchBranchProcedure is the fully-qualified name of the AIService's SwitchBranch RPC.
+	AIServiceSwitchBranchProcedure = "/memos.api.v1.AIService/SwitchBranch"
+	// AIServiceDeleteBranchProcedure is the fully-qualified name of the AIService's DeleteBranch RPC.
+	AIServiceDeleteBranchProcedure = "/memos.api.v1.AIService/DeleteBranch"
 	// ScheduleAgentServiceChatProcedure is the fully-qualified name of the ScheduleAgentService's Chat
 	// RPC.
 	ScheduleAgentServiceChatProcedure = "/memos.api.v1.ScheduleAgentService/Chat"
@@ -200,6 +209,19 @@ type AIServiceClient interface {
 	AppendUserInput(context.Context, *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error)
 	// AppendEvent appends an event to the block's event stream.
 	AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error)
+	// ForkBlock creates a new block as a branch from an existing block.
+	// The new block inherits the parent's conversation and user inputs,
+	// allowing the user to regenerate a different AI response.
+	ForkBlock(context.Context, *connect.Request[v1.ForkBlockRequest]) (*connect.Response[v1.Block], error)
+	// ListBlockBranches lists all child blocks of a given block.
+	// Returns the tree structure showing all branches from this block.
+	ListBlockBranches(context.Context, *connect.Request[v1.ListBlockBranchesRequest]) (*connect.Response[v1.ListBlockBranchesResponse], error)
+	// SwitchBranch switches the active branch for a conversation.
+	// Updates the branch_path to make the specified block the active leaf.
+	SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error)
+	// DeleteBranch deletes a block and all its descendants.
+	// Used for pruning unwanted conversation branches.
+	DeleteBranch(context.Context, *connect.Request[v1.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceClient constructs a client for the memos.api.v1.AIService service. By default, it
@@ -417,6 +439,30 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("AppendEvent")),
 			connect.WithClientOptions(opts...),
 		),
+		forkBlock: connect.NewClient[v1.ForkBlockRequest, v1.Block](
+			httpClient,
+			baseURL+AIServiceForkBlockProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("ForkBlock")),
+			connect.WithClientOptions(opts...),
+		),
+		listBlockBranches: connect.NewClient[v1.ListBlockBranchesRequest, v1.ListBlockBranchesResponse](
+			httpClient,
+			baseURL+AIServiceListBlockBranchesProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("ListBlockBranches")),
+			connect.WithClientOptions(opts...),
+		),
+		switchBranch: connect.NewClient[v1.SwitchBranchRequest, emptypb.Empty](
+			httpClient,
+			baseURL+AIServiceSwitchBranchProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("SwitchBranch")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteBranch: connect.NewClient[v1.DeleteBranchRequest, emptypb.Empty](
+			httpClient,
+			baseURL+AIServiceDeleteBranchProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("DeleteBranch")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -456,6 +502,10 @@ type aIServiceClient struct {
 	deleteBlock               *connect.Client[v1.DeleteBlockRequest, emptypb.Empty]
 	appendUserInput           *connect.Client[v1.AppendUserInputRequest, emptypb.Empty]
 	appendEvent               *connect.Client[v1.AppendEventRequest, emptypb.Empty]
+	forkBlock                 *connect.Client[v1.ForkBlockRequest, v1.Block]
+	listBlockBranches         *connect.Client[v1.ListBlockBranchesRequest, v1.ListBlockBranchesResponse]
+	switchBranch              *connect.Client[v1.SwitchBranchRequest, emptypb.Empty]
+	deleteBranch              *connect.Client[v1.DeleteBranchRequest, emptypb.Empty]
 }
 
 // SemanticSearch calls memos.api.v1.AIService.SemanticSearch.
@@ -628,6 +678,26 @@ func (c *aIServiceClient) AppendEvent(ctx context.Context, req *connect.Request[
 	return c.appendEvent.CallUnary(ctx, req)
 }
 
+// ForkBlock calls memos.api.v1.AIService.ForkBlock.
+func (c *aIServiceClient) ForkBlock(ctx context.Context, req *connect.Request[v1.ForkBlockRequest]) (*connect.Response[v1.Block], error) {
+	return c.forkBlock.CallUnary(ctx, req)
+}
+
+// ListBlockBranches calls memos.api.v1.AIService.ListBlockBranches.
+func (c *aIServiceClient) ListBlockBranches(ctx context.Context, req *connect.Request[v1.ListBlockBranchesRequest]) (*connect.Response[v1.ListBlockBranchesResponse], error) {
+	return c.listBlockBranches.CallUnary(ctx, req)
+}
+
+// SwitchBranch calls memos.api.v1.AIService.SwitchBranch.
+func (c *aIServiceClient) SwitchBranch(ctx context.Context, req *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.switchBranch.CallUnary(ctx, req)
+}
+
+// DeleteBranch calls memos.api.v1.AIService.DeleteBranch.
+func (c *aIServiceClient) DeleteBranch(ctx context.Context, req *connect.Request[v1.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteBranch.CallUnary(ctx, req)
+}
+
 // AIServiceHandler is an implementation of the memos.api.v1.AIService service.
 type AIServiceHandler interface {
 	// SemanticSearch performs semantic search on memos.
@@ -698,6 +768,19 @@ type AIServiceHandler interface {
 	AppendUserInput(context.Context, *connect.Request[v1.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error)
 	// AppendEvent appends an event to the block's event stream.
 	AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error)
+	// ForkBlock creates a new block as a branch from an existing block.
+	// The new block inherits the parent's conversation and user inputs,
+	// allowing the user to regenerate a different AI response.
+	ForkBlock(context.Context, *connect.Request[v1.ForkBlockRequest]) (*connect.Response[v1.Block], error)
+	// ListBlockBranches lists all child blocks of a given block.
+	// Returns the tree structure showing all branches from this block.
+	ListBlockBranches(context.Context, *connect.Request[v1.ListBlockBranchesRequest]) (*connect.Response[v1.ListBlockBranchesResponse], error)
+	// SwitchBranch switches the active branch for a conversation.
+	// Updates the branch_path to make the specified block the active leaf.
+	SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error)
+	// DeleteBranch deletes a block and all its descendants.
+	// Used for pruning unwanted conversation branches.
+	DeleteBranch(context.Context, *connect.Request[v1.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAIServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -911,6 +994,30 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("AppendEvent")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIServiceForkBlockHandler := connect.NewUnaryHandler(
+		AIServiceForkBlockProcedure,
+		svc.ForkBlock,
+		connect.WithSchema(aIServiceMethods.ByName("ForkBlock")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceListBlockBranchesHandler := connect.NewUnaryHandler(
+		AIServiceListBlockBranchesProcedure,
+		svc.ListBlockBranches,
+		connect.WithSchema(aIServiceMethods.ByName("ListBlockBranches")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceSwitchBranchHandler := connect.NewUnaryHandler(
+		AIServiceSwitchBranchProcedure,
+		svc.SwitchBranch,
+		connect.WithSchema(aIServiceMethods.ByName("SwitchBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceDeleteBranchHandler := connect.NewUnaryHandler(
+		AIServiceDeleteBranchProcedure,
+		svc.DeleteBranch,
+		connect.WithSchema(aIServiceMethods.ByName("DeleteBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/memos.api.v1.AIService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIServiceSemanticSearchProcedure:
@@ -981,6 +1088,14 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceAppendUserInputHandler.ServeHTTP(w, r)
 		case AIServiceAppendEventProcedure:
 			aIServiceAppendEventHandler.ServeHTTP(w, r)
+		case AIServiceForkBlockProcedure:
+			aIServiceForkBlockHandler.ServeHTTP(w, r)
+		case AIServiceListBlockBranchesProcedure:
+			aIServiceListBlockBranchesHandler.ServeHTTP(w, r)
+		case AIServiceSwitchBranchProcedure:
+			aIServiceSwitchBranchHandler.ServeHTTP(w, r)
+		case AIServiceDeleteBranchProcedure:
+			aIServiceDeleteBranchHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1124,6 +1239,22 @@ func (UnimplementedAIServiceHandler) AppendUserInput(context.Context, *connect.R
 
 func (UnimplementedAIServiceHandler) AppendEvent(context.Context, *connect.Request[v1.AppendEventRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.AppendEvent is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) ForkBlock(context.Context, *connect.Request[v1.ForkBlockRequest]) (*connect.Response[v1.Block], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ForkBlock is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) ListBlockBranches(context.Context, *connect.Request[v1.ListBlockBranchesRequest]) (*connect.Response[v1.ListBlockBranchesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ListBlockBranches is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.SwitchBranch is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) DeleteBranch(context.Context, *connect.Request[v1.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.DeleteBranch is not implemented"))
 }
 
 // ScheduleAgentServiceClient is a client for the memos.api.v1.ScheduleAgentService service.

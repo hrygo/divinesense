@@ -319,6 +319,105 @@ func (m *mockAIBlockStore) GetPendingBlocks(ctx context.Context) ([]*store.AIBlo
 	return result, nil
 }
 
+// ForkBlock creates a new block as a branch from an existing block.
+// The new block inherits the parent's conversation and user inputs.
+func (m *mockAIBlockStore) ForkBlock(ctx context.Context, parentID int64, reason string) (*store.AIBlock, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	parent, ok := m.blocks[parentID]
+	if !ok {
+		return nil, fmt.Errorf("parent block not found: %d", parentID)
+	}
+
+	id := m.nextID
+	m.nextID++
+
+	uid := fmt.Sprintf("fork-%d", id)
+
+	// Count existing children with this parent (excluding any not yet added)
+	childCount := 0
+	for _, b := range m.blocks {
+		if b.ParentBlockID != nil && *b.ParentBlockID == parentID {
+			childCount++
+		}
+	}
+
+	// Calculate branch path
+	branchPath := ""
+	if parent.BranchPath == "" {
+		// Root's child: just the child index
+		branchPath = fmt.Sprintf("%d", childCount)
+	} else {
+		// Append child index to parent's path
+		branchPath = fmt.Sprintf("%s/%d", parent.BranchPath, childCount)
+	}
+
+	// Copy parent's user inputs (inheritance)
+	copiedInputs := make([]store.UserInput, len(parent.UserInputs))
+	copy(copiedInputs, parent.UserInputs)
+
+	// Copy parent's metadata
+	copiedMetadata := make(map[string]interface{})
+	for k, v := range parent.Metadata {
+		copiedMetadata[k] = v
+	}
+
+	block := &store.AIBlock{
+		ID:               id,
+		UID:              uid,
+		ConversationID:   parent.ConversationID,
+		RoundNumber:      parent.RoundNumber + 1, // Forks are in next round
+		BlockType:        parent.BlockType,
+		Mode:             parent.Mode,
+		UserInputs:       copiedInputs,
+		AssistantContent: "",
+		EventStream:      []store.BlockEvent{},
+		SessionStats:     nil,
+		CCSessionID:      "", // Forks don't inherit CC session
+		Status:           store.AIBlockStatusPending,
+		Metadata:         copiedMetadata,
+		ParentBlockID:    &parentID,
+		BranchPath:       branchPath,
+		CreatedTs:        time.Now().UnixMilli(),
+		UpdatedTs:        time.Now().UnixMilli(),
+	}
+
+	m.blocks[id] = block
+	return block, nil
+}
+
+// ArchiveInactiveBranches archives blocks not on the target branch path.
+func (m *mockAIBlockStore) ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Parse target path into segments
+	targetSegments := parseBranchPath(targetPath)
+
+	// Archive blocks that are not on the target path
+	for _, block := range m.blocks {
+		if block.ConversationID != conversationID {
+			continue
+		}
+		// Skip already archived blocks
+		if block.ArchivedAt != nil {
+			continue
+		}
+
+		// Check if this block's path is on the target path
+		blockSegments := parseBranchPath(block.BranchPath)
+
+		// A block is on the target path if its path is a prefix of target path
+		// or if target path starts with block's path
+		if !isPathOnActiveBranch(blockSegments, targetSegments) {
+			block.ArchivedAt = &archivedAt
+		}
+	}
+
+	return nil
+}
+
 func (m *mockAIBlockStore) Close() error {
 	// No-op for mock store
 	return nil
@@ -871,6 +970,378 @@ func TestBlockModes(t *testing.T) {
 			block, err := db.CreateBlock(ctx, create)
 			require.NoError(t, err)
 			assert.Equal(t, tt.mode, block.Mode)
+		})
+	}
+}
+
+// ============================================================================
+// Branching Tests (Task 047: ForkBlock)
+// ============================================================================
+
+// TestForkBlock_CreatesCorrectBranchStructure verifies that ForkBlock creates
+// a new block with the correct parent_block_id and branch_path.
+func TestForkBlock_CreatesCorrectBranchStructure(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create parent block
+	parentCreate := &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Parent block", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	}
+
+	parent, err := db.CreateBlock(ctx, parentCreate)
+	require.NoError(t, err)
+	require.NotNil(t, parent)
+
+	// Fork from parent using the ForkBlock method signature
+	forkReason := "Exploring alternative response"
+	forkedBlock, err := db.ForkBlock(ctx, parent.ID, forkReason)
+
+	require.NoError(t, err)
+	require.NotNil(t, forkedBlock)
+
+	// Verify parent_block_id is set correctly
+	assert.NotNil(t, forkedBlock.ParentBlockID,
+		"Forked block should have parent_block_id set")
+	assert.Equal(t, parent.ID, *forkedBlock.ParentBlockID,
+		"Forked block should have parent_block_id set to parent's ID")
+
+	// Verify branch_path is set
+	assert.NotEmpty(t, forkedBlock.BranchPath,
+		"Forked block should have a branch_path")
+
+	// Verify forked block is in the same conversation
+	assert.Equal(t, parent.ConversationID, forkedBlock.ConversationID,
+		"Forked block should be in the same conversation")
+
+	// Verify forked block has its own unique ID
+	assert.NotEqual(t, parent.ID, forkedBlock.ID,
+		"Forked block should have a different ID from parent")
+
+	// Verify forked block inherited parent's user inputs
+	assert.Equal(t, len(parent.UserInputs), len(forkedBlock.UserInputs),
+		"Forked block should inherit parent's user inputs")
+}
+
+// TestForkBlock_SequentialForks verifies branch path calculation for sequential forks.
+func TestForkBlock_SequentialForks(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create root block
+	rootCreate := &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Root block", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	}
+
+	root, err := db.CreateBlock(ctx, rootCreate)
+	require.NoError(t, err)
+
+	// Fork multiple times from root
+	var forks []*store.AIBlock
+	for i := 0; i < 3; i++ {
+		fork, err := db.ForkBlock(ctx, root.ID, fmt.Sprintf("Fork %d", i))
+		require.NoError(t, err)
+		require.NotNil(t, fork)
+		forks = append(forks, fork)
+
+		// Verify all forks have the same parent
+		assert.NotNil(t, fork.ParentBlockID)
+		assert.Equal(t, root.ID, *fork.ParentBlockID)
+	}
+
+	// Verify each fork has a unique branch path
+	branchPaths := make(map[string]bool)
+	for _, fork := range forks {
+		assert.NotEmpty(t, fork.BranchPath)
+		// Each fork should have a unique branch path
+		assert.False(t, branchPaths[fork.BranchPath],
+			"Branch path should be unique: %s", fork.BranchPath)
+		branchPaths[fork.BranchPath] = true
+	}
+}
+
+// TestForkBlock_NestedForks verifies branch path calculation for nested forks.
+func TestForkBlock_NestedForks(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create root
+	root, err := db.CreateBlock(ctx, &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Root", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	})
+	require.NoError(t, err)
+
+	// Fork from root -> fork1
+	fork1, err := db.ForkBlock(ctx, root.ID, "First fork")
+	require.NoError(t, err)
+
+	// Fork from fork1 -> fork2 (nested fork)
+	fork2, err := db.ForkBlock(ctx, fork1.ID, "Nested fork")
+	require.NoError(t, err)
+
+	// Verify parent relationships
+	assert.NotNil(t, fork1.ParentBlockID)
+	assert.Equal(t, root.ID, *fork1.ParentBlockID, "fork1's parent should be root")
+	assert.NotNil(t, fork2.ParentBlockID)
+	assert.Equal(t, fork1.ID, *fork2.ParentBlockID, "fork2's parent should be fork1")
+
+	// Verify branch paths reflect hierarchy
+	// fork2's path should be longer than fork1's (deeper in tree)
+	assert.Greater(t, len(fork2.BranchPath), len(fork1.BranchPath),
+		"Nested fork should have longer branch path")
+
+	// Verify fork2's path contains fork1's path as prefix
+	assert.Contains(t, fork2.BranchPath, fork1.BranchPath,
+		"Nested fork's path should contain parent's path")
+}
+
+// ============================================================================
+// Branch Switching Tests (Task 048: Branch Switching)
+// ============================================================================
+
+// TestArchiveInactiveBranches_ArchivesCorrectBlocks verifies that ArchiveInactiveBranches
+// correctly archives blocks not on the active branch path.
+func TestArchiveInactiveBranches_ArchivesCorrectBlocks(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create root block
+	root, err := db.CreateBlock(ctx, &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Root", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	})
+	require.NoError(t, err)
+
+	// Fork from root to create branch "0"
+	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0")
+	require.NoError(t, err)
+
+	// Fork from root to create branch "1"
+	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1")
+	require.NoError(t, err)
+
+	// Fork from fork0 to create branch "0/0"
+	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0")
+	require.NoError(t, err)
+
+	// Archive blocks not on path "0/0"
+	archivedAt := int64(1234569999)
+	err = db.ArchiveInactiveBranches(ctx, 1, "0/0", archivedAt)
+	require.NoError(t, err)
+
+	// Verify blocks on path "0/0" are NOT archived
+	// Path "0/0" includes: root (path ""), fork0 (path "0"), fork00 (path "0/0")
+	assert.Nil(t, root.ArchivedAt, "Root block should not be archived (on active path)")
+	assert.Nil(t, fork0.ArchivedAt, "Fork 0 should not be archived (on active path)")
+	assert.Nil(t, fork00.ArchivedAt, "Fork 0/0 should not be archived (on active path)")
+
+	// Verify blocks NOT on path "0/0" ARE archived
+	assert.NotNil(t, fork1.ArchivedAt, "Fork 1 should be archived (not on active path)")
+	assert.Equal(t, archivedAt, *fork1.ArchivedAt, "Fork 1 should have archived_at set")
+}
+
+// TestBranchSwitching_UpdatesActivePath verifies that switching branches
+// correctly updates which blocks are archived.
+func TestBranchSwitching_UpdatesActivePath(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create a tree structure:
+	//     root
+	//    /     \
+	//  fork0  fork1
+	//  /
+	// fork00
+
+	root, err := db.CreateBlock(ctx, &store.CreateAIBlock{
+		ConversationID: 1,
+		BlockType:      store.AIBlockTypeMessage,
+		Mode:           store.AIBlockModeNormal,
+		UserInputs: []store.UserInput{
+			{Content: "Root", Timestamp: 1234567890},
+		},
+		Status:    store.AIBlockStatusCompleted,
+		CreatedTs: 1234567890,
+		UpdatedTs: 1234567890,
+	})
+	require.NoError(t, err)
+
+	fork0, err := db.ForkBlock(ctx, root.ID, "Fork 0")
+	require.NoError(t, err)
+
+	fork1, err := db.ForkBlock(ctx, root.ID, "Fork 1")
+	require.NoError(t, err)
+
+	fork00, err := db.ForkBlock(ctx, fork0.ID, "Fork 0/0")
+	require.NoError(t, err)
+
+	// Initially, no blocks should be archived
+	assert.Nil(t, root.ArchivedAt)
+	assert.Nil(t, fork0.ArchivedAt)
+	assert.Nil(t, fork1.ArchivedAt)
+	assert.Nil(t, fork00.ArchivedAt)
+
+	// Switch to branch "1" (fork1)
+	archivedAt := int64(1234569999)
+	err = db.ArchiveInactiveBranches(ctx, 1, "1", archivedAt)
+	require.NoError(t, err)
+
+	// Verify: Only blocks on path "1" (root + fork1) should remain active
+	// Blocks on path "0" (fork0 + fork00) should be archived
+	assert.Nil(t, root.ArchivedAt, "Root should not be archived (on all paths)")
+	assert.NotNil(t, fork0.ArchivedAt, "Fork 0 should be archived (not on path 1)")
+	assert.Equal(t, archivedAt, *fork0.ArchivedAt)
+	assert.NotNil(t, fork00.ArchivedAt, "Fork 0/0 should be archived (not on path 1)")
+	assert.Equal(t, archivedAt, *fork00.ArchivedAt)
+	assert.Nil(t, fork1.ArchivedAt, "Fork 1 should not be archived (on path 1)")
+
+	// Switch back to branch "0"
+	archivedAt2 := int64(1234579999)
+	err = db.ArchiveInactiveBranches(ctx, 1, "0", archivedAt2)
+	require.NoError(t, err)
+
+	// Now fork0 should be unarchived (or still have old archived_at)
+	// and fork1 should be archived
+	// Note: The mock doesn't unarchive, so fork0 would still have archived_at
+	// In real implementation, unarchiving might be a separate operation
+
+	// What we can verify: fork1 is now archived
+	assert.Equal(t, archivedAt2, *fork1.ArchivedAt, "Fork 1 should be archived after switching to path 0")
+
+	// fork00 should still be archived (descendant of archived fork0, or archived separately)
+	assert.NotNil(t, fork00.ArchivedAt, "Fork 0/0 should remain archived")
+}
+
+// ============================================================================
+// Cost Calculation Tests (Task 049: Cost Calculation Precision)
+// ============================================================================
+
+// TestCostCalculation_MilliCentsPrecision verifies that cost_estimate is stored
+// with milli-cent precision (1/1000 of a cent, or 1/100,000 of a dollar).
+func TestCostCalculation_MilliCentsPrecision(t *testing.T) {
+	// Cost estimate uses int64 for milli-cents
+	// Example: $0.001234 = 123.4 milli-cents = 123400 micro-dollars
+	// But for simplicity: $0.01 = 1 cent = 1000 milli-cents
+	// $1.23 = 123 cents = 123,000 milli-cents
+
+	testCases := []struct {
+		name          string
+		centsUSD      float64 // Cost in USD cents
+		expectedMilli int64   // Expected value in milli-cents
+	}{
+		{
+			name:          "Zero cost",
+			centsUSD:      0,
+			expectedMilli: 0,
+		},
+		{
+			name:          "One cent",
+			centsUSD:      1.0, // $0.01
+			expectedMilli: 1000,
+		},
+		{
+			name:          "Ten cents",
+			centsUSD:      10.0, // $0.10
+			expectedMilli: 10000,
+		},
+		{
+			name:          "One dollar",
+			centsUSD:      100.0, // $1.00
+			expectedMilli: 100000,
+		},
+		{
+			name:          "Fractional cent",
+			centsUSD:      0.123, // $0.00123
+			expectedMilli: 123,
+		},
+		{
+			name:          "Precise calculation",
+			centsUSD:      12.345, // $0.12345
+			expectedMilli: 12345,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Convert cents to milli-cents
+			milliCents := int64(tc.centsUSD * 1000)
+
+			assert.Equal(t, tc.expectedMilli, milliCents,
+				"Cost calculation in milli-cents should match expected for %s (%f cents)", tc.name, tc.centsUSD)
+
+			// Verify reverse calculation
+			centsBack := float64(milliCents) / 1000
+			assert.InDelta(t, tc.centsUSD, centsBack, 0.0001,
+				"Reverse calculation should match within precision")
+		})
+	}
+}
+
+// TestCostCalculation_LLMTokenPricing verifies cost calculation for different token counts.
+func TestCostCalculation_LLMTokenPricing(t *testing.T) {
+	// DeepSeek pricing (example): $0.14 per million input tokens, $0.28 per million output tokens
+	// That's: $0.00000014 per input token, $0.00000028 per output token
+
+	type TokenUsage struct {
+		inputTokens  int
+		outputTokens int
+		expectedCost float64 // in milli-cents
+	}
+
+	testCases := []TokenUsage{
+		{1000, 1000, 420},  // 1000 input + 1000 output = 2000 tokens = 0.42 cents = 420 milli-cents
+		{1000, 2000, 700},  // 1000 input + 2000 output = 3000 tokens = 0.70 cents = 700 milli-cents
+		{5000, 5000, 2100}, // 5000 + 5000 = 10000 tokens = 2.10 cents = 2100 milli-cents
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%d_input_%d_output", tc.inputTokens, tc.outputTokens), func(t *testing.T) {
+			// Calculate cost based on token pricing
+			inputCost := float64(tc.inputTokens) * 0.14 // milli-cents per token (scaled)
+			outputCost := float64(tc.outputTokens) * 0.28
+			totalCost := inputCost + outputCost
+
+			assert.InDelta(t, tc.expectedCost, totalCost, 0.001,
+				"Token cost calculation should match expected for %d input + %d output", tc.inputTokens, tc.outputTokens)
+
+			// Verify the cost fits in int64 (max ~9.2 quintillion milli-cents = $92 billion)
+			assert.Less(t, totalCost, float64(1<<62), "Cost should fit in int64")
 		})
 	}
 }

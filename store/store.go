@@ -180,3 +180,25 @@ func (s *Store) ListToolMetrics(ctx context.Context, find *FindToolMetrics) ([]*
 func (s *Store) DeleteToolMetrics(ctx context.Context, delete *DeleteToolMetrics) error {
 	return s.driver.DeleteToolMetrics(ctx, delete)
 }
+
+// ========== Tree Branching Methods (tree-conversation-branching) ==========
+
+func (s *Store) ForkBlock(ctx context.Context, parentID int64, reason string) (*AIBlock, error) {
+	return s.driver.ForkBlock(ctx, parentID, reason)
+}
+
+func (s *Store) ListChildBlocks(ctx context.Context, parentID int64) ([]*AIBlock, error) {
+	return s.driver.ListChildBlocks(ctx, parentID)
+}
+
+func (s *Store) GetActivePath(ctx context.Context, conversationID int32) ([]*AIBlock, error) {
+	return s.driver.GetActivePath(ctx, conversationID)
+}
+
+func (s *Store) DeleteBranch(ctx context.Context, blockID int64, cascade bool) error {
+	return s.driver.DeleteBranch(ctx, blockID, cascade)
+}
+
+func (s *Store) ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error {
+	return s.driver.ArchiveInactiveBranches(ctx, conversationID, targetPath, archivedAt)
+}

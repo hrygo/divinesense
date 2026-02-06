@@ -101,6 +101,14 @@ func (p *ScheduleParrotV2) StreamChat(ctx context.Context, input string, history
 	return responseChan, nil
 }
 
+// GetSessionStats returns the accumulated session statistics.
+func (p *ScheduleParrotV2) GetSessionStats() *NormalSessionStats {
+	if p.agent == nil {
+		return nil
+	}
+	return p.agent.GetSessionStats()
+}
+
 // SelfDescribe returns the schedule parrot's metacognitive understanding of itself.
 func (p *ScheduleParrotV2) SelfDescribe() *ParrotSelfCognition {
 	return &ParrotSelfCognition{

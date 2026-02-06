@@ -200,10 +200,11 @@ func (s *ConversationSummarizer) generateSummary(ctx context.Context, blocks []*
 		{Role: "user", Content: prompt},
 	}
 
-	summary, err := s.llm.Chat(ctx, llmMessages)
+	summary, stats, err := s.llm.Chat(ctx, llmMessages)
 	if err != nil {
 		return "", err
 	}
+	_ = stats // Stats not needed for conversation summary
 
 	return strings.TrimSpace(summary), nil
 }

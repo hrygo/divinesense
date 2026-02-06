@@ -231,6 +231,41 @@ service AIService {
       body: "*"
     };
   }
+
+  // ========== Tree Branching (Phase 3) ==========
+
+  // ForkBlock creates a new block as a branch from an existing block.
+  // The new block inherits the parent's conversation and user inputs,
+  // allowing the user to regenerate a different AI response.
+  rpc ForkBlock(ForkBlockRequest) returns (Block) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/blocks/{id}/fork"
+      body: "*"
+    };
+  }
+
+  // ListBlockBranches lists all child blocks of a given block.
+  // Returns the tree structure showing all branches from this block.
+  rpc ListBlockBranches(ListBlockBranchesRequest) returns (ListBlockBranchesResponse) {
+    option (google.api.http) = {get: "/api/v1/ai/blocks/{id}/branches"};
+  }
+
+  // SwitchBranch switches the active branch for a conversation.
+  // Updates the branch_path to make the specified block the active leaf.
+  rpc SwitchBranch(SwitchBranchRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/conversations/{conversation_id}/switch-branch"
+      body: "*"
+    };
+  }
+
+  // DeleteBranch deletes a block and all its descendants.
+  // Used for pruning unwanted conversation branches.
+  rpc DeleteBranch(DeleteBranchRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/ai/blocks/{id}/branch"
+    };
+  }
 }
 
 // ScheduleAgentService provides schedule-specific AI agent functionality.
@@ -873,11 +908,39 @@ message Block {
   int64 parent_block_id = 14; // Parent block ID (null for root blocks)
   string branch_path = 15; // Branch path for ordering (e.g., "0/1/3")
 
+  // Token usage statistics (for all modes)
+  TokenUsage token_usage = 19; // Detailed token usage for this block
+
+  // Cost estimation (in milli-cents: 1/1000 of a US cent)
+  int64 cost_estimate = 20; // Estimated cost in milli-cents
+
+  // Model information
+  string model_version = 21; // LLM model used (e.g., "deepseek-chat", "gpt-4")
+
+  // User feedback and regeneration
+  string user_feedback = 22; // User feedback: "thumbs_up", "thumbs_down", or custom feedback
+  int32 regeneration_count = 23; // Number of times this block was regenerated
+
+  // Error tracking
+  string error_message = 24; // Error message if status = ERROR
+
+  // Archival support
+  int64 archived_at = 25; // Timestamp when block was archived (0 if active)
+
   // Extension metadata
   string metadata = 16; // JSON string
 
   int64 created_ts = 17;
   int64 updated_ts = 18;
+}
+
+// TokenUsage represents detailed token usage for a single block or LLM call.
+message TokenUsage {
+  int32 prompt_tokens = 1; // Input tokens
+  int32 completion_tokens = 2; // Output tokens
+  int32 total_tokens = 3; // Total tokens
+  int32 cache_read_tokens = 4; // Tokens read from cache
+  int32 cache_write_tokens = 5; // Tokens written to cache
 }
 
 // UserInput represents a single user input within a block.
@@ -974,4 +1037,43 @@ message AppendUserInputRequest {
 message AppendEventRequest {
   int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Block ID
   BlockEvent event = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ========== Tree Branching Messages ==========
+
+// ForkBlockRequest is the request for ForkBlock.
+message ForkBlockRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Parent block ID
+  optional string reason = 2; // Optional reason for forking (e.g., "regenerate", "edit")
+}
+
+// ListBlockBranchesRequest is the request for ListBlockBranches.
+message ListBlockBranchesRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Root block ID
+}
+
+// ListBlockBranchesResponse is the response for ListBlockBranches.
+message ListBlockBranchesResponse {
+  repeated BlockBranch branches = 1;
+  string active_branch_path = 2; // Currently active branch path
+}
+
+// BlockBranch represents a branch in the conversation tree.
+message BlockBranch {
+  Block block = 1; // The block at this branch position
+  string branch_path = 2; // Path from root to this block (e.g., "0/1/3")
+  bool is_active = 3; // Whether this is the currently active branch
+  repeated BlockBranch children = 4; // Child branches
+}
+
+// SwitchBranchRequest is the request for SwitchBranch.
+message SwitchBranchRequest {
+  int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string target_branch_path = 2 [(google.api.field_behavior) = REQUIRED]; // Target branch to activate
+}
+
+// DeleteBranchRequest is the request for DeleteBranch.
+message DeleteBranchRequest {
+  int64 id = 1 [(google.api.field_behavior) = REQUIRED]; // Block ID to delete (and all descendants)
+  bool cascade = 2; // If true, delete all descendants; otherwise only delete this block
 }

@@ -75,7 +75,7 @@ func (l *LLMLayer) Suggest(ctx context.Context, req *SuggestRequest) []Suggestio
 		{Role: "user", Content: prompt},
 	}
 
-	response, err := l.llmService.Chat(ctx, messages)
+	response, stats, err := l.llmService.Chat(ctx, messages)
 	if err != nil {
 		slog.Warn("LLM tag suggestion failed",
 			"error", err,
@@ -83,6 +83,7 @@ func (l *LLMLayer) Suggest(ctx context.Context, req *SuggestRequest) []Suggestio
 		)
 		return nil // Graceful degradation: return empty, don't affect L1/L2
 	}
+	_ = stats // Stats not needed for tag suggestion
 
 	// Parse response
 	tags := parseTagsFromJSON(response)

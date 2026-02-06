@@ -72,9 +72,10 @@ const SCROLL_THROTTLE_MS = 50;
 interface MessageBlock {
   id: string;
   userMessage: ConversationMessage;
+  additionalUserInputs?: ConversationMessage[];
   assistantMessage?: ConversationMessage;
   isLatest: boolean;
-  /** Session summary attached to this block (only for last block) */
+  /** Whether to attach block summary to this block */
   attachBlockSummary?: boolean;
 }
 
@@ -120,21 +121,32 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
       continue;
     }
 
-    // Combine all user inputs into a single message
-    const userContent = block.userInputs
-      .map((ui) => ui.content)
-      .filter(Boolean)
-      .join("\n");
+    // Split userInputs: first as userMessage, rest as additionalUserInputs
+    const firstInput = block.userInputs[0];
+    const restInputs = block.userInputs.slice(1);
 
     const userMessage: ConversationMessage = {
       id: `block-${block.id}`,
       role: "user" as MessageRole,
-      content: userContent,
-      timestamp: normalizeTimestamp(block.createdTs),
+      content: firstInput?.content || "",
+      timestamp: normalizeTimestamp(firstInput?.timestamp || block.createdTs),
       metadata: {
         mode: getBlockModeName(block.mode) as AIMode,
       },
     };
+
+    // Build additional user inputs (appended messages)
+    const additionalUserInputs: ConversationMessage[] = restInputs
+      .filter((ui) => ui.content)
+      .map((ui, idx) => ({
+        id: `block-${block.id}-additional-${idx}`,
+        role: "user" as MessageRole,
+        content: ui.content,
+        timestamp: normalizeTimestamp(ui.timestamp || block.createdTs),
+        metadata: {
+          mode: getBlockModeName(block.mode) as AIMode,
+        },
+      }));
 
     // Build assistant message from assistantContent and eventStream
     const rawThinkingSteps = extractThinkingSteps(block.eventStream);
@@ -158,6 +170,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], hasBlockSummary: bool
     messageBlocks.push({
       id: String(block.id),
       userMessage,
+      additionalUserInputs: additionalUserInputs.length > 0 ? additionalUserInputs : undefined,
       assistantMessage,
       isLatest,
       attachBlockSummary,
@@ -502,8 +515,9 @@ const ChatMessages = memo(function ChatMessages({
 
             return (
               <UnifiedMessageBlock
-                key={block.id}
+                key={`${block.id}-${index}`}
                 userMessage={block.userMessage}
+                additionalUserInputs={block.additionalUserInputs}
                 assistantMessage={block.assistantMessage}
                 blockSummary={block.attachBlockSummary ? blockSummary : undefined}
                 parrotId={blockParrotId}

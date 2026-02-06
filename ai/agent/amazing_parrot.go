@@ -41,6 +41,7 @@ type AmazingParrot struct {
 	findFreeTimeTool   *tools.FindFreeTimeTool
 	scheduleUpdateTool *tools.ScheduleUpdateTool
 	userID             int32
+	*BaseParrot        // Embedded for stats accumulation (P1-A006)
 }
 
 // retrievalPlan represents the plan for concurrent retrieval.
@@ -100,6 +101,7 @@ func NewAmazingParrot(
 		scheduleAddTool:    scheduleAddTool,
 		findFreeTimeTool:   findFreeTimeTool,
 		scheduleUpdateTool: scheduleUpdateTool,
+		BaseParrot:         NewBaseParrot("amazing"),
 	}, nil
 }
 
@@ -107,6 +109,17 @@ func NewAmazingParrot(
 // Name 返回鹦鹉名称。
 func (*AmazingParrot) Name() string {
 	return "amazing" // ParrotAgentType AGENT_TYPE_AMAZING
+}
+
+// getModelName returns the model name used for LLM calls.
+// getModelName 返回用于 LLM 调用的模型名称。
+func (p *AmazingParrot) getModelName() string {
+	// Get model name from LLM service if available
+	if llmWithModel, ok := p.llm.(interface{ GetModelName() string }); ok {
+		return llmWithModel.GetModelName()
+	}
+	// Default fallback
+	return "deepseek-chat"
 }
 
 // recordMetrics records prompt usage metrics for the amazing agent.
@@ -256,13 +269,17 @@ func (p *AmazingParrot) planRetrieval(ctx context.Context, userInput string, his
 		"messages_count", len(messages),
 	)
 
-	response, err := p.llm.Chat(ctx, messages)
+	response, stats, err := p.llm.Chat(ctx, messages)
 	if err != nil {
 		slog.Error("AmazingParrot: LLM planning call failed",
 			"user_id", p.userID,
 			"error", err,
 		)
 		return nil, fmt.Errorf("LLM planning failed: %w", err)
+	}
+	// Track LLM call stats (P1-A006)
+	if stats != nil {
+		p.TrackLLMCall(stats, p.getModelName())
 	}
 
 	slog.Debug("AmazingParrot: LLM planning response received",
@@ -311,6 +328,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			defer wg.Done()
 
 			safeCallback(EventTypeToolUse, "正在搜索笔记...")
+			p.TrackToolCall("memo_search")
 
 			input := fmt.Sprintf(`{"query": %q}`, plan.memoSearchQuery)
 
@@ -370,6 +388,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			defer wg.Done()
 
 			safeCallback(EventTypeToolUse, "正在查询日程...")
+			p.TrackToolCall("schedule_query")
 
 			input := fmt.Sprintf(`{"start_time": %q, "end_time": %q}`, plan.scheduleStartTime, plan.scheduleEndTime)
 
@@ -435,6 +454,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			defer wg.Done()
 
 			safeCallback(EventTypeToolUse, "正在创建日程...")
+			p.TrackToolCall("schedule_add")
 
 			// The params are expected to be a JSON string from the planner
 			result, err := p.scheduleAddTool.Run(ctx, plan.scheduleAddParams)
@@ -464,6 +484,7 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			defer wg.Done()
 
 			safeCallback(EventTypeToolUse, "正在查找空闲时间...")
+			p.TrackToolCall("find_free_time")
 
 			input := fmt.Sprintf(`{"date": %q}`, plan.freeTimeDate)
 			result, err := p.findFreeTimeTool.Run(ctx, input)
@@ -568,7 +589,7 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 	// Add current user input
 	messages = append(messages, ai.Message{Role: "user", Content: userInput})
 
-	contentChan, errChan := p.llm.ChatStream(ctx, messages)
+	contentChan, statsChan, errChan := p.llm.ChatStream(ctx, messages)
 
 	var fullContent strings.Builder
 	var hasError bool
@@ -576,11 +597,15 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 		select {
 		case chunk, ok := <-contentChan:
 			if !ok {
-				// contentChan closed, drain errChan then return
+				// contentChan closed, drain errChan and statsChan then return
 				for len(errChan) > 0 {
 					if drainErr := <-errChan; drainErr != nil && !hasError {
 						return "", fmt.Errorf("LLM synthesis failed: %w", drainErr)
 					}
+				}
+				// Drain stats channel (already tracked in case above)
+				for range statsChan {
+					// Stats already tracked when received
 				}
 				if hasError {
 					return "", fmt.Errorf("LLM synthesis failed")
@@ -593,12 +618,22 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 					return "", err
 				}
 			}
-		case _, ok := <-errChan:
+		case stats, ok := <-statsChan:
+			if !ok {
+				statsChan = nil
+				continue
+			}
+			// Track LLM call stats (P1-A006)
+			if stats != nil {
+				p.TrackLLMCall(stats, p.getModelName())
+			}
+		case streamErr, ok := <-errChan:
 			if !ok {
 				// errChan closed, continue to drain contentChan
 				errChan = nil
 				continue
 			}
+			_ = streamErr // Log but continue processing content
 			hasError = true
 			// Log error but continue processing content
 		case <-ctx.Done():
@@ -756,6 +791,15 @@ func (p *AmazingParrot) buildSynthesisPrompt(results map[string]string) string {
 // GetStats returns the cache statistics.
 func (p *AmazingParrot) GetStats() CacheStats {
 	return p.cache.Stats()
+}
+
+// GetSessionStats returns the accumulated session statistics.
+// GetSessionStats 返回累积的会话统计信息。
+func (p *AmazingParrot) GetSessionStats() *NormalSessionStats {
+	if p.BaseParrot == nil {
+		return nil
+	}
+	return p.BaseParrot.GetSessionStats()
 }
 
 // SelfDescribe returns the amazing parrot's metacognitive understanding of itself.

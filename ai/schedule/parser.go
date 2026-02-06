@@ -255,13 +255,14 @@ Before returning, verify:
 
 	userPrompt := fmt.Sprintf("User Input: %s", text)
 
-	response, err := p.llmService.Chat(ctx, []ai.Message{
+	response, stats, err := p.llmService.Chat(ctx, []ai.Message{
 		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: userPrompt},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("LLM parsing failed: %w", err)
 	}
+	_ = stats // Stats not needed for schedule parsing
 
 	// Clean code blocks if present
 	jsonStr := strings.TrimSpace(response)

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
+import { PARROT_THEMES } from "@/types/parrot";
+import { ModeCycleButton } from "./ModeCycleButton";
 
 interface ChatInputProps {
   value: string;
@@ -91,10 +93,25 @@ export function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      // Ctrl+Enter or Cmd+Enter to send
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        onSend();
+      // Enter to send, Ctrl+Enter or Cmd+Enter for new line
+      if (e.key === "Enter") {
+        if (e.ctrlKey || e.metaKey) {
+          // Insert newline at cursor position
+          e.preventDefault();
+          const target = e.target as HTMLTextAreaElement;
+          const start = target.selectionStart;
+          const end = target.selectionEnd;
+          const value = target.value;
+          const newValue = value.slice(0, start) + "\n" + value.slice(end);
+          target.value = newValue;
+          target.selectionStart = target.selectionEnd = start + 1;
+          // Trigger input event to update height
+          target.dispatchEvent(new Event("input", { bubbles: true }));
+        } else {
+          // Send message
+          e.preventDefault();
+          onSend();
+        }
       }
     },
     [onSend],
@@ -145,33 +162,31 @@ export function ChatInput({
     return placeholder || t("ai.parrot.chat-default-placeholder");
   }, [currentMode, placeholder, t]);
 
-  // Mode-specific styles - memoized to avoid recreating on every render
-  const modeStyles = useMemo(() => {
+  // Get theme based on current mode - memoized
+  const currentTheme = useMemo(() => {
     switch (currentMode) {
       case "geek":
-        return {
-          border: "geek-border geek-terminal",
-          input: "geek-mono placeholder:text-green-500/50",
-          button: "geek-btn",
-        };
+        return PARROT_THEMES.GEEK;
       case "evolution":
-        return {
-          border: "evolution-border evolution-gradient",
-          input: "evolution-mono placeholder:text-purple-500/50",
-          button: "evolution-btn",
-        };
+        return PARROT_THEMES.EVOLUTION;
       default:
-        return {
-          border: "",
-          input: "",
-          button: "",
-        };
+        return PARROT_THEMES.NORMAL;
     }
   }, [currentMode]);
 
+  // Mode-specific styles - memoized to avoid recreating on every render
+  const modeStyles = useMemo(() => {
+    return {
+      footerBg: currentTheme.footerBg,
+      inputBg: currentTheme.inputBg,
+      inputBorder: currentTheme.inputBorder,
+      inputFocus: currentTheme.inputFocus,
+    };
+  }, [currentTheme]);
+
   return (
     <div
-      className={cn("shrink-0 p-3 md:p-4 border-t border-border bg-background", className)}
+      className={cn("shrink-0 p-3 md:p-4 border-t border-border transition-colors", modeStyles.footerBg, className)}
       style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : "max(16px, env(safe-area-inset-bottom))" }}
     >
       <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto">
@@ -232,23 +247,21 @@ export function ChatInput({
             )}
             {/* Spacer to push mode cycle button to the right */}
             <div className="flex-1" />
-            {/* Shortcut hint */}
+            {/* Shortcut hint - desktop only */}
             <span className="hidden sm:inline text-xs text-muted-foreground">
-              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> {t("ai.input-hint-newline", { key: "Enter" })} ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> {t("ai.input-hint-send", { key: sendShortcut })}
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> {t("ai.input-hint-send", { key: "Enter" })} ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> {t("ai.input-hint-newline", { key: sendShortcut })}
             </span>
-            {/* Mode Cycle Button - mobile only, shows mode selector */}
-            {onModeChange && currentMode !== "normal" && (
-              <div className="hidden md:block">{/* Could add compact mode indicator here for mobile */}</div>
-            )}
+            {/* Mode Cycle Button - show on all devices */}
+            {onModeChange && <ModeCycleButton currentMode={currentMode} onModeChange={onModeChange} variant="toolbar" isAdmin={true} />}
           </div>
         )}
         {/* Shortcut hint for when no toolbar buttons - always visible on sm+ screens */}
         {!onNewChat && !onClearContext && !onClearChat && !onModeChange && (
           <div className="flex items-center justify-end mb-2">
             <span className="hidden sm:inline text-xs text-muted-foreground">
-              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 换行 ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 发送
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 发送 ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 换行
             </span>
           </div>
         )}
@@ -256,10 +269,11 @@ export function ChatInput({
         {/* Input Box */}
         <div
           className={cn(
-            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border",
-            "focus-within:ring-2 focus-within:ring-offset-2 shadow-sm",
-            "bg-card border-border focus-within:ring-ring",
-            modeStyles.border,
+            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border shadow-sm transition-colors",
+            modeStyles.inputBg,
+            modeStyles.inputBorder,
+            modeStyles.inputFocus,
+            "focus-within:ring-2 focus-within:ring-offset-2",
           )}
           style={{ contain: "layout" }}
         >
@@ -274,9 +288,8 @@ export function ChatInput({
             placeholder={placeholderText}
             disabled={disabled}
             className={cn(
-              "flex-1 min-h-[44px] max-h-[120px] bg-transparent border-0 outline-none resize-none text-sm leading-relaxed",
+              "flex-1 min-h-[44px] max-h-[120px] bg-transparent border-0 outline-none resize-none text-sm leading-relaxed transition-colors",
               "text-foreground placeholder:text-muted-foreground",
-              modeStyles.input,
             )}
             rows={1}
           />
@@ -288,10 +301,9 @@ export function ChatInput({
               isTyping
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : value.trim()
-                  ? "bg-primary text-primary-foreground"
+                  ? `${currentTheme.accent} ${currentTheme.accentText}`
                   : "bg-muted text-muted-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-              modeStyles.button,
             )}
             onClick={() => {
               if (isTyping && onStop) {

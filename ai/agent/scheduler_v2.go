@@ -22,6 +22,7 @@ type SchedulerAgentV2 struct {
 	timezoneLoc      *time.Location
 	intentClassifier *LLMIntentClassifier // LLM-based intent classification
 	queryTool        interface{}          // Stored for structured result access
+	*BaseParrot                           // Embedded for stats accumulation (P1-A006)
 }
 
 // NewSchedulerAgentV2 creates a new framework-less schedule agent.
@@ -88,6 +89,7 @@ func NewSchedulerAgentV2(llm ai.LLMService, scheduleSvc schedule.Service, userID
 		timezone:    userTimezone,
 		timezoneLoc: timezoneLoc,
 		queryTool:   queryTool,
+		BaseParrot:  NewBaseParrot("schedule"),
 	}, nil
 }
 
@@ -262,4 +264,13 @@ func buildSystemPromptV2(timezoneLoc *time.Location) string {
 		timezoneLoc.String(),
 		tzOffsetStr,
 	)
+}
+
+// GetSessionStats returns the accumulated session statistics.
+// GetSessionStats 返回累积的会话统计信息。
+func (a *SchedulerAgentV2) GetSessionStats() *NormalSessionStats {
+	if a.BaseParrot == nil {
+		return nil
+	}
+	return a.BaseParrot.GetSessionStats()
 }

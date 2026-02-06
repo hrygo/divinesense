@@ -498,6 +498,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-slate-200 dark:border-slate-700",
     accent: "bg-red-500",
     accentText: "text-white",
+    headerBg: "bg-slate-50 dark:bg-slate-900/20",
+    footerBg: "bg-slate-200/80 dark:bg-slate-800/50",
+    ringColor: "ring-slate-500",
   },
   // 时巧 - 鸡尾鹦鹉 (Cockatiel) - 日程管理
   SCHEDULE: {
@@ -515,6 +518,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-cyan-200 dark:border-cyan-700",
     accent: "bg-cyan-500",
     accentText: "text-white",
+    headerBg: "bg-cyan-50 dark:bg-cyan-900/20",
+    footerBg: "bg-cyan-200/80 dark:bg-cyan-800/50",
+    ringColor: "ring-cyan-500",
   },
   // 折衷 - 折衷鹦鹉 (Eclectus Parrot) - 综合助手 (Legacy)
   AMAZING: {
@@ -532,6 +538,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-indigo-200 dark:border-indigo-700",
     accent: "bg-indigo-500",
     accentText: "text-white",
+    headerBg: "bg-indigo-50 dark:bg-indigo-900/20",
+    footerBg: "bg-indigo-200/80 dark:bg-indigo-800/50",
+    ringColor: "ring-indigo-500",
   },
   // Normal Mode - 琥珀色 (闪念如琥珀般珍贵保存)
   NORMAL: {
@@ -549,6 +558,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-amber-200 dark:border-amber-700",
     accent: "bg-amber-500",
     accentText: "text-white",
+    headerBg: "bg-amber-50 dark:bg-amber-900/20",
+    footerBg: "bg-amber-200/80 dark:bg-amber-800/50",
+    ringColor: "ring-amber-500",
   },
   // 极客 - Geek Mode (Claude Code CLI) - 石板蓝 (代码如石板般精确)
   GEEK: {
@@ -566,6 +578,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-sky-200 dark:border-slate-700",
     accent: "bg-sky-500",
     accentText: "text-white",
+    headerBg: "bg-sky-50 dark:bg-slate-900/20",
+    footerBg: "bg-sky-200/80 dark:bg-slate-800/50",
+    ringColor: "ring-sky-500",
   },
   // 进化 - Evolution Mode (系统自我进化) - 翠绿 (系统如植物般向上生长)
   EVOLUTION: {
@@ -583,6 +598,9 @@ export const PARROT_THEMES = {
     cardBorder: "border-emerald-200 dark:border-emerald-700",
     accent: "bg-emerald-500",
     accentText: "text-white",
+    headerBg: "bg-emerald-50 dark:bg-emerald-900/20",
+    footerBg: "bg-emerald-200/80 dark:bg-emerald-800/50",
+    ringColor: "ring-emerald-500",
   },
 } as const;
 
