@@ -276,7 +276,6 @@ const AIChat = () => {
     refetch: refetchBlocks,
   } = useBlocksWithFallback(
     currentConversationIdNum,
-    undefined, // No filters - get all blocks
     { isActive: shouldAutoRefreshBlocks }, // Only auto-refresh when not streaming
   );
 
