@@ -871,7 +871,10 @@ function BlockBody({
           {/* 4. Error Section - 使用 TimelineNode */}
           {hasError && (
             <div className="relative group">
-              <TimelineNode type="error" />
+              {/* Timeline Node - 与其他 Section 一致的位置规范 */}
+              <div className="absolute -left-[2rem] top-0">
+                <TimelineNode type="error" />
+              </div>
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
                 <p className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
                   {t("ai.unified_block.error_occurred")}
