@@ -418,6 +418,104 @@ className="... min-h-0 w-full px-6 py-8"
 
 ---
 
+## AI Token 统计与缓存指标 (2026-02)
+
+### 问题描述
+分析 AI 聊天日志时发现两个数据差异：
+1. 日志显示 `content_length=451`，但数据库 `LENGTH(content)=163`
+2. 数据库显示 `cache_read_tokens=5760`，但不确定来源
+
+### 根本原因
+
+**1. 内容长度差异：UTF-8 编码**
+
+```
+日志：octet_length(assistant_content) = 451 字节
+数据库：LENGTH(assistant_content) = 163 字符
+
+原因：中文字符在 UTF-8 中占用 3 字节
+计算：163 字符 × ~2.77 ≈ 451 字节
+```
+
+**代码验证**：
+```sql
+-- server/router/api/v1/ai/handler.go:860
+SELECT octet_length(assistant_content) as content_length  -- 字节数
+
+-- 数据库查询
+SELECT LENGTH(assistant_content)                          -- 字符数
+```
+
+**2. cache_read_tokens 来源：DeepSeek 上下文缓存**
+
+```
+数据流追踪：
+DeepSeek API 响应
+    ↓ prompt_cache_hit_tokens
+go-openai 库映射 (v1.41.2)
+    ↓ PromptTokensDetails.CachedTokens
+ai/llm.go:206
+    ↓ CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens
+LLMCallStats.CacheReadTokens
+    ↓ SessionStats.CacheReadTokens
+数据库 ai_block.token_usage.cache_read_tokens
+    ↓ 5760
+```
+
+**DeepSeek 上下文缓存机制**：
+- **缓存粒度**：64 token 块
+- **工作原理**：相同会话前缀的后续请求自动命中缓存
+- **prompt_cache_hit_tokens**：本次请求中从缓存读取的 token 数量
+
+### 数据验证
+
+| 轮次 | Prompt Tokens | Cache Hit | 说明 |
+|:-----|:--------------|:---------|:-----|
+| 第1轮 | ~5000 | 0 | 冷启动，无缓存 |
+| 第2轮 | ~6000 | ~5000 | 第1轮内容缓存命中 |
+| 第3轮（本次）| ~8000 | **5760** | 前两轮累积缓存命中 |
+
+**缓存率计算**：5760 / 8000 ≈ 72% 的 prompt tokens 来自缓存
+
+### 代码位置
+
+| 文件 | 行号 | 说明 |
+|:-----|:-----|:-----|
+| `ai/llm.go` | 206 | `CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens` |
+| `server/router/api/v1/ai/handler.go` | 860 | `octet_length(finalContent) as content_length` |
+
+### 经验教训
+
+| 问题 | 教练 |
+|:-----|:-----|
+| **字节 vs 字符混淆** | UTF-8 编码中文字符 = 3 字节，明确区分 `octet_length` 和 `LENGTH` |
+| **缓存指标来源不明** | 追踪完整数据流：API → SDK → 业务代码 → 数据库 |
+| **Token 计费理解** | cache_read_tokens 降低 API 调用成本，但仍有基础费用 |
+| **日志与数据库一致** | 统一使用字节或字符统计，避免歧义 |
+
+### 预防措施
+
+1. **统一长度统计**：
+   ```sql
+   -- 推荐统一使用 octet_length（与 API 一致）
+   octet_length(content) as content_bytes
+   LENGTH(content) as content_chars
+   ```
+
+2. **Token 用量监控**：
+   ```go
+   // 记录缓存命中率
+   cacheHitRate := float64(cacheReadTokens) / float64(promptTokens)
+   slog.Info("Token usage", "cache_hit_rate", cacheHitRate)
+   ```
+
+3. **成本优化**：
+   - 系统提示词保持稳定，提升缓存命中率
+   - 避免频繁修改会话前缀
+   - 监控 `cache_write_tokens` 与 `cache_read_tokens` 比例
+
+---
+
 ## 贡献指南
 
 当你遇到一个新的调试问题时：

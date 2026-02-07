@@ -365,6 +365,42 @@ ChatRouter 实现**四层**意图分类系统：
 - **成本优化**：意图分类 Token 限制为 50，Temperature 0（确定性输出）
 - **输出格式**：JSON Schema `{intent, confidence}` 确保结构化响应
 
+### DeepSeek 上下文缓存
+
+> **保鲜状态**: ✅ 已验证 (2026-02-07)
+
+DeepSeek API 提供自动上下文缓存（Prompt Caching），降低多轮对话成本。
+
+**缓存机制**：
+- **缓存粒度**：64 token 块
+- **工作原理**：相同会话前缀的后续请求自动命中缓存
+- **命中识别**：API 响应返回 `prompt_cache_hit_tokens` 字段
+
+**数据流**：
+```
+DeepSeek API Response
+    ↓ prompt_cache_hit_tokens
+go-openai 库映射
+    ↓ PromptTokensDetails.CachedTokens
+ai/llm.go:206
+    ↓ CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens
+LLMCallStats.CacheReadTokens
+    ↓ SessionStats.CacheReadTokens
+数据库 ai_block.token_usage.cache_read_tokens
+```
+
+**成本优化效果**：
+| 轮次 | Prompt Tokens | Cache Hit | 缓存率 |
+|:-----|:--------------|:---------|:-------|
+| 第1轮 | ~5000 | 0 | 0% (冷启动) |
+| 第2轮 | ~6000 | ~5000 | ~83% |
+| 第3轮 | ~8000 | ~5760 | ~72% |
+
+**最佳实践**：
+- 保持系统提示词稳定，提升缓存命中率
+- 避免频繁修改会话前缀
+- 监控 `cache_write_tokens` 与 `cache_read_tokens` 比例
+
 ### 代理工具
 
 **位置**：`ai/agent/tools/`
