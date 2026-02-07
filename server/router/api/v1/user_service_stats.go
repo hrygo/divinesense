@@ -31,7 +31,7 @@ func newMemoStatsCollector() *memoStatsCollector {
 	return &memoStatsCollector{
 		tagCount:          make(map[string]int32),
 		displayTimestamps: make([]*timestamppb.Timestamp, 0, 64), // Pre-allocate for efficiency
-		pinnedMemos:       make([]string, 0, 8),                   // Pre-allocate for efficiency
+		pinnedMemos:       make([]string, 0, 8),                  // Pre-allocate for efficiency
 	}
 }
 
