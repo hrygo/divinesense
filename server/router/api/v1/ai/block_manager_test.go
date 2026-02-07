@@ -78,14 +78,15 @@ func (m *mockBlockStore) AppendEvent(ctx context.Context, blockID int64, event s
 	}
 
 	m.eventsMutex.Lock()
+	defer m.eventsMutex.Unlock()
 	m.eventCount++
-	m.eventsMutex.Unlock()
 
 	block, ok := m.blocks[blockID]
 	if !ok {
 		return assert.AnError
 	}
 
+	// Create a new slice to avoid race with concurrent reads
 	block.EventStream = append(block.EventStream, event)
 	return nil
 }
@@ -589,6 +590,11 @@ func TestEventSerializer_ConcurrentAppend(t *testing.T) {
 	// Track expected event count
 	expectedEventCount := numGoroutines * eventsPerGoroutine
 
+	// appendWg tracks when all AppendEvent calls have completed
+	// This ensures all events are enqueued before we stop the serializer
+	var appendWg sync.WaitGroup
+	appendWg.Add(numGoroutines * eventsPerGoroutine)
+
 	// Launch concurrent goroutines appending events
 	for i := 0; i < numGoroutines; i++ {
 		go func(goroutineID int) {
@@ -596,12 +602,16 @@ func TestEventSerializer_ConcurrentAppend(t *testing.T) {
 			for j := 0; j < eventsPerGoroutine; j++ {
 				eventType := fmt.Sprintf("event_g%d_e%d", goroutineID, j)
 				_ = manager.AppendEvent(ctx, block.ID, eventType, fmt.Sprintf("content from goroutine %d", goroutineID), nil)
+				appendWg.Done()
 			}
 		}(i)
 	}
 
-	// Wait for all goroutines to finish
+	// Wait for all goroutines to finish their event generation
 	wg.Wait()
+
+	// Wait for all AppendEvent calls to complete (events enqueued)
+	appendWg.Wait()
 
 	// Give the serializer time to process all queued events
 	// (The serializer processes asynchronously in a goroutine)

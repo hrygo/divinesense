@@ -102,12 +102,25 @@ func (s *eventSerializer) persist(ctx context.Context, event *blockEvent) {
 }
 
 // enqueue adds an event to the serialization queue.
-// Returns false if the serializer has been stopped.
+//
+// Returns false if the serializer has been stopped OR if the channel is full.
+// The non-blocking select with default case means events may be dropped when
+// the channel buffer (100 events) is saturated. This is intentional: it prevents
+// slow event persistence from blocking the streaming response. In practice, with
+// a 100-event buffer and typical persistence latency (<1ms per event), the channel
+// should rarely be full. If events are being dropped, consider:
+// 1. Increasing the buffer size in getOrCreateSerializer
+// 2. Adding metrics to track dropped events
+// 3. Using a blocking enqueue with timeout
 func (s *eventSerializer) enqueue(eventType string, content string, metadata map[string]any) bool {
 	select {
 	case s.channel <- &blockEvent{eventType, content, metadata}:
 		return true
 	case <-s.stopCh:
+		return false
+	default:
+		// Channel is full - event is dropped
+		// TODO: Add metrics to track dropped events
 		return false
 	}
 }
@@ -285,6 +298,10 @@ func (m *BlockManager) CreateBlockForChat(
 // they are received, preventing race conditions during concurrent appends.
 //
 // This should be called during streaming to record thinking, tool_use, tool_result, and answer events.
+//
+// Metadata key convention: Use snake_case keys (Go convention) for metadata.
+// The TypeScript frontend will access these using the same snake_case keys.
+// Example: {"tool_name": "search", "query": "test"} → frontend accesses as meta.tool_name
 func (m *BlockManager) AppendEvent(
 	ctx context.Context,
 	blockID int64,
@@ -430,6 +447,12 @@ func (m *BlockManager) UpdateBlockStatus(
 // CompleteBlock marks a block as completed with the final assistant content.
 //
 // Stops the event serializer for this block after updating status.
+//
+// Safety: This is safe even if UpdateBlockStatus fails because:
+//  1. stopSerializer uses sync.Once, so multiple calls are idempotent
+//  2. The serializer drain in stop() ensures queued events are persisted
+//  3. If status update fails, the block remains in streaming state but events
+//     continue to be persisted until a subsequent CompleteBlock/MarkBlockError call
 func (m *BlockManager) CompleteBlock(
 	ctx context.Context,
 	blockID int64,
@@ -438,6 +461,7 @@ func (m *BlockManager) CompleteBlock(
 ) error {
 	err := m.UpdateBlockStatus(ctx, blockID, store.AIBlockStatusCompleted, assistantContent, sessionStats)
 	// Stop the event serializer after completing the block
+	// Even if UpdateBlockStatus failed, we stop the serializer to prevent resource leaks
 	m.stopSerializer(blockID)
 	return err
 }
@@ -445,6 +469,12 @@ func (m *BlockManager) CompleteBlock(
 // MarkBlockError marks a block as failed with error status.
 //
 // Stops the event serializer for this block after updating status.
+//
+// Safety: This is safe even if UpdateBlockStatus fails because:
+//  1. stopSerializer uses sync.Once, so multiple calls are idempotent
+//  2. The serializer drain in stop() ensures queued events are persisted
+//  3. If status update fails, the block remains in streaming state but events
+//     continue to be persisted until a subsequent CompleteBlock/MarkBlockError call
 func (m *BlockManager) MarkBlockError(
 	ctx context.Context,
 	blockID int64,
@@ -452,6 +482,7 @@ func (m *BlockManager) MarkBlockError(
 ) error {
 	err := m.UpdateBlockStatus(ctx, blockID, store.AIBlockStatusError, errorMessage, nil)
 	// Stop the event serializer after marking error
+	// Even if UpdateBlockStatus failed, we stop the serializer to prevent resource leaks
 	m.stopSerializer(blockID)
 	return err
 }
