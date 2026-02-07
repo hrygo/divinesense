@@ -106,6 +106,17 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 				// 创建 session stats 持久化器
 				persister := aistats.NewPersister(store.AgentStatsStore, 100, slog.Default())
 
+				// 创建会话标题生成器（使用 IntentClassifier 相同的轻量级模型）
+				var titleGenerator *ai.TitleGenerator
+				if aiConfig.IntentClassifier.Enabled {
+					titleGenerator = ai.NewTitleGenerator(ai.TitleGeneratorConfig{
+						APIKey:  aiConfig.IntentClassifier.APIKey,
+						BaseURL: aiConfig.IntentClassifier.BaseURL,
+						Model:   aiConfig.IntentClassifier.Model,
+					})
+					slog.Info("Title generator initialized", "model", aiConfig.IntentClassifier.Model)
+				}
+
 				service.AIService = &AIService{
 					Store:                  store,
 					EmbeddingService:       embeddingService,
@@ -114,6 +125,7 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					LLMService:             llmService,
 					AdaptiveRetriever:      adaptiveRetriever,
 					IntentClassifierConfig: &aiConfig.IntentClassifier,
+					TitleGenerator:         titleGenerator,
 					persister:              persister,
 				}
 				// Initialize ScheduleService with LLM service for natural language parsing
