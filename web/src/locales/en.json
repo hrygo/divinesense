@@ -394,6 +394,9 @@
       "error": "Something went wrong"
     },
     "typing_indicator": "AI typing",
+    "actions": {
+      "cancel": "Stop Generating"
+    },
     "events": {
       "thinking": "Thinking",
       "tool_use": "Tool",
@@ -443,9 +446,11 @@
       "session_tokens": "Total Session Tokens",
       "session_cost": "Total Session Cost",
       "thinking_process": "Thinking Process",
+      "thinking_done": "Thinking Complete",
       "collapsed": "Click expand to view details",
-      "input": "Input",
-      "output": "Output",
+      "input": "Input Parameters",
+      "output": "Output Result",
+      "file": "File",
       "error_occurred": "Error Occurred",
       "forget": "Forget",
       "forget_tooltip": "Remove from context (Coming soon)",
@@ -467,7 +472,10 @@
       "duration": "Duration",
       "cost": "Cost",
       "tokens": "Tokens",
-      "branch_path": "Branch"
+      "branch_path": "Branch",
+      "click_details": "Click to view details",
+      "tool_details": "Tool Call Details",
+      "no_output": "No output"
     },
     "session_bar": {
       "title": "Session Stats",

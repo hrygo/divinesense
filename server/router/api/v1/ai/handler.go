@@ -584,44 +584,15 @@ func (h *ParrotHandler) executeAgent(
 				}
 			}
 
-			// Append event asynchronously with error logging (don't block streaming)
-			// Note: Persistence failures are logged with structured "metric" attribute for monitoring/alerting
-			go func(blockID int64, evtType string, content string, meta map[string]any) {
-				// Debug log for tool_use events to verify content and meta
-				if evtType == "tool_use" || evtType == "tool_result" {
-					toolName := ""
-					if v, ok := meta["tool_name"].(string); ok {
-						toolName = v
-					}
-					inputSummary := ""
-					if v, ok := meta["input_summary"].(string); ok {
-						inputSummary = v
-						if len(inputSummary) > 100 {
-							inputSummary = inputSummary[:100] + "..."
-						}
-					}
-					contentPreview := content
-					if len(contentPreview) > 200 {
-						contentPreview = contentPreview[:200] + "..."
-					}
-					logger.Info("ai.block.event_persisting",
-						slog.String("event_type", evtType),
-						slog.String("content", contentPreview),
-						slog.String("tool_name", toolName),
-						slog.String("input_summary", inputSummary),
-					)
-				}
-				// Use WithoutCancel to detach from request context - allows persistence to complete
-				// even if the request is cancelled or the client disconnects
-				bgCtx := context.WithoutCancel(ctx)
-				if err := h.blockManager.AppendEvent(bgCtx, blockID, evtType, content, meta); err != nil {
-					logger.Warn("Failed to append event to block",
-						slog.String("metric", "ai.event_persistence_failure"), // Structured attribute for monitoring
-						slog.Int64("block_id", blockID),
-						slog.String("event_type", evtType),
-						slog.String("error", err.Error()))
-				}
-			}(currentBlock.ID, eventType, dataStr, eventMetaForBlock)
+			// Append event synchronously (non-blocking because AppendEvent internally queues)
+			// This ensures events are persisted in order by the BlockManager's serializer
+			if err := h.blockManager.AppendEvent(ctx, currentBlock.ID, eventType, dataStr, eventMetaForBlock); err != nil {
+				logger.Warn("Failed to enqueue event for persistence",
+					slog.String("metric", "ai.event_persistence_failure"), // Structured attribute for monitoring
+					slog.Int64("block_id", currentBlock.ID),
+					slog.String("event_type", eventType),
+					slog.String("error", err.Error()))
+			}
 
 			// Collect assistant content for block completion
 			if eventType == "answer" || eventType == "content" {

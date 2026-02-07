@@ -327,6 +327,8 @@ export function useChat() {
                 if (b.id !== blockId) return b;
 
                 // Append event to eventStream
+                // CRITICAL: Use snake_case keys to match backend format and extractToolCalls expectations
+                // Backend sends: tool_name, input_summary, output_summary, tool_id, etc.
                 const newEventStream = [
                   ...(b.eventStream || []),
                   {
@@ -335,13 +337,13 @@ export function useChat() {
                     content: event.content || "",
                     timestamp: BigInt(event.timestamp),
                     metadata: JSON.stringify({
-                      toolName: event.toolName,
-                      toolId: event.toolId,
-                      inputSummary: event.inputSummary,
-                      outputSummary: event.outputSummary,
-                      filePath: event.filePath,
+                      tool_name: event.toolName,
+                      tool_id: event.toolId,
+                      input_summary: event.inputSummary,
+                      output_summary: event.outputSummary,
+                      file_path: event.filePath,
                       duration: event.duration,
-                      isError: event.isError,
+                      is_error: event.isError,
                     }),
                   },
                 ];
@@ -367,13 +369,13 @@ export function useChat() {
                   content: event.content || "",
                   timestamp: BigInt(event.timestamp),
                   metadata: JSON.stringify({
-                    toolName: event.toolName,
-                    toolId: event.toolId,
-                    inputSummary: event.inputSummary,
-                    outputSummary: event.outputSummary,
-                    filePath: event.filePath,
+                    tool_name: event.toolName,
+                    tool_id: event.toolId,
+                    input_summary: event.inputSummary,
+                    output_summary: event.outputSummary,
+                    file_path: event.filePath,
                     duration: event.duration,
-                    isError: event.isError,
+                    is_error: event.isError,
                   }),
                 },
               ];

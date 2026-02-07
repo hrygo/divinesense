@@ -389,6 +389,9 @@
       "error": "出错了"
     },
     "typing_indicator": "AI 正在输入",
+    "actions": {
+      "cancel": "停止生成"
+    },
     "events": {
       "thinking": "思考中",
       "tool_use": "工具",
@@ -438,9 +441,11 @@
       "session_tokens": "会话总 Token",
       "session_cost": "会话总成本",
       "thinking_process": "思考过程",
+      "thinking_done": "思考完成",
       "collapsed": "点击展开查看详情",
-      "input": "输入",
-      "output": "输出",
+      "input": "输入参数",
+      "output": "输出结果",
+      "file": "文件",
       "error_occurred": "发生错误",
       "forget": "遗忘",
       "forget_tooltip": "从上下文中移除 (即将推出)",
@@ -462,7 +467,10 @@
       "duration": "时长",
       "cost": "成本",
       "tokens": "Token",
-      "branch_path": "分支"
+      "branch_path": "分支",
+      "click_details": "点击查看详情",
+      "tool_details": "工具调用详情",
+      "no_output": "无输出结果"
     },
     "session_bar": {
       "title": "会话统计",

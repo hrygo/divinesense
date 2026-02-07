@@ -9,7 +9,7 @@
  * Phase 5: React.memo optimization
  */
 
-import { Brain, Check, ChevronDown, ChevronUp, Copy, Pencil } from "lucide-react";
+import { Brain, Check, ChevronDown, ChevronUp, Copy, Pencil, StopCircle } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,8 @@ export interface BlockFooterProps {
   onDelete?: () => void;
   theme: BlockFooterTheme;
   isStreaming?: boolean;
+  /** Cancel streaming callback (#113) */
+  onCancel?: () => void;
 }
 
 /**
@@ -42,7 +44,8 @@ const areBlockFooterPropsEqual = (prev: BlockFooterProps, next: BlockFooterProps
     prev.isCollapsed === next.isCollapsed &&
     prev.isStreaming === next.isStreaming &&
     prev.onCopy === next.onCopy &&
-    prev.onToggle === next.onToggle
+    prev.onToggle === next.onToggle &&
+    prev.onCancel === next.onCancel
   );
 };
 
@@ -60,6 +63,7 @@ export const BlockFooter = memo(function BlockFooter({
   onDelete,
   theme,
   isStreaming,
+  onCancel,
 }: BlockFooterProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -110,6 +114,24 @@ export const BlockFooter = memo(function BlockFooter({
 
       {/* Right: Action Buttons - Responsive Icon-First */}
       <div className="flex items-center gap-2">
+        {/* Cancel Button (Only show during streaming) */}
+        {isStreaming && onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              "bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30",
+              "text-red-600 dark:text-red-400",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-red-500",
+            )}
+            title={t("ai.actions.cancel") || "取消"}
+          >
+            <StopCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t("ai.actions.cancel") || "取消"}</span>
+          </button>
+        )}
+
         {/* Edit Button */}
         {onEdit && (
           <button

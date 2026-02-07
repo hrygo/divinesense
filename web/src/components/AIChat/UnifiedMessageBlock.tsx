@@ -54,7 +54,7 @@
  * - useStreamingProgress: 流式进度计算
  */
 
-import { AlertCircle, BarChart3, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { AlertCircle, BarChart3, ChevronDown, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
@@ -125,13 +125,80 @@ function CompactToolCall({
   const { t } = useTranslation();
   const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => displayName.toLowerCase().includes(k));
 
+  // Interactive expand/collapse state with localStorage persistence
+  // Storage key format: tool-expanded-{displayName}-{inputSummary hash}
+  const storageKey = useMemo(() => {
+    const hash = inputSummary ? inputSummary.slice(0, 8) : displayName.slice(0, 8);
+    return `tool-expanded-${displayName}-${hash}`;
+  }, [displayName, inputSummary]);
+
+  const [isExpanded, setIsExpanded] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        return stored === "true";
+      } catch {
+        // Ignore storage errors (e.g., quota exceeded, private browsing)
+      }
+    }
+    return false;
+  });
+
+  // Persist expand state changes to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(storageKey, String(isExpanded));
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }, [storageKey, isExpanded]);
+
+  // Determine expandable content: only output result is worth expanding
+  // inputSummary is already shown in compact view, so don't count it
+  const hasOutputResult = output && output.trim().length > 0;
+  const hasExpandableContent = hasOutputResult;
+  const showExpandHint = !isExpanded && hasExpandableContent;
+
+  // Generate unique ID for ARIA attributes
+  const contentId = `tool-content-${displayName}-${inputSummary?.slice(0, 8) || ""}`;
+
+  const handleToggle = useCallback(() => {
+    if (hasExpandableContent) {
+      setIsExpanded((prev) => !prev);
+    }
+  }, [hasExpandableContent]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleToggle();
+      } else if (e.key === "Escape" && isExpanded) {
+        e.preventDefault();
+        setIsExpanded(false);
+      }
+    },
+    [handleToggle, isExpanded],
+  );
+
   return (
     <div
       className={cn(
         "rounded-lg border px-3 py-2 transition-all duration-200",
         "bg-card hover:shadow-sm",
+        // Add cursor pointer when expandable
+        hasExpandableContent && "cursor-pointer",
         isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
       )}
+      onClick={handleToggle}
+      role="button"
+      tabIndex={hasExpandableContent ? 0 : undefined}
+      aria-expanded={isExpanded}
+      aria-controls={contentId}
+      onKeyDown={handleKeyDown}
     >
       {/* Line 1: Tool Name + Status + Duration */}
       <div className="flex items-center justify-between gap-3">
@@ -139,8 +206,12 @@ function CompactToolCall({
           <span className={cn("font-semibold text-sm", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
             {displayName}
           </span>
-          {/* Status Indicator */}
-          {hasResult ? (
+          {/* Status Indicator - priority: running > done > error > pending */}
+          {isRunning ? (
+            <span className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
+              <Loader2 className="w-3 h-3 animate-spin" /> {t("ai.events.running")}
+            </span>
+          ) : hasResult ? (
             isOutputError ? (
               <span className="flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
                 <AlertCircle className="w-3 h-3" /> {t("ai.events.error")}
@@ -148,10 +219,6 @@ function CompactToolCall({
             ) : (
               <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">✓ {t("ai.events.done")}</span>
             )
-          ) : isRunning ? (
-            <span className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
-              <Loader2 className="w-3 h-3 animate-spin" /> {t("ai.events.running")}
-            </span>
           ) : (
             <span className="text-[11px] text-muted-foreground">{t("ai.events.pending")}</span>
           )}
@@ -164,52 +231,75 @@ function CompactToolCall({
         )}
       </div>
 
-      {/* Line 2: Function Call + Parameters (Compact) */}
-      <div className="mt-1 flex items-center gap-2 min-w-0">
-        {/* Function with params - prefer inputSummary, fallback to fullCall */}
-        {inputSummary ? (
-          <code
-            className={cn(
-              "text-xs font-mono truncate block",
-              isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
-            )}
-            title={inputSummary}
-          >
-            {inputSummary}
-          </code>
-        ) : filePath ? (
-          <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={filePath}>
-            {filePath}
-          </code>
-        ) : fullCall !== displayName ? (
-          <code
-            className={cn(
-              "text-xs font-mono truncate block",
-              isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
-            )}
-            title={fullCall}
-          >
-            {fullCall}
-          </code>
-        ) : null}
-      </div>
+      {/* Line 2: Function Call + Parameters (Compact) - always shown unless empty */}
+      {(inputSummary || filePath || fullCall !== displayName) && (
+        <div className="mt-1 flex items-center gap-2 min-w-0">
+          {/* Function with params - prefer inputSummary, fallback to fullCall */}
+          {inputSummary ? (
+            <code
+              className={cn(
+                "text-xs font-mono truncate block",
+                isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
+              )}
+              title={inputSummary}
+            >
+              {inputSummary}
+            </code>
+          ) : filePath ? (
+            <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={filePath}>
+              {filePath}
+            </code>
+          ) : fullCall !== displayName ? (
+            <code
+              className={cn(
+                "text-xs font-mono truncate block",
+                isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
+              )}
+              title={fullCall}
+            >
+              {fullCall}
+            </code>
+          ) : null}
+        </div>
+      )}
 
-      {/* Expandable Output (only if has output) */}
-      {output && (
-        <details className="group/details mt-2">
-          <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1">
-            <ChevronDown className="w-3 h-3 transition-transform group-open/details:rotate-[-90deg]" />
-            {t("ai.unified_block.output")}
-          </summary>
-          <pre
-            className={cn(
-              "mt-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-2 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
-              isOutputError && "text-red-600/90 bg-red-50/50",
+      {/* Expand hint indicator - only show when there's output to reveal */}
+      {showExpandHint && (
+        <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground opacity-60">
+          <ChevronRight className="w-3 h-3" />
+          {t("ai.unified_block.click_details") || "点击查看详情"}
+        </div>
+      )}
+
+      {/* Expanded Details View - only show output result (inputSummary already visible above) */}
+      {isExpanded && (hasOutputResult || (hasResult && !hasOutputResult)) && (
+        <div
+          id={contentId}
+          className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200"
+          role="region"
+          aria-label={t("ai.unified_block.tool_details") || "工具调用详情"}
+        >
+          {/* Output Result */}
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1 flex items-center gap-1">
+              {t("ai.unified_block.output") || "输出结果"}
+            </div>
+            {hasOutputResult ? (
+              <pre
+                className={cn(
+                  "text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-48 overflow-y-auto p-3 rounded border",
+                  isOutputError ? "text-red-600/90 bg-red-50/50 border-red-200/50" : "text-muted-foreground bg-muted/30 border-border/50",
+                )}
+              >
+                {output}
+              </pre>
+            ) : (
+              <div className="text-xs text-muted-foreground italic p-3 rounded border border-border/50 bg-muted/20">
+                {t("ai.unified_block.no_output") || "无输出结果"}
+              </div>
             )}
-          >
-            {output}
-          </pre>
-        </details>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -275,6 +365,8 @@ export interface UnifiedMessageBlockProps {
   onRegenerate?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Cancel streaming callback (#113) */
+  onCancel?: () => void;
   /** Block ID for edit/fork operations */
   blockId?: bigint;
   /** Branch-related props for tree conversation branching */
@@ -557,12 +649,6 @@ function BlockBody({
   // 按时间戳排序
   timelineEvents.sort((a, b) => a.timestamp - b.timestamp);
 
-  // 计算各类事件的最后一个索引（用于动效判断）
-  const lastToolIndex = timelineEvents
-    .map((e, i) => (e.type === "tool_call" ? i : -1))
-    .filter((i) => i >= 0)
-    .pop();
-
   // When collapsed, show minimal info
   if (isCollapsed) {
     return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.unified_block.collapsed")}</div>;
@@ -640,10 +726,9 @@ function BlockBody({
           )}
 
           {/* 2. Tool Calls Stream - 使用 ToolCallCard 组件 */}
-          {timelineEvents.map((event, eventIndex) => {
+          {timelineEvents.map((event) => {
             if (event.type !== "tool_call") return null;
 
-            const calling = streamingPhase === "tools" && eventIndex === lastToolIndex;
             const call = event.data;
             const rawCallName = typeof call === "string" ? call : call.name;
             // Extract pure tool name for title, full call for content
@@ -658,15 +743,22 @@ function BlockBody({
 
             const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
 
+            // Determine running state:
+            // - If streaming in tools phase AND this tool has no result yet, it's running
+            // - This fixes the issue where only the last tool showed as running
+            const isToolRunning = streamingPhase === "tools" && !result;
+            const hasToolResult = !!result;
+            const hasError = isError || result?.isError;
+
             return (
               <div key={event.id} className="relative group">
                 {/* Timeline Node - 使用 TimelineNode 组件 */}
                 <div className="absolute -left-[2rem] top-0">
-                  {calling ? (
+                  {isToolRunning ? (
                     <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 border-2 border-purple-500 flex items-center justify-center shrink-0 z-10 animate-pulse">
                       <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
                     </div>
-                  ) : isError ? (
+                  ) : hasError ? (
                     <TimelineNode type="error" />
                   ) : (
                     <TimelineNode type="tool" />
@@ -680,9 +772,9 @@ function BlockBody({
                   inputSummary={typeof call === "object" ? call.inputSummary : undefined}
                   filePath={typeof call === "object" ? call.filePath : undefined}
                   duration={typeof call === "object" ? call.duration : undefined}
-                  isError={isError}
-                  isRunning={calling}
-                  hasResult={!!result}
+                  isError={hasError}
+                  isRunning={isToolRunning}
+                  hasResult={hasToolResult}
                   output={result?.outputSummary}
                   isOutputError={result?.isError}
                 />
@@ -838,7 +930,7 @@ function BlockHeader({
 }
 
 // 使用 ModularBlockFooter 替代内联实现
-function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming }: BlockFooterProps) {
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming, onCancel }: BlockFooterProps) {
   const footerTheme = themeToFooterTheme(theme);
 
   return (
@@ -851,6 +943,7 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDe
       onDelete={onDelete}
       theme={footerTheme}
       isStreaming={isStreaming}
+      onCancel={onCancel}
     />
   );
 }
@@ -872,6 +965,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   onRegenerate,
   onEdit,
   onDelete,
+  onCancel,
   blockId: _blockId,
   branches,
   branchPath,
@@ -991,6 +1085,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           onDelete={onDelete}
           theme={blockTheme}
           isStreaming={isStreaming}
+          onCancel={onCancel}
         />
       </div>
     </div>

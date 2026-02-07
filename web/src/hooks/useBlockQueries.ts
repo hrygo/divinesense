@@ -119,7 +119,10 @@ export function useBlocks(conversationId: number, filters?: Partial<ListBlocksRe
       return response;
     },
     enabled: conversationId > 0,
-    staleTime: is_active ? STALE_TIMES.ACTIVE_CONVERSATION : STALE_TIMES.BLOCK_LIST,
+    // CRITICAL: Set staleTime to 0 when active to ensure real-time streaming updates
+    // are immediately reflected in the UI. Cache updates from optimistic updates
+    // (setQueryData) should trigger re-renders without delay.
+    staleTime: is_active ? 0 : STALE_TIMES.BLOCK_LIST,
     gcTime: is_active ? CACHE_TIMES.ACTIVE_CONVERSATION : CACHE_TIMES.BLOCK_LIST,
     retry: (failureCount, error) => {
       // Use type-safe error handling instead of any
@@ -129,6 +132,9 @@ export function useBlocks(conversationId: number, filters?: Partial<ListBlocksRe
     retryDelay: createRetryDelay(RETRY_CONFIG.BASE_RETRY_DELAY, RETRY_CONFIG.MAX_RETRY_DELAY),
     refetchOnWindowFocus: is_active,
     refetchOnReconnect: true,
+    // CRITICAL: Notify on any change to the query data, not just on specific properties
+    // This ensures that optimistic updates to eventStream trigger re-renders
+    notifyOnChangeProps: "all",
   });
 }
 

@@ -126,6 +126,7 @@ function UnifiedChatView({
         currentParrotId={ParrotAgentType.AMAZING}
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
+        onCancel={onStop}
         blockSummary={blockSummary}
         conversationId={conversationId}
       >
@@ -228,19 +229,13 @@ const AIChat = () => {
     return id ? parseInt(id, 10) : 0;
   }, [currentConversation?.id]);
 
-  // Determine if we should enable auto-refresh for blocks
-  // Disable during streaming to avoid interrupting the LLM context
-  // Also disable when user is actively using the chat (isTyping)
-  const shouldAutoRefreshBlocks = useMemo(() => {
-    // Don't auto-refresh when AI is processing to avoid context cancellation
-    return !isTyping && !isThinking;
-  }, [isTyping, isThinking]);
-
   // Phase 2: Use Block API as single source of truth (no more items fallback)
+  // Always keep active=true to ensure real-time streaming updates are reflected in UI
+  // The optimistic updates from useAIQueries.ts rely on React Query's cache changes being observed
   const blocksQuery = useBlocks(
     currentConversationIdNum,
     undefined, // No filters
-    { isActive: shouldAutoRefreshBlocks }, // Only auto-refresh when not streaming
+    { isActive: true }, // Always active to receive streaming event updates
   );
 
   const blocks = blocksQuery.data?.blocks || [];

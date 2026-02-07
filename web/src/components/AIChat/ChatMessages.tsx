@@ -58,9 +58,11 @@ interface ChatMessagesProps {
   onDeleteMessage?: (index: number) => void;
   children?: ReactNode;
   className?: string;
-  /** Phase 2: 流式渲染支持 */
+  /** 流式渲染支持 */
   isStreaming?: boolean;
   streamingContent?: string;
+  /** 取消流式请求回调 (#113) */
+  onCancel?: () => void;
   /** @deprecated Block summary now comes from Block.sessionStats (1:1 binding) */
   blockSummary?: BlockSummary;
   /** Conversation ID for Block API operations (e.g., fork) */
@@ -254,6 +256,7 @@ const ChatMessages = memo(function ChatMessages({
   className,
   isStreaming = false,
   streamingContent = "",
+  onCancel,
   // blockSummary prop deprecated - each Block now has its own summary via sessionStats
   blockSummary: _deprecatedBlockSummary,
   conversationId,
@@ -513,6 +516,7 @@ const ChatMessages = memo(function ChatMessages({
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
                 onEdit={blockId ? () => handleEdit(blockId, block) : undefined}
+                onCancel={block.isLatest && isLastStreaming ? onCancel : undefined}
                 blockId={blockId}
                 branchPath={branchPath}
               >
