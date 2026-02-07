@@ -315,12 +315,7 @@ function CompactToolCall({
 
       {/* Expanded Details View - only show output result (inputSummary already visible above) */}
       {isExpanded && (hasOutputResult || (hasResult && !hasOutputResult)) && (
-        <div
-          id={contentId}
-          className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200"
-          role="region"
-          aria-label={t("ai.unified_block.tool_details") || "工具调用详情"}
-        >
+        <div id={contentId} className="mt-3 space-y-3" role="region" aria-label={t("ai.unified_block.tool_details") || "工具调用详情"}>
           {/* Output Result */}
           <div>
             <div className="text-[11px] text-muted-foreground mb-1 flex items-center gap-1">
@@ -755,7 +750,7 @@ function BlockBody({
 
                 {/* Expanded View */}
                 {isThinkingExpanded && (
-                  <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200 prose prose-xs dark:prose-invert max-w-none">
+                  <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50 prose prose-xs dark:prose-invert max-w-none">
                     <ReactMarkdown>{allThinkingContent}</ReactMarkdown>
                   </div>
                 )}
@@ -793,7 +788,7 @@ function BlockBody({
                 {/* Timeline Node - 使用 TimelineNode 组件 */}
                 <div className="absolute -left-[2rem] top-0">
                   {isToolRunning ? (
-                    <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 border-2 border-purple-500 flex items-center justify-center shrink-0 z-10 animate-pulse">
+                    <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 border-2 border-purple-500 flex items-center justify-center shrink-0 z-10">
                       <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
                     </div>
                   ) : hasError ? (
@@ -826,7 +821,7 @@ function BlockBody({
               {/* Timeline Node - answer 类型 */}
               <div className="absolute -left-[2rem] top-3.5">
                 {streamingPhase === "answer" ? (
-                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-500 flex items-center justify-center shrink-0 z-10 animate-pulse">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-500 flex items-center justify-center shrink-0 z-10">
                     <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />
                   </div>
                 ) : (
@@ -858,7 +853,7 @@ function BlockBody({
           ) : (
             /* Pending State (Cold Start / Initializing) */
             (isLatest || children) && (
-              <div className="relative pt-2 px-1 animate-in fade-in duration-300">
+              <div className="relative pt-2 px-1">
                 <div className="flex items-center gap-3 text-muted-foreground">
                   {/* Fallback spinner if valid children (cursor) is not provided */}
                   {children ? (
@@ -1065,8 +1060,8 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
       className={cn(
         "rounded-lg border overflow-hidden shadow-sm transition-all duration-300",
         blockTheme.border,
-        // Active/Streaming state: Breathing border + Ring
-        isLatest && isStreaming && `ring-2 ${blockTheme.ringColor} animate-block-pulse`,
+        // Active/Streaming state: Ring (no pulse animation to prevent flicker)
+        isLatest && isStreaming && `ring-2 ${blockTheme.ringColor}`,
         isLatest && !isStreaming && `ring-1 ${blockTheme.ringColor}`,
         className,
       )}
