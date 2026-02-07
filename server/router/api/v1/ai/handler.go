@@ -77,6 +77,15 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		return h.handleGeekMode(ctx, req, stream)
 	}
 
+	// PROGRESS EVENT: Send received event immediately to acknowledge message receipt
+	// 进度事件：立即发送 received 事件以确认收到消息，消除死寂感
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+		// Non-critical error, continue processing
+	}
+
 	if h.llm == nil {
 		return status.Error(codes.Unavailable, "LLM service is not available")
 	}
@@ -87,7 +96,20 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		// Add user ID to context for history matching.
 		// Note: req.UserID is already authenticated by the gRPC interceptor middleware.
 		ctx = router.WithUserID(ctx, req.UserID)
+
+		// PROGRESS EVENT: Send routing_start event before intent routing
+		// 进度事件：发送 routing_start 事件表示开始理解意图
+		startTime := time.Now()
+		if err := stream.Send(&v1pb.ChatResponse{
+			EventType: "routing_start",
+			EventData: `{"layer":"cache"}`,
+		}); err != nil {
+			slog.Warn("failed to send routing_start event", "error", err)
+		}
+
+		// Execute routing
 		routeResult, err := h.chatRouter.Route(ctx, req.Message)
+		duration := time.Since(startTime)
 		if err != nil {
 			slog.Warn("chat router failed, defaulting to amazing",
 				"error", err,
@@ -103,6 +125,17 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 			default:
 				agentType = AgentTypeAmazing
 			}
+
+			// PROGRESS EVENT: Send routing_end event with agent info
+			// 进度事件：发送 routing_end 事件，告知用户路由结果
+			if err := stream.Send(&v1pb.ChatResponse{
+				EventType: "routing_end",
+				EventData: fmt.Sprintf(`{"agent":"%s","duration_ms":%d}`,
+					agentType.String(), duration.Milliseconds()),
+			}); err != nil {
+				slog.Warn("failed to send routing_end event", "error", err)
+			}
+
 			slog.Info("chat auto-routed",
 				"route", routeResult.Route,
 				"method", routeResult.Method,
@@ -168,6 +201,14 @@ func (h *ParrotHandler) handleGeekMode(
 		slog.Int("history_count", len(req.History)),
 	)
 
+	// Send received event for immediate feedback (Task 1.2: Progress Feedback)
+	// 发送 received 事件提供即时反馈（200ms 心理阈值）
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+	}
+
 	// Generate a stable session ID based on Conversation ID using UUID v5
 	// Using a fixed namespace ensures the same conversation ID always generates the same UUID
 	// 使用固定的命名空间确保相同的 Conversation ID 总是生成相同的 UUID
@@ -229,6 +270,14 @@ func (h *ParrotHandler) handleEvolutionMode(
 		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
 		slog.Int("history_count", len(req.History)),
 	)
+
+	// Send received event for immediate feedback (Task 1.2: Progress Feedback)
+	// 发送 received 事件提供即时反馈（200ms 心理阈值）
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+	}
 
 	// Get source directory (DivineSense root)
 	sourceDir, err := h.getSourceDir()
