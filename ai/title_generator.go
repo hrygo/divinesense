@@ -60,10 +60,18 @@ func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse 
 
 	prompt := tg.buildPrompt(userMessage, aiResponse)
 
+	// Use low temperature and top_p for stable, predictable output
+	// MaxTokens=20 is sufficient for short titles (typically 5-15 chars)
+	temperature := float32(0.1) // Very low for high consistency
+	topP := float32(0.5)        // Restrict sampling for stability
+	maxTokens := 20             // Reduced from 30 to save cost
+
 	req := openai.ChatCompletionRequest{
 		Model:       tg.model,
-		MaxTokens:   30,  // Short titles only
-		Temperature: 0.3, // Low temperature for consistent output
+		MaxTokens:   maxTokens,
+		Temperature: temperature,
+		TopP:        topP,   // Value type, not pointer
+		Stop:        []string{"\n"}, // Stop at newline for cleaner output
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,
