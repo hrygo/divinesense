@@ -254,8 +254,8 @@ func (c *MemoQueryClassifier) ExtractTimeFilter(query string) (start, end time.T
 func (c *MemoQueryClassifier) ExtractTags(query string) []string {
 	tags := []string{}
 
-	// Match #tag pattern
-	tagPattern := regexp.MustCompile(`#([\w\u4e00-\u9fff-]+)`)
+	// Match #tag pattern (including Unicode Chinese characters)
+	tagPattern := regexp.MustCompile(`#([\w\p{Han}-]+)`)
 	matches := tagPattern.FindAllStringSubmatch(query, -1)
 
 	for _, match := range matches {
