@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
 import { useForkBlock } from "@/hooks/useBlockQueries";
 import { cn } from "@/lib/utils";
-import { type AIMode, ChatItem, ConversationMessage, isContextSeparator, MessageRole } from "@/types/aichat";
-// Phase 4: Import Block types
+import { type AIMode, ConversationMessage, MessageRole } from "@/types/aichat";
+// Block types (single source of truth for chat data)
 import type { Block as AIBlock } from "@/types/block";
 import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isErrorStatus, isStreamingStatus } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
@@ -49,7 +49,8 @@ function useEffectiveParrotId(currentParrotId: ParrotAgentType | undefined, bloc
 // ============================================================================
 
 interface ChatMessagesProps {
-  items: ChatItem[];
+  /** Block data - single source of truth for chat messages */
+  blocks: AIBlock[];
   isTyping?: boolean;
   currentParrotId?: ParrotAgentType;
   onCopyMessage?: (content: string) => void;
@@ -62,10 +63,8 @@ interface ChatMessagesProps {
   /** Phase 2: 流式渲染支持 */
   isStreaming?: boolean;
   streamingContent?: string;
-  /** Block summary for Geek/Evolution modes */
+  /** @deprecated Block summary now comes from Block.sessionStats (1:1 binding) */
   blockSummary?: BlockSummary;
-  /** Phase 4: Block data support */
-  blocks?: AIBlock[];
   /** Conversation ID for Block API operations (e.g., fork) */
   conversationId?: number;
 }
@@ -246,89 +245,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
   return messageBlocks;
 }
 
-/**
- * Group messages into user-assistant pairs
- * Legacy function for ChatItem[] support (backward compatibility)
- * @param items - Array of ChatItem objects
- * @param _t - Translation function for i18n keys (unused, kept for interface consistency)
- */
-function groupMessagesIntoBlocks(items: ChatItem[], _hasBlockSummary: boolean, _t: (key: string) => string): MessageBlock[] {
-  const blocks: MessageBlock[] = [];
-  let pendingUser: ConversationMessage | null = null;
-
-  for (const item of items) {
-    // Skip context separators for now (they could be rendered separately)
-    if (isContextSeparator(item)) {
-      if (pendingUser) {
-        blocks.push({
-          id: pendingUser.id,
-          userMessage: pendingUser,
-          isLatest: false,
-        });
-        pendingUser = null;
-      }
-      continue;
-    }
-
-    const msg = item as ConversationMessage;
-
-    if (msg.role === "user") {
-      // If we have a pending user message, flush it first
-      if (pendingUser) {
-        blocks.push({
-          id: pendingUser.id,
-          userMessage: pendingUser,
-          isLatest: false,
-        });
-      }
-      pendingUser = msg;
-    } else if (msg.role === "assistant") {
-      // Pair with user message if available
-      if (pendingUser) {
-        blocks.push({
-          id: pendingUser.id,
-          userMessage: pendingUser,
-          assistantMessage: msg,
-          isLatest: false,
-        });
-        pendingUser = null;
-      } else {
-        // Orphan assistant message (shouldn't happen normally)
-        blocks.push({
-          id: msg.id,
-          userMessage: {
-            id: `system-${msg.id}`,
-            role: "user" as MessageRole,
-            content: "",
-            timestamp: msg.timestamp,
-          },
-          assistantMessage: msg,
-          isLatest: false,
-        });
-      }
-    }
-  }
-
-  // Flush remaining user message
-  if (pendingUser) {
-    blocks.push({
-      id: pendingUser.id,
-      userMessage: pendingUser,
-      isLatest: true,
-    });
-  }
-
-  // Mark last block as latest
-  if (blocks.length > 0) {
-    const lastBlock = blocks[blocks.length - 1];
-    lastBlock.isLatest = true;
-  }
-
-  return blocks;
-}
-
 const ChatMessages = memo(function ChatMessages({
-  items,
   blocks,
   isTyping = false,
   currentParrotId,
@@ -413,16 +330,16 @@ const ChatMessages = memo(function ChatMessages({
     return () => observer.disconnect();
   }, [scrollToBottomLocked]);
 
-  const prevItemsLengthRef = useRef(items.length);
+  const prevBlocksLengthRef = useRef(0);
   useEffect(() => {
-    const itemsLength = items.length;
-    const hasNewMessage = itemsLength > prevItemsLengthRef.current;
-    prevItemsLengthRef.current = itemsLength;
+    const blocksLength = blocks?.length ?? 0;
+    const hasNewMessage = blocksLength > prevItemsLengthRef.current;
+    prevBlocksLengthRef.current = blocksLength;
 
     if (hasNewMessage && !isUserScrollingRef.current) {
       scrollToBottomLocked();
     }
-  }, [items.length, scrollToBottomLocked]);
+  }, [blocks?.length, scrollToBottomLocked]);
 
   useEffect(() => {
     if (!isStreaming) return;
@@ -442,10 +359,11 @@ const ChatMessages = memo(function ChatMessages({
     }
   }, [isTyping, scrollToBottomLocked]);
 
-  const itemsLengthRef = useRef(items.length);
+  const blocksLengthRef = useRef(0);
   useEffect(() => {
-    const lengthChanged = items.length !== itemsLengthRef.current;
-    itemsLengthRef.current = items.length;
+    const blocksLength = blocks?.length ?? 0;
+    const lengthChanged = blocksLength !== blocksLengthRef.current;
+    blocksLengthRef.current = blocksLength;
 
     if (!lengthChanged) return;
 
@@ -456,7 +374,7 @@ const ChatMessages = memo(function ChatMessages({
         isUserScrollingRef.current = false;
       }
     }
-  }, [items.length]);
+  }, [blocks?.length]);
 
   useEffect(() => {
     return () => {
@@ -521,16 +439,11 @@ const ChatMessages = memo(function ChatMessages({
     [conversationId, editDialog],
   );
 
-  // Group messages into blocks
-  // Phase 4: Use blocks if provided, otherwise fall back to items (backward compatibility)
+  // Group messages into blocks - Block data is single source of truth
   const messageBlocks = useMemo(() => {
-    if (blocks && blocks.length > 0) {
-      // Use new Block data structure - each Block generates its own summary
-      return convertAIBlocksToMessageBlocks(blocks, t);
-    }
-    // Legacy: use ChatItem[] structure - no summary available
-    return groupMessagesIntoBlocks(items, false, t);
-  }, [blocks, items, t]);
+    if (!blocks || blocks.length === 0) return [];
+    return convertAIBlocksToMessageBlocks(blocks, t);
+  }, [blocks, t]);
 
   // Phase 4: Check streaming status from either blocks or props (using extracted hook)
   const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);

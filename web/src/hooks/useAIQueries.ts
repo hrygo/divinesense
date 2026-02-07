@@ -287,6 +287,87 @@ export function useChat() {
           // When we receive a block_id, it means a new block was created/updated
           // Instead of just invalidating, we create an optimistic block for instant rendering
           const blockId = response.blockId;
+
+          // Helper function to update optimistic block's eventStream during streaming
+          // This ensures UI shows real-time progress (thinking, tool_use, tool_result) instead of "black hole"
+          const updateBlockEventStream = (event: {
+            type: string;
+            content?: string;
+            toolName?: string;
+            toolId?: string;
+            inputSummary?: string;
+            outputSummary?: string;
+            filePath?: string;
+            duration?: number;
+            isError?: boolean;
+            timestamp: number;
+          }) => {
+            if (!blockId || blockId === 0n || !params.conversationId) return;
+
+            queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
+              const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
+              const existingBlocks = existing?.blocks || [];
+
+              // Find and update the target block
+              const updatedBlocks = existingBlocks.map((b) => {
+                if (b.id !== blockId) return b;
+
+                // Append event to eventStream
+                const newEventStream = [
+                  ...(b.eventStream || []),
+                  {
+                    $typeName: "memos.api.v1.BlockEvent" as const,
+                    type: event.type as any,
+                    content: event.content || "",
+                    timestamp: BigInt(event.timestamp),
+                    metadata: JSON.stringify({
+                      toolName: event.toolName,
+                      toolId: event.toolId,
+                      inputSummary: event.inputSummary,
+                      outputSummary: event.outputSummary,
+                      filePath: event.filePath,
+                      duration: event.duration,
+                      isError: event.isError,
+                    }),
+                  },
+                ];
+
+                return { ...b, eventStream: newEventStream };
+              });
+
+              return {
+                blocks: updatedBlocks,
+                totalCount: updatedBlocks.length,
+              };
+            });
+
+            // Also update the individual block cache
+            queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+              if (!old || old.id !== blockId) return old;
+
+              const newEventStream = [
+                ...(old.eventStream || []),
+                {
+                  $typeName: "memos.api.v1.BlockEvent" as const,
+                  type: event.type as any,
+                  content: event.content || "",
+                  timestamp: BigInt(event.timestamp),
+                  metadata: JSON.stringify({
+                    toolName: event.toolName,
+                    toolId: event.toolId,
+                    inputSummary: event.inputSummary,
+                    outputSummary: event.outputSummary,
+                    filePath: event.filePath,
+                    duration: event.duration,
+                    isError: event.isError,
+                  }),
+                },
+              ];
+
+              return { ...old, eventStream: newEventStream };
+            });
+          };
+
           if (blockId !== undefined && blockId !== 0n && params.conversationId) {
             // Create an optimistic block for instant UI feedback
             const now = BigInt(Date.now());
@@ -392,6 +473,12 @@ export function useChat() {
             switch (response.eventType) {
               case "thinking":
                 callbacks?.onThinking?.(response.eventData);
+                // Update optimistic block's eventStream to show thinking in UI
+                updateBlockEventStream({
+                  type: "thinking",
+                  content: response.eventData,
+                  timestamp: Date.now(),
+                });
                 break;
               case "tool_use": {
                 // Convert proto EventMetadata (bigint fields) to local EventMetadata (number fields)
@@ -414,6 +501,16 @@ export function useChat() {
                     }
                   : undefined;
                 callbacks?.onToolUse?.(response.eventData, toolMeta);
+                // Update optimistic block's eventStream to show tool_use in UI
+                updateBlockEventStream({
+                  type: "tool_use",
+                  toolName: response.eventData,
+                  toolId: toolMeta?.toolId,
+                  inputSummary: toolMeta?.inputSummary,
+                  outputSummary: toolMeta?.outputSummary,
+                  filePath: toolMeta?.filePath,
+                  timestamp: Date.now(),
+                });
                 break;
               }
               case "tool_result": {
@@ -437,6 +534,17 @@ export function useChat() {
                     }
                   : undefined;
                 callbacks?.onToolResult?.(response.eventData, resultMeta);
+                // Update optimistic block's eventStream to show tool_result in UI
+                updateBlockEventStream({
+                  type: "tool_result",
+                  content: response.eventData,
+                  toolName: resultMeta?.toolName,
+                  toolId: resultMeta?.toolId,
+                  outputSummary: resultMeta?.outputSummary,
+                  duration: resultMeta?.durationMs,
+                  isError: !!resultMeta?.errorMsg,
+                  timestamp: Date.now(),
+                });
                 break;
               }
               case "answer":

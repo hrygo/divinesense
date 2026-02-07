@@ -20,41 +20,63 @@
  * ```
  */
 
-import {
-  AlertCircle,
-  BarChart3,
-  Brain,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-  Copy,
-  Loader2,
-  Pencil,
-  User,
-  Wrench,
-  Zap,
-} from "lucide-react";
+/**
+ * UnifiedMessageBlock - Warp Block 风格统一消息容器
+ *
+ * 将用户输入 + AI 回复 + 工具调用 + 会话统计封装为一个统一的可折叠 Block
+ *
+ * ## 架构
+ * ```
+ * ┌─────────────────────────────────────────────────────────┐
+ * │  Block Header (用户消息 + 时间戳 + 状态)                │ ← 固定显示
+ * ├─────────────────────────────────────────────────────────┤
+ * │  Block Body (可折叠)                                    │
+ * │  ├── ThinkingSection (思考过程)                        │
+ * │  ├── ToolCallsSection (工具调用徽章)                    │
+ * │  ├── ToolResultsSection (终端风格输出)                │
+ * │  ├── AnswerSection (Markdown渲染 + 代码高亮)        │
+ * │  └── SummarySection (会话统计)                          │
+ * ├─────────────────────────────────────────────────────────┤
+ * │  Block Footer (操作栏：折叠/展开/复制/删除)             │ ← 固定显示
+ * └─────────────────────────────────────────────────────────┘
+ * ```
+ *
+ * ## UI/UX 优化 (Issue #104)
+ *
+ * 已集成模块化组件：
+ * - TimelineNode: 统一时间线节点样式
+ * - StreamingProgressBar: 流式进度条
+ * - PendingSkeleton: 骨架屏加载状态
+ * - ToolCallCard: 优化的工具卡片（hover 高亮）
+ * - BlockHeader: 响应式两栏布局
+ * - BlockFooter: 图标优先响应式设计
+ * - useBlockCollapse: 折叠状态下沉 hook
+ * - useStreamingProgress: 流式进度计算
+ */
+
+import { AlertCircle, BarChart3, ChevronDown, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import {
-  BADGE_WIDTH_OFFSET,
-  HEADER_VISUAL_WIDTH,
-  ROUND_TIMESTAMP_MULTIPLIER,
-  TOOL_CALL_OFFSET_US,
-  USER_INPUTS_EXPAND_THRESHOLD,
-} from "@/components/AIChat/constants";
+import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
-import { type AIMode, ConversationMessage } from "@/types/aichat";
+import { type ConversationMessage } from "@/types/aichat";
 import { type BlockBranch } from "@/types/block";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
-import { BranchIndicator } from "./BranchIndicator";
+// UI/UX 优化模块组件
+import {
+  type BlockFooterProps,
+  type BlockFooterTheme,
+  type BlockHeaderProps,
+  type BlockHeaderTheme,
+  BlockFooter as ModularBlockFooter,
+  BlockHeader as ModularBlockHeader,
+  TimelineNode,
+} from "./UnifiedMessageBlock/components";
 
 type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
@@ -74,6 +96,127 @@ function extractToolName(callName: string): { displayName: string; fullCall: str
   }
   // If no parentheses found, the entire string is the tool name
   return { displayName: callName, fullCall: callName };
+}
+
+/**
+ * CompactToolCall - 轻量级工具调用卡片
+ */
+interface CompactToolCallProps {
+  displayName: string;
+  fullCall: string;
+  inputSummary?: string;
+  filePath?: string;
+  duration?: number;
+  isError?: boolean;
+  isRunning?: boolean;
+  hasResult?: boolean;
+  output?: string;
+  isOutputError?: boolean;
+}
+
+function CompactToolCall({
+  displayName,
+  fullCall,
+  inputSummary,
+  filePath,
+  duration,
+  isError,
+  isRunning,
+  hasResult,
+  output,
+  isOutputError,
+}: CompactToolCallProps) {
+  const { t } = useTranslation();
+  const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => displayName.toLowerCase().includes(k));
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border px-3 py-2 transition-all duration-200",
+        "bg-card hover:shadow-sm",
+        isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
+      )}
+    >
+      {/* Line 1: Tool Name + Status + Duration */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={cn("font-semibold text-sm", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
+            {displayName}
+          </span>
+          {/* Status Indicator */}
+          {hasResult ? (
+            isOutputError ? (
+              <span className="flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
+                <AlertCircle className="w-3 h-3" /> {t("ai.events.error")}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">✓ {t("ai.events.done")}</span>
+            )
+          ) : isRunning ? (
+            <span className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
+              <Loader2 className="w-3 h-3 animate-spin" /> {t("ai.events.running")}
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">{t("ai.events.pending")}</span>
+          )}
+        </div>
+        {/* Duration */}
+        {duration && (
+          <span className="text-[11px] text-muted-foreground font-mono shrink-0">
+            {duration > 1000 ? `${(duration / 1000).toFixed(1)}s` : `${duration}ms`}
+          </span>
+        )}
+      </div>
+
+      {/* Line 2: Function Call + Parameters (Compact) */}
+      <div className="mt-1 flex items-center gap-2 min-w-0">
+        {/* Function with params - prefer inputSummary, fallback to fullCall */}
+        {inputSummary ? (
+          <code
+            className={cn(
+              "text-xs font-mono truncate block",
+              isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
+            )}
+            title={inputSummary}
+          >
+            {inputSummary}
+          </code>
+        ) : filePath ? (
+          <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={filePath}>
+            {filePath}
+          </code>
+        ) : fullCall !== displayName ? (
+          <code
+            className={cn(
+              "text-xs font-mono truncate block",
+              isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
+            )}
+            title={fullCall}
+          >
+            {fullCall}
+          </code>
+        ) : null}
+      </div>
+
+      {/* Expandable Output (only if has output) */}
+      {output && (
+        <details className="group/details mt-2">
+          <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1">
+            <ChevronDown className="w-3 h-3 transition-transform group-open/details:rotate-[-90deg]" />
+            {t("ai.unified_block.output")}
+          </summary>
+          <pre
+            className={cn(
+              "mt-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-2 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
+              isOutputError && "text-red-600/90 bg-red-50/50",
+            )}
+          >
+            {output}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
 }
 
 // Tool call type
@@ -206,346 +349,14 @@ const BLOCK_THEMES: Record<
 // Helper Functions
 // ============================================================================
 
-function formatTime(timestamp: number, t: (key: string, options?: Record<string, unknown>) => string): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return t("ai.aichat.sidebar.time-just-now");
-  if (diffMins < 60) return t("ai.aichat.sidebar.time-minutes-ago", { count: diffMins });
-  if (diffMins < 1440) return t("ai.aichat.sidebar.time-hours-ago", { count: Math.floor(diffMins / 60) });
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function extractUserInitial(content: string): string {
-  const trimmed = content.trim();
-  if (trimmed.length === 0) return "U";
-  const match = trimmed.match(/[a-zA-Z\u4e00-\u9fa5]/);
-  return match ? match[0].toUpperCase() : "U";
-}
-
-/**
- * 计算字符串的视觉宽度（改进版）
- * - ASCII 字符（英文字母、数字、半角符号）= 1
- * - 中文字符、全角符号、Emoji = 2
- * - 某些组合字符（如皮肤修饰符）不计入宽度
- */
-function getVisualWidth(str: string): number {
-  let width = 0;
-  // 使用 [...str] 而不是 for...of 来正确处理代理对（surrogate pairs）
-  const chars = [...str];
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i];
-    const code = char.codePointAt(0) || 0;
-
-    // 跳过零宽连接符和变体选择器
-    if (code === 0x200b || code === 0xfe0e || code === 0xfe0f || (code >= 0x1f3fb && code <= 0x1f3ff)) {
-      continue;
-    }
-
-    // ASCII: 0-127
-    if (code < 128) {
-      width += 1;
-    } else if (
-      code >= 0x1100 &&
-      // Hangul Jamo
-      (code <= 0x11ff ||
-        // CJK Radicals Supplement
-        (code >= 0x2e80 && code <= 0x9fff) ||
-        // CJK Ideographs
-        (code >= 0x3400 && code <= 0x4dbf) ||
-        // CJK Unified Ideographs Extension A
-        (code >= 0x20000 && code <= 0x2ebef))
-    ) {
-      // CJK 字符统一为 2
-      width += 2;
-    } else {
-      // 其他字符（包括 emoji）默认为 2
-      // 对于复杂的 emoji 序列，这只是一个近似值
-      width += 2;
-    }
-  }
-  return width;
-}
-
-/**
- * 按视觉宽度截取字符串
- * @param str 原字符串
- * @param maxVisualWidth 最大视觉宽度
- * @returns 截取后的字符串
- */
-function truncateByVisualWidth(str: string, maxVisualWidth: number): string {
-  let currentWidth = 0;
-  let result = "";
-
-  for (const char of str) {
-    const code = char.codePointAt(0) || 0;
-    const charWidth = code < 128 ? 1 : 2;
-
-    if (currentWidth + charWidth > maxVisualWidth) {
-      return result + "...";
-    }
-
-    result += char;
-    currentWidth += charWidth;
-  }
-
-  return result;
-}
-
 function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boolean {
   if (isStreaming || isLatest) return false;
   return true;
 }
 
 // ============================================================================
-// Sub-Components
+// Sub-Components (Legacy - 保留用于 UserInputsSection)
 // ============================================================================
-
-interface BlockHeaderProps {
-  userMessage: ConversationMessage;
-  assistantMessage?: ConversationMessage;
-  blockSummary?: BlockSummary;
-  parrotId?: ParrotAgentType;
-  theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
-  onToggle: () => void;
-  isCollapsed: boolean;
-  isStreaming?: boolean;
-  /** 追加的用户输入列表 (支持多个) */
-  additionalUserInputs?: ConversationMessage[];
-  /** Branch-related props */
-  branches?: BlockBranch[];
-  /** Branch path (e.g., "A.1", "B.2.3") for display */
-  branchPath?: string;
-  isBranchActive?: boolean;
-  onBranchClick?: () => void;
-}
-
-function BlockHeader({
-  userMessage,
-  assistantMessage,
-  blockSummary,
-  parrotId,
-  theme,
-  onToggle,
-  isCollapsed,
-  isStreaming,
-  additionalUserInputs = [],
-  branches,
-  branchPath,
-  isBranchActive,
-  onBranchClick,
-}: BlockHeaderProps) {
-  const { t } = useTranslation();
-  const userInitial = extractUserInitial(userMessage.content);
-
-  // 计算用户输入预览文本 (按视觉宽度截取)
-  // 24 视觉宽度 ≈ 12 个中文字符 或 24 个英文字符
-  const userInputPreview = useMemo(() => {
-    const inputs = [userMessage.content, ...additionalUserInputs.map((m) => m.content)];
-    const firstLine = inputs[0].split("\n")[0];
-
-    // 单个输入直接截取
-    if (inputs.length === 1) {
-      const visualWidth = getVisualWidth(firstLine);
-      return visualWidth > HEADER_VISUAL_WIDTH ? truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH) : firstLine;
-    }
-
-    // 多输入时：第一个输入截取 + 追加数量
-    const truncated = truncateByVisualWidth(firstLine, HEADER_VISUAL_WIDTH - BADGE_WIDTH_OFFSET); // 预留 " +N" 空间
-    if (inputs.length === 2) {
-      return `${truncated} +1`;
-    }
-    return `${truncated} +${inputs.length - 1}`;
-  }, [userMessage.content, additionalUserInputs]);
-
-  // 计算追加输入的总数
-  const totalInputCount = useMemo(() => 1 + additionalUserInputs.length, [additionalUserInputs.length]);
-
-  // Calculate stats for Outcome Badge
-
-  // Determine border color based on status (Status Bubbling)
-  // Determine border color based on status (Status Bubbling)
-  const statusBorderClass = useMemo(() => {
-    if (isStreaming) return "border-l-4 border-l-blue-500/50 dark:border-l-blue-400"; // Breathing animation handled in parent
-    if (assistantMessage?.error) return "border-l-4 border-l-red-500 dark:border-l-red-400";
-    return "border-l-4 border-l-transparent";
-  }, [isStreaming, assistantMessage]);
-
-  // Mode-specific Session Summary Info
-  // 根据不同 Mode 展示差异化的统计信息
-  const modeSummary = useMemo(() => {
-    if (!blockSummary) return null;
-
-    // 获取当前模式：优先使用 userMessage.metadata.mode，其次根据 parrotId 推断
-    const currentMode: AIMode =
-      userMessage.metadata?.mode || (parrotId === "GEEK" ? "geek" : parrotId === "EVOLUTION" ? "evolution" : "normal");
-
-    // 通用格式化函数
-    const formatCost = (cost?: number) => (cost ? `${t("ai.session_stats.currency_symbol")}${cost.toFixed(4)}` : "");
-    const formatTokens = (input?: number, output?: number) => {
-      if (input && output) return `${((input + output) / 1000).toFixed(1)}k`;
-      return "";
-    };
-    const formatTime = (ms?: number) => (ms ? `${(ms / 1000).toFixed(1)}s` : "");
-
-    // 根据 mode 返回不同的统计信息
-    switch (currentMode) {
-      case "geek":
-        // Geek 模式：耗时 + 工具数（零 LLM 成本）
-        return {
-          primary: formatTime(blockSummary.totalDurationMs),
-          secondary: blockSummary.toolCallCount ? `${blockSummary.toolCallCount} 工具` : "",
-          icon: "clock",
-        };
-
-      case "evolution":
-        // Evolution 模式：耗时 + 变更文件数
-        return {
-          primary: formatTime(blockSummary.totalDurationMs),
-          secondary: blockSummary.filesModified ? `${blockSummary.filesModified} 文件` : "",
-          icon: "clock",
-        };
-
-      case "normal":
-      default:
-        // Normal 模式：Tokens + Cost（LLM 对话）
-        return {
-          primary: formatTokens(blockSummary.totalInputTokens, blockSummary.totalOutputTokens),
-          secondary: formatCost(blockSummary.totalCostUSD),
-          icon: "token",
-        };
-    }
-  }, [blockSummary, userMessage.metadata?.mode, parrotId]);
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between px-4 py-2.5 select-none cursor-pointer transition-colors duration-200",
-        theme.headerBg,
-        statusBorderClass,
-      )}
-      onClick={onToggle}
-    >
-      {/* Left: User avatar + message preview */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="relative">
-          <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0 shadow-sm">
-            {userInitial}
-          </div>
-          {/* 追加输入计数徽章 */}
-          {totalInputCount > 1 && (
-            <div className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white border-2 border-background shadow-sm">
-              {totalInputCount}
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground truncate" title={userMessage.content}>
-            {userInputPreview}
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Timestamp + Badge + Block Summary + Toggle */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1 sm:ml-2">
-        {/* Mode-specific Session Summary - 根据不同 Mode 展示差异化的统计信息 */}
-        {modeSummary && modeSummary.primary && (
-          <>
-            {/* Desktop: Full stats */}
-            <div className="hidden lg:flex items-center gap-3 text-[11px] font-mono opacity-70 mr-1 bg-muted/50 px-2 py-1 rounded border border-border/50">
-              {/* Normal 模式显示 Tokens + Cost */}
-              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") && (
-                <>
-                  {modeSummary.primary && (
-                    <span className="flex items-center gap-1" title={t("ai.unified_block.session_tokens")}>
-                      <span className="text-amber-500">⚡</span> {modeSummary.primary}
-                    </span>
-                  )}
-                  {modeSummary.secondary && (
-                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400" title={t("ai.unified_block.session_cost")}>
-                      <span className="font-bold">$</span> {modeSummary.secondary}
-                    </span>
-                  )}
-                </>
-              )}
-              {/* Geek/Evolution 模式显示 耗时 + 工具数/文件数 */}
-              {(userMessage.metadata?.mode === "geek" || userMessage.metadata?.mode === "evolution") && (
-                <>
-                  {modeSummary.primary && (
-                    <span className="flex items-center gap-1" title={t("ai.unified_block.session_duration")}>
-                      <Clock className="w-3 h-3" /> {modeSummary.primary}
-                    </span>
-                  )}
-                  {modeSummary.secondary && (
-                    <span
-                      className="flex items-center gap-1"
-                      title={userMessage.metadata?.mode === "geek" ? t("ai.stats.tool_calls") : t("ai.stats.files_modified")}
-                    >
-                      <Wrench className="w-3 h-3" /> {modeSummary.secondary}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-            {/* Mobile: Simplified indicator */}
-            <div className="lg:hidden flex items-center gap-1 text-[10px] font-mono opacity-80">
-              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") && modeSummary.secondary && (
-                <span className="flex items-center gap-0.5 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">
-                  <span className="font-bold">$</span>
-                  {modeSummary.secondary}
-                </span>
-              )}
-              {(!userMessage.metadata?.mode || userMessage.metadata?.mode === "normal") &&
-                !modeSummary.secondary &&
-                modeSummary.primary && <span className="text-muted-foreground">{modeSummary.primary}</span>}
-              {(userMessage.metadata?.mode === "geek" || userMessage.metadata?.mode === "evolution") && modeSummary.primary && (
-                <span className="flex items-center gap-0.5 text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
-                  <Clock className="w-3 h-3" /> {modeSummary.primary}
-                </span>
-              )}
-            </div>
-          </>
-        )}
-
-        <div className={cn("flex items-center gap-1 text-xs", theme.badgeText)}>
-          <Clock className="w-3 h-3" />
-          <span>{formatTime(userMessage.timestamp, t)}</span>
-        </div>
-
-        {(parrotId === "GEEK" || parrotId === "EVOLUTION" || parrotId === "AMAZING") && (
-          <span className={cn("inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
-            {parrotId === "GEEK" ? t("ai.mode.geek") : parrotId === "EVOLUTION" ? t("ai.mode.evolution") : t("ai.mode.normal")}
-          </span>
-        )}
-
-        {/* Branch Indicator - shows branch path or branch count */}
-        {(branchPath || (branches && branches.length > 0)) && (
-          <BranchIndicator branches={branches} branchPath={branchPath} isActive={isBranchActive} onClick={onBranchClick} />
-        )}
-
-        <button
-          type="button"
-          className={cn(
-            "p-1 rounded transition-colors",
-            "hover:bg-black/10 dark:hover:bg-white/10",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            theme.badgeText,
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          aria-label={isCollapsed ? t("common.expand") : t("common.collapse")}
-          aria-expanded={!isCollapsed}
-        >
-          {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================================
 // User Inputs Section Component (新增)
@@ -574,9 +385,9 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
 
   return (
     <div className="relative group">
-      {/* Timeline Node - 统一使用 -left-[2rem] 确保与其他 section 对齐 */}
-      <div className="absolute -left-[2rem] top-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60">
-        <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+      {/* Timeline Node - 使用统一组件 - #1 Fix: 统一使用 absolute -left-[2rem] 包裹 */}
+      <div className="absolute -left-[2rem] top-0.5">
+        <TimelineNode type="user" />
       </div>
 
       {/* Section Header */}
@@ -776,18 +587,18 @@ function BlockBody({
             />
           )}
 
-          {/* 1. Thinking Section - Simplified Collapsible Style */}
+          {/* 1. Thinking Section - 使用 TimelineNode 组件 */}
           {allThinkingContent.length > 0 && (
             <div className="relative group">
-              <div
-                className={cn(
-                  "absolute -left-[2rem] top-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
-                  streamingPhase === "thinking"
-                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/10"
-                    : "bg-muted text-muted-foreground group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500",
+              {/* Timeline Node - thinking 类型，流式时显示加载动画 */}
+              <div className="absolute -left-[2rem] top-0.5">
+                {streamingPhase === "thinking" ? (
+                  <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-500 flex items-center justify-center shrink-0 z-10 ring-4 ring-blue-50 dark:ring-blue-900/10">
+                    <Loader2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin" />
+                  </div>
+                ) : (
+                  <TimelineNode type="thinking" />
                 )}
-              >
-                {streamingPhase === "thinking" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
               </div>
 
               <div className="flex flex-col">
@@ -801,6 +612,12 @@ function BlockBody({
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
                         <span className="text-blue-600 dark:text-blue-400">{getThinkingText()}</span>
                       </>
+                    ) : allThinkingContent.length > 0 ? (
+                      // #2 Fix: 已完成状态显示"思考完成"而不是"思考中"
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <span className="text-green-600 dark:text-green-400">✓</span>
+                        {t("ai.unified_block.thinking_done") || "思考完成"}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">{t("ai.unified_block.thinking_process") || "思考过程"}</span>
                     )}
@@ -824,7 +641,7 @@ function BlockBody({
             </div>
           )}
 
-          {/* 2. Tool Calls Stream */}
+          {/* 2. Tool Calls Stream - 使用 ToolCallCard 组件 */}
           {timelineEvents.map((event, eventIndex) => {
             if (event.type !== "tool_call") return null;
 
@@ -834,141 +651,59 @@ function BlockBody({
             // Extract pure tool name for title, full call for content
             const { displayName, fullCall } = extractToolName(rawCallName);
 
-            // Find result
+            // #3 Fix: Improve tool result matching - use displayName instead of fullCall for matching
+            // result.name contains only the tool name (e.g., "search_files")
+            // while rawCallName may contain full function call (e.g., "search_files(query=\"xxx\")")
             const result = toolResults.find(
-              (r) => r.name === rawCallName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
+              (r) => r.name === displayName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
             );
 
             const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
-            // Determine operation type (Read vs Write)
-            const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => displayName.toLowerCase().includes(k));
 
             return (
               <div key={event.id} className="relative group">
-                {/* Timeline Node */}
-                <div
-                  className={cn(
-                    "absolute -left-[2rem] top-0 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border transition-all",
-                    calling
-                      ? "bg-purple-100 dark:bg-purple-900/40 border-purple-500 animate-pulse"
-                      : "bg-card border-border group-hover:border-purple-400/50",
-                    isError && "bg-red-50 border-red-200",
-                  )}
-                >
+                {/* Timeline Node - 使用 TimelineNode 组件 */}
+                <div className="absolute -left-[2rem] top-0">
                   {calling ? (
-                    <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
-                  ) : (
-                    <Wrench className={cn("w-3 h-3", isError ? "text-red-500" : "text-muted-foreground group-hover:text-purple-500")} />
-                  )}
-                </div>
-
-                {/* Card Container - Compact Two-Line Design */}
-                <div
-                  className={cn(
-                    "rounded-lg border px-3 py-2 transition-all duration-200",
-                    "bg-card hover:shadow-sm",
-                    isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
-                  )}
-                >
-                  {/* Line 1: Tool Name + Status + Duration */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={cn("font-semibold text-sm", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
-                        {displayName}
-                      </span>
-                      {/* Status Indicator */}
-                      {result ? (
-                        result.isError ? (
-                          <span className="flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
-                            <AlertCircle className="w-3 h-3" /> {t("ai.events.error")}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
-                            <Check className="w-3 h-3" /> {t("ai.events.done")}
-                          </span>
-                        )
-                      ) : calling ? (
-                        <span className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
-                          <Loader2 className="w-3 h-3 animate-spin" /> {t("ai.events.running")}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground">{t("ai.events.pending")}</span>
-                      )}
+                    <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 border-2 border-purple-500 flex items-center justify-center shrink-0 z-10 animate-pulse">
+                      <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
                     </div>
-                    {/* Duration */}
-                    {typeof call === "object" && call.duration && (
-                      <span className="text-[11px] text-muted-foreground font-mono shrink-0">
-                        {call.duration > 1000 ? `${(call.duration / 1000).toFixed(1)}s` : `${call.duration}ms`}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Line 2: Function Call + Parameters (Compact) */}
-                  <div className="mt-1 flex items-center gap-2 min-w-0">
-                    {/* Function with params - prefer inputSummary, fallback to fullCall */}
-                    {typeof call === "object" && call.inputSummary ? (
-                      <code
-                        className={cn(
-                          "text-xs font-mono truncate block",
-                          isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
-                        )}
-                        title={call.inputSummary}
-                      >
-                        {call.inputSummary}
-                      </code>
-                    ) : typeof call === "object" && call.filePath ? (
-                      <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={call.filePath}>
-                        {call.filePath}
-                      </code>
-                    ) : fullCall !== displayName ? (
-                      <code
-                        className={cn(
-                          "text-xs font-mono truncate block",
-                          isError ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground/70",
-                        )}
-                        title={fullCall}
-                      >
-                        {fullCall}
-                      </code>
-                    ) : null}
-                  </div>
-
-                  {/* Expandable Output (only if has output) */}
-                  {result && result.outputSummary && (
-                    <details className="group/details mt-2">
-                      <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1">
-                        <ChevronDown className="w-3 h-3 transition-transform group-open/details:rotate-0" />
-                        <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
-                        {t("ai.unified_block.output")}
-                      </summary>
-                      <pre
-                        className={cn(
-                          "mt-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-2 rounded bg-black/5 dark:bg-black/20 text-muted-foreground",
-                          result.isError && "text-red-600/90 bg-red-50/50",
-                        )}
-                      >
-                        {result.outputSummary}
-                      </pre>
-                    </details>
+                  ) : isError ? (
+                    <TimelineNode type="error" />
+                  ) : (
+                    <TimelineNode type="tool" />
                   )}
                 </div>
+
+                {/* Tool Call Card - 使用 CompactToolCall 组件 */}
+                <CompactToolCall
+                  displayName={displayName}
+                  fullCall={fullCall}
+                  inputSummary={typeof call === "object" ? call.inputSummary : undefined}
+                  filePath={typeof call === "object" ? call.filePath : undefined}
+                  duration={typeof call === "object" ? call.duration : undefined}
+                  isError={isError}
+                  isRunning={calling}
+                  hasResult={!!result}
+                  output={result?.outputSummary}
+                  isOutputError={result?.isError}
+                />
               </div>
             );
           })}
 
-          {/* 3. AI Answer Section */}
-          {/* 3. AI Answer Section */}
+          {/* 3. AI Answer Section - 使用 TimelineNode */}
           {hasAnswer ? (
             <div className="relative pt-2">
-              <div
-                className={cn(
-                  "absolute -left-[2rem] top-3.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors",
-                  streamingPhase === "answer"
-                    ? "bg-amber-100 dark:bg-amber-900/40 border border-amber-500 animate-pulse text-amber-600"
-                    : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-500",
+              {/* Timeline Node - answer 类型 */}
+              <div className="absolute -left-[2rem] top-3.5">
+                {streamingPhase === "answer" ? (
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-500 flex items-center justify-center shrink-0 z-10 animate-pulse">
+                    <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                  </div>
+                ) : (
+                  <TimelineNode type="answer" />
                 )}
-              >
-                {streamingPhase === "answer" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
               </div>
 
               {/* Message bubble */}
@@ -1054,12 +789,10 @@ function BlockBody({
             )
           )}
 
-          {/* 4. Error Section */}
+          {/* 4. Error Section - 使用 TimelineNode */}
           {hasError && (
             <div className="relative group">
-              <div className="absolute -left-[2rem] top-1 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-500 flex items-center justify-center shrink-0 z-10 transition-colors group-hover:bg-red-200 dark:group-hover:bg-red-900/50">
-                <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-              </div>
+              <TimelineNode type="error" />
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
                 <p className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
                   {t("ai.unified_block.error_occurred")}
@@ -1085,142 +818,85 @@ function BlockBody({
   );
 }
 
-interface BlockFooterProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
-  onCopy: () => void;
-  onRegenerate?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES];
-  /** 是否正在流式输出 - 流式输出时禁用编辑 */
-  isStreaming?: boolean;
+// ============================================================================
+// Legacy BlockHeader/Footer - 已替换为模块化组件，保留此接口用于向后兼容
+// ============================================================================
+
+// 将主题类型转换
+function themeToHeaderTheme(theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES]): BlockHeaderTheme {
+  return {
+    border: theme.border,
+    headerBg: theme.headerBg,
+    footerBg: theme.footerBg,
+    badgeBg: theme.badgeBg,
+    badgeText: theme.badgeText,
+    ringColor: theme.ringColor,
+  };
 }
 
-function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming }: BlockFooterProps) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+function themeToFooterTheme(theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES]): BlockFooterTheme {
+  return {
+    border: theme.border,
+    headerBg: theme.headerBg,
+    footerBg: theme.footerBg,
+    badgeBg: theme.badgeBg,
+    badgeText: theme.badgeText,
+    ringColor: theme.ringColor,
+  };
+}
 
-  const handleCopy = useCallback(() => {
-    onCopy();
-    setCopied(true);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setCopied(false);
-      timeoutRef.current = null;
-    }, 2000);
-  }, [onCopy]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+// 使用 ModularBlockHeader 替代内联实现
+function BlockHeader({
+  userMessage,
+  assistantMessage,
+  blockSummary,
+  parrotId,
+  theme,
+  onToggle,
+  isCollapsed,
+  isStreaming,
+  additionalUserInputs = [],
+  branches,
+  branchPath,
+  isBranchActive,
+  onBranchClick,
+}: BlockHeaderProps) {
+  const headerTheme = themeToHeaderTheme(theme);
 
   return (
-    <div className={cn("flex items-center justify-between px-4 py-2 border-t", theme.border, theme.footerBg)}>
-      {/* Left: Collapse/Expand Toggle */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-          "hover:bg-black/10 dark:hover:bg-white/10",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          theme.badgeText,
-        )}
-      >
-        {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-        {isCollapsed ? t("common.expand") : t("common.collapse")}
-      </button>
+    <ModularBlockHeader
+      userMessage={userMessage}
+      assistantMessage={assistantMessage}
+      blockSummary={blockSummary}
+      parrotId={parrotId}
+      theme={headerTheme}
+      onToggle={onToggle}
+      isCollapsed={isCollapsed}
+      isStreaming={isStreaming}
+      additionalUserInputs={additionalUserInputs}
+      branches={branches}
+      branchPath={branchPath}
+      isBranchActive={isBranchActive}
+      onBranchClick={onBranchClick}
+    />
+  );
+}
 
-      {/* Right: Action Buttons */}
-      <div className="flex items-center gap-2">
-        {/* P0-A001: Edit Button - 创建分支并重新生成 */}
-        {onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            disabled={isStreaming}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              "hover:bg-black/10 dark:hover:bg-white/10",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              theme.badgeText,
-              isStreaming && "opacity-50 cursor-not-allowed",
-            )}
-            title={t("ai.unified_block.edit")}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{t("ai.unified_block.edit")}</span>
-          </button>
-        )}
-        {onRegenerate && (
-          <button
-            type="button"
-            onClick={onRegenerate}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              "hover:bg-black/10 dark:hover:bg-white/10",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              theme.badgeText,
-            )}
-          >
-            {t("ai.regenerate")}
-          </button>
-        )}
-        {/* Context Pinning / Remove - Visual Only for now */}
-        <button
-          type="button"
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-60 hover:opacity-100",
-            "hover:bg-black/10 dark:hover:bg-white/10",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
-            theme.badgeText,
-          )}
-          title={t("ai.unified_block.forget_tooltip")}
-        >
-          <Brain className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline">{t("ai.unified_block.forget")}</span>
-        </button>
+// 使用 ModularBlockFooter 替代内联实现
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming }: BlockFooterProps) {
+  const footerTheme = themeToFooterTheme(theme);
 
-        <button
-          type="button"
-          onClick={handleCopy}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-            "hover:bg-black/10 dark:hover:bg-white/10",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            copied && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
-            !copied && theme.badgeText,
-          )}
-        >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? t("common.copied") : t("common.copy")}
-        </button>
-        {onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              "hover:bg-red-100 dark:hover:bg-red-900/30",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-red-500",
-              "text-red-600 dark:text-red-400",
-            )}
-          >
-            {t("common.delete")}
-          </button>
-        )}
-      </div>
-    </div>
+  return (
+    <ModularBlockFooter
+      isCollapsed={isCollapsed}
+      onToggle={onToggle}
+      onCopy={onCopy}
+      onRegenerate={onRegenerate}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      theme={footerTheme}
+      isStreaming={isStreaming}
+    />
   );
 }
 

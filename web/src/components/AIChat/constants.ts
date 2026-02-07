@@ -55,3 +55,131 @@ export const MESSAGE_CACHE_LIMIT = 100;
 export function isToolCallObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+// ============================================================
+// Timeline Node Configuration (Phase 1: Visual Hierarchy)
+// ============================================================
+
+/**
+ * Unified timeline node styling configuration
+ * Ensures all timeline nodes use consistent sizing and styling
+ */
+export const TIMELINE_NODE_CONFIG = {
+  /** Base size classes for all timeline nodes */
+  size: "w-6 h-6",
+  /** Border width for all nodes */
+  border: "border-2",
+  /** Border radius for circular nodes */
+  radius: "rounded-full",
+  /** Icon size within nodes */
+  iconSize: "w-3.5 h-3.5",
+} as const;
+
+/**
+ * Color schemes for different timeline node types
+ */
+export const NODE_COLORS = {
+  /** User input node - blue theme */
+  user: "bg-blue-100 dark:bg-blue-900/40 border-blue-500 text-blue-600 dark:text-blue-400",
+  /** Thinking/processing node - purple theme */
+  thinking: "bg-purple-100 dark:bg-purple-900/40 border-purple-500 text-purple-600 dark:text-purple-400",
+  /** Tool call node - neutral with hover effect */
+  tool: "bg-card border-border group-hover:border-purple-400/50 transition-colors",
+  /** AI answer node - amber theme */
+  answer: "bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-600 dark:text-amber-400",
+  /** Error node - red theme */
+  error: "bg-red-100 dark:bg-red-900/30 border-red-500 text-red-600 dark:text-red-400",
+} as const;
+
+// ============================================================
+// Responsive Configuration (Phase 2: Responsive Experience)
+// ============================================================
+
+/**
+ * Breakpoint values matching Tailwind CSS defaults
+ */
+export const BREAKPOINTS = {
+  sm: 640, // Mobile landscape
+  md: 768, // Tablet
+  lg: 1024, // Desktop
+  xl: 1280, // Large desktop
+} as const;
+
+/**
+ * Responsive behavior configuration
+ * Defines what UI elements show/hide at different breakpoints
+ */
+export const RESPONSIVE_CONFIG = {
+  /** Mobile breakpoint (< 768px) */
+  mobile: {
+    /** Hide statistics in header */
+    hideStats: true,
+    /** Hide status badges in header */
+    hideBadge: true,
+    /** Show only icon for footer buttons */
+    iconOnly: true,
+    /** Show single key stat (cost or latency) */
+    singleStat: true,
+  },
+  /** Desktop breakpoint (≥ 768px) */
+  desktop: {
+    /** Show all statistics in header */
+    showStats: true,
+    /** Show status badges in header */
+    showBadge: true,
+    /** Show icon + label for footer buttons */
+    showLabels: true,
+    /** Show all available stats */
+    allStats: true,
+  },
+} as const;
+
+// ============================================================
+// Collapse Preview Configuration (Phase 1: Visual Hierarchy)
+// ============================================================
+
+/** Maximum characters to show in collapsed block preview */
+export const COLLAPSE_PREVIEW_MAX_CHARS = 100;
+
+/** Maximum lines to show in collapsed block preview */
+export const COLLAPSE_PREVIEW_MAX_LINES = 2;
+
+// ============================================================
+// Streaming Progress Configuration (Phase 3: Interaction Feedback)
+// ============================================================
+
+/** Height of streaming progress bar in pixels */
+export const STREAMING_PROGRESS_HEIGHT = 4; // 1 border unit = 4px
+
+/** Streaming progress animation duration in milliseconds */
+export const STREAMING_PROGRESS_ANIMATION_MS = 300;
+
+// ============================================================
+// Keyboard Navigation Configuration (Phase 4: Accessibility)
+// ============================================================
+
+/** Keyboard shortcuts for UnifiedMessageBlock */
+export const KEYBOARD_SHORTCUTS = {
+  /** Move focus to next block */
+  NEXT_BLOCK: "Tab",
+  /** Move focus to previous block */
+  PREV_BLOCK: "Shift+Tab",
+  /** Copy current block content */
+  COPY: "Ctrl+C",
+  /** Edit current block */
+  EDIT: "Ctrl+E",
+  /** Send message */
+  SEND: "Ctrl+Enter",
+  /** Cancel/close dialog */
+  CANCEL: "Escape",
+} as const;
+
+// ============================================================
+// Virtual Scrolling Configuration (Phase 5: Performance)
+// ============================================================
+
+/** Root margin for IntersectionObserver (pixels before viewport) */
+export const VIRTUAL_SCROLL_OVERSCAN = 200;
+
+/** Minimum time a block should stay rendered after leaving viewport (ms) */
+export const VIRTUAL_RENDER_STAY_TIME = 1000;
