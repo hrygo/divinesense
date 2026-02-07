@@ -135,9 +135,19 @@ pending → in_progress → completed
 
 ### 开发命令速查
 
+> **⚠️ 重要：始终优先使用 `make` 命令**
+>
+> | 错误操作 | 正确操作 | 原因 |
+> |:---------|:---------|:-----|
+> | `pnpm build`（根目录）| `make build-web` | `package.json` 在 `web/` 下 |
+> | `docker exec divinesense-postgres` | `make db-shell` | 容器名自动检测 |
+> | `cd web && pnpm dev` | `make web` | Makefile 处理目录切换 |
+
 | 阶段 | 命令 | 说明 |
 |:-----|:-----|:-----|
 | **启动** | `make start` | 全栈服务（DB + 后端 + 前端） |
+| **前端** | `make web` / `make build-web` | 启动 dev server / 构建 |
+| **数据库** | `make db-shell` / `make db-connect` | 连接 PostgreSQL（自动检测容器） |
 | **检查** | `make check-all` | 提交前完整检查 |
 | **CI** | `make ci-check` | 模拟 CI 环境 |
 | **测试** | `make test-ai` | AI 相关测试 |

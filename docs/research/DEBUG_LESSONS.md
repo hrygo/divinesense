@@ -516,6 +516,82 @@ LLMCallStats.CacheReadTokens
 
 ---
 
+## 环境意识不足导致的重复错误 (2026-02)
+
+### 问题描述
+AI Agent 在执行命令时频繁犯错：
+1. 使用错误的 PostgreSQL 容器名（`divinesense-postgres` 而非 `divinesense-postgres-dev`）
+2. 在根目录执行前端命令（`pnpm build`）而非 `web/` 目录或使用 Makefile
+
+### 根本原因
+
+**环境/上下文意识不足**：执行命令前没有验证当前环境，而是假设某种默认状态。
+
+### 错误模式
+
+| 错误操作 | 正确操作 | 原因 |
+|:---------|:---------|:-----|
+| `docker exec divinesense-postgres` | `docker exec divinesense-postgres-dev` | 假设生产容器名，实际是开发环境 |
+| `pnpm build`（根目录） | `make build-web` 或 `cd web && pnpm build` | `package.json` 在 `web/` 下 |
+
+### 环境配置对照
+
+| 环境 | 容器名 | 端口 | 用户 |
+|:-----|:-------|:-----|:-----|
+| **开发** | `divinesense-postgres-dev` | 25432 | `divinesense` |
+| **生产** | `divinesense-postgres` | 无映射 | `divine` |
+
+### 解决方案
+
+**1. 优先使用 Makefile wrapper**
+
+```bash
+# ✅ 正确：使用 Makefile（自动处理目录和容器名）
+make db-shell          # 自动检测正确的 PostgreSQL 容器
+make build-web         # 自动进入 web/ 目录构建
+make web               # 启动前端 dev server
+make ci-frontend       # 前端 lint + build 检查
+make check-i18n        # i18n 验证
+
+# ❌ 错误：直接执行环境相关命令
+pnpm build             # 需要先 cd web/
+docker exec divinesense-postgres ...  # 容器名可能错误
+```
+
+**2. Makefile 环境自动检测**
+
+```makefile
+# 自动检测当前运行的 PostgreSQL 容器
+POSTGRES_CONTAINER := $(shell docker ps --filter "name=postgres" --format "{{.Names}}" | head -1)
+
+db-shell:
+	docker exec -it $(POSTGRES_CONTAINER) psql -U divinesense -d divinesense
+```
+
+**3. 执行命令前的检查清单**
+
+- [ ] 当前工作目录是否正确？
+- [ ] 目标文件/容器是否存在？
+- [ ] 是否有 Makefile wrapper 可用？
+- [ ] 环境变量是否正确（dev/prod）？
+
+### 经验教训
+
+| 问题 | 教练 |
+|:-----|:-----|
+| **假设而非验证** | 执行前先检查环境，不要假设默认状态 |
+| **忽略项目约定** | Makefile 是项目命令的标准入口 |
+| **缺少上下文感知** | 多环境配置下必须明确当前环境 |
+| **重复性错误** | 一次错误是疏忽，重复是流程问题 |
+
+### 预防措施
+
+1. **优先使用 Makefile** —— 所有操作通过 Makefile 执行，避免手动输入环境相关命令
+2. **添加容器检测** —— Makefile 自动检测运行的容器，而非硬编码名称
+3. **环境前缀** —— 开发环境资源名称加 `-dev` 后缀，便于区分
+
+---
+
 ## 贡献指南
 
 当你遇到一个新的调试问题时：

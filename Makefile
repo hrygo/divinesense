@@ -16,7 +16,15 @@ endif
 # Database Configuration (PostgreSQL)
 DIVINESENSE_DRIVER ?= postgres
 DIVINESENSE_DSN ?= postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable
-POSTGRES_CONTAINER ?= divinesense-postgres-dev
+
+# 自动检测当前运行的 PostgreSQL 容器 (优先级: 环境变量 > 自动检测 > 默认值)
+ifeq ($(POSTGRES_CONTAINER),)
+    POSTGRES_CONTAINER := $(shell docker ps --filter "name=postgres" --format "{{.Names}}" 2>/dev/null | head -1)
+    ifeq ($(POSTGRES_CONTAINER),)
+        POSTGRES_CONTAINER := divinesense-postgres-dev
+    endif
+endif
+
 POSTGRES_PORT ?= 25432
 POSTGRES_USER ?= divinesense
 POSTGRES_DB ?= divinesense
@@ -234,8 +242,11 @@ docker-prod-logs: ## 查看生产环境日志
 
 ##@ Database
 
-db-connect: ## 连接 PostgreSQL shell
+db-shell: ## 连接 PostgreSQL shell (别名，自动检测容器)
+	@echo "Connecting to $(POSTGRES_CONTAINER)..."
 	@docker exec -it $(POSTGRES_CONTAINER) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+db-connect: db-shell ## 连接 PostgreSQL shell (兼容别名)
 
 db-reset: ## 重置数据库 schema
 	@echo "Resetting database schema..."
