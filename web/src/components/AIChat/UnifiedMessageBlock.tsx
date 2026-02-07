@@ -728,7 +728,8 @@ function BlockBody({
           )}
 
           {/* 1. Thinking Section - 使用 TimelineNode 组件 */}
-          {allThinkingContent.length > 0 && (
+          {/* 显示条件: 有 thinkingSteps（即使只是占位符）或正在流式思考 */}
+          {(thinkingSteps.length > 0 || streamingPhase === "thinking") && (
             <div className="relative group">
               {/* Timeline Node - thinking 类型，流式时显示加载动画 */}
               <div className="absolute -left-[2rem] top-0.5">
@@ -743,7 +744,7 @@ function BlockBody({
 
               <div className="flex flex-col">
                 <button
-                  onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                  onClick={() => allThinkingContent.length > 0 && setIsThinkingExpanded(!isThinkingExpanded)}
                   className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   <span className="flex items-center gap-2">
@@ -759,20 +760,24 @@ function BlockBody({
                         {t("ai.unified_block.thinking_done") || "思考完成"}
                       </span>
                     ) : (
+                      // 只有占位符，没有真实思考内容
                       <span className="text-muted-foreground">{t("ai.unified_block.thinking_process") || "思考过程"}</span>
                     )}
                   </span>
-                  <span className="ml-auto">
-                    {isThinkingExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </span>
+                  {/* 只有在有真实内容时才显示展开/收起图标 */}
+                  {allThinkingContent.length > 0 && (
+                    <span className="ml-auto">
+                      {isThinkingExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </span>
+                  )}
                 </button>
 
-                {/* Expanded View */}
-                {isThinkingExpanded && (
+                {/* Expanded View - 只在有真实内容时显示 */}
+                {isThinkingExpanded && allThinkingContent.length > 0 && (
                   <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200 prose prose-xs dark:prose-invert max-w-none">
                     <ReactMarkdown>{allThinkingContent}</ReactMarkdown>
                   </div>
