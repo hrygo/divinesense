@@ -84,7 +84,6 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
     onCopy: vi.fn(),
     onRegenerate: vi.fn(),
     onDelete: vi.fn(),
-    onEdit: vi.fn(),
     ...overrides,
   });
 

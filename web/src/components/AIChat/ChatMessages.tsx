@@ -10,8 +10,6 @@ import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import type { SessionStats } from "@/types/proto/api/v1/ai_service_pb";
 import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
-// BlockEditDialog for editing user inputs
-import { BlockEditDialog, useBlockEditDialog } from "./BlockEditDialog";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
 // Event transformation utilities
 import { extractThinkingSteps, extractToolCalls, normalizeTimestamp, type ThinkingStep } from "./utils/eventTransformers";
@@ -385,37 +383,6 @@ const ChatMessages = memo(function ChatMessages({
   // Get translation function
   const { t } = useTranslation();
 
-  // Block edit dialog state management
-  const editDialog = useBlockEditDialog();
-
-  // Handle edit confirmation - show not implemented message
-  const handleEditConfirm = useCallback(
-    async (editedMessage: string) => {
-      // TODO: Implement proper edit handling (currently just returns text)
-      // For now, inform user that this feature is not yet available
-      console.warn("[ChatMessages] Edit functionality not yet implemented. Edited content:", editedMessage);
-
-      // Close the dialog
-      editDialog.closeDialog();
-    },
-    [editDialog, t],
-  );
-
-  // Handle edit button click - merge all user inputs for editing
-  const handleEdit = useCallback(
-    (_blockId: bigint, block: MessageBlock) => {
-      // Merge all user inputs (primary + additional) into a single message
-      const allInputs = [block.userMessage, ...(block.additionalUserInputs || [])];
-      const mergedMessage = allInputs
-        .map((msg) => msg.content)
-        .filter((content) => content)
-        .join("\n");
-
-      editDialog.openDialog(mergedMessage);
-    },
-    [editDialog],
-  );
-
   // Group messages into blocks - Block data is single source of truth
   // Note: t is excluded from deps as translateThinkingSteps handles it conditionally
   const messageBlocks = useMemo(() => {
@@ -493,7 +460,6 @@ const ChatMessages = memo(function ChatMessages({
                 onCopy={onCopyMessage}
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
-                onEdit={blockId ? () => handleEdit(blockId, block) : undefined}
                 onCancel={block.isLatest && isLastStreaming ? onCancel : undefined}
                 blockId={blockId}
                 blockNumber={blockNumber}
@@ -522,14 +488,6 @@ const ChatMessages = memo(function ChatMessages({
 
       {/* Scroll anchor */}
       <div ref={endRef} className="h-px" />
-
-      {/* Block Edit Dialog */}
-      <BlockEditDialog
-        originalMessage={editDialog.originalMessage}
-        open={editDialog.open}
-        onOpenChange={editDialog.setOpen}
-        onConfirm={handleEditConfirm}
-      />
     </div>
   );
 });

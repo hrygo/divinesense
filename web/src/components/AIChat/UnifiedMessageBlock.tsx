@@ -405,7 +405,6 @@ export interface UnifiedMessageBlockProps {
   /** Actions */
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
-  onEdit?: () => void;
   onDelete?: () => void;
   /** Cancel streaming callback (#113) */
   onCancel?: () => void;
@@ -988,7 +987,7 @@ function BlockHeader({
 }
 
 // 使用 ModularBlockFooter 替代内联实现
-function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDelete, theme, isStreaming, onCancel }: BlockFooterProps) {
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, theme, isStreaming, onCancel }: BlockFooterProps) {
   const footerTheme = themeToFooterTheme(theme);
 
   return (
@@ -997,7 +996,6 @@ function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onEdit, onDe
       onToggle={onToggle}
       onCopy={onCopy}
       onRegenerate={onRegenerate}
-      onEdit={onEdit}
       onDelete={onDelete}
       theme={footerTheme}
       isStreaming={isStreaming}
@@ -1021,7 +1019,6 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   streamingPhase = null,
   onCopy,
   onRegenerate,
-  onEdit,
   onDelete,
   onCancel,
   blockId: _blockId,
@@ -1133,7 +1130,6 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           onToggle={toggleCollapse}
           onCopy={handleCopy}
           onRegenerate={onRegenerate}
-          onEdit={onEdit}
           onDelete={onDelete}
           theme={blockTheme}
           isStreaming={isStreaming}

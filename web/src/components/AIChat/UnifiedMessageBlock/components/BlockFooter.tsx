@@ -9,7 +9,7 @@
  * Phase 5: React.memo optimization
  */
 
-import { Brain, Check, ChevronDown, ChevronUp, Copy, Pencil, StopCircle } from "lucide-react";
+import { Brain, Check, ChevronDown, ChevronUp, Copy, StopCircle } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,6 @@ export interface BlockFooterProps {
   onToggle: () => void;
   onCopy: () => void;
   onRegenerate?: () => void;
-  onEdit?: () => void;
   onDelete?: () => void;
   theme: BlockFooterTheme;
   isStreaming?: boolean;
@@ -59,7 +58,6 @@ export const BlockFooter = memo(function BlockFooter({
   onToggle,
   onCopy,
   onRegenerate,
-  onEdit,
   onDelete,
   theme,
   isStreaming,
@@ -129,26 +127,6 @@ export const BlockFooter = memo(function BlockFooter({
           >
             <StopCircle className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t("ai.actions.cancel") || "取消"}</span>
-          </button>
-        )}
-
-        {/* Edit Button */}
-        {onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            disabled={isStreaming}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              "hover:bg-black/10 dark:hover:bg-white/10",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              theme.badgeText,
-              isStreaming && "opacity-50 cursor-not-allowed",
-            )}
-            title={t("ai.unified_block.edit")}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{t("ai.unified_block.edit")}</span>
           </button>
         )}
 
