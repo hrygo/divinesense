@@ -16,6 +16,10 @@ const (
 	// After this timeout, the serializer is stopped to prevent resource leaks.
 	// 30 minutes is chosen as a safe upper bound for normal chat completion.
 	serializerTimeout = 30 * time.Minute
+
+	// serializerStopTimeout is the maximum time to wait for serializer drain during stop.
+	// After this timeout, the serializer is forcibly stopped to prevent indefinite blocking.
+	serializerStopTimeout = 5 * time.Second
 )
 
 // BlockManager manages the lifecycle of conversation blocks.
@@ -109,17 +113,44 @@ func (s *eventSerializer) enqueue(eventType string, content string, metadata map
 }
 
 // stop gracefully shuts down the serializer after draining the queue.
+// Uses a timeout to prevent indefinite blocking if the drain takes too long.
 func (s *eventSerializer) stop() {
 	s.once.Do(func() {
 		close(s.stopCh)
-		s.wg.Wait()
+
+		// Add timeout to prevent indefinite blocking during drain
+		done := make(chan struct{})
+		go func() {
+			s.wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			// Normal shutdown
+		case <-time.After(serializerStopTimeout):
+			slog.Warn("Event serializer stop timeout, forcing shutdown",
+				"block_id", s.blockID,
+				"timeout_seconds", serializerStopTimeout.Seconds(),
+			)
+		}
 	})
 }
 
 // getOrCreateSerializer retrieves or creates an event serializer for the given block.
 func (m *BlockManager) getOrCreateSerializer(blockID int64) *eventSerializer {
 	if v, ok := m.serializers.Load(blockID); ok {
-		return v.(*eventSerializer)
+		// Defensive type assertion with safety check
+		if s, ok := v.(*eventSerializer); ok {
+			return s
+		}
+		// Unexpected type in map - log and delete to recover
+		slog.Error("Unexpected type in serializers map, deleting and recreating",
+			"block_id", blockID,
+			"actual_type", fmt.Sprintf("%T", v),
+		)
+		m.serializers.Delete(blockID)
+		// Continue to create new serializer
 	}
 
 	s := &eventSerializer{
@@ -134,7 +165,16 @@ func (m *BlockManager) getOrCreateSerializer(blockID int64) *eventSerializer {
 	if actual, loaded := m.serializers.LoadOrStore(blockID, s); loaded {
 		// Another goroutine created a serializer first, use it and stop ours
 		s.stop()
-		return actual.(*eventSerializer)
+		// Defensive type assertion for the loaded value
+		if serializer, ok := actual.(*eventSerializer); ok {
+			return serializer
+		}
+		// Should never happen, but log and return ours as fallback
+		slog.Error("Loaded unexpected type from serializers map",
+			"block_id", blockID,
+			"actual_type", fmt.Sprintf("%T", actual),
+		)
+		return s
 	}
 	return s
 }
@@ -143,7 +183,15 @@ func (m *BlockManager) getOrCreateSerializer(blockID int64) *eventSerializer {
 // This should be called when the block is completed.
 func (m *BlockManager) stopSerializer(blockID int64) {
 	if v, ok := m.serializers.LoadAndDelete(blockID); ok {
-		v.(*eventSerializer).stop()
+		// Defensive type assertion with safety check
+		if s, ok := v.(*eventSerializer); ok {
+			s.stop()
+		} else {
+			slog.Error("Unexpected type in stopSerializer",
+				"block_id", blockID,
+				"actual_type", fmt.Sprintf("%T", v),
+			)
+		}
 	}
 }
 
@@ -154,7 +202,17 @@ func (m *BlockManager) CleanupStaleSerializers() int {
 	cleaned := 0
 	now := time.Now()
 	m.serializers.Range(func(key, value any) bool {
-		s := value.(*eventSerializer)
+		// Defensive type assertion with safety check
+		s, ok := value.(*eventSerializer)
+		if !ok {
+			slog.Error("Unexpected type in CleanupStaleSerializers, removing",
+				"key", key,
+				"actual_type", fmt.Sprintf("%T", value),
+			)
+			m.serializers.Delete(key)
+			return true
+		}
+
 		if now.Sub(s.createTime) > serializerTimeout {
 			if m.serializers.CompareAndDelete(key, value) {
 				s.stop()

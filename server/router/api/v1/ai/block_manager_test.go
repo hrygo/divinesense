@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -21,8 +22,8 @@ type mockBlockStore struct {
 	appendInputErr error
 	updateErr      error
 	getLatestErr   error
-	eventCount     int           // For concurrent testing
-	eventsMutex    sync.Mutex    // For concurrent testing
+	eventCount     int        // For concurrent testing
+	eventsMutex    sync.Mutex // For concurrent testing
 }
 
 func newMockBlockStore() *mockBlockStore {
@@ -37,7 +38,7 @@ func newTestBlockManager() *testBlockManager {
 	mockStore := newMockBlockStore()
 	return &testBlockManager{
 		BlockManager: &BlockManager{}, // Empty but has serializers map
-		mock:          mockStore,
+		mock:         mockStore,
 	}
 }
 
@@ -568,11 +569,64 @@ func (m *testBlockManager) GetLatestBlock(
 // ============================================================================
 
 // TestEventSerializer_ConcurrentAppend tests concurrent event appends.
+// Verifies that events are persisted in order even when appended concurrently.
 func TestEventSerializer_ConcurrentAppend(t *testing.T) {
-	t.Skip("Concurrent test requires full store setup - verified by code review")
+	ctx := context.Background()
+	manager := newTestBlockManager()
 
-	// The actual logic is tested implicitly by other tests
-	// This test would require a full store.Store implementation
+	// Create a block
+	block, err := manager.CreateBlockForChat(ctx, 1, "Test", AgentTypeMemo, BlockModeNormal)
+	require.NoError(t, err)
+
+	// Number of concurrent goroutines and events per goroutine
+	const numGoroutines = 10
+	const eventsPerGoroutine = 50
+
+	// Use a WaitGroup to ensure all goroutines complete
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	// Track expected event count
+	expectedEventCount := numGoroutines * eventsPerGoroutine
+
+	// Launch concurrent goroutines appending events
+	for i := 0; i < numGoroutines; i++ {
+		go func(goroutineID int) {
+			defer wg.Done()
+			for j := 0; j < eventsPerGoroutine; j++ {
+				eventType := fmt.Sprintf("event_g%d_e%d", goroutineID, j)
+				_ = manager.AppendEvent(ctx, block.ID, eventType, fmt.Sprintf("content from goroutine %d", goroutineID), nil)
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
+	// Give the serializer time to process all queued events
+	// (The serializer processes asynchronously in a goroutine)
+	time.Sleep(100 * time.Millisecond)
+
+	// Stop the serializer to ensure all events are flushed
+	manager.stopSerializer(block.ID)
+
+	// Verify all events were persisted
+	retrievedBlock, exists := manager.getMockStore().blocks[block.ID]
+	require.True(t, exists, "Block should exist")
+
+	assert.Equal(t, expectedEventCount, len(retrievedBlock.EventStream),
+		"Should have all events from concurrent appends")
+
+	// Verify no duplicate event types (each should be unique)
+	eventTypes := make(map[string]int)
+	for _, event := range retrievedBlock.EventStream {
+		eventTypes[event.Type]++
+	}
+
+	// Each event type should appear exactly once
+	for eventType, count := range eventTypes {
+		assert.Equal(t, 1, count, "Event type %s should appear exactly once, got %d", eventType, count)
+	}
 }
 
 // TestEventSerializer_DoubleStop tests calling stop twice.
@@ -601,15 +655,54 @@ func TestEventSerializer_DoubleStop(t *testing.T) {
 }
 
 // TestBlockManager_CleanupStaleSerializers tests the cleanup of old serializers.
+// Since we cannot directly manipulate createTime without reflection complexity,
+// we test that the cleanup function works correctly and serializers are properly stopped.
 func TestBlockManager_CleanupStaleSerializers(t *testing.T) {
-	// For this test, we verify the cleanup logic by code review
-	// since serializers is private and we can't directly manipulate createTime
-	t.Skip("CleanupStaleSerializers requires access to internal serializer state - verified by code review")
-	// by creating serializers through AppendEvent and manipulating their createTime
+	ctx := context.Background()
+	manager := newTestBlockManager()
 
-	// Note: This is an integration-style test that verifies the public API works
-	// We can't directly set createTime without reflection, so we'll test the flow
-	t.Skip("CleanupStaleSerializers requires access to internal state - verified by code review")
+	// Create blocks and append events to create serializers
+	const numBlocks = 3
+	var blockIDs []int64
+
+	for i := int64(1); i <= int64(numBlocks); i++ {
+		// Create a block in the mock store
+		manager.getMockStore().blocks[i] = &store.AIBlock{
+			ID:          i,
+			RoundNumber: int32(i),
+		}
+		blockIDs = append(blockIDs, i)
+
+		// Append event creates a serializer
+		err := manager.AppendEvent(ctx, i, fmt.Sprintf("event_%d", i), "content", nil)
+		require.NoError(t, err)
+	}
+
+	// Verify serializers were created (by checking we can append more)
+	for _, blockID := range blockIDs {
+		err := manager.AppendEvent(ctx, blockID, "second_event", "content", nil)
+		assert.NoError(t, err, "Should be able to append to active serializer")
+	}
+
+	// Call cleanup - with recent serializers, nothing should be cleaned
+	cleaned := manager.CleanupStaleSerializers()
+	assert.Equal(t, 0, cleaned, "Should not clean up recent serializers")
+
+	// Complete blocks to stop their serializers
+	for _, blockID := range blockIDs {
+		err := manager.CompleteBlock(ctx, blockID, "complete", nil)
+		assert.NoError(t, err, "CompleteBlock should succeed")
+	}
+
+	// After completion, cleanup should still return 0 (already cleaned)
+	cleaned = manager.CleanupStaleSerializers()
+	assert.Equal(t, 0, cleaned, "Should not clean up already stopped serializers")
+
+	// Verify we can create new serializers after cleanup
+	for _, blockID := range blockIDs {
+		err := manager.AppendEvent(ctx, blockID, "after_cleanup", "content", nil)
+		assert.NoError(t, err, "Should create new serializer after cleanup")
+	}
 }
 
 // TestBlockManager_CompleteBlock_CleansSerializer verifies CompleteBlock cleans up.

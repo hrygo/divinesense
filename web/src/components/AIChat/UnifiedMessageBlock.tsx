@@ -65,6 +65,19 @@ import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
 import { type BlockBranch } from "@/types/block";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
+
+// Simple hash function for generating stable storage keys from strings.
+// Uses DJB2 algorithm variant for good distribution.
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 // UI/UX 优化模块组件
 import {
   type BlockFooterProps,
@@ -126,10 +139,12 @@ function CompactToolCall({
   const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => displayName.toLowerCase().includes(k));
 
   // Interactive expand/collapse state with localStorage persistence
-  // Storage key format: tool-expanded-{displayName}-{inputSummary hash}
+  // Storage key format: tool-expanded-{displayName}-{hash of inputSummary or displayName}
+  // Uses proper hash function to avoid collisions from simple slice(0,8)
   const storageKey = useMemo(() => {
-    const hash = inputSummary ? inputSummary.slice(0, 8) : displayName.slice(0, 8);
-    return `tool-expanded-${displayName}-${hash}`;
+    // Include both displayName and full inputSummary for uniqueness
+    const uniquePart = inputSummary ? `${displayName}-${simpleHash(inputSummary)}` : displayName;
+    return `tool-expanded-${uniquePart}`;
   }, [displayName, inputSummary]);
 
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -163,7 +178,7 @@ function CompactToolCall({
   const showExpandHint = !isExpanded && hasExpandableContent;
 
   // Generate unique ID for ARIA attributes
-  const contentId = `tool-content-${displayName}-${inputSummary?.slice(0, 8) || ""}`;
+  const contentId = `tool-content-${displayName}-${inputSummary ? simpleHash(inputSummary) : ""}`;
 
   const handleToggle = useCallback(() => {
     if (hasExpandableContent) {
@@ -171,17 +186,38 @@ function CompactToolCall({
     }
   }, [hasExpandableContent]);
 
+  // Space key press tracking for proper ARIA pattern (keydown preventDefault, keyup trigger)
+  const spacePressedRef = useRef(false);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (!hasExpandableContent) return;
+
+      if (e.key === "Enter") {
         e.preventDefault();
         handleToggle();
+      } else if (e.key === " ") {
+        // Prevent page scroll on keydown, track for keyup trigger
+        e.preventDefault();
+        spacePressedRef.current = true;
       } else if (e.key === "Escape" && isExpanded) {
         e.preventDefault();
         setIsExpanded(false);
       }
     },
-    [handleToggle, isExpanded],
+    [hasExpandableContent, handleToggle, isExpanded],
+  );
+
+  const handleKeyUp = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!hasExpandableContent) return;
+
+      if (e.key === " " && spacePressedRef.current) {
+        spacePressedRef.current = false;
+        handleToggle();
+      }
+    },
+    [hasExpandableContent, handleToggle],
   );
 
   return (
@@ -193,12 +229,13 @@ function CompactToolCall({
         hasExpandableContent && "cursor-pointer",
         isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
       )}
-      onClick={handleToggle}
-      role="button"
+      onClick={hasExpandableContent ? handleToggle : undefined}
+      role={hasExpandableContent ? "button" : undefined}
       tabIndex={hasExpandableContent ? 0 : undefined}
-      aria-expanded={isExpanded}
-      aria-controls={contentId}
-      onKeyDown={handleKeyDown}
+      aria-expanded={hasExpandableContent ? isExpanded : undefined}
+      aria-controls={hasExpandableContent ? contentId : undefined}
+      onKeyDown={hasExpandableContent ? handleKeyDown : undefined}
+      onKeyUp={hasExpandableContent ? handleKeyUp : undefined}
     >
       {/* Line 1: Tool Name + Status + Duration */}
       <div className="flex items-center justify-between gap-3">
