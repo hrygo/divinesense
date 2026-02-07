@@ -21,10 +21,6 @@ import { cn } from "@/lib/utils";
 interface BlockEditDialogProps {
   /** 原始用户消息内容（多条已合并） */
   originalMessage: string;
-  /** Block ID（用于标识） */
-  blockId: bigint;
-  /** 对话 ID */
-  conversationId: number;
   /** 对话框是否打开 */
   open: boolean;
   /** 关闭对话框 */
@@ -136,19 +132,13 @@ export function BlockEditDialog({ originalMessage, open, onOpenChange, onConfirm
  */
 export function useBlockEditDialog() {
   const [open, setOpen] = useState(false);
-  const [blockId, setBlockId] = useState<bigint>(BigInt(0));
-  const [conversationId, setConversationId] = useState(0);
   const [originalMessage, setOriginalMessage] = useState("");
 
   /**
    * 打开编辑对话框
-   * @param id - Block ID
-   * @param convId - Conversation ID
    * @param message - 原始消息（如果有多条，调用方已合并）
    */
-  const openDialog = (id: bigint, convId: number, message: string) => {
-    setBlockId(id);
-    setConversationId(convId);
+  const openDialog = (message: string) => {
     setOriginalMessage(message);
     setOpen(true);
   };
@@ -159,8 +149,6 @@ export function useBlockEditDialog() {
 
   return {
     open,
-    blockId,
-    conversationId,
     originalMessage,
     openDialog,
     closeDialog,

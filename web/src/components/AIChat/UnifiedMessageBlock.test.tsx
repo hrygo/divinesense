@@ -358,9 +358,9 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
       });
       const { container } = render(<UnifiedMessageBlock {...props} />);
 
-      // Check that no hash icon exists for block number
-      const blockNumberBadges = container.querySelectorAll('span[class*="font-mono"]');
-      expect(blockNumberBadges.length).toBe(0);
+      // Check that no hash icon exists for block number (lucide-hash is only used for block number)
+      const hashIcons = container.querySelectorAll(".lucide-hash");
+      expect(hashIcons.length).toBe(0);
     });
   });
 

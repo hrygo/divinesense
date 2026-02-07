@@ -152,8 +152,11 @@ function CompactToolCall({
       try {
         const stored = localStorage.getItem(storageKey);
         return stored === "true";
-      } catch {
-        // Ignore storage errors (e.g., quota exceeded, private browsing)
+      } catch (err) {
+        // Log storage errors in development for debugging
+        if (import.meta.env.DEV) {
+          console.warn("[CompactToolCall] Failed to read localStorage:", storageKey, err);
+        }
       }
     }
     return false;
@@ -164,8 +167,11 @@ function CompactToolCall({
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(storageKey, String(isExpanded));
-      } catch {
-        // Ignore storage errors
+      } catch (err) {
+        // Log storage errors in development for debugging
+        if (import.meta.env.DEV) {
+          console.warn("[CompactToolCall] Failed to write localStorage:", storageKey, err);
+        }
       }
     }
   }, [storageKey, isExpanded]);

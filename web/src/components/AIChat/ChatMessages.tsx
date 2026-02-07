@@ -257,10 +257,11 @@ const ChatMessages = memo(function ChatMessages({
   onCancel,
   // blockSummary prop deprecated - each Block now has its own summary via sessionStats
   blockSummary: _deprecatedBlockSummary,
-  conversationId,
+  conversationId: _conversationId,
 }: ChatMessagesProps) {
-  // Suppress unused variable warning
+  // Suppress unused variable warnings
   void _deprecatedBlockSummary;
+  void _conversationId;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -387,21 +388,22 @@ const ChatMessages = memo(function ChatMessages({
   // Block edit dialog state management
   const editDialog = useBlockEditDialog();
 
-  // Handle edit confirmation - simplified to return edited text only
+  // Handle edit confirmation - show not implemented message
   const handleEditConfirm = useCallback(
-    async (_editedMessage: string) => {
+    async (editedMessage: string) => {
       // TODO: Implement proper edit handling (currently just returns text)
-      // For now, the dialog will close and edited text is available for future use
+      // For now, inform user that this feature is not yet available
+      console.warn("[ChatMessages] Edit functionality not yet implemented. Edited content:", editedMessage);
+
+      // Close the dialog
       editDialog.closeDialog();
     },
-    [editDialog],
+    [editDialog, t],
   );
 
   // Handle edit button click - merge all user inputs for editing
   const handleEdit = useCallback(
-    (blockId: bigint, block: MessageBlock) => {
-      if (!conversationId) return;
-
+    (_blockId: bigint, block: MessageBlock) => {
       // Merge all user inputs (primary + additional) into a single message
       const allInputs = [block.userMessage, ...(block.additionalUserInputs || [])];
       const mergedMessage = allInputs
@@ -409,9 +411,9 @@ const ChatMessages = memo(function ChatMessages({
         .filter((content) => content)
         .join("\n");
 
-      editDialog.openDialog(blockId, conversationId, mergedMessage);
+      editDialog.openDialog(mergedMessage);
     },
-    [conversationId, editDialog],
+    [editDialog],
   );
 
   // Group messages into blocks - Block data is single source of truth
@@ -524,8 +526,6 @@ const ChatMessages = memo(function ChatMessages({
       {/* Block Edit Dialog */}
       <BlockEditDialog
         originalMessage={editDialog.originalMessage}
-        blockId={editDialog.blockId}
-        conversationId={editDialog.conversationId}
         open={editDialog.open}
         onOpenChange={editDialog.setOpen}
         onConfirm={handleEditConfirm}

@@ -527,6 +527,7 @@
   },
   "chat": {
     "new": "New Chat",
+    "block-number": "Block {{number}}",
     "block-summary": {
       "tokens": "Tokens",
       "total-tokens": "Total",

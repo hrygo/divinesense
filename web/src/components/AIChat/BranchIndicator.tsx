@@ -27,7 +27,12 @@ export function BlockNumberIndicator({ blockNumber, label, className, isActive }
   }
 
   const displayNumber = String(blockNumber);
-  const defaultLabel = label || t("chat.blocks.block-number", { number: blockNumber, defaultValue: `Block ${blockNumber}` });
+  // Try multiple key paths for different locale file structures
+  const defaultLabel =
+    label ||
+    t("chat.block-number", { number: blockNumber }) ||
+    t("ai.unified_block.block_number", { number: blockNumber }) ||
+    t("chat.blocks.block-number", { number: blockNumber, defaultValue: `Block ${blockNumber}` });
 
   return (
     <div

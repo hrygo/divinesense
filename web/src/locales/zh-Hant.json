@@ -621,7 +621,8 @@
         "duration": "時長",
         "cost": "成本",
         "tokens": "Token",
-        "branch_path": "分支路徑"
+        "branch_path": "分支路徑",
+        "block_number": "第 {{number}} 塊"
       },
       "states": {
         "thinking": "思考中...",

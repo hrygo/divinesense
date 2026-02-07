@@ -476,6 +476,7 @@
       "cost": "成本",
       "tokens": "Token",
       "branch_path": "分支",
+      "block_number": "第 {{number}} 块",
       "click_details": "点击查看详情",
       "tool_details": "工具调用详情",
       "no_output": "无输出结果"
@@ -522,6 +523,7 @@
   },
   "chat": {
     "new": "新对话",
+    "block-number": "第 {{number}} 块",
     "block-summary": {
       "tokens": "令牌",
       "total-tokens": "总计",

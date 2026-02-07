@@ -447,6 +447,38 @@ describe("BlockHeader", () => {
       expect(hashIcons.length).toBe(0);
     });
 
+    it("should not render block number when blockNumber is 0", () => {
+      const props = createDefaultProps({
+        blockNumber: 0,
+      });
+      const { container } = render(<BlockHeader {...props} />);
+
+      // Should not show hash icon for block number
+      const hashIcons = container.querySelectorAll(".lucide-hash");
+      expect(hashIcons.length).toBe(0);
+    });
+
+    it("should not render block number when blockNumber is negative", () => {
+      const props = createDefaultProps({
+        blockNumber: -1,
+      });
+      const { container } = render(<BlockHeader {...props} />);
+
+      // Should not show hash icon for block number
+      const hashIcons = container.querySelectorAll(".lucide-hash");
+      expect(hashIcons.length).toBe(0);
+    });
+
+    it("should handle large block numbers", () => {
+      const props = createDefaultProps({
+        blockNumber: 999,
+      });
+      const { container } = render(<BlockHeader {...props} />);
+
+      const allText = container.textContent || "";
+      expect(allText).toContain("999");
+    });
+
     it("should show active ring when block is streaming", () => {
       const props = createDefaultProps({
         blockNumber: 2,
