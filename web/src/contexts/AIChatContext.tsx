@@ -384,10 +384,8 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   }, []);
 
   const updateConversationTitle = useCallback((id: string, title: string) => {
-    const numericId = parseInt(id);
-    if (!isNaN(numericId)) {
-      aiServiceClient.updateAIConversation({ id: numericId, title });
-    }
+    // Only update local state - API call is handled by the caller
+    // This avoids duplicate API calls when updating from dialogs
     setState((prev) => ({
       ...prev,
       conversations: prev.conversations.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c)),

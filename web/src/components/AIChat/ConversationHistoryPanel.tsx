@@ -21,7 +21,7 @@ interface ConversationHistoryPanelProps {
  */
 export function ConversationHistoryPanel({ className, onSelectConversation }: ConversationHistoryPanelProps) {
   const { t } = useTranslation();
-  const { conversationSummaries, conversations, state, deleteConversation, selectConversation } = useAIChat();
+  const { conversationSummaries, conversations, state, deleteConversation, selectConversation, updateConversationTitle } = useAIChat();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
@@ -80,6 +80,10 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
     setConversationToDelete(null);
   };
 
+  const handleTitleChange = (id: string, newTitle: string) => {
+    updateConversationTitle(id, newTitle);
+  };
+
   const hasConversations = conversationSummaries.length > 0;
 
   return (
@@ -101,6 +105,7 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
                       isActive={conversation.id === state.currentConversationId}
                       onSelect={handleSelectConversation}
                       onDelete={handleDeleteClick}
+                      onTitleChange={handleTitleChange}
                       isLoaded={loadedConversationIds.has(conversation.id)}
                     />
                   ))}
