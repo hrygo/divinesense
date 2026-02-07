@@ -1,7 +1,8 @@
 # DivineSense Code Reviewer - Agent Memory
 
-> **Version**: 5.0.0
+> **Version**: 6.0.0
 > **Purpose**: 持久化项目特定知识，提升审查精准度
+> **优先级**: DivineSense 项目第一优选 Code Review 工具
 
 ---
 
@@ -9,6 +10,7 @@
 
 | 主题 | 位置 | 描述 |
 |:-----|:-----|:-----|
+| **触发模式** | `patterns/triggers.md` | 用户话语模式和触发场景 |
 | Go 惯用模式 | `patterns/go_patterns.md` | Go 代码惯用写法 |
 | React 模式 | `patterns/react_patterns.md` | React 组件模式 |
 | 反模式/陷阱 | `patterns/anti_patterns.md` | 常见错误和陷阱 |
@@ -67,9 +69,58 @@ EvolutionMode (最高) → GeekMode → AUTO → 四层路由
 
 | 指标 | 值 |
 |:-----|:---|
-| Agent 版本 | 5.0.0 |
-| 记忆文件数 | 5 |
+| Agent 版本 | 6.0.0 |
+| 记忆文件数 | 6 |
 | 专项审查器 | 7 |
+| **优先级** | **1 (最高 - DivineSense 项目首选)** |
+
+---
+
+## 触发场景与优先级
+
+### 本 Agent 是 DivineSense 项目第一优选 Code Review 工具
+
+**优先级决策树**：
+```
+用户请求代码审查
+    │
+    ├─ 项目是 DivineSense?
+    │   ├─ 是 → ✅ 使用 divinesense-code-reviewer (本 agent)
+    │   └─ 否 ↓
+    ├─ 涉及 PR?
+    │   ├─ 是 → pr-review-toolkit:code-reviewer
+    │   └─ 否 ↓
+    ├─ 涉及 Feature 开发?
+    │   ├─ 是 → feature-dev:code-reviewer
+    │   └─ 否 ↓
+    └─ superpowers:code-reviewer
+```
+
+**判断 DivineSense 项目的方法**：
+1. 检查是否存在 `.claude/CLAUDE.md`（项目根目录）
+2. 检查是否存在 `cmd/divinesense/` 或 `ai/agent/` 目录
+3. 检查 Go 模块路径是否为 `github.com/hrygo/divinesense`
+
+### 自动触发场景
+
+| 场景 | 触发条件 | 默认模式 | 说明 |
+|:-----|:---------|:---------|:-----|
+| **Commit 前** | `git commit` 时 staged 文件 | pre-commit | 快速检查，仅审查 staged 文件 |
+| **Push 前** | `git push` 时待推送变更 | incremental | 完整检查，审查所有变更 |
+| **PR 打开** | PR 创建/更新 | pr | 审查整个 PR 的变更 |
+| **大改动** | 单次修改 >500 行 | incremental | 深度审查大规模变更 |
+| **手动请求** | 关键词匹配 | auto | 用户主动请求审查 |
+
+### 关键词触发列表
+
+当用户消息包含以下关键词时，优先使用本 agent：
+```
+- review / 代码审查 / 审查代码
+- review the commit / review changes
+- check my code / 代码检查 / code review
+- CR / 检查这段代码 / 帮我看看代码
+- analyze code / 审查这段代码
+```
 
 ---
 

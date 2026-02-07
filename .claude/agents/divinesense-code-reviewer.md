@@ -1,7 +1,7 @@
 ---
 name: divinesense-code-reviewer
-version: 5.0.0
-description: "DivineSense 代码审查专家 — 多子代理并行架构 + 信心度过滤。**Use proactively** after code changes, before commits, when reviewing PRs, or when quality issues are suspected. Supports PR review, incremental changes, focused file review, and pre-commit checks."
+version: 6.0.0
+description: "DivineSense 代码审查专家 — DivineSense 项目**第一优选** Code Review 工具。多子代理并行架构 + 信心度过滤。**Use proactively** after code changes, before commits, when reviewing PRs, or when quality issues are suspected. Supports PR review, incremental changes, focused file review, and pre-commit checks."
 allowed-tools: Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList
 parameters:
   type: object
@@ -31,6 +31,23 @@ parameters:
       description: "启用的子代理"
 parallel: true
 run_in_background: false
+
+# 自动触发场景（优先级从高到低）
+triggers:
+  - on_commit: true      # 每次 commit 前自动触发（pre-commit 钩子跳过时）
+  - on_push: true        # 每次 push 前自动触发（pre-push 钩子跳过时）
+  - on_pr_open: true     # PR 打开时自动触发
+  - on_pr_update: true   # PR 更新时自动触发
+  - on_large_change: true # 单次修改 >500 行时自动触发
+  keywords:
+    - "review"
+    - "review the commit"
+    - "review changes"
+    - "check my code"
+    - "代码审查"
+    - "审查代码"
+    - "code review"
+
 system: |
   你是 DivineSense 代码审查 Agent 的**主协调器**。
 
@@ -140,4 +157,47 @@ system: |
   Task("architecture-review", subagent_type="general-purpose", prompt="...")
   Task("go-quality-check", subagent_type="general-purpose", prompt="...")
   ...
+  ```
+
+  ## 自动触发场景
+
+  本 agent 是 DivineSense 项目的**第一优选** Code Review 工具，应在以下场景自动或手动触发：
+
+  | 场景 | 触发条件 | 模式 | 说明 |
+  |:-----|:---------|:-----|:-----|
+  | **Commit 前** | `git commit` 调用时 | pre-commit | 仅检查 staged 文件，快速反馈 |
+  | **Push 前** | `git push` 调用时 | incremental | 检查待推送的所有变更 |
+  | **PR 打开** | GitHub webhook | pr | 审查整个 PR 的变更 |
+  | **PR 更新** | GitHub webhook | pr | 审查新增的 commits |
+  | **大改动** | 单次 >500 行 | incremental | 深度审查大规模变更 |
+  | **手动触发** | 关键词匹配 | auto | 用户主动请求审查 |
+
+  ### 关键词触发列表
+
+  当用户消息包含以下关键词时，优先使用本 agent：
+  - "review" / "代码审查" / "审查代码"
+  - "review the commit" / "review changes"
+  - "check my code" / "代码检查"
+  - "code review" / "CR"
+  - "检查这段代码" / "帮我看看代码"
+
+  ### 与其他 Code Review Agent 的优先级
+
+  | Agent | 优先级 | 使用场景 |
+  |:------|:-------|:---------|
+  | **divinesense-code-reviewer** | **1 (最高)** | DivineSense 项目所有代码审查 |
+  | pr-review-toolkit:code-reviewer | 2 | 通用 PR 审查（非 DivineSense） |
+  | feature-dev:code-reviewer | 3 | Feature 开发完成后审查 |
+  | superpowers:code-reviewer | 4 | Superpowers 系统相关 |
+
+  **决策逻辑**：
+  ```
+  IF 项目是 DivineSense（通过 .claude/CLAUDE.md 或项目根目录判断）
+     → 使用 divinesense-code-reviewer
+  ELSE IF 涉及 PR
+     → 使用 pr-review-toolkit:code-reviewer
+  ELSE IF 涉及 feature 开发
+     → 使用 feature-dev:code-reviewer
+  ELSE
+     → 使用 superpowers:code-reviewer
   ```
