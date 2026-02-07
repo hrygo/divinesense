@@ -151,10 +151,10 @@ func (tg *TitleGenerator) GenerateTitleFromBlocks(ctx context.Context, blocks []
 	var userMessage, aiResponse string
 
 	for _, block := range blocks {
-		if userMessage == "" && block.UserInput != "" {
+		if userMessage == "" {
 			userMessage = block.UserInput
 		}
-		if aiResponse == "" && block.AssistantContent != "" {
+		if aiResponse == "" {
 			aiResponse = block.AssistantContent
 		}
 		if userMessage != "" && aiResponse != "" {
