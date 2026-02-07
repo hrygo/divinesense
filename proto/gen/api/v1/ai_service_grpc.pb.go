@@ -39,7 +39,6 @@ const (
 	AIService_UpdateAIConversation_FullMethodName      = "/memos.api.v1.AIService/UpdateAIConversation"
 	AIService_DeleteAIConversation_FullMethodName      = "/memos.api.v1.AIService/DeleteAIConversation"
 	AIService_AddContextSeparator_FullMethodName       = "/memos.api.v1.AIService/AddContextSeparator"
-	AIService_ListMessages_FullMethodName              = "/memos.api.v1.AIService/ListMessages"
 	AIService_ClearConversationMessages_FullMethodName = "/memos.api.v1.AIService/ClearConversationMessages"
 	AIService_StopChat_FullMethodName                  = "/memos.api.v1.AIService/StopChat"
 	AIService_GetSessionStats_FullMethodName           = "/memos.api.v1.AIService/GetSessionStats"
@@ -104,8 +103,6 @@ type AIServiceClient interface {
 	DeleteAIConversation(ctx context.Context, in *DeleteAIConversationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// AddContextSeparator adds a context separator marker to a conversation.
 	AddContextSeparator(ctx context.Context, in *AddContextSeparatorRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListMessages returns messages for a conversation with incremental sync support.
-	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(ctx context.Context, in *ClearConversationMessagesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
@@ -356,16 +353,6 @@ func (c *aIServiceClient) AddContextSeparator(ctx context.Context, in *AddContex
 	return out, nil
 }
 
-func (c *aIServiceClient) ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListMessagesResponse)
-	err := c.cc.Invoke(ctx, AIService_ListMessages_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *aIServiceClient) ClearConversationMessages(ctx context.Context, in *ClearConversationMessagesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -590,8 +577,6 @@ type AIServiceServer interface {
 	DeleteAIConversation(context.Context, *DeleteAIConversationRequest) (*emptypb.Empty, error)
 	// AddContextSeparator adds a context separator marker to a conversation.
 	AddContextSeparator(context.Context, *AddContextSeparatorRequest) (*emptypb.Empty, error)
-	// ListMessages returns messages for a conversation with incremental sync support.
-	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
@@ -699,9 +684,6 @@ func (UnimplementedAIServiceServer) DeleteAIConversation(context.Context, *Delet
 }
 func (UnimplementedAIServiceServer) AddContextSeparator(context.Context, *AddContextSeparatorRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddContextSeparator not implemented")
-}
-func (UnimplementedAIServiceServer) ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListMessages not implemented")
 }
 func (UnimplementedAIServiceServer) ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClearConversationMessages not implemented")
@@ -1113,24 +1095,6 @@ func _AIService_AddContextSeparator_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AIService_ListMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AIServiceServer).ListMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AIService_ListMessages_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AIServiceServer).ListMessages(ctx, req.(*ListMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AIService_ClearConversationMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ClearConversationMessagesRequest)
 	if err := dec(in); err != nil {
@@ -1533,10 +1497,6 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddContextSeparator",
 			Handler:    _AIService_AddContextSeparator_Handler,
-		},
-		{
-			MethodName: "ListMessages",
-			Handler:    _AIService_ListMessages_Handler,
 		},
 		{
 			MethodName: "ClearConversationMessages",

@@ -418,6 +418,16 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: limit
+                  in: query
+                  description: Pagination support (for incremental sync)
+                  schema:
+                    type: integer
+                    format: int32
+                - name: lastBlockUid
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -463,40 +473,6 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Status'
     /api/v1/ai/conversations/{conversationId}/messages:
-        get:
-            tags:
-                - AIService
-            description: ListMessages returns messages for a conversation with incremental sync support.
-            operationId: AIService_ListMessages
-            parameters:
-                - name: conversationId
-                  in: path
-                  required: true
-                  schema:
-                    type: integer
-                    format: int32
-                - name: limit
-                  in: query
-                  schema:
-                    type: integer
-                    format: int32
-                - name: lastBlockUid
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/ListMessagesResponse'
-                default:
-                    description: Default error response
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Status'
         delete:
             tags:
                 - AIService
@@ -4795,6 +4771,16 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Block'
+                hasMore:
+                    type: boolean
+                    description: Pagination metadata
+                totalCount:
+                    type: integer
+                    format: int32
+                latestBlockUid:
+                    type: string
+                syncRequired:
+                    type: boolean
             description: ListBlocksResponse is the response for ListBlocks.
         ListCredentialsResponse:
             type: object
@@ -4877,25 +4863,6 @@ components:
                     description: |-
                         A token that can be sent as `page_token` to retrieve the next page.
                          If this field is omitted, there are no subsequent pages.
-        ListMessagesResponse:
-            type: object
-            properties:
-                blocks:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Block'
-                hasMore:
-                    type: boolean
-                totalCount:
-                    type: integer
-                    format: int32
-                latestBlockUid:
-                    type: string
-                syncRequired:
-                    type: boolean
-            description: |-
-                ListMessagesResponse is the response for ListMessages.
-                 NOTE: Named ListMessages for API compatibility, but returns Blocks.
         ListParrotsResponse:
             type: object
             properties:

@@ -23,7 +23,6 @@ import {
   CreateBlockRequestSchema,
   DeleteBlockRequestSchema,
   ListBlocksResponseSchema,
-  ListMessagesResponseSchema,
   UpdateBlockRequestSchema,
   UserInputSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
@@ -46,7 +45,6 @@ import {
 vi.mock("@/connect", () => ({
   aiServiceClient: {
     listBlocks: vi.fn(),
-    listMessages: vi.fn(), // Added for useBlocksWithFallback
     getBlock: vi.fn(),
     createBlock: vi.fn(),
     updateBlock: vi.fn(),
@@ -120,13 +118,15 @@ function createMockListResponse(blocks: Block[]): ListBlocksResponse {
 }
 
 /**
- * Helper to create a mock ListMessagesResponse
+ * Helper to create a mock ListBlocksResponse with pagination metadata
  */
-function createMockMessagesResponse(blocks: Block[], hasMore = false, totalCount = blocks.length) {
-  return create(ListMessagesResponseSchema, {
+function createMockPaginatedResponse(blocks: Block[], hasMore = false, totalCount = blocks.length): ListBlocksResponse {
+  return create(ListBlocksResponseSchema, {
     blocks,
     hasMore,
     totalCount,
+    latestBlockUid: blocks.length > 0 ? blocks[blocks.length - 1].uid : "",
+    syncRequired: false,
   });
 }
 
@@ -138,13 +138,15 @@ function createEmptyListResponse(): ListBlocksResponse {
 }
 
 /**
- * Helper to create an empty ListMessagesResponse
+ * Helper to create an empty paginated ListBlocksResponse
  */
-function createEmptyMessagesResponse() {
-  return create(ListMessagesResponseSchema, {
+function createEmptyPaginatedResponse(): ListBlocksResponse {
+  return create(ListBlocksResponseSchema, {
     blocks: [],
     hasMore: false,
     totalCount: 0,
+    latestBlockUid: "",
+    syncRequired: false,
   });
 }
 
@@ -250,7 +252,7 @@ describe("useBlocksWithFallback", () => {
       }),
     ];
 
-    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createMockMessagesResponse(mockBlocks));
+    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createMockPaginatedResponse(mockBlocks));
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
 
@@ -268,7 +270,7 @@ describe("useBlocksWithFallback", () => {
 
     // Use mockRejectedValue directly
     const error = new Error("Network error");
-    vi.mocked(aiServiceClient.listMessages).mockRejectedValue(error);
+    vi.mocked(aiServiceClient.listBlocks).mockRejectedValue(error);
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper: freshWrapper });
 
@@ -283,7 +285,7 @@ describe("useBlocksWithFallback", () => {
     // Clear any cached data from previous tests
     queryClient.clear();
 
-    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createEmptyMessagesResponse());
+    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyPaginatedResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123, { isActive: true }), { wrapper });
 
@@ -296,7 +298,7 @@ describe("useBlocksWithFallback", () => {
   it("should provide refetch function", async () => {
     queryClient.clear();
 
-    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createEmptyMessagesResponse());
+    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyPaginatedResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
 
@@ -307,7 +309,7 @@ describe("useBlocksWithFallback", () => {
     // Call refetch
     result.current.refetch();
 
-    expect(aiServiceClient.listMessages).toHaveBeenCalledTimes(2);
+    expect(aiServiceClient.listBlocks).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -19,8 +19,19 @@ import (
 // emptyMetadata is the default empty JSON object for metadata.
 const emptyMetadata = "{}"
 
-// ListBlocks retrieves blocks for a conversation.
+// ListBlocks retrieves blocks for a conversation with pagination support.
 func (s *AIService) ListBlocks(ctx context.Context, req *v1pb.ListBlocksRequest) (*v1pb.ListBlocksResponse, error) {
+	// Parameter validation
+	if req.ConversationId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
+
+	// Pagination limit
+	limit := req.Limit
+	if limit <= 0 || limit > MaxBlockLimit {
+		limit = MaxBlockLimit // Default and max limit
+	}
+
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
@@ -61,14 +72,83 @@ func (s *AIService) ListBlocks(ctx context.Context, req *v1pb.ListBlocksRequest)
 		return nil, status.Errorf(codes.Internal, "failed to list blocks: %v", err)
 	}
 
-	response := &v1pb.ListBlocksResponse{
-		Blocks: make([]*v1pb.Block, 0, len(blocks)),
-	}
+	// Convert to protobuf blocks
+	pbBlocks := make([]*v1pb.Block, 0, len(blocks))
 	for _, b := range blocks {
-		response.Blocks = append(response.Blocks, convertBlockFromStore(b))
+		pbBlocks = append(pbBlocks, convertBlockFromStore(b))
 	}
 
-	return response, nil
+	// Calculate total MESSAGE type block count
+	var totalCount int32
+	for _, block := range pbBlocks {
+		if block.BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
+			totalCount++
+		}
+	}
+
+	// Determine starting position based on request type
+	var startIndex int
+	if req.LastBlockUid == "" {
+		// First load: from end, count back limit MESSAGE blocks to find start position
+		msgCount := 0
+		for i := len(pbBlocks) - 1; i >= 0; i-- {
+			if pbBlocks[i].BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
+				msgCount++
+				if msgCount > int(limit) {
+					startIndex = i + 1
+					break
+				}
+			}
+		}
+	} else {
+		// Incremental load: find position after lastBlockUid
+		found := false
+		for i, block := range pbBlocks {
+			if block.Uid == req.LastBlockUid {
+				startIndex = i + 1
+				found = true
+				break
+			}
+		}
+		if !found {
+			// UID not found - tell frontend to refresh
+			return &v1pb.ListBlocksResponse{
+				Blocks:         []*v1pb.Block{},
+				HasMore:        false,
+				TotalCount:     totalCount,
+				LatestBlockUid: getLatestBlockUID(pbBlocks),
+				SyncRequired:   true,
+			}, nil
+		}
+	}
+
+	// Collect blocks from startIndex, max limit MESSAGE blocks (SEPARATOR included)
+	var result []*v1pb.Block
+	msgCount := 0
+	for i := startIndex; i < len(pbBlocks) && msgCount < int(limit); i++ {
+		block := pbBlocks[i]
+		result = append(result, block)
+		if block.BlockType == v1pb.BlockType_BLOCK_TYPE_MESSAGE {
+			msgCount++
+		}
+		// SEPARATOR is included but not counted
+	}
+
+	return &v1pb.ListBlocksResponse{
+		Blocks:         result,
+		HasMore:        startIndex > 0,
+		TotalCount:     totalCount,
+		LatestBlockUid: getLatestBlockUID(pbBlocks),
+		SyncRequired:   false,
+	}, nil
+}
+
+// getLatestBlockUID returns the UID of the latest block.
+func getLatestBlockUID(blocks []*v1pb.Block) string {
+	if len(blocks) == 0 {
+		return ""
+	}
+	return blocks[len(blocks)-1].Uid
 }
 
 // GetBlock retrieves a specific block.

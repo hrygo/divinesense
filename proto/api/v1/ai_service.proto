@@ -135,11 +135,6 @@ service AIService {
     };
   }
 
-  // ListMessages returns messages for a conversation with incremental sync support.
-  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {
-    option (google.api.http) = {get: "/api/v1/ai/conversations/{conversation_id}/messages"};
-  }
-
   // ClearConversationMessages deletes all messages in a conversation.
   rpc ClearConversationMessages(ClearConversationMessagesRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/api/v1/ai/conversations/{conversation_id}/messages"};
@@ -409,23 +404,6 @@ message DeleteAIConversationRequest {
 // Subsequent chat requests will only include messages after this separator.
 message AddContextSeparatorRequest {
   int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-// ListMessagesRequest is the request for ListMessages.
-message ListMessagesRequest {
-  int32 conversation_id = 1 [(google.api.field_behavior) = REQUIRED]; // Conversation ID
-  int32 limit = 2; // Max blocks to return (default: 100, max: 100)
-  string last_block_uid = 3; // Last block UID from previous page (for incremental sync)
-}
-
-// ListMessagesResponse is the response for ListMessages.
-// NOTE: Named ListMessages for API compatibility, but returns Blocks.
-message ListMessagesResponse {
-  repeated Block blocks = 1; // Blocks in the conversation
-  bool has_more = 2; // Whether more blocks exist before this page
-  int32 total_count = 3; // Total count of MESSAGE type blocks
-  string latest_block_uid = 4; // UID of the latest block for sync validation
-  bool sync_required = 5; // Whether client should re-sync (UID not found)
 }
 
 // ClearConversationMessagesRequest is the request for ClearConversationMessages.
@@ -987,11 +965,21 @@ message ListBlocksRequest {
   BlockStatus status = 2; // Optional filter by status
   BlockMode mode = 3; // Optional filter by mode
   string cc_session_id = 4; // Optional filter by CC session
+
+  // Pagination support (for incremental sync)
+  int32 limit = 5; // Max blocks to return (default: 100, max: 100)
+  string last_block_uid = 6; // Last block UID from previous page (for incremental sync)
 }
 
 // ListBlocksResponse is the response for ListBlocks.
 message ListBlocksResponse {
-  repeated Block blocks = 1;
+  repeated Block blocks = 1; // Blocks in the conversation
+
+  // Pagination metadata
+  bool has_more = 2; // Whether more blocks exist before this page
+  int32 total_count = 3; // Total count of MESSAGE type blocks
+  string latest_block_uid = 4; // UID of the latest block for sync validation
+  bool sync_required = 5; // Whether client should re-sync (UID not found)
 }
 
 // GetBlockRequest is the request for GetBlock.

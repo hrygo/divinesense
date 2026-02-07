@@ -86,8 +86,6 @@ const (
 	// AIServiceAddContextSeparatorProcedure is the fully-qualified name of the AIService's
 	// AddContextSeparator RPC.
 	AIServiceAddContextSeparatorProcedure = "/memos.api.v1.AIService/AddContextSeparator"
-	// AIServiceListMessagesProcedure is the fully-qualified name of the AIService's ListMessages RPC.
-	AIServiceListMessagesProcedure = "/memos.api.v1.AIService/ListMessages"
 	// AIServiceClearConversationMessagesProcedure is the fully-qualified name of the AIService's
 	// ClearConversationMessages RPC.
 	AIServiceClearConversationMessagesProcedure = "/memos.api.v1.AIService/ClearConversationMessages"
@@ -179,8 +177,6 @@ type AIServiceClient interface {
 	DeleteAIConversation(context.Context, *connect.Request[v1.DeleteAIConversationRequest]) (*connect.Response[emptypb.Empty], error)
 	// AddContextSeparator adds a context separator marker to a conversation.
 	AddContextSeparator(context.Context, *connect.Request[v1.AddContextSeparatorRequest]) (*connect.Response[emptypb.Empty], error)
-	// ListMessages returns messages for a conversation with incremental sync support.
-	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
@@ -349,12 +345,6 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("AddContextSeparator")),
 			connect.WithClientOptions(opts...),
 		),
-		listMessages: connect.NewClient[v1.ListMessagesRequest, v1.ListMessagesResponse](
-			httpClient,
-			baseURL+AIServiceListMessagesProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("ListMessages")),
-			connect.WithClientOptions(opts...),
-		),
 		clearConversationMessages: connect.NewClient[v1.ClearConversationMessagesRequest, emptypb.Empty](
 			httpClient,
 			baseURL+AIServiceClearConversationMessagesProcedure,
@@ -487,7 +477,6 @@ type aIServiceClient struct {
 	updateAIConversation      *connect.Client[v1.UpdateAIConversationRequest, v1.AIConversation]
 	deleteAIConversation      *connect.Client[v1.DeleteAIConversationRequest, emptypb.Empty]
 	addContextSeparator       *connect.Client[v1.AddContextSeparatorRequest, emptypb.Empty]
-	listMessages              *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
 	clearConversationMessages *connect.Client[v1.ClearConversationMessagesRequest, emptypb.Empty]
 	stopChat                  *connect.Client[v1.StopChatRequest, emptypb.Empty]
 	getSessionStats           *connect.Client[v1.GetSessionStatsRequest, v1.SessionStats]
@@ -601,11 +590,6 @@ func (c *aIServiceClient) DeleteAIConversation(ctx context.Context, req *connect
 // AddContextSeparator calls memos.api.v1.AIService.AddContextSeparator.
 func (c *aIServiceClient) AddContextSeparator(ctx context.Context, req *connect.Request[v1.AddContextSeparatorRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.addContextSeparator.CallUnary(ctx, req)
-}
-
-// ListMessages calls memos.api.v1.AIService.ListMessages.
-func (c *aIServiceClient) ListMessages(ctx context.Context, req *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error) {
-	return c.listMessages.CallUnary(ctx, req)
 }
 
 // ClearConversationMessages calls memos.api.v1.AIService.ClearConversationMessages.
@@ -738,8 +722,6 @@ type AIServiceHandler interface {
 	DeleteAIConversation(context.Context, *connect.Request[v1.DeleteAIConversationRequest]) (*connect.Response[emptypb.Empty], error)
 	// AddContextSeparator adds a context separator marker to a conversation.
 	AddContextSeparator(context.Context, *connect.Request[v1.AddContextSeparatorRequest]) (*connect.Response[emptypb.Empty], error)
-	// ListMessages returns messages for a conversation with incremental sync support.
-	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
 	// ClearConversationMessages deletes all messages in a conversation.
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
@@ -904,12 +886,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("AddContextSeparator")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aIServiceListMessagesHandler := connect.NewUnaryHandler(
-		AIServiceListMessagesProcedure,
-		svc.ListMessages,
-		connect.WithSchema(aIServiceMethods.ByName("ListMessages")),
-		connect.WithHandlerOptions(opts...),
-	)
 	aIServiceClearConversationMessagesHandler := connect.NewUnaryHandler(
 		AIServiceClearConversationMessagesProcedure,
 		svc.ClearConversationMessages,
@@ -1058,8 +1034,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceDeleteAIConversationHandler.ServeHTTP(w, r)
 		case AIServiceAddContextSeparatorProcedure:
 			aIServiceAddContextSeparatorHandler.ServeHTTP(w, r)
-		case AIServiceListMessagesProcedure:
-			aIServiceListMessagesHandler.ServeHTTP(w, r)
 		case AIServiceClearConversationMessagesProcedure:
 			aIServiceClearConversationMessagesHandler.ServeHTTP(w, r)
 		case AIServiceStopChatProcedure:
@@ -1179,10 +1153,6 @@ func (UnimplementedAIServiceHandler) DeleteAIConversation(context.Context, *conn
 
 func (UnimplementedAIServiceHandler) AddContextSeparator(context.Context, *connect.Request[v1.AddContextSeparatorRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.AddContextSeparator is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.ListMessages is not implemented"))
 }
 
 func (UnimplementedAIServiceHandler) ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error) {

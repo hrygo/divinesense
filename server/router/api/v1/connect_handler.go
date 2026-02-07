@@ -142,17 +142,6 @@ func (s *ConnectServiceHandler) GetRelatedMemos(ctx context.Context, req *connec
 	return connect.NewResponse(resp), nil
 }
 
-func (s *ConnectServiceHandler) ListMessages(ctx context.Context, req *connect.Request[v1pb.ListMessagesRequest]) (*connect.Response[v1pb.ListMessagesResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
-	}
-	resp, err := s.AIService.ListMessages(ctx, req.Msg)
-	if err != nil {
-		return nil, convertGRPCError(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
 func (s *ConnectServiceHandler) Chat(ctx context.Context, req *connect.Request[v1pb.ChatRequest], stream *connect.ServerStream[v1pb.ChatResponse]) error {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
