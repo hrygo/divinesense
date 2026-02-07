@@ -10,9 +10,23 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+// LLM parameters for title generation
+const (
+	titleTimeout      = 15 * time.Second
+	titleMaxTokens    = 20
+	titleTemperature  = 0.1
+	titleTopP         = 0.5
+	titleMaxLen       = 500
+	titleMaxRuneCount = 50
+)
+
+// Default API configuration
+const (
+	defaultBaseURL = "https://api.siliconflow.cn/v1"
+	defaultModel   = "Qwen/Qwen2.5-7B-Instruct"
+)
+
 // TitleGenerator generates meaningful titles for AI conversations.
-// It uses a lightweight LLM (Qwen2.5-7B-Instruct) to analyze the first
-// user-AI exchange and generate a concise, descriptive title.
 type TitleGenerator struct {
 	client *openai.Client
 	model  string
@@ -22,56 +36,50 @@ type TitleGenerator struct {
 type TitleGeneratorConfig struct {
 	APIKey  string
 	BaseURL string
-	Model   string // Recommended: Qwen/Qwen2.5-7B-Instruct
-}
-
-// GeneratedTitle represents the result of title generation.
-type GeneratedTitle struct {
-	Title string `json:"title"`
+	Model   string
 }
 
 // NewTitleGenerator creates a new title generator instance.
 func NewTitleGenerator(cfg TitleGeneratorConfig) *TitleGenerator {
 	baseURL := cfg.BaseURL
 	if baseURL == "" {
-		baseURL = "https://api.siliconflow.cn/v1"
+		baseURL = defaultBaseURL
 	}
 
 	model := cfg.Model
 	if model == "" {
-		model = "Qwen/Qwen2.5-7B-Instruct"
+		model = defaultModel
 	}
 
-	clientConfig := openai.DefaultConfig(cfg.APIKey)
-	clientConfig.BaseURL = baseURL
+	config := openai.DefaultConfig(cfg.APIKey)
+	config.BaseURL = baseURL
 
 	return &TitleGenerator{
-		client: openai.NewClientWithConfig(clientConfig),
+		client: openai.NewClientWithConfig(config),
 		model:  model,
 	}
 }
 
 // Generate generates a title based on the conversation content.
-// The input should include the user's first message and the AI's response.
 func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse string) (string, error) {
-	// Set timeout for title generation (should be fast)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, titleTimeout)
 	defer cancel()
 
-	prompt := tg.buildPrompt(userMessage, aiResponse)
-
-	// Use low temperature and top_p for stable, predictable output
-	// MaxTokens=20 is sufficient for short titles (typically 5-15 chars)
-	temperature := float32(0.1) // Very low for high consistency
-	topP := float32(0.5)        // Restrict sampling for stability
-	maxTokens := 20             // Reduced from 30 to save cost
+	// Truncate inputs
+	if len(userMessage) > titleMaxLen {
+		userMessage = userMessage[:titleMaxLen] + "..."
+	}
+	if len(aiResponse) > titleMaxLen {
+		aiResponse = aiResponse[:titleMaxLen] + "..."
+	}
+	prompt := fmt.Sprintf("用户消息: %s\n\nAI 回复: %s\n\n请为这段对话生成一个简短的标题。", userMessage, aiResponse)
 
 	req := openai.ChatCompletionRequest{
 		Model:       tg.model,
-		MaxTokens:   maxTokens,
-		Temperature: temperature,
-		TopP:        topP,   // Value type, not pointer
-		Stop:        []string{"\n"}, // Stop at newline for cleaner output
+		MaxTokens:   titleMaxTokens,
+		Temperature: titleTemperature,
+		TopP:        titleTopP,
+		Stop:        []string{"\n"},
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,
@@ -108,14 +116,25 @@ func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse 
 		return "", fmt.Errorf("empty response from LLM")
 	}
 
-	content := resp.Choices[0].Message.Content
-	result, err := tg.parseResponse(content)
-	if err != nil {
+	var result struct {
+		Title string `json:"title"`
+	}
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &result); err != nil {
 		slog.Warn("title_generation_parse_failed",
 			"model", tg.model,
-			"content", content,
+			"content", resp.Choices[0].Message.Content,
 			"error", err)
 		return "", fmt.Errorf("parse response failed: %w", err)
+	}
+
+	if result.Title == "" {
+		return "", fmt.Errorf("empty title in response")
+	}
+
+	// Truncate to max length (rune-aware for UTF-8)
+	runes := []rune(result.Title)
+	if len(runes) > titleMaxRuneCount {
+		result.Title = string(runes[:titleMaxRuneCount])
 	}
 
 	slog.Debug("title_generation_success",
@@ -127,40 +146,33 @@ func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse 
 	return result.Title, nil
 }
 
-// buildPrompt constructs the title generation prompt.
-func (tg *TitleGenerator) buildPrompt(userMessage, aiResponse string) string {
-	// Truncate if too long to stay within token limits
-	maxLen := 500
-	if len(userMessage) > maxLen {
-		userMessage = userMessage[:maxLen] + "..."
-	}
-	if len(aiResponse) > maxLen {
-		aiResponse = aiResponse[:maxLen] + "..."
+// GenerateTitleFromBlocks generates a title from a slice of blocks.
+func (tg *TitleGenerator) GenerateTitleFromBlocks(ctx context.Context, blocks []BlockContent) (string, error) {
+	var userMessage, aiResponse string
+
+	for _, block := range blocks {
+		if userMessage == "" && block.UserInput != "" {
+			userMessage = block.UserInput
+		}
+		if aiResponse == "" && block.AssistantContent != "" {
+			aiResponse = block.AssistantContent
+		}
+		if userMessage != "" && aiResponse != "" {
+			break
+		}
 	}
 
-	return fmt.Sprintf("用户消息: %s\n\nAI 回复: %s\n\n请为这段对话生成一个简短的标题。", userMessage, aiResponse)
+	if userMessage == "" {
+		return "", fmt.Errorf("no user message found in blocks")
+	}
+
+	return tg.Generate(ctx, userMessage, aiResponse)
 }
 
-// parseResponse parses the LLM JSON response.
-func (tg *TitleGenerator) parseResponse(content string) (*GeneratedTitle, error) {
-	var result GeneratedTitle
-	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		return nil, fmt.Errorf("JSON parse error: %w", err)
-	}
-
-	// Validate title
-	if result.Title == "" {
-		return nil, fmt.Errorf("empty title in response")
-	}
-
-	// Truncate to max length (rune-aware for UTF-8)
-	// Use []rune to properly handle multi-byte characters (e.g., Chinese)
-	if len([]rune(result.Title)) > 50 {
-		runes := []rune(result.Title)
-		result.Title = string(runes[:50])
-	}
-
-	return &result, nil
+// BlockContent represents a simplified block for title generation.
+type BlockContent struct {
+	UserInput        string
+	AssistantContent string
 }
 
 // titleSystemPrompt is the system prompt for title generation.
@@ -183,18 +195,19 @@ const titleSystemPrompt = `你是一个专业的对话标题生成助手。你�
 
 // titleJSONSchema defines the JSON schema for title generation response.
 var titleJSONSchema = &jsonSchema{
-	Type: "object",
+	Type:                 "object",
+	AdditionalProperties: false,
+	Required:             []string{"title"},
 	Properties: map[string]*jsonSchema{
 		"title": {
 			Type:        "string",
 			Description: "生成的对话标题，3-15个字符",
 		},
 	},
-	Required:             []string{"title"},
-	AdditionalProperties: false,
 }
 
 // jsonSchema implements json.Marshaler for OpenAI's JSON Schema format.
+// The alias type prevents infinite recursion during marshaling.
 type jsonSchema struct {
 	Properties           map[string]*jsonSchema `json:"properties,omitempty"`
 	Type                 string                 `json:"type"`
@@ -207,37 +220,4 @@ type jsonSchema struct {
 func (s *jsonSchema) MarshalJSON() ([]byte, error) {
 	type alias jsonSchema
 	return json.Marshal((*alias)(s))
-}
-
-// GenerateTitleFromBlocks generates a title from a slice of blocks.
-// This is a convenience method that extracts the first user-AI exchange.
-func (tg *TitleGenerator) GenerateTitleFromBlocks(ctx context.Context, blocks []BlockContent) (string, error) {
-	var userMessage, aiResponse string
-
-	for _, block := range blocks {
-		// Get first user input
-		if userMessage == "" && block.UserInput != "" {
-			userMessage = block.UserInput
-		}
-		// Get first AI response
-		if aiResponse == "" && block.AssistantContent != "" {
-			aiResponse = block.AssistantContent
-		}
-		// Stop when we have both
-		if userMessage != "" && aiResponse != "" {
-			break
-		}
-	}
-
-	if userMessage == "" {
-		return "", fmt.Errorf("no user message found in blocks")
-	}
-
-	return tg.Generate(ctx, userMessage, aiResponse)
-}
-
-// BlockContent represents a simplified block for title generation.
-type BlockContent struct {
-	UserInput        string
-	AssistantContent string
 }
