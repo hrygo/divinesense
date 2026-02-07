@@ -63,7 +63,6 @@ import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSumma
 import { StreamingText } from "@/components/AIChat/StreamingText";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
-import { type BlockBranch } from "@/types/block";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 
 // Simple hash function for generating stable storage keys from strings.
@@ -406,12 +405,8 @@ export interface UnifiedMessageBlockProps {
   onCancel?: () => void;
   /** Block ID for edit/fork operations */
   blockId?: bigint;
-  /** Branch-related props for tree conversation branching */
-  branches?: BlockBranch[];
-  /** Branch path (e.g., "A.1", "B.2.3") for display */
-  branchPath?: string;
-  isBranchActive?: boolean;
-  onBranchClick?: () => void;
+  /** Block sequence number (1-based) for display */
+  blockNumber?: number;
   /** Additional children to render in block body */
   children?: ReactNode;
   className?: string;
@@ -940,10 +935,7 @@ function BlockHeader({
   isCollapsed,
   isStreaming,
   additionalUserInputs = [],
-  branches,
-  branchPath,
-  isBranchActive,
-  onBranchClick,
+  blockNumber,
 }: BlockHeaderProps) {
   const headerTheme = themeToHeaderTheme(theme);
 
@@ -958,10 +950,7 @@ function BlockHeader({
       isCollapsed={isCollapsed}
       isStreaming={isStreaming}
       additionalUserInputs={additionalUserInputs}
-      branches={branches}
-      branchPath={branchPath}
-      isBranchActive={isBranchActive}
-      onBranchClick={onBranchClick}
+      blockNumber={blockNumber}
     />
   );
 }
@@ -1004,10 +993,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   onDelete,
   onCancel,
   blockId: _blockId,
-  branches,
-  branchPath,
-  isBranchActive,
-  onBranchClick,
+  blockNumber,
   children,
   className,
 }: UnifiedMessageBlockProps) {
@@ -1088,10 +1074,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           isCollapsed={collapsed}
           isStreaming={isStreaming}
           additionalUserInputs={additionalUserInputs}
-          branches={branches}
-          branchPath={branchPath}
-          isBranchActive={isBranchActive}
-          onBranchClick={onBranchClick}
+          blockNumber={blockNumber}
         />
       </div>
 

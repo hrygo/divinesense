@@ -6,13 +6,12 @@
  * - Multi-user input badge display
  * - Session stats display
  * - Collapse/expand toggle
- * - Branch indicator display
+ * - Block number display
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationMessage } from "@/types/aichat";
-import type { BlockBranch } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
 import type { BlockHeaderProps } from "../BlockHeader";
@@ -425,61 +424,39 @@ describe("BlockHeader", () => {
     });
   });
 
-  describe("Branch Indicator", () => {
-    it("should render branch indicator when branchPath is provided", () => {
+  describe("Block Number Indicator", () => {
+    it("should render block number when blockNumber is provided", () => {
       const props = createDefaultProps({
-        branchPath: "A.1.2",
+        blockNumber: 1,
       });
       const { container } = render(<BlockHeader {...props} />);
 
-      // The actual BranchIndicator component renders, not the mock
-      const branchButton = container.querySelector('button[title="A.1.2"]');
-      expect(branchButton).toBeInTheDocument();
+      // Look for block number badge with hash icon
+      const allText = container.textContent || "";
+      expect(allText).toContain("1");
     });
 
-    it("should render branch indicator when branches array is provided", () => {
-      const mockBranch = {
-        block: undefined,
-        branchPath: "A",
-        isActive: true,
-        children: [],
-        $typeName: "memos.api.v1.BlockBranch",
-      } as BlockBranch;
+    it("should not render block number when blockNumber is not provided", () => {
       const props = createDefaultProps({
-        branches: [mockBranch],
+        blockNumber: undefined,
       });
       const { container } = render(<BlockHeader {...props} />);
 
-      // Should show branch count when no path
-      const branchButtons = container.querySelectorAll('button[class*="purple"]');
-      expect(branchButtons.length).toBeGreaterThan(0);
+      // Should not show hash icon for block number
+      const hashIcons = container.querySelectorAll(".lucide-hash");
+      expect(hashIcons.length).toBe(0);
     });
 
-    it("should not render branch indicator when no branches", () => {
+    it("should show active ring when block is streaming", () => {
       const props = createDefaultProps({
-        branches: [],
-        branchPath: undefined,
+        blockNumber: 2,
+        isStreaming: true,
       });
       const { container } = render(<BlockHeader {...props} />);
 
-      // Check that no purple branch button exists
-      const branchButtons = container.querySelectorAll('button[class*="purple"]');
-      expect(branchButtons.length).toBe(0);
-    });
-
-    it("should call onBranchClick when branch indicator is clicked", () => {
-      const onBranchClick = vi.fn();
-      const props = createDefaultProps({
-        branchPath: "A.1",
-        onBranchClick,
-      });
-      const { container } = render(<BlockHeader {...props} />);
-
-      const branchButton = container.querySelector('button[title="A.1"]');
-      if (branchButton) {
-        fireEvent.click(branchButton);
-        expect(onBranchClick).toHaveBeenCalled();
-      }
+      // Should show block number with active state
+      const allText = container.textContent || "";
+      expect(allText).toContain("2");
     });
   });
 

@@ -1,8 +1,6 @@
-import { create } from "@bufbuild/protobuf";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import TypingCursor from "@/components/AIChat/TypingCursor";
-import { useForkBlock } from "@/hooks/useBlockQueries";
 import { cn } from "@/lib/utils";
 import { type AIMode, ConversationMessage, MessageRole } from "@/types/aichat";
 // Block types (single source of truth for chat data)
@@ -11,7 +9,7 @@ import { blockModeToParrotAgentType, getBlockModeName, isErrorStatus, isStreamin
 import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import type { SessionStats } from "@/types/proto/api/v1/ai_service_pb";
-import { BlockType, UserInputSchema } from "@/types/proto/api/v1/ai_service_pb";
+import { BlockType } from "@/types/proto/api/v1/ai_service_pb";
 // BlockEditDialog for editing user inputs
 import { BlockEditDialog, useBlockEditDialog } from "./BlockEditDialog";
 import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
@@ -386,39 +384,17 @@ const ChatMessages = memo(function ChatMessages({
   // Get translation function
   const { t } = useTranslation();
 
-  // Fork block mutation
-  const forkBlock = useForkBlock();
-
   // Block edit dialog state management
   const editDialog = useBlockEditDialog();
 
-  // Handle edit confirmation - call ForkBlock API with new user input
+  // Handle edit confirmation - simplified to return edited text only
   const handleEditConfirm = useCallback(
-    async (editedMessage: string, blockId: bigint, _convId: number) => {
-      try {
-        // Create new UserInput with edited message
-        // Fix: Use create() to properly construct protobuf message with $typeName
-        const newUserInput = create(UserInputSchema, {
-          content: editedMessage,
-          timestamp: BigInt(Date.now()),
-          metadata: "{}",
-        });
-
-        // Fork block with replaced user input
-        await forkBlock.mutateAsync({
-          blockId,
-          reason: `User edited message: "${editedMessage}"`,
-          replaceUserInputs: [newUserInput],
-        });
-
-        // The forked block will appear in the block list with the new user input
-        // User can continue the conversation by sending a new message
-        editDialog.closeDialog();
-      } catch (error) {
-        console.error("Failed to fork block:", error);
-      }
+    async (_editedMessage: string) => {
+      // TODO: Implement proper edit handling (currently just returns text)
+      // For now, the dialog will close and edited text is available for future use
+      editDialog.closeDialog();
     },
-    [forkBlock, editDialog],
+    [editDialog],
   );
 
   // Handle edit button click - merge all user inputs for editing
@@ -498,8 +474,8 @@ const ChatMessages = memo(function ChatMessages({
             // Get blockId for edit functionality
             const blockId = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].id : undefined;
 
-            // Get branchPath from block
-            const branchPath = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].branchPath : undefined;
+            // Calculate block number (1-based sequential number)
+            const blockNumber = index + 1;
 
             return (
               <UnifiedMessageBlock
@@ -518,7 +494,7 @@ const ChatMessages = memo(function ChatMessages({
                 onEdit={blockId ? () => handleEdit(blockId, block) : undefined}
                 onCancel={block.isLatest && isLastStreaming ? onCancel : undefined}
                 blockId={blockId}
-                branchPath={branchPath}
+                blockNumber={blockNumber}
               >
                 {/* Typing cursor for streaming messages */}
                 {block.isLatest && isTyping && !block.assistantMessage?.error && (

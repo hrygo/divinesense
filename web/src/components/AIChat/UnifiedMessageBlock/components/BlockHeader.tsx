@@ -2,7 +2,7 @@
  * BlockHeader Component - Optimized Version
  *
  * Two-column responsive layout:
- * - Left: Avatar + message preview
+ * - Left: Avatar + message preview + Block number
  * - Right: Stats + Badge + Toggle
  *
  * Phase 1: Visual Hierarchy
@@ -10,14 +10,12 @@
  * Phase 5: React.memo optimization
  */
 
-import { ChevronDown, ChevronUp, Clock, Wrench } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, Hash, Wrench } from "lucide-react";
 import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { AIMode, ConversationMessage } from "@/types/aichat";
-import type { BlockBranch } from "@/types/block";
 import type { BlockSummary, ParrotAgentType } from "@/types/parrot";
-import { BranchIndicator } from "../../BranchIndicator";
 import { formatRelativeTime, getVisualWidth, truncateByVisualWidth } from "../utils";
 
 export interface BlockHeaderTheme {
@@ -39,10 +37,8 @@ export interface BlockHeaderProps {
   isCollapsed: boolean;
   isStreaming?: boolean;
   additionalUserInputs?: ConversationMessage[];
-  branches?: BlockBranch[];
-  branchPath?: string;
-  isBranchActive?: boolean;
-  onBranchClick?: () => void;
+  /** Block sequence number (1-based) for display */
+  blockNumber?: number;
 }
 
 /**
@@ -64,14 +60,42 @@ const areBlockHeaderPropsEqual = (prev: BlockHeaderProps, next: BlockHeaderProps
     prev.userMessage.content === next.userMessage.content &&
     prev.isCollapsed === next.isCollapsed &&
     prev.isStreaming === next.isStreaming &&
-    prev.additionalUserInputs?.length === next.additionalUserInputs?.length
+    prev.additionalUserInputs?.length === next.additionalUserInputs?.length &&
+    prev.blockNumber === next.blockNumber
   );
 };
+
+/**
+ * BlockNumberBadge - Simple block number display
+ */
+interface BlockNumberBadgeProps {
+  blockNumber: number;
+  isActive?: boolean;
+}
+
+function BlockNumberBadge({ blockNumber, isActive }: BlockNumberBadgeProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium",
+        "bg-slate-100 dark:bg-slate-800/50",
+        "text-slate-600 dark:text-slate-400",
+        "border border-slate-200 dark:border-slate-700/50",
+        isActive && "ring-1 ring-slate-400 dark:ring-slate-600",
+      )}
+      title={`Block ${blockNumber}`}
+    >
+      <Hash className="w-3 h-3 shrink-0" />
+      <span className="font-mono">{blockNumber}</span>
+    </div>
+  );
+}
 
 /**
  * BlockHeader component
  *
  * Optimized with React.memo and responsive two-column layout.
+ * Simplified to show block number instead of branch path.
  */
 export const BlockHeader = memo(function BlockHeader({
   userMessage,
@@ -83,10 +107,7 @@ export const BlockHeader = memo(function BlockHeader({
   isCollapsed,
   isStreaming,
   additionalUserInputs = [],
-  branches,
-  branchPath,
-  isBranchActive,
-  onBranchClick,
+  blockNumber,
 }: BlockHeaderProps) {
   const { t } = useTranslation();
   const userInitial = extractUserInitial(userMessage.content);
@@ -171,7 +192,7 @@ export const BlockHeader = memo(function BlockHeader({
       )}
       onClick={onToggle}
     >
-      {/* Left: Avatar + message preview */}
+      {/* Left: Avatar + message preview + Block number */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="relative">
           <div className="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-300 flex items-center justify-center text-white dark:text-slate-800 text-xs font-medium shrink-0 shadow-sm">
@@ -189,6 +210,9 @@ export const BlockHeader = memo(function BlockHeader({
             {userInputPreview}
           </p>
         </div>
+
+        {/* Block Number Badge */}
+        {blockNumber && blockNumber > 0 && <BlockNumberBadge blockNumber={blockNumber} isActive={isStreaming} />}
       </div>
 
       {/* Right: Stats + Badge + Toggle */}
@@ -263,11 +287,6 @@ export const BlockHeader = memo(function BlockHeader({
           <span className={cn("hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
             {parrotId === "GEEK" ? t("ai.mode.geek") : parrotId === "EVOLUTION" ? t("ai.mode.evolution") : t("ai.mode.normal")}
           </span>
-        )}
-
-        {/* Branch Indicator */}
-        {(branchPath || (branches && branches.length > 0)) && (
-          <BranchIndicator branches={branches} branchPath={branchPath} isActive={isBranchActive} onClick={onBranchClick} />
         )}
 
         {/* Toggle button */}

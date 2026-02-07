@@ -340,28 +340,27 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
     });
   });
 
-  describe("BlockHeader - Branch Indicator", () => {
-    it("should render branch indicator when branchPath is provided", () => {
+  describe("BlockHeader - Block Number Indicator", () => {
+    it("should render block number indicator when blockNumber is provided", () => {
       const props = createDefaultProps({
-        branchPath: "A.1.2",
+        blockNumber: 1,
       });
       const { container } = render(<UnifiedMessageBlock {...props} />);
 
-      // Look for the branch path in the component
+      // Look for the block number in the component
       const allText = container.textContent || "";
-      expect(allText).toContain("A.1.2");
+      expect(allText).toContain("1");
     });
 
-    it("should not render branch indicator when no branches", () => {
+    it("should not render block number indicator when blockNumber is not provided", () => {
       const props = createDefaultProps({
-        branches: [],
-        branchPath: undefined,
+        blockNumber: undefined,
       });
       const { container } = render(<UnifiedMessageBlock {...props} />);
 
-      // Check that no purple branch button exists
-      const branchButtons = container.querySelectorAll('button[class*="purple"]');
-      expect(branchButtons.length).toBe(0);
+      // Check that no hash icon exists for block number
+      const blockNumberBadges = container.querySelectorAll('span[class*="font-mono"]');
+      expect(blockNumberBadges.length).toBe(0);
     });
   });
 

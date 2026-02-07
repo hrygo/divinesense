@@ -2,16 +2,15 @@
  * BlockEditDialog - 编辑用户输入对话框
  *
  * 功能：
- * 1. 合并展示原始用户消息（支持多条输入）
+ * 1. 展示原始用户消息（支持多条输入）
  * 2. 提供编辑区域（Textarea）
- * 3. 解释编辑将创建新分支
- * 4. 确认/取消按钮
- * 5. 调用 ForkBlock API
+ * 3. 确认/取消按钮
+ * 4. 编辑完成后返回修改内容（不再创建分支）
  *
- * @see docs/specs/block-design/ai-chat-interface-gap-analysis.md P0-A001
+ * @note 分支功能已暂时移除，编辑现在仅返回修改后的文本
  */
 
-import { AlertTriangle, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { cn } from "@/lib/utils";
 interface BlockEditDialogProps {
   /** 原始用户消息内容（多条已合并） */
   originalMessage: string;
-  /** Block ID（用于 Fork API） */
+  /** Block ID（用于标识） */
   blockId: bigint;
   /** 对话 ID */
   conversationId: number;
@@ -30,21 +29,22 @@ interface BlockEditDialogProps {
   open: boolean;
   /** 关闭对话框 */
   onOpenChange: (open: boolean) => void;
-  /** 确认编辑回调 */
-  onConfirm?: (editedMessage: string, blockId: bigint, conversationId: number) => void;
+  /** 确认编辑回调 - 返回编辑后的内容 */
+  onConfirm?: (editedMessage: string) => void;
 }
 
 /**
  * BlockEditDialog 组件
  *
- * 允许用户编辑已发送的消息，创建新分支并重新生成。
- * 这是实现对话分支功能的关键组件。
+ * 允许用户编辑已发送的消息。
+ * 编辑完成后，返回修改后的文本给调用方处理。
  *
  * 简化设计：
  * - 直接在编辑区显示原始消息
- * - 移除单独的原始消息展示区
+ * - 移除分支创建相关功能
+ * - 编辑后仅返回文本，由调用方决定如何处理
  */
-export function BlockEditDialog({ originalMessage, blockId, conversationId, open, onOpenChange, onConfirm }: BlockEditDialogProps) {
+export function BlockEditDialog({ originalMessage, open, onOpenChange, onConfirm }: BlockEditDialogProps) {
   const { t } = useTranslation();
   const [editedMessage, setEditedMessage] = useState(originalMessage);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,8 +74,8 @@ export function BlockEditDialog({ originalMessage, blockId, conversationId, open
     setIsSubmitting(true);
 
     try {
-      // 调用父组件传入的回调（传递 blockId 和 conversationId 用于 Fork API）
-      await onConfirm?.(trimmed, blockId, conversationId);
+      // 调用父组件传入的回调，仅返回编辑后的内容
+      await onConfirm?.(trimmed);
 
       // 关闭对话框
       onOpenChange(false);
@@ -95,7 +95,7 @@ export function BlockEditDialog({ originalMessage, blockId, conversationId, open
             <Pencil className="w-5 h-5" />
             {t("ai.unified_block.edit_title")}
           </DialogTitle>
-          <DialogDescription>{t("ai.unified_block.edit_description")}</DialogDescription>
+          <DialogDescription>{t("ai.unified_block.edit_description_simple") || t("ai.unified_block.edit_description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -114,12 +114,6 @@ export function BlockEditDialog({ originalMessage, blockId, conversationId, open
               autoFocus
             />
           </div>
-
-          {/* 警告信息 */}
-          <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 dark:text-amber-200">{t("ai.unified_block.edit_warning")}</p>
-          </div>
         </div>
 
         <DialogFooter className="gap-2">
@@ -127,7 +121,7 @@ export function BlockEditDialog({ originalMessage, blockId, conversationId, open
             {t("ai.unified_block.cancel")}
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={!hasChanges || !isValid || isSubmitting}>
-            {isSubmitting ? t("states.processing") : t("ai.unified_block.create_branch")}
+            {isSubmitting ? t("states.processing") : t("common.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
