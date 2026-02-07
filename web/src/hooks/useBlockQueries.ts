@@ -163,10 +163,11 @@ export function useBlock(id: number, options?: { enabled?: boolean }) {
 }
 
 /**
- * Hook to create a new block with optimistic update
+ * Hook to create a new block without optimistic update
  *
- * Optimistically adds the block to the cache before the server responds,
- * rolling back on error.
+ * Waits for server response before adding to cache to avoid UI flicker.
+ * The optimistic update was causing a flicker effect where an empty
+ * pending block would appear momentarily before being replaced.
  */
 export function useCreateBlock() {
   const queryClient = useQueryClient();
@@ -177,81 +178,23 @@ export function useCreateBlock() {
       const response = await aiServiceClient.createBlock(req);
       return response;
     },
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      const conversationId = Number(variables.conversationId || 0);
-      await queryClient.cancelQueries({ queryKey: blockKeys.list(conversationId) });
-
-      // Snapshot previous value
-      const previousBlocks = queryClient.getQueryData(blockKeys.list(conversationId));
-
-      // Generate temp ID for optimistic update
-      const tempId = BigInt(-Date.now());
-
-      // Create optimistic block with proper type safety
-      const now = BigInt(Date.now());
-      const optimisticBlock: Block = {
-        $typeName: "memos.api.v1.Block" as const,
-        id: tempId,
-        uid: `temp-${tempId}`,
-        conversationId: conversationId,
-        roundNumber: 0,
-        mode: variables.mode || BlockMode.NORMAL,
-        blockType: variables.blockType || BlockType.MESSAGE,
-        userInputs: variables.userInputs || [],
-        assistantContent: "",
-        eventStream: [],
-        status: BlockStatus.PENDING,
-        metadata: "{}",
-        createdTs: now,
-        updatedTs: now,
-        assistantTimestamp: now,
-        ccSessionId: "",
-        parentBlockId: BigInt(0),
-        branchPath: "",
-        costEstimate: BigInt(0),
-        modelVersion: "",
-        userFeedback: "",
-        regenerationCount: 0,
-        errorMessage: "",
-        archivedAt: BigInt(0),
-      };
-
-      // Optimistically update cache
-      queryClient.setQueryData(blockKeys.list(conversationId), (old: BlockListCacheData | undefined) => {
-        if (!old) return { blocks: [optimisticBlock], totalCount: 1 };
-        return {
-          ...old,
-          blocks: [...old.blocks, optimisticBlock],
-          totalCount: (old.totalCount || 0) + 1,
-        };
-      });
-
-      // Return context with rollback function
-      return { previousBlocks, conversationId, tempId };
-    },
-    onError: (_error, _variables, context) => {
-      // Rollback on error
-      if (context?.previousBlocks) {
-        queryClient.setQueryData(blockKeys.list(context.conversationId), context.previousBlocks);
-      }
-    },
-    onSuccess: (newBlock, variables, context) => {
+    onSuccess: (newBlock, variables) => {
       // Update cache with actual server response
       const conversationId = Number(variables.conversationId);
       queryClient.setQueryData(blockKeys.detail(Number(newBlock.id)), newBlock);
 
-      // Replace optimistic block in list with actual block
+      // Add block to list cache
       queryClient.setQueryData(blockKeys.list(conversationId), (old: BlockListCacheData | undefined) => {
         if (!old) return { blocks: [newBlock], totalCount: 1 };
         return {
           ...old,
-          blocks: old.blocks.map((b: Block) => (b.id === context?.tempId ? newBlock : b)),
+          blocks: [...old.blocks, newBlock],
+          totalCount: (old.totalCount || 0) + 1,
         };
       });
     },
     onSettled: (_data, _error, variables) => {
-      // Refetch to ensure consistency
+      // Invalidate to ensure consistency with server state
       queryClient.invalidateQueries({
         queryKey: blockKeys.list(Number(variables.conversationId)),
       });
