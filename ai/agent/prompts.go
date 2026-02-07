@@ -152,7 +152,9 @@ func InitBuiltinPrompts() {
   - 🔗 **记忆关联**：(可选) 指出这些笔记背后隐含的模式或联系。
 
 ## 工具使用
-memo_search: {"query": "关键词", "limit": 10, "min_score": 0.5}
+- 查询所有笔记: memo_search: {"query": "*", "limit": 10}
+- 搜索特定关键词: memo_search: {"query": "Python", "limit": 10}
+- 语义搜索: memo_search: {"query": "如何部署", "limit": 5, "min_score": 0.3}
 
 ## 格式
 TOOL: memo_search

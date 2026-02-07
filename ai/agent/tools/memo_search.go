@@ -89,7 +89,7 @@ func (t *MemoSearchTool) Description() string {
 
 INPUT FORMAT:
 {"query": "搜索词", "limit": 10, "min_score": 0.5}
-- query (required): search keywords
+- query (required): search keywords. Use "*" to search all memos. Empty query will search all.
 - limit (optional): max results, default 10
 - min_score (optional): min relevance 0-1, default 0.5
 
@@ -102,7 +102,8 @@ Found N memo(s) matching query: xxx
 2. [Score: 0.72] another memo...
    UID: yyyyy
 
-NO RESULTS: "No memos found matching query: xxx"`
+NO RESULTS: "No memos found matching query: xxx"
+`
 }
 
 // MemoSearchInput represents the input for memo search.
@@ -130,9 +131,9 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 		return "", fmt.Errorf("invalid JSON input: %w", err)
 	}
 
-	// Validate query
+	// Validate query - empty query is treated as "search all"
 	if strings.TrimSpace(searchInput.Query) == "" {
-		return "", fmt.Errorf("query cannot be empty")
+		searchInput.Query = "*" // Search all memos when query is empty
 	}
 
 	// Set defaults
@@ -231,9 +232,9 @@ func (t *MemoSearchTool) RunWithStructuredResult(ctx context.Context, input stri
 		return nil, fmt.Errorf("invalid JSON input: %w", err)
 	}
 
-	// Validate query
+	// Validate query - empty query is treated as "search all"
 	if strings.TrimSpace(searchInput.Query) == "" {
-		return nil, fmt.Errorf("query cannot be empty")
+		searchInput.Query = "*" // Search all memos when query is empty
 	}
 
 	// Set defaults using defined constants
