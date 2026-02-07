@@ -9,11 +9,10 @@
  * - UI state management for branch selector
  */
 
-import { act } from "react";
 import { create } from "@bufbuild/protobuf";
-import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Block, BlockBranch, ListBlockBranchesResponse } from "@/types/proto/api/v1/ai_service_pb";
 import {
@@ -22,9 +21,7 @@ import {
   BlockSchema,
   BlockStatus,
   BlockType,
-  ForkBlockRequestSchema,
   ListBlockBranchesResponseSchema,
-  SwitchBranchRequestSchema,
   UserInputSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
 import { useBranchTree } from "./useBranchTree";
@@ -112,13 +109,6 @@ function createMockListBranchesResponse(branches: BlockBranch[], activeBranchPat
     branches,
     activeBranchPath,
   });
-}
-
-/**
- * Helper to create an empty response (for switchBranch/deleteBranch)
- */
-function createEmptyResponse() {
-  return create(EmptySchema, {});
 }
 
 describe("useBranchTree", () => {
@@ -217,7 +207,8 @@ describe("useBranchTree", () => {
     const switchPromise = new Promise<void>((resolve) => {
       resolveSwitch = resolve;
     });
-    vi.mocked(aiServiceClient.switchBranch).mockReturnValue(switchPromise as unknown as ReturnType<typeof createEmptyResponse>);
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock for complex Promise type
+    vi.mocked(aiServiceClient.switchBranch).mockReturnValue(switchPromise as any);
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 
@@ -247,7 +238,8 @@ describe("useBranchTree", () => {
     const deletePromise = new Promise<void>((resolve) => {
       resolveDelete = resolve;
     });
-    vi.mocked(aiServiceClient.deleteBranch).mockReturnValue(deletePromise as unknown as ReturnType<typeof createEmptyResponse>);
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock for complex Promise type
+    vi.mocked(aiServiceClient.deleteBranch).mockReturnValue(deletePromise as any);
 
     const { result } = renderHook(() => useBranchTree({ conversationId: 123, blockId: 1 }), { wrapper });
 

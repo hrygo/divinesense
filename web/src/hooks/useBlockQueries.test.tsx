@@ -357,17 +357,15 @@ describe("useStreamingBlock", () => {
     });
 
     // Convert BigInt to string for JSON serialization
-    const eventJson = JSON.stringify(event, (_, value) =>
-      typeof value === "bigint" ? value.toString() : value,
-    );
+    const eventJson = JSON.stringify(event, (_, value) => (typeof value === "bigint" ? value.toString() : value));
 
     // appendStreamingEvent expects a JSON string
     result.current.appendStreamingEvent(eventJson);
 
-    const cached = queryClient.getQueryData(blockKeys.detail(1));
+    const cached = queryClient.getQueryData(blockKeys.detail(1)) as Block | undefined;
     // The event is stored as JSON string in the eventStream array
     expect(cached).toBeDefined();
-    expect(cached.eventStream).toContain(eventJson);
+    expect(cached?.eventStream).toContain(eventJson);
   });
 
   it("should complete streaming with session stats", () => {

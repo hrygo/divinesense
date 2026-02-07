@@ -14,7 +14,7 @@ import { BlockCostBadge } from "./BlockCostBadge";
 // Mock i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
+    t: (key: string) => {
       if (key === "ai.session_stats.currency_symbol") return "$";
       return key;
     },

@@ -372,9 +372,7 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
 
       // Find the header by the user message text - use getAllByText and find the one with cursor-pointer class
       const textElements = screen.getAllByText("Hello, how are you?");
-      const header = textElements
-        .map((el) => el.closest("div.cursor-pointer"))
-        .find((el) => el !== null);
+      const header = textElements.map((el) => el.closest("div.cursor-pointer")).find((el) => el !== null);
 
       expect(header).toBeInTheDocument();
 
