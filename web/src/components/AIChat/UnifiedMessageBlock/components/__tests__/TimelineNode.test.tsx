@@ -12,8 +12,8 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { TimelineNode } from "../TimelineNode";
 import type { TimelineNodeType } from "../../../types";
+import { TimelineNode } from "../TimelineNode";
 
 // Mock i18next
 vi.mock("react-i18next", () => ({
@@ -151,9 +151,7 @@ describe("TimelineNode", () => {
     });
 
     it("should merge custom className with base classes", () => {
-      const { container } = render(
-        <TimelineNode type="user" className="custom-class another-class" />,
-      );
+      const { container } = render(<TimelineNode type="user" className="custom-class another-class" />);
 
       const node = container.firstChild as HTMLElement;
       expect(node).toHaveClass("w-6"); // base class
@@ -162,9 +160,7 @@ describe("TimelineNode", () => {
     });
 
     it("should maintain type-specific colors with custom className", () => {
-      const { container } = render(
-        <TimelineNode type="thinking" className="custom-class" />,
-      );
+      const { container } = render(<TimelineNode type="thinking" className="custom-class" />);
 
       const node = container.firstChild as HTMLElement;
       expect(node).toHaveClass("bg-purple-100"); // type-specific
@@ -297,16 +293,7 @@ describe("TimelineNode", () => {
       const customIcon = <span data-testid="icon">X</span>;
       const handleClick = vi.fn();
 
-      expect(() =>
-        render(
-          <TimelineNode
-            type="user"
-            icon={customIcon}
-            className="test-class"
-            onClick={handleClick}
-          />,
-        ),
-      ).not.toThrow();
+      expect(() => render(<TimelineNode type="user" icon={customIcon} className="test-class" onClick={handleClick} />)).not.toThrow();
     });
 
     it("should handle rapid onClick calls", () => {

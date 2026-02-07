@@ -8,13 +8,13 @@
  * - Status indicators
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
-import type { UnifiedMessageBlockProps } from "./UnifiedMessageBlock";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationMessage } from "@/types/aichat";
 import type { BlockSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
+import type { UnifiedMessageBlockProps } from "./UnifiedMessageBlock";
+import { UnifiedMessageBlock } from "./UnifiedMessageBlock";
 
 // Mock i18next
 vi.mock("react-i18next", () => ({
@@ -166,10 +166,7 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
 
     it("should show badge with count when there are multiple inputs", () => {
       const props = createDefaultProps({
-        additionalUserInputs: [
-          createMockUserMessage("Additional input 1"),
-          createMockUserMessage("Additional input 2"),
-        ],
+        additionalUserInputs: [createMockUserMessage("Additional input 1"), createMockUserMessage("Additional input 2")],
       });
       const { container } = render(<UnifiedMessageBlock {...props} />);
 

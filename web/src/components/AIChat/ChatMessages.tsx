@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { type AIMode, ConversationMessage, MessageRole } from "@/types/aichat";
 // Block types (single source of truth for chat data)
 import type { Block as AIBlock } from "@/types/block";
-import { blockModeToParrotAgentType, EVENT_TYPE, getBlockModeName, isErrorStatus, isStreamingStatus } from "@/types/block";
+import { blockModeToParrotAgentType, getBlockModeName, isErrorStatus, isStreamingStatus } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
 import { PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
 import type { SessionStats } from "@/types/proto/api/v1/ai_service_pb";
@@ -56,8 +56,6 @@ interface ChatMessagesProps {
   onCopyMessage?: (content: string) => void;
   onRegenerate?: () => void;
   onDeleteMessage?: (index: number) => void;
-  /** @deprecated Kept for potential future use */
-  _onSendProp?: (messageContent?: string) => void;
   children?: ReactNode;
   className?: string;
   /** Phase 2: 流式渲染支持 */
@@ -172,7 +170,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
     const restInputs = block.userInputs.slice(1);
 
     const userMessage: ConversationMessage = {
-      id: `block-${block.id}`,
+      id: `block-${block.id.toString()}`,
       role: "user" as MessageRole,
       content: firstInput?.content || "",
       timestamp: normalizeTimestamp(firstInput?.timestamp || block.createdTs),
@@ -185,7 +183,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
     const additionalUserInputs: ConversationMessage[] = restInputs
       .filter((ui) => ui.content)
       .map((ui, idx) => ({
-        id: `block-${block.id}-additional-${idx}`,
+        id: `block-${block.id.toString()}-additional-${idx}`,
         role: "user" as MessageRole,
         content: ui.content,
         timestamp: normalizeTimestamp(ui.timestamp || block.createdTs),
@@ -208,7 +206,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
       }));
 
     const assistantMessage: ConversationMessage = {
-      id: `block-${block.id}-assistant`,
+      id: `block-${block.id.toString()}-assistant`,
       role: "assistant" as MessageRole,
       content: block.assistantContent || "",
       timestamp: normalizeTimestamp(block.updatedTs),
@@ -227,7 +225,7 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
     const blockSummary = block.sessionStats ? sessionStatsToBlockSummary(block.sessionStats) : undefined;
 
     messageBlocks.push({
-      id: String(block.id),
+      id: block.id.toString(),
       userMessage,
       additionalUserInputs: additionalUserInputs.length > 0 ? additionalUserInputs : undefined,
       assistantMessage,
@@ -252,7 +250,6 @@ const ChatMessages = memo(function ChatMessages({
   onCopyMessage,
   onRegenerate,
   onDeleteMessage,
-  _onSendProp,
   children,
   className,
   isStreaming = false,
@@ -261,8 +258,7 @@ const ChatMessages = memo(function ChatMessages({
   blockSummary: _deprecatedBlockSummary,
   conversationId,
 }: ChatMessagesProps) {
-  // Suppress unused variable warnings
-  void _onSendProp;
+  // Suppress unused variable warning
   void _deprecatedBlockSummary;
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -333,7 +329,7 @@ const ChatMessages = memo(function ChatMessages({
   const prevBlocksLengthRef = useRef(0);
   useEffect(() => {
     const blocksLength = blocks?.length ?? 0;
-    const hasNewMessage = blocksLength > prevItemsLengthRef.current;
+    const hasNewMessage = blocksLength > prevBlocksLengthRef.current;
     prevBlocksLengthRef.current = blocksLength;
 
     if (hasNewMessage && !isUserScrollingRef.current) {
@@ -440,61 +436,40 @@ const ChatMessages = memo(function ChatMessages({
   );
 
   // Group messages into blocks - Block data is single source of truth
+  // Note: t is excluded from deps as translateThinkingSteps handles it conditionally
   const messageBlocks = useMemo(() => {
     if (!blocks || blocks.length === 0) return [];
     return convertAIBlocksToMessageBlocks(blocks, t);
-  }, [blocks, t]);
+  }, [blocks]); // t is stable from i18next, no need to track
 
   // Phase 4: Check streaming status from either blocks or props (using extracted hook)
   const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);
 
   // 计算当前流式阶段（用于动画效果）
-  // Phase 4: Enhanced to read from Block eventStream
+  // Optimization: Extract only last block's relevant data to avoid recalc on any block change
+  const lastBlockKey = useMemo(() => {
+    if (!blocks || blocks.length === 0) return null;
+    const last = blocks[blocks.length - 1];
+    const events = last.eventStream || [];
+    // Track only properties that affect streaming phase calculation
+    const lastEvent = events[events.length - 1];
+    return {
+      lastEventType: lastEvent?.type,
+      hasToolResult: lastEvent?.type === "tool_result",
+      assistantContent: last.assistantContent,
+    };
+  }, [blocks]);
+
   const streamingPhase = useMemo((): "thinking" | "tools" | "answer" | null => {
-    if (!isLastStreaming) return null;
+    if (!isLastStreaming || !lastBlockKey) return null;
 
-    // Phase 4: Check Block eventStream first
-    if (blocks && blocks.length > 0) {
-      const lastAIBlock = blocks[blocks.length - 1];
-      const events = lastAIBlock.eventStream || [];
-
-      // Get the most recent non-answer event
-      const recentEvents = events.filter((e) => e.type !== EVENT_TYPE.ANSWER);
-      const lastNonAnswerEvent = recentEvents[recentEvents.length - 1];
-
-      if (lastNonAnswerEvent) {
-        if (lastNonAnswerEvent.type === EVENT_TYPE.TOOL_USE) {
-          // Check if there's a corresponding tool_result
-          const hasResult = events.some((e, i) => e.type === EVENT_TYPE.TOOL_RESULT && i > events.indexOf(lastNonAnswerEvent));
-          if (!hasResult) return "tools";
-        }
-        if (lastNonAnswerEvent.type === EVENT_TYPE.THINKING) return "thinking";
-      }
-
-      // Check if we have answer content
-      if (lastAIBlock.assistantContent) return "answer";
-
-      return null;
-    }
-
-    // Legacy: use message metadata from messageBlocks
-    const lastMessageBlock = messageBlocks[messageBlocks.length - 1];
-    if (!lastMessageBlock?.assistantMessage) return null;
-    const metadata = lastMessageBlock.assistantMessage.metadata;
-    if (!metadata) return null;
-
-    // 有工具调用正在执行（有 toolCalls 但没有 outputSummary）
-    const hasPendingTools = metadata.toolCalls?.some((tc) => typeof tc === "object" && !tc.outputSummary);
-    if (hasPendingTools) return "tools";
-
-    // 有内容正在流式输出
-    if (lastMessageBlock.assistantMessage.content) return "answer";
-
-    // 正在思考（有 thinkingSteps 或 thinking 但还没有内容）
-    if ((metadata.thinkingSteps?.length ?? 0) > 0 || metadata.thinking) return "thinking";
+    // Determine phase from lastBlockKey (derived from last block's actual data)
+    if (lastBlockKey.lastEventType === "tool_use" && !lastBlockKey.hasToolResult) return "tools";
+    if (lastBlockKey.lastEventType === "thinking") return "thinking";
+    if (lastBlockKey.assistantContent) return "answer";
 
     return null;
-  }, [isLastStreaming, blocks, messageBlocks, isStreaming]);
+  }, [isLastStreaming, lastBlockKey]);
 
   // Determine effective parrot ID from Block.mode (single source of truth)
   const effectiveParrotId = useEffectiveParrotId(currentParrotId, blocks);
@@ -513,33 +488,14 @@ const ChatMessages = memo(function ChatMessages({
           {messageBlocks.map((block, index) => {
             const blockIsLast = index === messageBlocks.length - 1;
 
-            // Phase 4: Determine effective parrot ID for this specific block
-            // Priority order:
-            // 1. Block's own mode (when using blocks prop)
-            // 2. Message metadata mode (legacy items)
-            // 3. Session summary mode (fallback)
-            // 4. Current global parrotId (fallback)
-            let blockParrotId = effectiveParrotId;
+            // Phase 2: Determine effective parrot ID from Block.mode (single source of truth)
+            const blockParrotId =
+              blocks && blocks.length > 0 && index < blocks.length ? blockModeToParrotAgentType(blocks[index].mode) : effectiveParrotId;
 
-            if (blocks && blocks.length > 0 && index < blocks.length) {
-              // Direct from Block mode
-              blockParrotId = blockModeToParrotAgentType(blocks[index].mode);
-            } else {
-              // Legacy: from message metadata
-              const blockMode: AIMode | undefined = block.assistantMessage?.metadata?.mode || block.userMessage?.metadata?.mode;
-              if (blockMode === "geek") {
-                blockParrotId = ParrotAgentType.GEEK;
-              } else if (blockMode === "evolution") {
-                blockParrotId = ParrotAgentType.EVOLUTION;
-              } else if (blockMode === "normal") {
-                blockParrotId = ParrotAgentType.AMAZING;
-              }
-            }
-
-            // Get blockId for edit functionality (when using blocks prop)
+            // Get blockId for edit functionality
             const blockId = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].id : undefined;
 
-            // Get branchPath from block (if available)
+            // Get branchPath from block
             const branchPath = blocks && blocks.length > 0 && index < blocks.length ? blocks[index].branchPath : undefined;
 
             return (

@@ -109,6 +109,13 @@ export function useBlocks(conversationId: number, filters?: Partial<ListBlocksRe
         ...filters,
       } as Record<string, unknown>);
       const response = await aiServiceClient.listBlocks(request);
+      if (import.meta.env.DEV) {
+        console.log("[useBlocks] Response from API:", {
+          conversationId,
+          blocksCount: response.blocks?.length || 0,
+          blocks: response.blocks,
+        });
+      }
       return response;
     },
     enabled: conversationId > 0,

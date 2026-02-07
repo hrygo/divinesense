@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { scheduleServiceClient } from "@/connect";
 import type {
   BatchCreateSchedulesRequest,
@@ -60,6 +60,16 @@ export function useScheduleAgentStreamingChat() {
     error: null,
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   const startChat = useCallback(
     async (message: string, userTimezone = "Asia/Shanghai") => {

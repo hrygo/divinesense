@@ -62,6 +62,7 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
+import { StreamingText } from "@/components/AIChat/StreamingText";
 import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
@@ -468,6 +469,7 @@ interface BlockBodyProps {
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
   streamingPhase?: "thinking" | "tools" | "answer" | null;
   isLatest?: boolean;
+  isStreaming?: boolean;
   children?: ReactNode;
 }
 
@@ -481,6 +483,7 @@ function BlockBody({
   themeColors,
   streamingPhase = null,
   isLatest = false,
+  isStreaming = false,
   children,
 }: BlockBodyProps) {
   const { t } = useTranslation();
@@ -715,58 +718,15 @@ function BlockBody({
                   themeColors.text,
                 )}
               >
-                {/* Markdown content */}
+                {/* Markdown content with streaming effect */}
                 <div ref={contentRef} className="px-5 py-4">
-                  <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-normal font-sans text-[15px]">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkBreaks]}
-                      components={{
-                        a: ({ node, ...props }) => (
-                          <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
-                        ),
-                        p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0 text-sm leading-relaxed" />,
-                        ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 mb-2 space-y-1" />,
-                        ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 mb-2 space-y-1" />,
-                        li: ({ node, ...props }) => <li {...props} className="pl-1" />,
-                        h1: ({ node, ...props }) => <h1 {...props} className="text-xl font-bold mb-2 mt-4 first:mt-0" />,
-                        h2: ({ node, ...props }) => <h2 {...props} className="text-lg font-bold mb-2 mt-3" />,
-                        h3: ({ node, ...props }) => <h3 {...props} className="text-base font-bold mb-1 mt-2" />,
-                        blockquote: ({ node, ...props }) => (
-                          <blockquote {...props} className="border-l-4 border-primary/30 pl-4 py-1 my-2 bg-muted/30 italic rounded-r-lg" />
-                        ),
-                        table: ({ node, ...props }) => (
-                          <div className="my-4 w-full overflow-x-auto rounded-lg border border-border shadow-sm">
-                            <table className="w-full text-sm" {...props} />
-                          </div>
-                        ),
-                        thead: ({ node, ...props }) => <thead className="bg-muted/50 text-xs uppercase" {...props} />,
-                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-border" {...props} />,
-                        tr: ({ node, ...props }) => <tr className="hover:bg-muted/50 transition-colors" {...props} />,
-                        th: ({ node, ...props }) => (
-                          <th className="px-4 py-2.5 text-left font-medium text-muted-foreground tracking-wider" {...props} />
-                        ),
-                        td: ({ node, ...props }) => <td className="px-4 py-2.5 whitespace-pre-wrap" {...props} />,
-                        pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
-                        code: ({ className, children, inline, ...props }: CodeComponentProps) => {
-                          return inline ? (
-                            <code
-                              className={cn("px-1.5 py-0.5 rounded-md bg-muted/80 font-mono text-xs text-secondary-foreground", className)}
-                              {...props}
-                            >
-                              {children}
-                            </code>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        },
-                      }}
-                    >
-                      {assistantMessage.content || getThinkingText()}
-                    </ReactMarkdown>
-                    {children}
-                  </div>
+                  <StreamingText
+                    content={assistantMessage.content || getThinkingText()}
+                    isStreaming={isStreaming && streamingPhase === "answer"}
+                    enableTypingEffect={false}
+                    className="break-words leading-normal font-sans text-[15px]"
+                  />
+                  {children}
                 </div>
               </div>
             </div>
@@ -1020,6 +980,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
         themeColors={themeColors}
         streamingPhase={streamingPhase}
         isLatest={isLatest}
+        isStreaming={isStreaming}
       >
         {children}
       </BlockBody>

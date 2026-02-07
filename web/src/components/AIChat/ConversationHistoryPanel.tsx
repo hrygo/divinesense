@@ -25,8 +25,9 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
+  // Use backend-provided messageCount instead of local messages array
   const loadedConversationIds = useMemo(
-    () => new Set(conversations.filter((c) => c.messages.length > 0).map((c) => c.id)),
+    () => new Set(conversations.filter((c) => (c.messageCount ?? 0) > 0).map((c) => c.id)),
     [conversations],
   );
 

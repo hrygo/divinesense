@@ -56,22 +56,6 @@ export interface ConversationMessage {
 }
 
 /**
- * Context separator type for clearing conversation context
- *
- * Design Notes:
- * - `id`: Unique identifier for sync with backend (future)
- * - `synced`: Whether this separator is synced to server (future)
- * - `trigger`: How the context was cleared (for analytics)
- */
-export interface ContextSeparator {
-  type: "context-separator";
-  id?: string; // Future: sync ID for conversation storage
-  timestamp: number;
-  synced?: boolean; // Future: sync status
-  trigger?: "manual" | "auto" | "shortcut"; // How context was cleared
-}
-
-/**
  * Referenced memo in conversation
  */
 export interface ReferencedMemo {
@@ -95,20 +79,6 @@ export interface ReferencedSchedule {
 }
 
 /**
- * Chat item - union of message and separator
- */
-export type ChatItem = ConversationMessage | ContextSeparator;
-
-/**
- * Type guard to check if an item is a ContextSeparator
- * @param item - The chat item to check
- * @returns True if the item is a ContextSeparator
- */
-export function isContextSeparator(item: ChatItem): item is ContextSeparator {
-  return "type" in item && item.type === "context-separator";
-}
-
-/**
  * Conversation state type
  */
 export type ConversationViewMode = "hub" | "chat";
@@ -127,15 +97,6 @@ export type AIMode = "normal" | "geek" | "evolution";
 export type SidebarTab = "history" | "memos";
 
 /**
- * Message cache state for incremental sync
- */
-export interface MessageCache {
-  lastMessageUid: string; // Latest message UID from backend
-  totalCount: number; // Total MSG count from backend
-  hasMore: boolean; // Whether more messages exist before the first cached message
-}
-
-/**
  * Single conversation
  */
 export interface Conversation {
@@ -144,10 +105,8 @@ export interface Conversation {
   parrotId: ParrotAgentType;
   createdAt: number;
   updatedAt: number;
-  messages: ChatItem[];
   referencedMemos: ReferencedMemo[];
-  messageCount?: number; // Optional: backend-provided message count (excludes SEPARATOR)
-  messageCache?: MessageCache; // Local message cache state for incremental sync
+  messageCount?: number; // Optional: backend-provided message count
 }
 
 /**
@@ -206,13 +165,9 @@ export interface AIChatContextValue {
   updateConversationTitle: (id: string, title: string) => void;
 
   // Message actions
-  addMessage: (conversationId: string, message: Omit<ConversationMessage, "id" | "timestamp">) => string;
-  updateMessage: (conversationId: string, messageId: string, updates: Partial<ConversationMessage>) => void;
-  deleteMessage: (conversationId: string, messageId: string) => void;
+  // Phase 4: Removed addMessage, updateMessage, deleteMessage, syncMessages, loadMoreMessages - Block API handles this
   clearMessages: (conversationId: string) => void;
   addContextSeparator: (conversationId: string, trigger?: "manual" | "auto" | "shortcut") => string;
-  syncMessages: (conversationId: string) => Promise<void>; // Incremental message sync with FIFO cache
-  loadMoreMessages: (conversationId: string) => Promise<void>; // Load older messages (paginate back)
 
   // Referenced content actions
   addReferencedMemos: (conversationId: string, memos: ReferencedMemo[]) => void;

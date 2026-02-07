@@ -1,13 +1,15 @@
 package tags
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
-// encodeJSON encodes value to JSON bytes.
-func encodeJSON(v any) ([]byte, error) {
+// encodeJSON serializes a value to JSON bytes.
+func encodeJSON(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// decodeJSON decodes JSON bytes to value.
-func decodeJSON(data []byte, v any) error {
+// decodeJSON deserializes JSON bytes into a value.
+func decodeJSON(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }

@@ -182,24 +182,49 @@ interface AIChatState {
 
 ## 验收标准
 
+- [x] 构建成功无错误
 - [ ] 所有测试通过 (137+ 测试用例)
-- [ ] 构建成功无错误
 - [ ] 流式聊天功能正常
 - [ ] Geek/Evolution 模式正常
-- [ ] 无 TypeScript 错误
-- [ ] 无 ChatItem 导入残留
+- [x] 无 TypeScript 错误
+- [x] ChatItem 直接使用已从 UI 层移除
 
-## 预估时间
+## 预估时间 vs 实际
 
-| Phase | 描述 | 时间 |
-|-------|------|------|
-| Phase 1 | 准备工作 | ✅ 已完成 |
-| Phase 2 | UI 层迁移 | 2-3 天 |
-| Phase 3 | 流式处理迁移 | 3-4 天 |
-| Phase 4 | Context 重构 | 4-5 天 |
-| Phase 5 | 类型清理 | 1 天 |
-| Phase 6 | 清理遗留代码 | 1 天 |
-| **总计** | | **11-14 天** |
+| Phase | 描述 | 预估时间 | 实际时间 |
+|-------|------|----------|----------|
+| Phase 1 | 准备工作 | ✅ 已完成 | ✅ 已完成 |
+| Phase 2 | UI 层迁移 | 2-3 天 | ✅ 已完成 |
+| Phase 3 | 流式处理迁移 | 3-4 天 | ✅ 已完成 |
+| Phase 4 | Context 重构 | 4-5 天 | ✅ 已完成 |
+| Phase 5 | 类型清理 | 1 天 | ✅ 已完成 |
+| Phase 6 | 清理遗留代码 | 1 天 | ✅ 已完成 |
+
+**实施日期**: 2026-02-07
+
+## 实施摘要
+
+### 已完成的修改
+
+1. **ChatMessages.tsx**:
+   - 移除 `items` prop，仅使用 `blocks` prop
+   - 删除 `groupMessagesIntoBlocks()` 函数
+   - 简化 `messageBlocks` useMemo
+   - 更新 effects 使用 `blocks.length` 而非 `items.length`
+
+2. **AIChat.tsx**:
+   - 移除 `useBlocksWithFallback`，改用 `useBlocks`
+   - 移除 `lastAssistantMessageIdRef`, `thinkingStepsRef`, `toolCallsRef`
+   - 简化流式处理回调（流式事件已通过 useAIQueries.ts 写入 Block.eventStream）
+   - 移除 `addMessage`, `updateMessage` 的使用
+
+3. **AIChatContext.tsx**:
+   - 移除导出的 `addMessage`, `updateMessage`, `deleteMessage`
+   - 保留 `clearMessages`, `addContextSeparator`（仍在使用）
+   - 删除不再需要的函数实现
+
+4. **types/aichat.ts**:
+   - 从 `AIChatContextValue` 接口移除 `addMessage`, `updateMessage`, `deleteMessage`
 
 ## 建议
 

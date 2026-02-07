@@ -234,9 +234,7 @@ describe("ToolCallCard", () => {
         expect(screen.getByText("ai.events.input")).toBeInTheDocument();
 
         // Find collapse button (ChevronDown when expanded)
-        const collapseButton = screen.getAllByRole("button").find((btn) =>
-          btn.querySelector("svg")
-        );
+        const collapseButton = screen.getAllByRole("button").find((btn) => btn.querySelector("svg"));
         if (collapseButton) {
           fireEvent.click(collapseButton);
           expect(screen.queryByText("ai.events.input")).not.toBeInTheDocument();
@@ -591,13 +589,7 @@ describe("InlineToolCall", () => {
     });
 
     it("should prefer inputSummary over filePath", () => {
-      render(
-        <InlineToolCall
-          toolName="read_file"
-          inputSummary="custom summary"
-          filePath="/tmp/file.txt"
-        />
-      );
+      render(<InlineToolCall toolName="read_file" inputSummary="custom summary" filePath="/tmp/file.txt" />);
 
       const element = screen.getByText(/read_file/);
       expect(element.textContent).toContain("custom summary");
@@ -605,9 +597,7 @@ describe("InlineToolCall", () => {
     });
 
     it("should truncate long text", () => {
-      render(
-        <InlineToolCall toolName="bash" inputSummary={"a".repeat(100)} />
-      );
+      render(<InlineToolCall toolName="bash" inputSummary={"a".repeat(100)} />);
 
       const element = screen.getByText(/bash/);
       expect(element).toHaveClass("truncate");

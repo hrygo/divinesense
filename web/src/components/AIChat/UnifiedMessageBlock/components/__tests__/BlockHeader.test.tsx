@@ -9,12 +9,12 @@
  * - Branch indicator display
  */
 
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { BlockHeader } from "../BlockHeader";
-import type { BlockHeaderProps } from "../BlockHeader";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationMessage } from "@/types/aichat";
 import type { BlockSummary } from "@/types/parrot";
+import type { BlockHeaderProps } from "../BlockHeader";
+import { BlockHeader } from "../BlockHeader";
 
 // Mock i18next
 vi.mock("react-i18next", () => ({
@@ -182,10 +182,7 @@ describe("BlockHeader", () => {
 
     it("should show badge with count when there are multiple inputs", () => {
       const props = createDefaultProps({
-        additionalUserInputs: [
-          createMockUserMessage("Additional input 1"),
-          createMockUserMessage("Additional input 2"),
-        ],
+        additionalUserInputs: [createMockUserMessage("Additional input 1"), createMockUserMessage("Additional input 2")],
       });
       const { container } = render(<BlockHeader {...props} />);
 
@@ -207,11 +204,7 @@ describe("BlockHeader", () => {
     it("should show '+N' suffix when there are more than 2 inputs", () => {
       const props = createDefaultProps({
         userMessage: createMockUserMessage("First"),
-        additionalUserInputs: [
-          createMockUserMessage("Second"),
-          createMockUserMessage("Third"),
-          createMockUserMessage("Fourth"),
-        ],
+        additionalUserInputs: [createMockUserMessage("Second"), createMockUserMessage("Third"), createMockUserMessage("Fourth")],
       });
       render(<BlockHeader {...props} />);
 

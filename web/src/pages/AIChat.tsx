@@ -11,15 +11,14 @@ import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
-import { useBlocksWithFallback } from "@/hooks/useBlockQueries";
+import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
-// import useMediaQuery from "@/hooks/useMediaQuery"; // Unused import - kept for reference
 import { cn } from "@/lib/utils";
-import type { AIMode, ChatItem } from "@/types/aichat";
+import type { AIMode } from "@/types/aichat";
 import type { Block as AIBlock } from "@/types/block";
 import { isActiveStatus } from "@/types/block";
 import { CapabilityStatus, CapabilityType, capabilityToParrotAgent } from "@/types/capability";
-import type { BlockSummary, MemoQueryResultData, ScheduleQueryResultData } from "@/types/parrot";
+import type { BlockSummary } from "@/types/parrot";
 import { ParrotAgentType } from "@/types/parrot";
 import type { SessionStats } from "@/types/proto/api/v1/ai_service_pb";
 import { BlockStatus as BlockStatusEnum } from "@/types/proto/api/v1/ai_service_pb";
@@ -39,13 +38,8 @@ interface UnifiedChatViewProps {
   setClearDialogOpen: (open: boolean) => void;
   onClearChat: () => void;
   onClearContext: () => void;
-  memoQueryResults: MemoQueryResultData[];
-  scheduleQueryResults: ScheduleQueryResultData[];
   blockSummary?: BlockSummary;
-  items: ChatItem[];
-  // Phase 4: Block data (primary source when available)
   blocks?: AIBlock[];
-  // isLoadingBlocks?: boolean; // Reserved for future loading state
   currentCapability: CapabilityType;
   capabilityStatus: CapabilityStatus;
   recentMemoCount?: number;
@@ -55,7 +49,6 @@ interface UnifiedChatViewProps {
   immersiveMode: boolean;
   onImmersiveModeToggle: (enabled: boolean) => void;
   isAdmin?: boolean;
-  /** Conversation ID for Block API operations (e.g., fork) */
   conversationId?: number;
 }
 
@@ -71,12 +64,8 @@ function UnifiedChatView({
   setClearDialogOpen,
   onClearChat,
   onClearContext,
-  memoQueryResults: _memoQueryResults, // Reserved for future query result display
-  scheduleQueryResults: _scheduleQueryResults, // Reserved for future query result display
   blockSummary,
-  items,
   blocks,
-  // isLoadingBlocks, // Reserved for future loading state
   currentCapability,
   capabilityStatus,
   recentMemoCount,
@@ -88,10 +77,6 @@ function UnifiedChatView({
   conversationId,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
-
-  // P1-5: Concurrent rendering optimizations - deferred values available for future use
-  // const deferredMemoResults = useDeferredValue(memoQueryResults);
-  // const deferredScheduleResults = useDeferredValue(scheduleQueryResults);
 
   const handleInputChange = (value: string) => {
     setInput(value);
@@ -136,18 +121,16 @@ function UnifiedChatView({
 
       {/* Messages Area with Welcome */}
       <ChatMessages
-        items={items}
-        blocks={blocks}
+        blocks={blocks ?? []}
         isTyping={isTyping}
         currentParrotId={ParrotAgentType.AMAZING}
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
-        _onSendProp={onSend}
         blockSummary={blockSummary}
         conversationId={conversationId}
       >
         {/* Welcome message - 统一入口，示例提问直接发送 */}
-        {(blocks?.length ?? 0) === 0 && items.length === 0 && (
+        {(blocks?.length ?? 0) === 0 && (
           <PartnerGreeting
             recentMemoCount={recentMemoCount}
             upcomingScheduleCount={upcomingScheduleCount}
@@ -200,31 +183,17 @@ const AIChat = () => {
   const [isThinking, setIsThinking] = useState(false);
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-  const [memoQueryResults, setMemoQueryResults] = useState<MemoQueryResultData[]>([]);
-  const [scheduleQueryResults, setScheduleQueryResults] = useState<ScheduleQueryResultData[]>([]);
   const [blockSummary, setBlockSummary] = useState<BlockSummary | undefined>();
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageIdRef = useRef(0);
-  const lastAssistantMessageIdRef = useRef<string | null>(null);
   const streamingContentRef = useRef<string>("");
   const isCreatingConversationRef = useRef(false);
-  // 多轮思考支持
-  const currentRoundRef = useRef(0); // 当前第几轮思考（0-based）
-  const thinkingStepsRef = useRef<Array<{ content: string; timestamp: number; round: number }>>([]);
-  const toolCallsRef = useRef<
-    Array<{
-      name: string;
-      toolId?: string;
-      inputSummary?: string;
-      outputSummary?: string;
-      filePath?: string;
-      duration?: number;
-      exitCode?: number;
-      isError?: boolean;
-      round?: number; // 第几轮思考
-    }>
-  >([]);
+  // Phase 3: Removed refs that are no longer needed:
+  // - lastAssistantMessageIdRef: Block ID tracking handled by useAIQueries
+  // - thinkingStepsRef: Written to Block.eventStream
+  // - toolCallsRef: Written to Block.eventStream
+  // - currentRoundRef: No longer needed
 
   // Get current conversation and capability from context
   const {
@@ -232,8 +201,7 @@ const AIChat = () => {
     conversations,
     createConversation,
     selectConversation,
-    addMessage,
-    updateMessage,
+    // Phase 3: No longer need addMessage/updateMessage - Block API handles this
     addReferencedMemos,
     addContextSeparator,
     clearMessages,
@@ -268,23 +236,15 @@ const AIChat = () => {
     return !isTyping && !isThinking;
   }, [isTyping, isThinking]);
 
-  // Use Block API as primary data source with error fallback (falls back to items for new conversations)
-  const {
-    blocks: blocksFromApi,
-    // isLoading: isLoadingBlocks, // Reserved for future loading state
-    shouldFallback: shouldFallbackToItems,
-    refetch: refetchBlocks,
-  } = useBlocksWithFallback(
+  // Phase 2: Use Block API as single source of truth (no more items fallback)
+  const blocksQuery = useBlocks(
     currentConversationIdNum,
+    undefined, // No filters
     { isActive: shouldAutoRefreshBlocks }, // Only auto-refresh when not streaming
   );
 
-  // Use blocks from API if available and not in fallback mode, otherwise use empty array
-  const blocks = useMemo(() => (shouldFallbackToItems ? [] : blocksFromApi), [blocksFromApi, shouldFallbackToItems]);
-
-  // Legacy: Get messages from current conversation (fallback for empty blocks or API errors)
-  // TODO: Remove once Block API is fully integrated and stable
-  const items = useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
+  const blocks = blocksQuery.data?.blocks || [];
+  const refetchBlocks = blocksQuery.refetch;
 
   const { t } = useTranslation();
 
@@ -306,17 +266,12 @@ const AIChat = () => {
   }, []);
 
   // Handle parrot chat with callbacks
+  // Phase 3: Simplified - stream events written to Block.eventStream by useAIQueries.ts
   const handleParrotChat = useCallback(
     async (conversationId: string, parrotId: ParrotAgentType, userMessage: string, _conversationIdNum: number) => {
       setIsTyping(true);
       setIsThinking(true);
       setCapabilityStatus("thinking");
-      setMemoQueryResults([]);
-      setScheduleQueryResults([]);
-      // 重置多轮思考状态
-      toolCallsRef.current = [];
-      thinkingStepsRef.current = [];
-      currentRoundRef.current = 0;
       const _messageId = ++messageIdRef.current;
 
       const explicitMessage = userMessage;
@@ -333,114 +288,40 @@ const AIChat = () => {
 
       try {
         await chatHook.stream(streamParams, {
-          onThinking: (msg) => {
-            if (lastAssistantMessageIdRef.current) {
-              // Handle i18n keys from backend (e.g., "ai.geek_mode.thinking")
-              const content = msg.startsWith("ai.") ? t(msg) : msg;
-              // 每次思考开始时，推进到下一轮
-              const round = currentRoundRef.current++;
-              // 添加新的思考步骤
-              const newStep = { content, timestamp: Date.now(), round };
-              thinkingStepsRef.current.push(newStep);
-              // 更新消息 metadata
-              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                metadata: {
-                  thinkingSteps: [...thinkingStepsRef.current],
-                  // 同时保留单一 thinking 字段（最新一轮，向后兼容）
-                  thinking: content,
-                },
-              });
-            }
+          // Phase 3: Stream events are automatically written to Block.eventStream
+          // by useAIQueries.ts updateBlockEventStream function
+          onThinking: (_msg) => {
+            // UI state update only - content already in Block.eventStream
+            setIsThinking(true);
           },
-          onToolUse: (toolName, meta) => {
+          onToolUse: (_toolName, _meta) => {
+            // UI state update only - tool calls already in Block.eventStream
             setCapabilityStatus("processing");
-            // Accumulate tool calls for this message
-            toolCallsRef.current.push({
-              name: toolName,
-              toolId: meta?.toolId,
-              inputSummary: meta?.inputSummary,
-              outputSummary: meta?.outputSummary,
-              filePath: meta?.filePath,
-              round: currentRoundRef.current, // 标记属于哪一轮思考
-            });
-            if (lastAssistantMessageIdRef.current) {
-              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                metadata: {
-                  toolCalls: [...toolCallsRef.current],
-                },
-              });
-            }
           },
-          onToolResult: (result, meta) => {
-            // Update tool call with output result
-            if (lastAssistantMessageIdRef.current && toolCallsRef.current.length > 0) {
-              // Find the most recent tool call and update its output
-              const lastToolCall = toolCallsRef.current[toolCallsRef.current.length - 1];
-              lastToolCall.outputSummary = meta?.outputSummary || result.slice(0, 200) + (result.length > 200 ? "..." : "");
-              lastToolCall.duration = meta?.durationMs;
-              lastToolCall.exitCode = meta?.errorMsg ? -1 : 0;
-              lastToolCall.isError = !!meta?.errorMsg;
-
-              // Update message with tool results（保留 round 字段）
-              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                metadata: {
-                  toolCalls: [...toolCallsRef.current],
-                  toolResults: toolCallsRef.current.map((tc) => ({
-                    name: tc.name,
-                    toolId: tc.toolId,
-                    inputSummary: tc.inputSummary,
-                    outputSummary: tc.outputSummary,
-                    duration: tc.duration,
-                    isError: tc.isError || false,
-                    round: tc.round, // 传递 round 字段
-                  })),
-                },
-              });
-            }
+          onToolResult: (_result, _meta) => {
+            // Tool results already in Block.eventStream
           },
           onBlockSummary: (summary) => {
             setBlockSummary(summary);
           },
           onMemoQueryResult: (result) => {
             if (_messageId === messageIdRef.current) {
-              setMemoQueryResults((prev) => [...prev, result]);
               addReferencedMemos(conversationId, result.memos);
             }
           },
-          onScheduleQueryResult: (result) => {
-            if (_messageId === messageIdRef.current) {
-              const transformedResult: ScheduleQueryResultData = {
-                schedules: result.schedules.map((s) => ({
-                  uid: s.uid,
-                  title: s.title,
-                  startTimestamp: Number(s.startTs),
-                  endTimestamp: Number(s.endTs),
-                  allDay: s.allDay,
-                  location: s.location || undefined,
-                  status: s.status,
-                })),
-                query: "",
-                count: result.schedules.length,
-                timeRangeDescription: result.timeRangeDescription,
-                queryType: result.queryType,
-              };
-              setScheduleQueryResults((prev) => [...prev, transformedResult]);
-            }
+          onScheduleQueryResult: (_result) => {
+            // Schedule query results - reserved for future use
           },
           onContent: (content) => {
-            if (lastAssistantMessageIdRef.current) {
-              streamingContentRef.current += content;
-              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                content: streamingContentRef.current,
-              });
-            }
+            streamingContentRef.current += content;
             // Note: Block content is updated in useAIQueries.ts stream handler
-            // via optimistic cache updates, no need to duplicate here
+            // via optimistic cache updates (updateBlockEventStream)
           },
           onDone: () => {
             setIsTyping(false);
             setIsThinking(false);
             setCapabilityStatus("idle");
+            streamingContentRef.current = "";
             // Refetch blocks to get the complete assistant content and session stats
             // This ensures the UI shows the final response with all metadata
             refetchBlocks();
@@ -449,13 +330,9 @@ const AIChat = () => {
             setIsTyping(false);
             setIsThinking(false);
             setCapabilityStatus("idle");
+            streamingContentRef.current = "";
             console.error("[Parrot Error]", error);
-            if (lastAssistantMessageIdRef.current) {
-              updateMessage(conversationId, lastAssistantMessageIdRef.current, {
-                content: streamingContentRef.current || t("ai.error-generic") || "Sorry, something went wrong. Please try again.",
-                error: true,
-              });
-            }
+            // Error state already written to Block by useAIQueries.ts
           },
         });
       } catch (error) {
@@ -465,7 +342,7 @@ const AIChat = () => {
         console.error("[Parrot Chat Error]", error);
       }
     },
-    [chatHook, updateMessage, addReferencedMemos, setCapabilityStatus, t, refetchBlocks, currentMode],
+    [chatHook, addReferencedMemos, setCapabilityStatus, refetchBlocks, currentMode],
   );
 
   const handleSend = useCallback(
@@ -479,7 +356,8 @@ const AIChat = () => {
       if (streamingBlock) {
         const blockId = Number(streamingBlock.id);
         const convId = Number(streamingBlock.conversationId);
-        if (blockId > 0 && convId > 0) {
+        // Validate conversationId matches current conversation to prevent unauthorized access
+        if (blockId > 0 && convId > 0 && convId === currentConversationIdNum) {
           try {
             // Pass conversationId for optimistic update
             await appendUserInput(blockId, userMessage, convId);
@@ -537,11 +415,8 @@ const AIChat = () => {
         return;
       }
 
-      // Add user message (optimistic update using tempId or realId)
-      addMessage(targetConversationId, {
-        role: "user",
-        content: userMessage,
-      });
+      // Phase 3: User message will be included in Block created by backend
+      // No need for optimistic addMessage - Block API handles this
 
       // Special handling for cutting line (context separator)
       if (userMessage === "---") {
@@ -553,16 +428,8 @@ const AIChat = () => {
         return;
       }
 
-      // Add empty assistant message
-      const newMessage = {
-        role: "assistant" as const,
-        content: "",
-      };
-
-      // Note: addMessage returns messageID. We don't use it for streaming logic
-      // but we need it to update the specific message later if needed.
-      const assistantMessageId = addMessage(targetConversationId, newMessage);
-      lastAssistantMessageIdRef.current = assistantMessageId;
+      // Phase 3: No need to add empty assistant message - Block is created by backend
+      // and automatically updated via useAIQueries.ts optimistic cache
 
       streamingContentRef.current = "";
       setInput("");
@@ -594,7 +461,7 @@ const AIChat = () => {
       conversations,
       selectConversation,
       createConversation,
-      addMessage,
+      // Phase 3: No addMessage dependency - Block created by backend
       handleParrotChat,
       resetTypingState,
       // Phase 4: Block append dependencies
@@ -689,14 +556,14 @@ const AIChat = () => {
 
   /**
    * Safely convert bigint to number with precision loss warning
-   * P1-#1: Add boundary check for large bigint values (> MAX_SAFE_INTEGER)
    */
-  const safeBigIntToNumber = useCallback((value: bigint | undefined, fieldName: string): number | undefined => {
-    if (value === undefined) return undefined;
+  const safeBigIntToNumber = useCallback((value: bigint | undefined | null, fieldName: string): number | undefined => {
+    if (value === undefined || value === null) return undefined;
     const num = Number(value);
-    // Check if value exceeds safe integer range (2^53 - 1)
-    if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
-      console.warn(`[BlockSummary] ${fieldName} (${value}) exceeds MAX_SAFE_INTEGER, precision may be lost`);
+    // Check if value exceeds safe integer range (2^53 - 1) or is NaN
+    if (value > BigInt(Number.MAX_SAFE_INTEGER) || isNaN(num)) {
+      console.warn(`[BlockSummary] ${fieldName} (${value}) exceeds MAX_SAFE_INTEGER or is NaN, precision may be lost`);
+      return undefined;
     }
     return num;
   }, []);
@@ -756,12 +623,8 @@ const AIChat = () => {
       setClearDialogOpen={setClearDialogOpen}
       onClearChat={handleClearChat}
       onClearContext={handleClearContext}
-      memoQueryResults={memoQueryResults}
-      scheduleQueryResults={scheduleQueryResults}
       blockSummary={blockSummary}
-      items={items}
       blocks={blocks}
-      // isLoadingBlocks={isLoadingBlocks} // Reserved for future loading state
       currentCapability={currentCapability}
       capabilityStatus={capabilityStatus}
       currentMode={currentMode}

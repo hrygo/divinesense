@@ -14,6 +14,21 @@ import (
 	postgresstore "github.com/hrygo/divinesense/store/db/postgres"
 )
 
+// ============================================================================
+// Error Definitions (from errors.go - merged to avoid circular dependency)
+// ============================================================================
+
+// Base error definitions for agent errors
+var (
+	ErrInvalidTimeFormat  = errors.New("invalid time format")
+	ErrToolNotFound       = errors.New("tool not found")
+	ErrParseError         = errors.New("parse error")
+	ErrNetworkError       = errors.New("network error")
+	ErrServiceUnavailable = errors.New("service unavailable")
+	ErrScheduleConflict   = errors.New("schedule conflict")
+	ErrInvalidInput       = errors.New("invalid input")
+)
+
 // ErrorClass represents the category of error for retry decisions.
 type ErrorClass int
 
@@ -225,4 +240,29 @@ func GetActionHint(err error) string {
 		return classified.ActionHint
 	}
 	return ""
+}
+
+// IsRecoverableError returns true if the error is a known type that can be recovered from.
+// This is distinct from retry logic - it indicates whether the error type itself is
+// fixable (e.g., invalid time format can be corrected) vs. a system-level issue.
+func IsRecoverableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check against our known error definitions
+	return errors.Is(err, ErrInvalidTimeFormat) ||
+		errors.Is(err, ErrToolNotFound) ||
+		errors.Is(err, ErrParseError)
+}
+
+// IsTransientError returns true if the error is temporary and may resolve on retry.
+// This maps network and service availability issues.
+func IsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return errors.Is(err, ErrNetworkError) ||
+		errors.Is(err, ErrServiceUnavailable)
 }

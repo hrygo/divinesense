@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { aiServiceClient } from "@/connect";
 import { ParrotAgentType, parrotToProtoAgentType } from "@/types/parrot";
 import type { Block } from "@/types/proto/api/v1/ai_service_pb";
@@ -167,6 +167,20 @@ export function useChat() {
   const queryClient = useQueryClient();
   const abortControllerRef = useRef<AbortController | null>(null);
   const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     /**
@@ -437,6 +451,32 @@ export function useChat() {
           if (response.content) {
             fullContent += response.content;
             callbacks?.onContent?.(response.content);
+
+            // CRITICAL: Update optimistic block's assistantContent during streaming
+            // This ensures the UI shows the streaming content in real-time
+            if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+              queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
+                const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
+                const existingBlocks = existing?.blocks || [];
+
+                // Find and update the target block's assistantContent
+                const updatedBlocks = existingBlocks.map((b) => {
+                  if (b.id !== blockId) return b;
+                  return { ...b, assistantContent: fullContent };
+                });
+
+                return {
+                  blocks: updatedBlocks,
+                  totalCount: updatedBlocks.length,
+                };
+              });
+
+              // Also update the individual block cache
+              queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+                if (!old || old.id !== blockId) return old;
+                return { ...old, assistantContent: fullContent };
+              });
+            }
           }
 
           // Handle schedule creation intent (sent in final chunk)
@@ -551,6 +591,29 @@ export function useChat() {
                 // Handle final answer from agent (when no tool is used)
                 fullContent += response.eventData;
                 callbacks?.onContent?.(response.eventData);
+                // CRITICAL: Real-time update assistantContent for streaming UI
+                // This prevents "initializing..." state during answer streaming
+                if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+                  queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
+                    const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
+                    const existingBlocks = existing?.blocks || [];
+
+                    const updatedBlocks = existingBlocks.map((b) => {
+                      if (b.id !== blockId) return b;
+                      return {
+                        ...b,
+                        assistantContent: fullContent,
+                        status: BlockStatus.STREAMING,
+                        updatedTs: BigInt(Date.now()),
+                      };
+                    });
+
+                    return {
+                      blocks: updatedBlocks,
+                      totalCount: updatedBlocks.length,
+                    };
+                  });
+                }
                 break;
               case "memo_query_result":
                 try {
@@ -610,6 +673,41 @@ export function useChat() {
           // Handle completion
           if (response.done === true) {
             doneCalled = true;
+
+            // CRITICAL: Mark block as COMPLETED and update final content
+            if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+              queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
+                const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
+                const existingBlocks = existing?.blocks || [];
+
+                const updatedBlocks = existingBlocks.map((b) => {
+                  if (b.id !== blockId) return b;
+                  return {
+                    ...b,
+                    assistantContent: fullContent,
+                    status: BlockStatus.COMPLETED,
+                    updatedTs: BigInt(Date.now()),
+                  };
+                });
+
+                return {
+                  blocks: updatedBlocks,
+                  totalCount: updatedBlocks.length,
+                };
+              });
+
+              // Also update the individual block cache
+              queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+                if (!old || old.id !== blockId) return old;
+                return {
+                  ...old,
+                  assistantContent: fullContent,
+                  status: BlockStatus.COMPLETED,
+                  updatedTs: BigInt(Date.now()),
+                };
+              });
+            }
+
             // Send block summary if available (Geek/Evolution modes)
             if (response.blockSummary) {
               // Convert proto BlockSummary (bigint fields) to local BlockSummary (number fields)
