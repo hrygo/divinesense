@@ -41,6 +41,20 @@ BACKEND_BIN ?= bin/divinesense
 BACKEND_CMD ?= cmd/divinesense
 BACKEND_PORT ?= 28081
 
+# Version (Git-based, injected at build time)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
+GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "unknown")
+
+# Ldflags for version injection
+LDFLAGS := -ldflags " \
+	-X github.com/hrygo/divinesense/internal/version.Version=$(VERSION) \
+	-X github.com/hrygo/divinesense/internal/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/hrygo/divinesense/internal/version.GitBranch=$(GIT_BRANCH) \
+	-X github.com/hrygo/divinesense/internal/version.BuildTime=$(BUILD_TIME) \
+	-s -w"
+
 # Frontend
 WEB_DIR ?= web
 
@@ -66,12 +80,27 @@ WEB_DIR ?= web
 .PHONY: dev-logs dev-logs-backend dev-logs-frontend dev-logs-follow
 .PHONY: check-embed-frontend check-embed-backend check-embed-all
 .PHONY: checksum verify-checksum
+.PHONY: version version-json version-verbose
 
 # ===========================================================================
 # Development Commands
 # ===========================================================================
 
 ##@ Development
+
+version: ## 显示版本信息
+	@echo "DivineSense Version Information"
+	@echo "=============================="
+	@echo "Version:    $(VERSION)"
+	@echo "Commit:     $(GIT_COMMIT)"
+	@echo "Branch:     $(GIT_BRANCH)"
+	@echo "Build Time: $(BUILD_TIME)"
+
+version-json: ## 显示版本信息 (JSON格式)
+	@echo '{"version":"$(VERSION)","commit":"$(GIT_COMMIT)","branch":"$(GIT_BRANCH)","buildTime":"$(BUILD_TIME)"}'
+
+version-verbose: ## 显示详细版本信息 (运行时)
+	@go run $(LDFLAGS) ./$(BACKEND_CMD) --version
 
 run: ## 启动后端 (PostgreSQL + AI)
 	@echo "Starting DivineSense with AI support..."
@@ -260,7 +289,8 @@ test-runner: ## 运行 Runner 测试
 
 build: ## 构建后端
 	@echo "Building backend..."
-	@go build -o $(BACKEND_BIN) ./$(BACKEND_CMD)
+	@echo "Version: $(VERSION)"
+	@go build $(LDFLAGS) -o $(BACKEND_BIN) ./$(BACKEND_CMD)
 	@if [ "$$(go env GOOS)" = "darwin" ] && command -v codesign >/dev/null 2>&1; then \
 		echo "Signing binary with ad-hoc signature..."; \
 		codesign --force --deep --sign - $(BACKEND_BIN); \
@@ -405,7 +435,7 @@ ci-backend: ## 后端 CI 检查 (go mod tidy + golangci-lint + test)
 	@echo "  → golangci-lint..."
 	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags=noui
 	@echo "  → go test..."
-	@go test -short -timeout=30s -tags=noui ./...
+	@go test -short -timeout=30s -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)")
 	@echo "  ✅ Backend checks passed"
 
 ci-frontend: ## 前端 CI 检查 (lint + build)

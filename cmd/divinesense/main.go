@@ -106,6 +106,20 @@ func init() {
 	viper.SetDefault("driver", "postgres")
 	viper.SetDefault("port", 28081)
 
+	// Set version for cobra - use short version for the flag
+	rootCmd.Version = version.Version
+
+	// Add version subcommand for detailed version info
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Display detailed version information",
+		Run: func(_ *cobra.Command, _ []string) {
+			fmt.Printf("DivineSense %s\n", version.String())
+			fmt.Println(version.StringFull())
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
+
 	rootCmd.PersistentFlags().String("mode", "dev", `mode of server, can be "prod" or "dev" or "demo"`)
 	rootCmd.PersistentFlags().String("addr", "", "address of server")
 	rootCmd.PersistentFlags().Int("port", 28081, "port of server")

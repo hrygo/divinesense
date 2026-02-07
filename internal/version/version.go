@@ -8,11 +8,27 @@ import (
 )
 
 // Version is the service current released version.
+// This value can be overridden at build time using ldflags:
+//
+//	go build -ldflags "-X github.com/hrygo/divinesense/internal/version.Version=v0.95.0"
+//
 // Semantic versioning: https://semver.org/
-var Version = "0.93.0"
+var Version = "0.0.0-dev"
 
 // DevVersion is the service current development version.
-var DevVersion = "0.93.0"
+var DevVersion = Version
+
+// GitCommit is the git commit hash at build time.
+// Set via ldflags: -X github.com/hrygo/divinesense/internal/version.GitCommit=$(git rev-parse HEAD)
+var GitCommit = "unknown"
+
+// GitBranch is the git branch at build time.
+// Set via ldflags: -X github.com/hrygo/divinesense/internal/version.GitBranch=$(git rev-parse --abbrev-ref HEAD)
+var GitBranch = "unknown"
+
+// BuildTime is the build timestamp in RFC3339 format.
+// Set via ldflags: -X github.com/hrygo/divinesense/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+var BuildTime = "unknown"
 
 func GetCurrentVersion(mode string) string {
 	if mode == "dev" || mode == "demo" {
@@ -57,4 +73,37 @@ func (s SortVersion) Less(i, j int) bool {
 	v1 := fmt.Sprintf("v%s", s[i])
 	v2 := fmt.Sprintf("v%s", s[j])
 	return semver.Compare(v1, v2) == -1
+}
+
+// String returns the version string with optional commit hash.
+func String() string {
+	v := Version
+	if GitCommit != "" && GitCommit != "unknown" {
+		shortCommit := GitCommit
+		if len(shortCommit) > 8 {
+			shortCommit = shortCommit[:8]
+		}
+		v = fmt.Sprintf("%s-%s", v, shortCommit)
+	}
+	return v
+}
+
+// StringFull returns the complete version information including build metadata.
+func StringFull() string {
+	var parts []string
+	parts = append(parts, fmt.Sprintf("Version=%s", Version))
+	if GitCommit != "" && GitCommit != "unknown" {
+		shortCommit := GitCommit
+		if len(shortCommit) > 8 {
+			shortCommit = shortCommit[:8]
+		}
+		parts = append(parts, fmt.Sprintf("Commit=%s", shortCommit))
+	}
+	if GitBranch != "" && GitBranch != "unknown" {
+		parts = append(parts, fmt.Sprintf("Branch=%s", GitBranch))
+	}
+	if BuildTime != "" && BuildTime != "unknown" {
+		parts = append(parts, fmt.Sprintf("BuildTime=%s", BuildTime))
+	}
+	return strings.Join(parts, " ")
 }
