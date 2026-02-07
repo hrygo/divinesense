@@ -37,6 +37,8 @@ const (
 	EventAssistantResponse ChatEventType = "assistant_response"
 	// EventSeparator is fired when a separator (---) is sent.
 	EventSeparator ChatEventType = "separator"
+	// EventBlockCompleted is fired when a block is completed.
+	EventBlockCompleted ChatEventType = "block_completed"
 )
 
 // ChatEventListener is a function that processes chat events.

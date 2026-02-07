@@ -58,7 +58,19 @@ func (h *ParrotHandler) SetChatRouter(router *agentpkg.ChatRouter) {
 
 // maybeGenerateConversationTitle auto-generates a conversation title after the first block.
 // Only generates if title_source is "default" (never been auto-generated or user-edited).
+//
+// Runs asynchronously in a background goroutine to avoid blocking the chat flow.
 func (h *ParrotHandler) maybeGenerateConversationTitle(ctx context.Context, conversationID int32, completedBlock *store.AIBlock) {
+	// Run asynchronously in background - don't block the chat flow
+	go h.generateTitleAsync(conversationID, completedBlock)
+}
+
+// generateTitleAsync generates and updates the conversation title in the background.
+func (h *ParrotHandler) generateTitleAsync(conversationID int32, completedBlock *store.AIBlock) {
+	// Use a fresh context with timeout for the title generation
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	// Check if this is the first completed block for this conversation
 	blocks, err := h.factory.store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversationID,
