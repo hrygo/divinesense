@@ -331,7 +331,7 @@ export function useChat() {
                   ...(b.eventStream || []),
                   {
                     $typeName: "memos.api.v1.BlockEvent" as const,
-                    type: event.type as any,
+                    type: event.type,
                     content: event.content || "",
                     timestamp: BigInt(event.timestamp),
                     metadata: JSON.stringify({
@@ -363,7 +363,7 @@ export function useChat() {
                 ...(old.eventStream || []),
                 {
                   $typeName: "memos.api.v1.BlockEvent" as const,
-                  type: event.type as any,
+                  type: event.type,
                   content: event.content || "",
                   timestamp: BigInt(event.timestamp),
                   metadata: JSON.stringify({

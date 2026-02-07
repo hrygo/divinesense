@@ -54,16 +54,13 @@
  * - useStreamingProgress: 流式进度计算
  */
 
-import { AlertCircle, BarChart3, ChevronDown, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
+import { AlertCircle, BarChart3, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
-import remarkBreaks from "remark-breaks";
-import remarkGfm from "remark-gfm";
 import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { StreamingText } from "@/components/AIChat/StreamingText";
-import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
 import { type BlockBranch } from "@/types/block";
@@ -78,8 +75,6 @@ import {
   BlockHeader as ModularBlockHeader,
   TimelineNode,
 } from "./UnifiedMessageBlock/components";
-
-type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
 /**
  * Extract pure tool name from function call string

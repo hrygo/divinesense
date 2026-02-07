@@ -10,9 +10,9 @@
  * - Snapshot testing for visual consistency
  */
 
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { TimelineNodeType } from "../../../types";
+import type { TimelineNodeType } from "../../types";
 import { TimelineNode } from "../TimelineNode";
 
 // Mock i18next

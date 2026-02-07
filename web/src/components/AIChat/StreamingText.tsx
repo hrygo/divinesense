@@ -14,8 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { CodeBlock } from "@/components/MemoContent/CodeBlock";
 import { cn } from "@/lib/utils";
-import CodeBlock from "@/components/MemoContent/CodeBlock";
+
+type CodeComponentProps = React.ComponentProps<"code"> & { inline?: boolean };
 
 export interface StreamingTextProps {
   /** 完整的文本内容 */
@@ -162,7 +164,7 @@ export function StreamingText({
           th: ({ node, ...props }) => <th className="px-4 py-2.5 text-left font-medium text-muted-foreground tracking-wider" {...props} />,
           td: ({ node, ...props }) => <td className="px-4 py-2.5 whitespace-pre-wrap" {...props} />,
           pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
-          code: ({ className, children, inline, ...props }: { className?: string; children: React.ReactNode; inline?: boolean }) => {
+          code: ({ className, children, inline, ...props }: CodeComponentProps) => {
             return inline ? (
               <code
                 className={cn("px-1.5 py-0.5 rounded-md bg-muted/80 font-mono text-xs text-secondary-foreground", className)}

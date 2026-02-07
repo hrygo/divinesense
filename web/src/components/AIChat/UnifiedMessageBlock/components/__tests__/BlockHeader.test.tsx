@@ -12,7 +12,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationMessage } from "@/types/aichat";
+import type { BlockBranch } from "@/types/block";
 import type { BlockSummary } from "@/types/parrot";
+import { ParrotAgentType } from "@/types/parrot";
 import type { BlockHeaderProps } from "../BlockHeader";
 import { BlockHeader } from "../BlockHeader";
 
@@ -29,7 +31,7 @@ vi.mock("react-i18next", () => ({
 
 // Mock utility functions - need to use default import for the index
 vi.mock("../utils", () => ({
-  formatRelativeTime: vi.fn((timestamp: number, t: (key: string) => string) => {
+  formatRelativeTime: vi.fn((timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
     if (diff < 60000) return "ai.aichat.sidebar.time-just-now";
@@ -80,7 +82,7 @@ describe("BlockHeader", () => {
     userMessage: createMockUserMessage("Hello, how are you?"),
     assistantMessage: createMockAssistantMessage(),
     blockSummary: createMockBlockSummary(),
-    parrotId: "AUTO",
+    parrotId: ParrotAgentType.AUTO,
     theme: {
       border: "border-l-4",
       headerBg: "bg-white",
@@ -220,7 +222,7 @@ describe("BlockHeader", () => {
           totalOutputTokens: 500,
           totalCostUSD: 0.002,
         }),
-        parrotId: "AUTO",
+        parrotId: ParrotAgentType.AUTO,
       });
       render(<BlockHeader {...props} />);
 
@@ -234,7 +236,7 @@ describe("BlockHeader", () => {
         blockSummary: createMockBlockSummary({
           totalCostUSD: 0.005,
         }),
-        parrotId: "AUTO",
+        parrotId: ParrotAgentType.AUTO,
       });
       const { container } = render(<BlockHeader {...props} />);
 
@@ -251,7 +253,7 @@ describe("BlockHeader", () => {
           totalDurationMs: 15000,
           toolCallCount: 5,
         }),
-        parrotId: "GEEK",
+        parrotId: ParrotAgentType.GEEK,
       });
       const { container } = render(<BlockHeader {...props} />);
 
@@ -270,9 +272,9 @@ describe("BlockHeader", () => {
         blockSummary: createMockBlockSummary({
           toolCallCount: 5,
         }),
-        parrotId: "GEEK",
+        parrotId: ParrotAgentType.GEEK,
       });
-      const { container } = render(<BlockHeader {...props} />);
+      render(<BlockHeader {...props} />);
 
       // Just verify the component renders
       expect(screen.getByText("Help me with code")).toBeInTheDocument();
@@ -285,7 +287,7 @@ describe("BlockHeader", () => {
           totalDurationMs: 30000,
           filesModified: 3,
         }),
-        parrotId: "EVOLUTION",
+        parrotId: ParrotAgentType.EVOLUTION,
       });
       const { container } = render(<BlockHeader {...props} />);
 
@@ -386,7 +388,7 @@ describe("BlockHeader", () => {
   describe("Parrot Badge", () => {
     it("should show GEEK badge for GEEK parrot", () => {
       const props = createDefaultProps({
-        parrotId: "GEEK",
+        parrotId: ParrotAgentType.GEEK,
       });
       render(<BlockHeader {...props} />);
 
@@ -395,7 +397,7 @@ describe("BlockHeader", () => {
 
     it("should show EVOLUTION badge for EVOLUTION parrot", () => {
       const props = createDefaultProps({
-        parrotId: "EVOLUTION",
+        parrotId: ParrotAgentType.EVOLUTION,
       });
       render(<BlockHeader {...props} />);
 
@@ -404,7 +406,7 @@ describe("BlockHeader", () => {
 
     it("should show AMAZING badge for AMAZING parrot", () => {
       const props = createDefaultProps({
-        parrotId: "AMAZING",
+        parrotId: ParrotAgentType.AMAZING,
       });
       render(<BlockHeader {...props} />);
 
@@ -413,9 +415,9 @@ describe("BlockHeader", () => {
 
     it("should not show badge for AUTO parrot", () => {
       const props = createDefaultProps({
-        parrotId: "AUTO",
+        parrotId: ParrotAgentType.AUTO,
       });
-      const { container } = render(<BlockHeader {...props} />);
+      render(<BlockHeader {...props} />);
 
       // AUTO should not show a badge
       expect(screen.queryByText("ai.mode.geek")).not.toBeInTheDocument();
@@ -436,8 +438,15 @@ describe("BlockHeader", () => {
     });
 
     it("should render branch indicator when branches array is provided", () => {
+      const mockBranch = {
+        block: undefined,
+        branchPath: "A",
+        isActive: true,
+        children: [],
+        $typeName: "memos.api.v1.BlockBranch",
+      } as BlockBranch;
       const props = createDefaultProps({
-        branches: [{ blockId: "1", path: "A" }],
+        branches: [mockBranch],
       });
       const { container } = render(<BlockHeader {...props} />);
 
@@ -550,7 +559,7 @@ describe("BlockHeader", () => {
     it("should hide parrot badge on mobile", () => {
       // Default matchMedia returns false for sm breakpoint
       const props = createDefaultProps({
-        parrotId: "GEEK",
+        parrotId: ParrotAgentType.GEEK,
       });
       const { container } = render(<BlockHeader {...props} />);
 

@@ -69,7 +69,7 @@ describe("ToolCallCard", () => {
       // toolId is truncated to 8 chars: # + first 7 chars
       expect(screen.getByText(/#tool_/)).toBeInTheDocument();
       // Find the element with the truncated ID
-      const truncatedElement = screen.getByText((content, element) => {
+      const truncatedElement = screen.getByText((_content, element) => {
         return element?.textContent === "#tool_123";
       });
       expect(truncatedElement).toBeInTheDocument();
@@ -454,9 +454,6 @@ describe("ToolCallCard", () => {
       const data2 = createMockData(); // Same values, different reference
 
       const { rerender } = render(<ToolCallCard data={data1} />);
-
-      // Get the initial rendered element
-      const initialElement = screen.getByText("bash");
 
       // Re-render with same values but different reference
       rerender(<ToolCallCard data={data2} />);

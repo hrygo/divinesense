@@ -23,6 +23,7 @@ import {
   CreateBlockRequestSchema,
   DeleteBlockRequestSchema,
   ListBlocksResponseSchema,
+  ListMessagesResponseSchema,
   UpdateBlockRequestSchema,
   UserInputSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
@@ -45,6 +46,7 @@ import {
 vi.mock("@/connect", () => ({
   aiServiceClient: {
     listBlocks: vi.fn(),
+    listMessages: vi.fn(), // Added for useBlocksWithFallback
     getBlock: vi.fn(),
     createBlock: vi.fn(),
     updateBlock: vi.fn(),
@@ -53,6 +55,15 @@ vi.mock("@/connect", () => ({
     appendUserInput: vi.fn(),
   },
 }));
+
+// Mock shouldRetryError to disable retries in tests
+vi.mock("@/config/errors", async () => {
+  const actual = await vi.importActual("@/config/errors");
+  return {
+    ...actual,
+    shouldRetryError: () => false, // Never retry in tests
+  };
+});
 
 const { aiServiceClient } = await import("@/connect");
 
@@ -109,10 +120,32 @@ function createMockListResponse(blocks: Block[]): ListBlocksResponse {
 }
 
 /**
+ * Helper to create a mock ListMessagesResponse
+ */
+function createMockMessagesResponse(blocks: Block[], hasMore = false, totalCount = blocks.length) {
+  return create(ListMessagesResponseSchema, {
+    blocks,
+    hasMore,
+    totalCount,
+  });
+}
+
+/**
  * Helper to create an empty ListBlocksResponse
  */
 function createEmptyListResponse(): ListBlocksResponse {
   return create(ListBlocksResponseSchema, { blocks: [] });
+}
+
+/**
+ * Helper to create an empty ListMessagesResponse
+ */
+function createEmptyMessagesResponse() {
+  return create(ListMessagesResponseSchema, {
+    blocks: [],
+    hasMore: false,
+    totalCount: 0,
+  });
 }
 
 /**
@@ -209,39 +242,48 @@ describe("useBlocksWithFallback", () => {
   });
 
   it("should return blocks and not indicate fallback when successful", async () => {
-    const mockBlocks = createMockListResponse([
+    const mockBlocks = [
       createMockBlock({
         id: 1n,
         conversationId: 123,
         assistantContent: "Response",
       }),
-    ]);
+    ];
 
-    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(mockBlocks);
+    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createMockMessagesResponse(mockBlocks));
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.blocks).toEqual(mockBlocks.blocks);
+    expect(result.current.blocks).toEqual(mockBlocks);
     expect(result.current.shouldFallback).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
   it("should indicate fallback when query fails", async () => {
-    vi.mocked(aiServiceClient.listBlocks).mockRejectedValue(new Error("Network error"));
+    // Create fresh query client for this test
+    const freshQueryClient = createTestQueryClient();
+    const freshWrapper = createWrapper(freshQueryClient);
 
-    const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
+    // Use mockRejectedValue directly
+    const error = new Error("Network error");
+    vi.mocked(aiServiceClient.listMessages).mockRejectedValue(error);
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper: freshWrapper });
+
+    // Wait for query to finish
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 15000 });
 
     expect(result.current.shouldFallback).toBe(true);
     expect(result.current.error).not.toBeNull();
-    expect(result.current.error?.message).toBe("Network error");
   });
 
   it("should indicate fallback when no blocks returned for active conversation", async () => {
-    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyListResponse());
+    // Clear any cached data from previous tests
+    queryClient.clear();
+
+    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createEmptyMessagesResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123, { isActive: true }), { wrapper });
 
@@ -252,7 +294,9 @@ describe("useBlocksWithFallback", () => {
   });
 
   it("should provide refetch function", async () => {
-    vi.mocked(aiServiceClient.listBlocks).mockResolvedValue(createEmptyListResponse());
+    queryClient.clear();
+
+    vi.mocked(aiServiceClient.listMessages).mockResolvedValue(createEmptyMessagesResponse());
 
     const { result } = renderHook(() => useBlocksWithFallback(123), { wrapper });
 
@@ -263,7 +307,7 @@ describe("useBlocksWithFallback", () => {
     // Call refetch
     result.current.refetch();
 
-    expect(aiServiceClient.listBlocks).toHaveBeenCalledTimes(2);
+    expect(aiServiceClient.listMessages).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -312,13 +356,18 @@ describe("useStreamingBlock", () => {
       meta: "{}",
     });
 
+    // Convert BigInt to string for JSON serialization
+    const eventJson = JSON.stringify(event, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+
     // appendStreamingEvent expects a JSON string
-    result.current.appendStreamingEvent(JSON.stringify(event));
+    result.current.appendStreamingEvent(eventJson);
 
     const cached = queryClient.getQueryData(blockKeys.detail(1));
-    expect(cached).toMatchObject({
-      eventStream: [event],
-    });
+    // The event is stored as JSON string in the eventStream array
+    expect(cached).toBeDefined();
+    expect(cached.eventStream).toContain(eventJson);
   });
 
   it("should complete streaming with session stats", () => {

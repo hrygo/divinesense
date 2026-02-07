@@ -14,7 +14,10 @@ import { BlockCostBadge } from "./BlockCostBadge";
 // Mock i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "ai.session_stats.currency_symbol") return "$";
+      return key;
+    },
   }),
 }));
 
@@ -76,9 +79,9 @@ describe("BlockCostBadge", () => {
   });
 
   it("should have title with full cost precision", () => {
-    render(<BlockCostBadge costEstimate={12345n} />); // $0.12345
+    const { container } = render(<BlockCostBadge costEstimate={12345n} />); // $0.12345
 
-    const badge = screen.getByTitle("chat.block-summary.estimated-cost: $0.123450");
+    const badge = container.querySelector('[title="chat.block-summary.estimated-cost: $0.123450"]');
     expect(badge).toBeInTheDocument();
   });
 

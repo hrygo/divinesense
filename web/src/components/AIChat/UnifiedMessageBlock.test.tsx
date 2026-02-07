@@ -8,7 +8,7 @@
  * - Status indicators
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationMessage } from "@/types/aichat";
 import type { BlockSummary } from "@/types/parrot";
@@ -370,8 +370,12 @@ describe("UnifiedMessageBlock - BlockHeader Functionality", () => {
       const props = createDefaultProps();
       render(<UnifiedMessageBlock {...props} />);
 
-      // Find the header by the user message text
-      const header = screen.getByText("Hello, how are you?").closest("div.cursor-pointer");
+      // Find the header by the user message text - use getAllByText and find the one with cursor-pointer class
+      const textElements = screen.getAllByText("Hello, how are you?");
+      const header = textElements
+        .map((el) => el.closest("div.cursor-pointer"))
+        .find((el) => el !== null);
+
       expect(header).toBeInTheDocument();
 
       // Click to collapse
