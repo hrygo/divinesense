@@ -131,7 +131,7 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
         meta = undefined;
       }
 
-      const toolName = asString(meta?.name) || event.content || "unknown";
+      const toolName = asString(meta?.tool_name) || asString(meta?.name) || event.content || "unknown";
       const toolId = asString(meta?.tool_id);
       const occurrence = asNumber(meta?.occurrence) ?? 0;
 
@@ -143,7 +143,8 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
       const toolCall: ToolCall = {
         name: toolName,
         toolId,
-        inputSummary: event.content || asString(meta?.input_summary),
+        // Prefer meta.input_summary (contains parameters) over event.content (may be just tool name for CCRunner)
+        inputSummary: asString(meta?.input_summary) || event.content,
       };
 
       // Store tool call with its occurrence
@@ -161,7 +162,9 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
       const occurrence = asNumber(meta?.occurrence) ?? 0;
 
       // Find matching tool_use event by same dedupe key
-      const resultKey = toolId ? `id:${toolId}` : `name:${asString(meta?.name)}:occ:${occurrence}`;
+      // Try both tool_name (preferred) and name (legacy compatibility)
+      const toolNameForKey = asString(meta?.tool_name) || asString(meta?.name);
+      const resultKey = toolId ? `id:${toolId}` : `name:${toolNameForKey}:occ:${occurrence}`;
 
       if (toolCallsMap.has(resultKey)) {
         // Update existing tool call with result

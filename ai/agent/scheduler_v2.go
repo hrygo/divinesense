@@ -224,9 +224,32 @@ func (a *SchedulerAgentV2) ExecuteWithCallback(ctx context.Context, userInput st
 		fullInput = fmt.Sprintf("[意图: %s]\n%s", a.intentToHint(intent), fullInput)
 	}
 
+	// Wrap callback to track tool calls and forward events
+	wrappedCallback := callback
+	if callback != nil {
+		wrappedCallback = func(event string, data interface{}) {
+			// Track tool calls in BaseParrot stats
+			if event == "tool_use" {
+				if eventWithMeta, ok := data.(*EventWithMeta); ok && eventWithMeta.Meta != nil {
+					a.TrackToolCall(eventWithMeta.Meta.ToolName)
+				}
+			}
+			// Forward to original callback
+			callback(event, data)
+		}
+	}
+
 	// Run the agent
-	// TODO: For IntentBatchCreate, use Plan-Execute mode instead of ReAct
-	result, err := a.agent.RunWithCallback(ctx, fullInput, callback)
+	// NOTE: For IntentBatchCreate, consider using Plan-Execute mode instead of ReAct
+	// for better user experience (show all created schedules at once).
+	// Current ReAct mode creates schedules one by one, which is fine for small batches.
+	// Issue for enhancement: https://github.com/hrygo/divinesense/issues/XXX
+	result, err := a.agent.RunWithCallback(ctx, fullInput, wrappedCallback)
+
+	// Transfer Agent framework stats to BaseParrot for Block summary
+	// This ensures token usage and LLM call metrics are included in the final BlockSummary
+	agentStats := a.agent.GetStats()
+	a.RecordAgentStats(&agentStats)
 
 	// Record metrics
 	a.recordMetrics(startTime, promptVersion, err == nil)

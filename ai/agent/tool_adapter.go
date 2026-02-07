@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hrygo/divinesense/ai"
@@ -82,6 +83,53 @@ func ToolFromLegacy(
 	}
 }
 
+// AgentStats accumulates statistics for agent execution.
+// AgentStats 累积代理执行的统计数据。
+type AgentStats struct {
+	mu               sync.Mutex
+	LLMCallCount     int
+	PromptTokens     int
+	CompletionTokens int
+	TotalCacheRead   int
+	TotalCacheWrite  int
+	ToolCallCount    int
+}
+
+// RecordLLMCall records a single LLM call with its statistics.
+func (s *AgentStats) RecordLLMCall(stats *ai.LLMCallStats) {
+	if stats == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.LLMCallCount++
+	s.PromptTokens += stats.PromptTokens
+	s.CompletionTokens += stats.CompletionTokens
+	s.TotalCacheRead += stats.CacheReadTokens
+	s.TotalCacheWrite += stats.CacheWriteTokens
+}
+
+// RecordToolCall records a tool invocation.
+func (s *AgentStats) RecordToolCall() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ToolCallCount++
+}
+
+// GetSnapshot returns a copy of the current stats.
+func (s *AgentStats) GetSnapshot() AgentStats {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return AgentStats{
+		LLMCallCount:     s.LLMCallCount,
+		PromptTokens:     s.PromptTokens,
+		CompletionTokens: s.CompletionTokens,
+		TotalCacheRead:   s.TotalCacheRead,
+		TotalCacheWrite:  s.TotalCacheWrite,
+		ToolCallCount:    s.ToolCallCount,
+	}
+}
+
 // Agent is a lightweight, framework-less AI agent.
 // It uses native LLM tool calling without LangChainGo.
 type Agent struct {
@@ -89,6 +137,7 @@ type Agent struct {
 	toolMap map[string]ToolWithSchema
 	config  AgentConfig
 	tools   []ToolWithSchema
+	stats   AgentStats
 }
 
 // AgentConfig holds configuration for creating a new Agent.
@@ -120,6 +169,16 @@ func NewAgent(llm ai.LLMService, config AgentConfig, tools []ToolWithSchema) *Ag
 		tools:   tools,
 		toolMap: toolMap,
 	}
+}
+
+// GetStats returns a snapshot of the accumulated stats.
+func (a *Agent) GetStats() AgentStats {
+	return a.stats.GetSnapshot()
+}
+
+// ResetStats clears all accumulated statistics.
+func (a *Agent) ResetStats() {
+	a.stats = AgentStats{}
 }
 
 // Callback is called during agent execution for events.
@@ -173,7 +232,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 		if err != nil {
 			return "", fmt.Errorf("LLM call failed (iteration %d): %w", iteration+1, err)
 		}
-		_ = stats // TODO: accumulate stats in session
+		a.stats.RecordLLMCall(stats)
 
 		// Check if LLM wants to call tools
 		hasStructuredToolCalls := len(resp.ToolCalls) > 0
@@ -232,7 +291,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 					}
 					callback(EventToolUse, &EventWithMeta{
 						EventType: EventTypeToolUse,
-						EventData: toolName,
+						EventData: toolInput, // Use toolInput (parameters) instead of toolName
 						Meta:      meta,
 					})
 				}
@@ -257,6 +316,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 						ToolName:      toolName,
 						Status:        "success",
 						OutputSummary: toolResult,
+						DurationMs:    time.Since(toolStart).Milliseconds(),
 					}
 					callback(EventToolResult, &EventWithMeta{
 						EventType: EventTypeToolResult,
@@ -322,7 +382,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 				}
 				callback(EventToolUse, &EventWithMeta{
 					EventType: EventTypeToolUse,
-					EventData: toolName,
+					EventData: toolInput, // Use toolInput (parameters) instead of toolName
 					Meta:      meta,
 				})
 			}
@@ -347,6 +407,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 					ToolName:      toolName,
 					Status:        "success",
 					OutputSummary: toolResult,
+					DurationMs:    time.Since(toolStart).Milliseconds(),
 				}
 				callback(EventToolResult, &EventWithMeta{
 					EventType: EventTypeToolResult,

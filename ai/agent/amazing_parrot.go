@@ -387,13 +387,30 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 		go func() {
 			defer wg.Done()
 
-			safeCallback(EventTypeToolUse, "正在查询日程...")
-			p.TrackToolCall("schedule_query")
-
+			toolStart := time.Now()
+			toolName := p.scheduleQueryTool.Name() // Use tool.Name() instead of hardcoded string
 			input := fmt.Sprintf(`{"start_time": %q, "end_time": %q}`, plan.scheduleStartTime, plan.scheduleEndTime)
+
+			// Send structured tool_use event with EventWithMeta
+			if callbackSafe != nil {
+				meta := &EventMeta{
+					ToolName:     toolName,
+					Status:       "running",
+					InputSummary: input,
+				}
+				callbackSafe(EventTypeToolUse, &EventWithMeta{
+					EventType: EventTypeToolUse,
+					EventData: toolName,
+					Meta:      meta,
+				})
+			}
+			p.TrackToolCall(toolName)
 
 			// Use structured result method
 			structuredResult, err := p.scheduleQueryTool.RunWithStructuredResult(ctx, input)
+
+			// Calculate duration once after tool execution completes
+			durationMs := time.Since(toolStart).Milliseconds()
 
 			mu.Lock()
 			defer mu.Unlock()
@@ -403,6 +420,18 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 				atomic.AddInt32(&errorCount, 1)
 				if callbackSafe != nil {
 					callbackSafe(EventTypeError, fmt.Sprintf("日程查询失败: %v", err))
+					// Send error result with EventWithMeta
+					meta := &EventMeta{
+						ToolName:   toolName,
+						Status:     "error",
+						ErrorMsg:   err.Error(),
+						DurationMs: durationMs, // Use pre-calculated duration
+					}
+					callbackSafe(EventTypeToolResult, &EventWithMeta{
+						EventType: EventTypeToolResult,
+						EventData: err.Error(),
+						Meta:      meta,
+					})
 				}
 				return
 			}
@@ -416,9 +445,20 @@ func (p *AmazingParrot) executeConcurrentRetrieval(ctx context.Context, plan *re
 			}
 			results["schedule_query"] = string(jsonBytes)
 
-			// Send tool result for debugging
+			// Send structured tool_result event with EventWithMeta
 			if callbackSafe != nil {
-				callbackSafe(EventTypeToolResult, string(jsonBytes))
+				outputSummary := fmt.Sprintf("找到 %d 个日程", structuredResult.Count)
+				meta := &EventMeta{
+					ToolName:      toolName,
+					Status:        "success",
+					OutputSummary: outputSummary,
+					DurationMs:    durationMs, // Use pre-calculated duration
+				}
+				callbackSafe(EventTypeToolResult, &EventWithMeta{
+					EventType: EventTypeToolResult,
+					EventData: string(jsonBytes),
+					Meta:      meta,
+				})
 
 				// Send structured schedule_query_result event for data tracking
 				scheduleQueryResult := ScheduleQueryResultData{
@@ -569,6 +609,13 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 	// Build synthesis prompt with retrieved context
 	synthesisPrompt := p.buildSynthesisPrompt(retrievalResults)
 
+	slog.Info("AmazingParrot: synthesizeAnswer starting",
+		"user_id", p.userID,
+		"prompt_length", len(synthesisPrompt),
+		"history_count", len(history),
+		"retrieval_results_count", len(retrievalResults),
+	)
+
 	messages := []ai.Message{
 		{Role: "system", Content: synthesisPrompt},
 	}
@@ -589,14 +636,30 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 	// Add current user input
 	messages = append(messages, ai.Message{Role: "user", Content: userInput})
 
+	slog.Info("AmazingParrot: Calling LLM ChatStream",
+		"user_id", p.userID,
+		"messages_count", len(messages),
+		"system_prompt_length", len(messages[0].Content),
+	)
+
 	contentChan, statsChan, errChan := p.llm.ChatStream(ctx, messages)
+
+	slog.Info("AmazingParrot: ChatStream channels created, starting read loop",
+		"user_id", p.userID,
+	)
 
 	var fullContent strings.Builder
 	var hasError bool
+	chunkCount := 0
 	for {
 		select {
 		case chunk, ok := <-contentChan:
 			if !ok {
+				slog.Info("AmazingParrot: Content channel closed",
+					"user_id", p.userID,
+					"chunk_count", chunkCount,
+					"has_error", hasError,
+				)
 				// contentChan closed, drain errChan and statsChan then return
 				for len(errChan) > 0 {
 					if drainErr := <-errChan; drainErr != nil && !hasError {
@@ -612,6 +675,7 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 				}
 				return fullContent.String(), nil
 			}
+			chunkCount++
 			fullContent.WriteString(chunk)
 			if callbackSafe != nil {
 				if err := callback(EventTypeAnswer, chunk); err != nil {
@@ -620,23 +684,40 @@ func (p *AmazingParrot) synthesizeAnswer(ctx context.Context, userInput string, 
 			}
 		case stats, ok := <-statsChan:
 			if !ok {
+				slog.Debug("AmazingParrot: Stats channel closed", "user_id", p.userID, "chunk_count", chunkCount)
 				statsChan = nil
 				continue
 			}
 			// Track LLM call stats (P1-A006)
 			if stats != nil {
+				slog.Debug("AmazingParrot: Received stats",
+					"user_id", p.userID,
+					"total_tokens", stats.TotalTokens,
+					"chunk_count", chunkCount,
+				)
 				p.TrackLLMCall(stats, p.getModelName())
 			}
 		case streamErr, ok := <-errChan:
 			if !ok {
+				slog.Debug("AmazingParrot: Error channel closed", "user_id", p.userID, "chunk_count", chunkCount)
 				// errChan closed, continue to drain contentChan
 				errChan = nil
 				continue
 			}
+			slog.Error("AmazingParrot: Stream error received",
+				"user_id", p.userID,
+				"error", streamErr,
+				"chunk_count", chunkCount,
+			)
 			_ = streamErr // Log but continue processing content
 			hasError = true
 			// Log error but continue processing content
 		case <-ctx.Done():
+			slog.Warn("AmazingParrot: Context cancelled during synthesis",
+				"user_id", p.userID,
+				"chunk_count", chunkCount,
+				"content_length", fullContent.Len(),
+			)
 			return "", context.Canceled
 		}
 	}
@@ -785,7 +866,22 @@ func (p *AmazingParrot) buildSynthesisPrompt(results map[string]string) string {
 		contextBuilder.WriteString(scheduleAddResult)
 	}
 
-	return GetAmazingSynthesisPrompt(contextBuilder.String())
+	context := contextBuilder.String()
+
+	// If no retrieval results, use a specialized casual chat prompt
+	// This avoids issues with empty context placeholder in the synthesis template
+	if context == "" {
+		return `你是 🦜 折衷，一位热情、多面手的综合助手。
+
+你的特点：
+- 友好、热情，像折衷鹦鹉一样拥有多彩的性格
+- 能够自然地进行闲聊，展现幽默感
+- 可以提到自己"雄性翠绿、雌性深红"的独特外貌作为隐喻
+
+请以自然、友好的方式回应用户。不要过度啰嗦，保持简洁。`
+	}
+
+	return GetAmazingSynthesisPrompt(context)
 }
 
 // GetStats returns the cache statistics.

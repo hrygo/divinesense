@@ -77,6 +77,15 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		return h.handleGeekMode(ctx, req, stream)
 	}
 
+	// PROGRESS EVENT: Send received event immediately to acknowledge message receipt
+	// 进度事件：立即发送 received 事件以确认收到消息，消除死寂感
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+		// Non-critical error, continue processing
+	}
+
 	if h.llm == nil {
 		return status.Error(codes.Unavailable, "LLM service is not available")
 	}
@@ -87,7 +96,20 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		// Add user ID to context for history matching.
 		// Note: req.UserID is already authenticated by the gRPC interceptor middleware.
 		ctx = router.WithUserID(ctx, req.UserID)
+
+		// PROGRESS EVENT: Send routing_start event before intent routing
+		// 进度事件：发送 routing_start 事件表示开始理解意图
+		startTime := time.Now()
+		if err := stream.Send(&v1pb.ChatResponse{
+			EventType: "routing_start",
+			EventData: `{"layer":"cache"}`,
+		}); err != nil {
+			slog.Warn("failed to send routing_start event", "error", err)
+		}
+
+		// Execute routing
 		routeResult, err := h.chatRouter.Route(ctx, req.Message)
+		duration := time.Since(startTime)
 		if err != nil {
 			slog.Warn("chat router failed, defaulting to amazing",
 				"error", err,
@@ -103,6 +125,17 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 			default:
 				agentType = AgentTypeAmazing
 			}
+
+			// PROGRESS EVENT: Send routing_end event with agent info
+			// 进度事件：发送 routing_end 事件，告知用户路由结果
+			if err := stream.Send(&v1pb.ChatResponse{
+				EventType: "routing_end",
+				EventData: fmt.Sprintf(`{"agent":"%s","duration_ms":%d}`,
+					agentType.String(), duration.Milliseconds()),
+			}); err != nil {
+				slog.Warn("failed to send routing_end event", "error", err)
+			}
+
 			slog.Info("chat auto-routed",
 				"route", routeResult.Route,
 				"method", routeResult.Method,
@@ -115,7 +148,8 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 
 	// Create logger for this request
 	logger := observability.NewRequestContext(slog.Default(), agentType.String(), req.UserID)
-	logger.Info("AI chat started (parrot agent)",
+	logger.Info("ai.chat.started",
+		slog.String("user_input", req.Message),
 		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
 		slog.Int("history_count", len(req.History)),
 	)
@@ -141,7 +175,7 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		return status.Error(codes.Internal, fmt.Sprintf("agent execution failed: %v", err))
 	}
 
-	logger.Info("AI chat completed",
+	logger.Info("ai.chat.completed",
 		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
 	)
 
@@ -160,10 +194,20 @@ func (h *ParrotHandler) handleGeekMode(
 ) error {
 	// Create logger for this request
 	logger := observability.NewRequestContext(slog.Default(), "geek", req.UserID)
-	logger.Info("AI chat started (Geek Mode - direct Claude Code)",
+	logger.Info("ai.chat.started",
+		slog.String("mode", "geek"),
+		slog.String("user_input", req.Message),
 		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
 		slog.Int("history_count", len(req.History)),
 	)
+
+	// Send received event for immediate feedback (Task 1.2: Progress Feedback)
+	// 发送 received 事件提供即时反馈（200ms 心理阈值）
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+	}
 
 	// Generate a stable session ID based on Conversation ID using UUID v5
 	// Using a fixed namespace ensures the same conversation ID always generates the same UUID
@@ -200,7 +244,8 @@ func (h *ParrotHandler) handleGeekMode(
 		return status.Error(codes.Internal, fmt.Sprintf("GeekMode execution failed: %v", err))
 	}
 
-	logger.Info("AI chat completed (Geek Mode)",
+	logger.Info("ai.chat.completed",
+		slog.String("mode", "geek"),
 		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
 	)
 
@@ -219,10 +264,20 @@ func (h *ParrotHandler) handleEvolutionMode(
 ) error {
 	// Create logger for this request
 	logger := observability.NewRequestContext(slog.Default(), "evolution", req.UserID)
-	logger.Info("AI chat started (Evolution Mode - self-evolution)",
+	logger.Info("ai.chat.started",
+		slog.String("mode", "evolution"),
+		slog.String("user_input", req.Message),
 		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
 		slog.Int("history_count", len(req.History)),
 	)
+
+	// Send received event for immediate feedback (Task 1.2: Progress Feedback)
+	// 发送 received 事件提供即时反馈（200ms 心理阈值）
+	if err := stream.Send(&v1pb.ChatResponse{
+		EventType: "received",
+	}); err != nil {
+		slog.Warn("failed to send received event", "error", err)
+	}
 
 	// Get source directory (DivineSense root)
 	sourceDir, err := h.getSourceDir()
@@ -260,7 +315,8 @@ func (h *ParrotHandler) handleEvolutionMode(
 		return status.Error(codes.Internal, fmt.Sprintf("EvolutionMode execution failed: %v", err))
 	}
 
-	logger.Info("AI chat completed (Evolution Mode)",
+	logger.Info("ai.chat.completed",
+		slog.String("mode", "evolution"),
 		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
 	)
 
@@ -376,25 +432,11 @@ func (h *ParrotHandler) executeAgent(
 			totalChunks++
 		}
 
-		// Log important events
-		if eventType == "tool_use" || eventType == "tool_result" {
-			logger.Info("Agent event", // Use Info level for visibility
-				slog.String(observability.LogFieldEventType, eventType),
-				slog.String("event_data", TruncateString(fmt.Sprintf("%v", eventData), 100)),
-				slog.Int("occurrence", currentCount),
-			)
-		} else {
-			logger.Debug("Agent event",
-				slog.String(observability.LogFieldEventType, eventType),
-				slog.Int("occurrence", currentCount),
-			)
-		}
-
 		// Convert event data to string for streaming
 		var dataStr string
 		var eventMeta *v1pb.EventMetadata
 
-		// Check if eventData is EventWithMeta (from CCRunner)
+		// Check if eventData is EventWithMeta (from CCRunner or Agent)
 		if eventWithMeta, ok := eventData.(*agentpkg.EventWithMeta); ok {
 			dataStr = eventWithMeta.EventData
 			if eventWithMeta.Meta != nil {
@@ -427,7 +469,7 @@ func (h *ParrotHandler) executeAgent(
 				costMu.Lock()
 				totalCostUsd = sessionStatsData.TotalCostUSD
 				costMu.Unlock()
-				logger.Info("Session stats received",
+				logger.Info("ai.session.stats.received",
 					slog.Float64("total_cost_usd", sessionStatsData.TotalCostUSD),
 					slog.Int("total_tokens", int(sessionStatsData.TotalTokens)),
 					slog.Int64("duration_ms", sessionStatsData.TotalDurationMs))
@@ -460,6 +502,36 @@ func (h *ParrotHandler) executeAgent(
 			}
 		}
 
+		// Log important events (after data extraction for meaningful content)
+		if eventType == "tool_use" || eventType == "tool_result" {
+			attrs := []slog.Attr{
+				slog.String("event_type", eventType),
+				slog.Int("occurrence", currentCount),
+			}
+			// Add tool-specific fields if available
+			if eventMeta != nil {
+				if eventMeta.ToolName != "" {
+					attrs = append(attrs, slog.String("tool_name", eventMeta.ToolName))
+				}
+				if eventMeta.Status != "" {
+					attrs = append(attrs, slog.String("status", eventMeta.Status))
+				}
+				if eventMeta.DurationMs > 0 {
+					attrs = append(attrs, slog.Int64("duration_ms", eventMeta.DurationMs))
+				}
+			}
+			// Add truncated content if available
+			if dataStr != "" {
+				attrs = append(attrs, slog.String("content", TruncateString(dataStr, 200)))
+			}
+			logger.Info("ai.agent.event", attrs...)
+		} else {
+			logger.Debug("ai.agent.event",
+				slog.String("event_type", eventType),
+				slog.Int("occurrence", currentCount),
+			)
+		}
+
 		// Phase 5: Append event to Block (async with error logging)
 		if currentBlock != nil && h.blockManager != nil {
 			// Build metadata for block event
@@ -478,23 +550,78 @@ func (h *ParrotHandler) executeAgent(
 					"output_summary":    eventMeta.OutputSummary,
 					"file_path":         eventMeta.FilePath,
 					"line_count":        eventMeta.LineCount,
+					// Frontend compatibility fields (extractToolCalls expects these)
+					"is_error":  eventMeta.Status == "error",
+					"duration":  eventMeta.DurationMs,
+					"exit_code": 0, // No exit code in EventMetadata, default to 0
+				}
+			}
+
+			// Debug: log eventMetaForBlock for tool_use/tool_result
+			if eventType == "tool_use" || eventType == "tool_result" {
+				if eventMetaForBlock == nil {
+					logger.Warn("tool event without metadata",
+						slog.String("event_type", eventType),
+						slog.String("event_data_type", fmt.Sprintf("%T", eventData)),
+					)
+				} else {
+					toolName := ""
+					if v, ok := eventMetaForBlock["tool_name"].(string); ok {
+						toolName = v
+					}
+					inputSummary := ""
+					if v, ok := eventMetaForBlock["input_summary"].(string); ok {
+						inputSummary = v
+						if len(inputSummary) > 100 {
+							inputSummary = inputSummary[:100] + "..."
+						}
+					}
+					logger.Debug("ai.block.event_metadata",
+						slog.String("event_type", eventType),
+						slog.String("tool_name", toolName),
+						slog.String("input_summary", inputSummary),
+					)
 				}
 			}
 
 			// Append event asynchronously with error logging (don't block streaming)
 			// Note: Persistence failures are logged with structured "metric" attribute for monitoring/alerting
-			go func(blockID int64, evtType string) {
+			go func(blockID int64, evtType string, content string, meta map[string]any) {
+				// Debug log for tool_use events to verify content and meta
+				if evtType == "tool_use" || evtType == "tool_result" {
+					toolName := ""
+					if v, ok := meta["tool_name"].(string); ok {
+						toolName = v
+					}
+					inputSummary := ""
+					if v, ok := meta["input_summary"].(string); ok {
+						inputSummary = v
+						if len(inputSummary) > 100 {
+							inputSummary = inputSummary[:100] + "..."
+						}
+					}
+					contentPreview := content
+					if len(contentPreview) > 200 {
+						contentPreview = contentPreview[:200] + "..."
+					}
+					logger.Info("ai.block.event_persisting",
+						slog.String("event_type", evtType),
+						slog.String("content", contentPreview),
+						slog.String("tool_name", toolName),
+						slog.String("input_summary", inputSummary),
+					)
+				}
 				// Use WithoutCancel to detach from request context - allows persistence to complete
 				// even if the request is cancelled or the client disconnects
 				bgCtx := context.WithoutCancel(ctx)
-				if err := h.blockManager.AppendEvent(bgCtx, blockID, evtType, dataStr, eventMetaForBlock); err != nil {
+				if err := h.blockManager.AppendEvent(bgCtx, blockID, evtType, content, meta); err != nil {
 					logger.Warn("Failed to append event to block",
 						slog.String("metric", "ai.event_persistence_failure"), // Structured attribute for monitoring
 						slog.Int64("block_id", blockID),
 						slog.String("event_type", evtType),
 						slog.String("error", err.Error()))
 				}
-			}(currentBlock.ID, eventType)
+			}(currentBlock.ID, eventType, dataStr, eventMetaForBlock)
 
 			// Collect assistant content for block completion
 			if eventType == "answer" || eventType == "content" {
@@ -572,7 +699,7 @@ func (h *ParrotHandler) executeAgent(
 	// Execute agent
 	defer close(heartbeatDone) // Ensure heartbeat stops even on panic
 	execErr := agent.ExecuteWithCallback(ctx, req.Message, req.History, callback)
-	logger.Info("Agent: ExecuteWithCallback completed",
+	logger.Info("ai.agent.completed",
 		slog.String("execErr", fmt.Sprintf("%v", execErr)),
 		slog.Int64("duration_ms", time.Since(sessionStartTime).Milliseconds()))
 	if execErr != nil {
@@ -584,7 +711,7 @@ func (h *ParrotHandler) executeAgent(
 
 	// Calculate session summary
 	sessionTotalDuration = time.Since(sessionStartTime).Milliseconds()
-	logger.Info("Agent: preparing session summary",
+	logger.Info("ai.session.summary.preparing",
 		slog.Int64("duration_ms", sessionTotalDuration))
 
 	// Try to get detailed stats from agent if available (GeekParrot/EvolutionParrot)
@@ -595,9 +722,9 @@ func (h *ParrotHandler) executeAgent(
 	// Check for SessionStatsProvider (GeekParrot/EvolutionParrot)
 	if statsProvider, ok := agent.(agentpkg.SessionStatsProvider); ok {
 		detailedStats = statsProvider.GetSessionStats()
-		logger.Info("Agent: got detailed stats from SessionStatsProvider")
+		logger.Info("ai.agent.stats.detailed")
 	} else {
-		logger.Info("Agent: agent is not a SessionStatsProvider, checking for NormalSessionStatsProvider")
+		logger.Info("ai.agent.stats.checking_normal")
 
 		// Check for NormalSessionStatsProvider (MemoParrot/ScheduleParrotV2/AmazingParrot)
 		// Use type assertion to check if agent has GetSessionStats method returning *NormalSessionStats
@@ -608,18 +735,17 @@ func (h *ParrotHandler) executeAgent(
 			normalStats = normalProvider.GetSessionStats()
 			// For tool-based agents, token stats are always zero - log tool metrics instead
 			if normalStats.PromptTokens == 0 && normalStats.CompletionTokens == 0 {
-				logger.Info("Agent: tool-based agent stats",
+				logger.Info("ai.agent.stats.tool_based",
 					slog.Int("tool_calls", normalStats.ToolCallCount),
-					slog.Int64("duration_ms", normalStats.TotalDurationMs),
-					slog.String("agent_type", "tool_based"))
+					slog.Int64("duration_ms", normalStats.TotalDurationMs))
 			} else {
-				logger.Info("Agent: got normal stats from NormalSessionStatsProvider",
+				logger.Info("ai.agent.stats.normal",
 					slog.Int("prompt_tokens", normalStats.PromptTokens),
 					slog.Int("completion_tokens", normalStats.CompletionTokens),
 					slog.Int64("duration_ms", normalStats.TotalDurationMs))
 			}
 		} else {
-			logger.Info("Agent: agent does not provide session stats")
+			logger.Info("ai.agent.stats.unavailable")
 		}
 	}
 
@@ -696,12 +822,12 @@ func (h *ParrotHandler) executeAgent(
 		}
 		// Log meaningful stats based on agent type
 		if statsSnapshot.PromptTokens == 0 && statsSnapshot.CompletionTokens == 0 {
-			logger.Info("Agent: tool-based agent completed",
+			logger.Info("ai.agent.completed",
 				slog.Int("tool_calls", statsSnapshot.ToolCallCount),
 				slog.String("tools", formatToolsList(statsSnapshot.ToolsUsed)),
 				slog.Int64("duration_ms", statsSnapshot.TotalDurationMs))
 		} else {
-			logger.Info("Agent: applied normal stats to BlockSummary",
+			logger.Info("ai.block.summary.applied",
 				slog.Int("prompt_tokens", statsSnapshot.PromptTokens),
 				slog.Int("completion_tokens", statsSnapshot.CompletionTokens),
 				slog.Int64("duration_ms", statsSnapshot.TotalDurationMs),
@@ -758,7 +884,7 @@ func (h *ParrotHandler) executeAgent(
 					slog.String("error", completeErr.Error()),
 				)
 			} else {
-				logger.Info("Agent: block completed successfully",
+				logger.Info("ai.block.completed",
 					slog.Int64("block_id", currentBlock.ID),
 					slog.Int("content_length", len(finalContent)),
 				)
@@ -768,14 +894,13 @@ func (h *ParrotHandler) executeAgent(
 
 	// Safely send done marker AFTER Block is completed
 	streamMu.Lock()
-	logger.Info("Agent: sending done marker with block summary",
+	logger.Info("ai.block.summary.sending",
 		slog.String("session_id", blockSummary.SessionId),
 		slog.Int64("duration_ms", blockSummary.TotalDurationMs),
 		slog.Int("input_tokens", int(blockSummary.TotalInputTokens)),
 		slog.Int("output_tokens", int(blockSummary.TotalOutputTokens)),
 		slog.Int64("tool_calls", int64(blockSummary.ToolCallCount)),
 		slog.Float64("cost_usd", blockSummary.TotalCostUsd),
-		slog.Bool("done", true),
 	)
 	// Phase 4: Include BlockId in done marker
 	var blockId int64
@@ -790,14 +915,11 @@ func (h *ParrotHandler) executeAgent(
 	streamMu.Unlock()
 
 	if sendErr != nil {
-		logger.Error("Agent: failed to send done marker", sendErr,
+		logger.Error("ai.block.summary.send_failed", sendErr,
 			slog.String("error", sendErr.Error()))
-	} else {
-		logger.Info("Agent: done marker sent successfully")
 	}
 
 	if sendErr != nil {
-		logger.Error("Agent: failed to send done marker", sendErr)
 		// If send fails, return the error (prefer execErr if it exists)
 		if execErr != nil {
 			return execErr
@@ -810,7 +932,7 @@ func (h *ParrotHandler) executeAgent(
 	uniqueEventTokenCount := len(eventCounts)
 	countMu.Unlock()
 
-	logger.Debug("Agent execution completed",
+	logger.Debug("ai.agent.execution_completed",
 		slog.Int("total_chunks", totalChunks),
 		slog.Int("unique_events", uniqueEventTokenCount),
 		slog.Int64("duration_ms", sessionTotalDuration),

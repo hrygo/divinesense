@@ -197,6 +197,17 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
 
     // Build assistant message from assistantContent and eventStream
     const rawThinkingSteps = extractThinkingSteps(block.eventStream);
+    const toolCalls = extractToolCalls(block.eventStream);
+    // Extract toolResults from toolCalls (toolCalls with outputSummary are completed)
+    const toolResults = toolCalls
+      .filter((call) => call.outputSummary !== undefined)
+      .map((call) => ({
+        name: call.name,
+        outputSummary: call.outputSummary,
+        isError: call.isError ?? false,
+        duration: call.duration,
+      }));
+
     const assistantMessage: ConversationMessage = {
       id: `block-${block.id}-assistant`,
       role: "assistant" as MessageRole,
@@ -207,7 +218,8 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
         mode: getBlockModeName(block.mode) as AIMode,
         // Parse eventStream to extract metadata for UI, translating i18n keys
         thinkingSteps: translateThinkingSteps(rawThinkingSteps, _t),
-        toolCalls: extractToolCalls(block.eventStream),
+        toolCalls: toolCalls,
+        toolResults: toolResults,
       },
     };
 

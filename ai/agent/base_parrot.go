@@ -125,7 +125,8 @@ func (b *BaseParrot) TrackLLMCall(stats *ai.LLMCallStats, model string) {
 
 	// Calculate cost in milli-cents (1/1000 of a cent)
 	// DeepSeek pricing (example): $0.14/M input, $0.28/M output
-	// TODO: Make pricing configurable per provider/model
+	// NOTE: Pricing is hardcoded per model for common providers.
+	// To add a new provider/model, extend calculateCost() method with its pricing.
 	costMilliCents := b.calculateCost(stats, model)
 	b.stats.TotalCostMilliCents += costMilliCents
 }
@@ -186,6 +187,33 @@ func (b *BaseParrot) TrackToolCall(toolName string) {
 		}
 	}
 	b.stats.ToolsUsed = append(b.stats.ToolsUsed, toolName)
+}
+
+// RecordAgentStats transfers accumulated stats from the Agent framework to BaseParrot.
+// This is used by agents (e.g., SchedulerAgentV2) that embed both Agent and BaseParrot
+// to ensure stats from the Agent's LLM calls are captured in the session stats.
+//
+// Note: agentStats should be a snapshot (e.g., from Agent.GetStats()) which is safe to pass.
+//
+// RecordAgentStats 将 Agent 框架的累积统计数据传输到 BaseParrot。
+// 这被同时嵌入 Agent 和 BaseParrot 的代理（例如 SchedulerAgentV2）使用，
+// 以确保来自 Agent LLM 调用的统计数据被捕获到会话统计中。
+func (b *BaseParrot) RecordAgentStats(agentStats *AgentStats) {
+	if agentStats == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.stats.PromptTokens += agentStats.PromptTokens
+	b.stats.CompletionTokens += agentStats.CompletionTokens
+	b.stats.TotalTokens += agentStats.PromptTokens + agentStats.CompletionTokens
+	b.stats.CacheReadTokens += agentStats.TotalCacheRead
+	b.stats.CacheWriteTokens += agentStats.TotalCacheWrite
+
+	// ToolCallCount is tracked separately via TrackToolCall in the wrapped callback.
+	// The Agent framework tracks all tool calls internally, but we don't use that
+	// count to avoid double-counting with the callback-based tracking.
 }
 
 // Finalize marks the session as complete and returns the final stats.
