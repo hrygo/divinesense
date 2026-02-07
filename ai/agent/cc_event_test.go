@@ -1229,12 +1229,12 @@ func TestEventMetaStructure(t *testing.T) {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
-	// Check key fields exist (Go uses PascalCase by default when no json tag is specified)
-	if _, ok := unmarshaled["DurationMs"]; !ok {
-		t.Error("Expected DurationMs field")
+	// Check key fields exist (JSON tags use snake_case)
+	if _, ok := unmarshaled["duration_ms"]; !ok {
+		t.Error("Expected duration_ms field")
 	}
-	if _, ok := unmarshaled["ToolName"]; !ok {
-		t.Error("Expected ToolName field")
+	if _, ok := unmarshaled["tool_name"]; !ok {
+		t.Error("Expected tool_name field")
 	}
 }
 
