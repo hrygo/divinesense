@@ -87,13 +87,14 @@ func (s *AIService) CreateAIConversation(ctx context.Context, req *v1pb.CreateAI
 
 	now := time.Now().Unix()
 	conversation, err := s.Store.CreateAIConversation(ctx, &store.AIConversation{
-		UID:       shortuuid.New(),
-		CreatorID: user.ID,
-		Title:     req.Title,
-		ParrotID:  req.ParrotId.String(),
-		CreatedTs: now,
-		UpdatedTs: now,
-		RowStatus: store.Normal,
+		UID:         shortuuid.New(),
+		CreatorID:   user.ID,
+		Title:       req.Title,
+		TitleSource: store.TitleSourceDefault, // Explicitly set default title source
+		ParrotID:    req.ParrotId.String(),
+		CreatedTs:   now,
+		UpdatedTs:   now,
+		RowStatus:   store.Normal,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create conversation: %v", err)
@@ -305,6 +306,7 @@ func (s *AIService) AddContextSeparator(ctx context.Context, req *v1pb.AddContex
 		BlockType:      store.AIBlockTypeContextSeparator,
 		Mode:           store.AIBlockModeNormal,
 		UserInputs:     []store.UserInput{},
+		Status:         store.AIBlockStatusCompleted, // SEPARATOR blocks are immediately completed
 		CreatedTs:      time.Now().UnixMilli(),
 		UpdatedTs:      time.Now().UnixMilli(),
 	})
