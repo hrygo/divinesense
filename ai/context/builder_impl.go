@@ -72,11 +72,14 @@ func NewService(cfg Config) *Service {
 		cfg.MaxTokens = 4096
 	}
 
+	allocator := NewBudgetAllocator()
+	allocator.LoadProfileFromEnv() // Load budget profile overrides from environment
+
 	return &Service{
 		shortTerm: NewShortTermExtractor(cfg.MaxTurns),
 		longTerm:  NewLongTermExtractor(cfg.MaxEpisodes),
 		ranker:    NewPriorityRanker(),
-		allocator: NewBudgetAllocator(),
+		allocator: allocator,
 		stats:     &serviceStats{},
 	}
 }
@@ -115,9 +118,9 @@ func (s *Service) Build(ctx context.Context, req *ContextRequest) (*ContextResul
 		req.MaxTokens = DefaultMaxTokens
 	}
 
-	// Allocate token budget
+	// Allocate token budget (Issue #93: profile-based allocation)
 	hasRetrieval := len(req.RetrievalResults) > 0
-	budget := s.allocator.Allocate(req.MaxTokens, hasRetrieval)
+	budget := s.allocator.AllocateForAgent(req.MaxTokens, hasRetrieval, req.AgentType)
 
 	// Build context segments
 	var segments []*ContextSegment
