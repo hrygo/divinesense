@@ -180,8 +180,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		}
 
 		// Notify thinking (non-critical - use safe callback)
+		// Use translation key instead of hardcoded text to avoid being displayed as content
 		if callbackSafe != nil {
-			callbackSafe(EventTypeThinking, "正在思考...")
+			callbackSafe(EventTypeThinking, "ai.states.thinking")
 		}
 
 		slog.Debug("MemoParrot: LLM call (iteration)",

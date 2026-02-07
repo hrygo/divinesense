@@ -635,12 +635,30 @@ function BlockBody({
 
   // 聚合 Thinking 内容
   const allThinkingContent = useMemo(() => {
-    const placeholderTexts = ["处理中...", "Thinking...", "...", "AI is thinking", "思考中"];
+    // Build placeholder list dynamically from i18n to catch translated placeholders
+    const placeholderTexts = [
+      "处理中...",
+      "Thinking...",
+      "...",
+      "AI is thinking",
+      "思考中",
+      // Translated placeholders from i18n
+      t("ai.geek_mode.thinking"),
+      t("ai.evolution_mode.thinking"),
+      t("ai.states.thinking"),
+      t("schedule.streaming-assistant.thinking"),
+    ].filter(Boolean); // Remove undefined values
+
     return thinkingSteps
       .map((s) => s.content?.trim() || "")
-      .filter((c) => c && !placeholderTexts.some((p) => c === p || c.startsWith(p)))
+      .filter((c) => {
+        if (!c) return false;
+        // Filter out placeholder texts (exact match or starts with)
+        const isPlaceholder = placeholderTexts.some((p) => p && (c === p || c.startsWith(p)));
+        return !isPlaceholder;
+      })
       .join("\n\n");
-  }, [thinkingSteps]);
+  }, [thinkingSteps, t]);
 
   // States for collapsible sections - Default expand thinking if it's the latest message
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(() => isLatest && allThinkingContent.length > 0);

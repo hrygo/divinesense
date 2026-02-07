@@ -236,8 +236,9 @@ func (p *AmazingParrot) ExecuteWithCallback(
 // planRetrieval analyzes user input and creates a concurrent retrieval plan.
 func (p *AmazingParrot) planRetrieval(ctx context.Context, userInput string, history []string, callback EventCallback) (*retrievalPlan, error) {
 	callbackSafe := SafeCallback(callback)
+	// Use translation key instead of hardcoded text to avoid being displayed as content
 	if callbackSafe != nil {
-		callbackSafe(EventTypeThinking, "正在分析您的需求...")
+		callbackSafe(EventTypeThinking, "ai.states.thinking")
 	}
 
 	now := time.Now()
