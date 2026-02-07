@@ -15,7 +15,7 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import CodeBlock from "./CodeBlock";
+import CodeBlock from "@/components/MemoContent/CodeBlock";
 
 export interface StreamingTextProps {
   /** 完整的文本内容 */
