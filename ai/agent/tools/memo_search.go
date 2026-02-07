@@ -8,6 +8,7 @@ import (
 
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/timeout"
+	"github.com/hrygo/divinesense/server/queryengine"
 )
 
 const (
@@ -55,6 +56,7 @@ func normalizeMemoJSONFields(inputJSON string) string {
 type MemoSearchTool struct {
 	retriever    *retrieval.AdaptiveRetriever
 	userIDGetter func(ctx context.Context) int32
+	classifier   *MemoQueryClassifier
 }
 
 // NewMemoSearchTool creates a new memo search tool.
@@ -73,6 +75,7 @@ func NewMemoSearchTool(
 	return &MemoSearchTool{
 		retriever:    retriever,
 		userIDGetter: userIDGetter,
+		classifier:   NewMemoQueryClassifier(),
 	}, nil
 }
 
@@ -150,10 +153,24 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 	// Get user ID
 	userID := t.userIDGetter(ctx)
 
-	// Set strategy (use memo_semantic_only for focused memo search)
+	// Smart strategy selection: classify query intent and route accordingly
+	// 智能策略选择：分类查询意图并路由到对应的检索策略
 	strategy := searchInput.Strategy
 	if strategy == "" {
-		strategy = "memo_semantic_only"
+		// Classify query intent to determine optimal retrieval strategy
+		intent := t.classifier.Classify(searchInput.Query)
+		strategy = intent.ToStrategy()
+
+		// For filter queries, extract time range and add to options
+		if intent == IntentFilter {
+			start, end, ok := t.classifier.ExtractTimeFilter(searchInput.Query)
+			if ok {
+				// Will set TimeRange in RetrievalOptions below
+				_ = start
+				_ = end
+				_ = ok
+			}
+		}
 	}
 
 	// Execute search
@@ -163,6 +180,17 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 		Strategy: strategy,
 		Limit:    searchInput.Limit,
 		MinScore: searchInput.MinScore,
+	}
+
+	// Add time range for filter queries
+	if strategy == "memo_filter_only" {
+		start, end, ok := t.classifier.ExtractTimeFilter(searchInput.Query)
+		if ok {
+			opts.TimeRange = &queryengine.TimeRange{
+				Start: start,
+				End:   end,
+			}
+		}
 	}
 
 	results, err := t.retriever.Retrieve(ctx, opts)

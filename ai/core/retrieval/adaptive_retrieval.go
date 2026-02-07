@@ -91,6 +91,15 @@ func (r *AdaptiveRetriever) Retrieve(ctx context.Context, opts *RetrievalOptions
 	case "schedule_bm25_only":
 		return r.scheduleBM25Only(ctx, opts)
 
+	case "memo_list_only":
+		return r.memoListOnly(ctx, opts)
+
+	case "memo_filter_only":
+		return r.memoFilterOnly(ctx, opts)
+
+	case "memo_bm25_only":
+		return r.memoBM25Only(ctx, opts)
+
 	case "memo_semantic_only":
 		return r.memoSemanticOnly(ctx, opts)
 
@@ -182,6 +191,173 @@ func (r *AdaptiveRetriever) scheduleBM25Only(ctx context.Context, opts *Retrieva
 	}
 
 	opts.Logger.InfoContext(ctx, "Schedule retrieval completed",
+		"request_id", opts.RequestID,
+		"result_count", len(results),
+	)
+
+	return results, nil
+}
+
+// memoListOnly 纯 SQL 列表查询（最快，用于"列出所有笔记"类查询）.
+// 无需向量搜索或 BM25，直接从数据库列表返回.
+func (r *AdaptiveRetriever) memoListOnly(ctx context.Context, opts *RetrievalOptions) ([]*SearchResult, error) {
+	opts.Logger.InfoContext(ctx, "Using retrieval strategy",
+		"request_id", opts.RequestID,
+		"strategy", "memo_list_only",
+		"user_id", opts.UserID,
+	)
+
+	// 构建 SQL 查询条件
+	findMemo := &store.FindMemo{
+		CreatorID:        &opts.UserID,
+		OrderByUpdatedTs: true,
+	}
+
+	// 设置限制
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 20 // 默认返回 20 条
+	}
+	findMemo.Limit = &limit
+
+	// 执行 SQL 查询
+	memos, err := r.store.ListMemos(ctx, findMemo)
+	if err != nil {
+		opts.Logger.ErrorContext(ctx, "Failed to list memos",
+			"request_id", opts.RequestID,
+			"error", err,
+		)
+		return nil, fmt.Errorf("failed to list memos: %w", err)
+	}
+
+	// 转换为 SearchResult
+	results := make([]*SearchResult, 0, len(memos))
+	for _, memo := range memos {
+		results = append(results, &SearchResult{
+			ID:      int64(memo.ID),
+			Type:    "memo",
+			Score:   1.0, // 列表查询默认满分
+			Content: memo.Content,
+			Memo:    memo,
+		})
+	}
+
+	opts.Logger.InfoContext(ctx, "Memo list retrieval completed",
+		"request_id", opts.RequestID,
+		"result_count", len(results),
+	)
+
+	return results, nil
+}
+
+// memoFilterOnly SQL 过滤查询（按时间、标签等过滤）.
+// 用于"今天的笔记"、"本周笔记"等过滤类查询.
+// 使用 CEL 表达式过滤 + SQL 排序.
+func (r *AdaptiveRetriever) memoFilterOnly(ctx context.Context, opts *RetrievalOptions) ([]*SearchResult, error) {
+	opts.Logger.InfoContext(ctx, "Using retrieval strategy",
+		"request_id", opts.RequestID,
+		"strategy", "memo_filter_only",
+		"user_id", opts.UserID,
+	)
+
+	// 构建 SQL 查询条件
+	findMemo := &store.FindMemo{
+		CreatorID:        &opts.UserID,
+		OrderByUpdatedTs: true,
+	}
+
+	// 添加时间过滤（使用 CEL 表达式）
+	if opts.TimeRange != nil {
+		if opts.TimeRange.Start.Unix() > 0 && opts.TimeRange.End.Unix() > 0 {
+			// 使用 CEL 表达式过滤时间范围
+			// created_ts >= start AND created_ts <= end
+			startTs := opts.TimeRange.Start.Unix()
+			endTs := opts.TimeRange.End.Unix()
+			filterExpr := fmt.Sprintf("created_ts >= %d && created_ts <= %d", startTs, endTs)
+			findMemo.Filters = []string{filterExpr}
+		}
+	}
+
+	// 设置限制
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	findMemo.Limit = &limit
+
+	// 执行 SQL 查询
+	memos, err := r.store.ListMemos(ctx, findMemo)
+	if err != nil {
+		opts.Logger.ErrorContext(ctx, "Failed to filter memos",
+			"request_id", opts.RequestID,
+			"error", err,
+		)
+		return nil, fmt.Errorf("failed to filter memos: %w", err)
+	}
+
+	// 转换为 SearchResult
+	results := make([]*SearchResult, 0, len(memos))
+	for _, memo := range memos {
+		results = append(results, &SearchResult{
+			ID:      int64(memo.ID),
+			Type:    "memo",
+			Score:   1.0,
+			Content: memo.Content,
+			Memo:    memo,
+		})
+	}
+
+	opts.Logger.InfoContext(ctx, "Memo filter retrieval completed",
+		"request_id", opts.RequestID,
+		"result_count", len(results),
+	)
+
+	return results, nil
+}
+
+// memoBM25Only 纯 BM25 关键词搜索（无需向量检索）.
+// 用于短关键词、技术术语等精确匹配场景.
+func (r *AdaptiveRetriever) memoBM25Only(ctx context.Context, opts *RetrievalOptions) ([]*SearchResult, error) {
+	opts.Logger.InfoContext(ctx, "Using retrieval strategy",
+		"request_id", opts.RequestID,
+		"strategy", "memo_bm25_only",
+		"user_id", opts.UserID,
+	)
+
+	// 设置 BM25 搜索参数
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	// 执行 BM25 搜索
+	bm25Results, err := r.store.BM25Search(ctx, &store.BM25SearchOptions{
+		UserID:   opts.UserID,
+		Query:    opts.Query,
+		Limit:    limit,
+		MinScore: 0.1,
+	})
+	if err != nil {
+		opts.Logger.ErrorContext(ctx, "BM25 search failed",
+			"request_id", opts.RequestID,
+			"error", err,
+		)
+		return nil, fmt.Errorf("failed to search: %w", err)
+	}
+
+	// 转换为 SearchResult
+	results := make([]*SearchResult, 0, len(bm25Results))
+	for _, bm25Result := range bm25Results {
+		results = append(results, &SearchResult{
+			ID:      int64(bm25Result.Memo.ID),
+			Type:    "memo",
+			Score:   bm25Result.Score,
+			Content: bm25Result.Memo.Content,
+			Memo:    bm25Result.Memo,
+		})
+	}
+
+	opts.Logger.InfoContext(ctx, "BM25 retrieval completed",
 		"request_id", opts.RequestID,
 		"result_count", len(results),
 	)

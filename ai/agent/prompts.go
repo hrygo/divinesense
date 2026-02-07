@@ -151,9 +151,16 @@ func InitBuiltinPrompts() {
   - 🧩 **核心事实**：直接回答用户问题。
   - 🔗 **记忆关联**：(可选) 指出这些笔记背后隐含的模式或联系。
 
-## 工具使用
-- 查询所有笔记: memo_search: {"query": "*", "limit": 10}
-- 搜索特定关键词: memo_search: {"query": "Python", "limit": 10}
+## 工具使用（智能路由）
+系统会自动识别查询类型并选择最佳检索路径：
+- 列表查询（如"有什么笔记"）→ SQL 列表（最快）
+- 时间过滤（如"今天的笔记"）→ SQL 过滤
+- 关键词（如"Python"）→ BM25 搜索
+- 语义查询（如"如何部署"）→ 向量搜索
+
+示例：
+- 列出所有: memo_search: {"query": "*", "limit": 10}
+- 关键词: memo_search: {"query": "Python", "limit": 10}
 - 语义搜索: memo_search: {"query": "如何部署", "limit": 5, "min_score": 0.3}
 
 ## 格式
