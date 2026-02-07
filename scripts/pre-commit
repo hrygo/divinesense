@@ -1,40 +1,127 @@
 #!/bin/sh
-# Pre-commit hook - lightweight checks (fast feedback)
+# Pre-commit hook - smart checks based on changed files
 set -e
 
-echo "🔍 Quick pre-commit checks..."
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Check go.mod/go.sum are tidy
-echo "  → go.mod/go.sum tidy check..."
-if ! go mod tidy -diff > /dev/null 2>&1; then
-    echo ""
-    echo "    ✗ go.mod/go.sum not tidy"
-    echo "    Run: go mod tidy && git add go.mod go.sum"
-    echo ""
-    exit 1
+echo "${BLUE}🔍 Pre-commit checks...${NC}"
+echo ""
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+if [ -z "$STAGED_FILES" ]; then
+    echo "${YELLOW}No staged files, skipping checks${NC}"
+    exit 0
 fi
-echo "    ✓ go.mod/go.sum tidy"
 
-# Smart embed check: only verify dist/ exists if frontend files were changed
-FRONTEND_CHANGED=$(git diff --cached --name-only | grep -cE '^(server/router/frontend/|web/)' || true)
-if [ "$FRONTEND_CHANGED" -gt 0 ]; then
-    if [ ! -d "server/router/frontend/dist" ] || [ -z "$(ls -A server/router/frontend/dist 2>/dev/null)" ]; then
-        echo "  → Frontend files changed but dist/ not built"
-        echo "    Auto-building frontend..."
-        if cd web && pnpm build >/dev/null 2>&1 && mkdir -p ../server/router/frontend && cp -r dist/* ../server/router/frontend/dist/; then
-            echo "    ✓ Frontend built successfully"
-            cd ..
+# Categorize changes
+HAS_GO_FILES=$(echo "$STAGED_FILES" | grep -cE '\.go$' || true)
+HAS_GO_MOD=$(echo "$STAGED_FILES" | grep -cE '^(go\.(mod|sum))$' || true)
+HAS_FRONTEND=$(echo "$STAGED_FILES" | grep -cE '^(web/|server/router/frontend/)' || true)
+HAS_DOCS_ONLY=true
+
+# Check if non-doc files exist
+if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ] || [ "$HAS_FRONTEND" -gt 0 ]; then
+    HAS_DOCS_ONLY=false
+fi
+
+# Track if any checks failed
+CHECKS_FAILED=false
+
+# ==================== Backend Checks ====================
+
+if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
+    echo "${BLUE}📦 Backend changes detected:${NC}"
+
+    # go.mod/go.sum tidy check (only if go.mod or go.sum changed)
+    if [ "$HAS_GO_MOD" -gt 0 ]; then
+        echo "  → go.mod/go.sum tidy check..."
+        cp go.mod go.mod.bak 2>/dev/null || true
+        cp go.sum go.sum.bak 2>/dev/null || true
+        go mod tidy
+        if ! git diff --quiet go.mod go.sum; then
+            echo "    ${RED}✗ go.mod/go.sum not tidy${NC}"
+            echo "    Run: go mod tidy && git add go.mod go.sum"
+            mv go.mod.bak go.mod 2>/dev/null || true
+            mv go.sum.bak go.sum 2>/dev/null || true
+            CHECKS_FAILED=true
         else
-            echo "    ⚠ Frontend build failed, continuing anyway (embed will fail in production)"
-            cd ..
+            rm -f go.mod.bak go.sum.bak
+            echo "    ${GREEN}✓${NC} go.mod/go.sum tidy"
         fi
     fi
+
+    # go fmt
+    echo "  → go fmt..."
+    FMT_OUTPUT=$(go fmt ./... 2>&1)
+    if [ -n "$FMT_OUTPUT" ]; then
+        echo "    ${YELLOW}⚠ Formatted files:${NC}"
+        echo "$FMT_OUTPUT" | sed 's/^/    /'
+        # Stage the formatted files
+        git diff --name-only | grep '\.go$' | xargs git add >/dev/null 2>&1 || true
+    else
+        echo "    ${GREEN}✓${NC} go fmt"
+    fi
+
+    # go vet
+    echo "  → go vet..."
+    if ! go vet ./... 2>&1 | grep -qE '^(#|vendor/)'; then
+        echo "    ${GREEN}✓${NC} go vet"
+    else
+        echo "    ${RED}✗ go vet failed${NC}"
+        CHECKS_FAILED=true
+    fi
+    echo ""
 fi
 
-echo "  → go fmt..."
-go fmt ./...
+# ==================== Frontend Checks ====================
 
-echo "  → go vet..."
-go vet ./...
+if [ "$HAS_FRONTEND" -gt 0 ]; then
+    echo "${BLUE}🎨 Frontend changes detected:${NC}"
 
-echo "✅ Pre-commit checks passed!"
+    # Only check/build if web/ directory exists
+    if [ -d "web" ] && [ -f "web/package.json" ]; then
+        cd web
+
+        # Quick lint check (auto-fix enabled)
+        echo "  → pnpm lint:fix..."
+        if ! pnpm lint:fix --silent >/dev/null 2>&1; then
+            echo "    ${RED}✗ Frontend lint failed${NC}"
+            cd ..
+            CHECKS_FAILED=true
+        else
+            echo "    ${GREEN}✓${NC} pnpm lint:fix"
+            # Stage any auto-fixed files
+            git diff --name-only | grep '^web/' | xargs git add >/dev/null 2>&1 || true
+        fi
+
+        cd ..
+    fi
+    echo ""
+fi
+
+# ==================== Documentation Only ====================
+
+if [ "$HAS_DOCS_ONLY" = true ]; then
+    echo "${BLUE}📚 Documentation only changes${NC}"
+    echo "    ${GREEN}✓ Skipping code checks${NC}"
+    echo ""
+fi
+
+# ==================== Final Report ====================
+
+if [ "$CHECKS_FAILED" = true ]; then
+    echo ""
+    echo "${RED}✗ Pre-commit checks failed${NC}"
+    echo ""
+    echo "Fix the errors above and try again, or use:"
+    echo "  git commit --no-verify -m 'message'"
+    exit 1
+fi
+
+echo "${GREEN}✅ Pre-commit checks passed!${NC}"
