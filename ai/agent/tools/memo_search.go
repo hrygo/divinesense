@@ -157,20 +157,8 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 	// 智能策略选择：分类查询意图并路由到对应的检索策略
 	strategy := searchInput.Strategy
 	if strategy == "" {
-		// Classify query intent to determine optimal retrieval strategy
 		intent := t.classifier.Classify(searchInput.Query)
 		strategy = intent.ToStrategy()
-
-		// For filter queries, extract time range and add to options
-		if intent == IntentFilter {
-			start, end, ok := t.classifier.ExtractTimeFilter(searchInput.Query)
-			if ok {
-				// Will set TimeRange in RetrievalOptions below
-				_ = start
-				_ = end
-				_ = ok
-			}
-		}
 	}
 
 	// Execute search
@@ -195,6 +183,10 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 
 	results, err := t.retriever.Retrieve(ctx, opts)
 	if err != nil {
+		// Check for timeout specifically
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("search timeout after %v", timeout.ToolExecutionTimeout)
+		}
 		return "", fmt.Errorf("search failed: %w", err)
 	}
 

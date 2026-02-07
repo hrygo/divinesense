@@ -28,6 +28,12 @@ const (
 	IntentSemantic
 )
 
+// Query length thresholds for classification.
+const (
+	// maxSimpleQueryLength is the maximum length for a simple (keyword) query.
+	maxSimpleQueryLength = 15 // Used in isSimpleKeyword heuristic
+)
+
 // String returns the string representation of the intent.
 func (i MemoQueryIntent) String() string {
 	switch i {
@@ -105,8 +111,9 @@ func NewMemoQueryClassifier() *MemoQueryClassifier {
 			`tags?:`,
 		}),
 		keywordPatterns: compilePatterns([]string{
-			`^.{1,10}$`, // Short queries (1-10 chars) are keywords
+			`^..{1,10}$`, // Short queries (1-10 chars) are keywords
 		}),
+		// Note: Empty string handling is done in Classify() before keywordPatterns check
 	}
 }
 
@@ -125,6 +132,11 @@ func compilePatterns(patterns []string) []*regexp.Regexp {
 // 使用分层方法：规则 → 启发式 → 降级。
 func (c *MemoQueryClassifier) Classify(query string) MemoQueryIntent {
 	normalized := strings.TrimSpace(query)
+
+	// Special case: empty or whitespace-only query is treated as "list all"
+	if normalized == "" {
+		return IntentList
+	}
 
 	// Layer 1: List intent (highest priority, 0ms)
 	// 检查明确的列表意图模式
@@ -148,41 +160,45 @@ func (c *MemoQueryClassifier) Classify(query string) MemoQueryIntent {
 		}
 	}
 
-	// Layer 3: Keyword intent (simple terms, 0ms)
-	// 短查询（1-10字符）通常是关键词搜索
+	// Layer 3: Semantic intent check (must happen before keyword patterns)
+	// 先检查语义意图，避免被短查询模式误判
+	if !c.isSimpleKeyword(normalized) {
+		return IntentSemantic
+	}
+
+	// Layer 4: Keyword intent (simple terms, 0ms)
+	// 短查询（1-10字符）且无语义特征 = 关键词搜索
 	for _, pattern := range c.keywordPatterns {
 		if pattern.MatchString(normalized) {
 			return IntentKeyword
 		}
 	}
-	// 检查是否为纯中文/英文单词（无复杂语法）
-	if c.isSimpleKeyword(normalized) {
-		return IntentKeyword
-	}
 
-	// Layer 4: Default to semantic search
+	// Layer 5: Default to semantic search
 	// 默认语义搜索
 	return IntentSemantic
 }
 
 // isSimpleKeyword checks if the query is a simple keyword without complex syntax.
 func (c *MemoQueryClassifier) isSimpleKeyword(query string) bool {
-	// Complex patterns that indicate semantic search intent
-	complexPatterns := []string{
-		"如何", "怎么", "为什么", "怎样", "是什么", // Chinese
-		"how", "why", "what", "where", "when", // English
-		"关于", "related to", "about",
-		"笔记中.*提到", "note.*mention",
+	// Complex word patterns that indicate semantic search intent (direct match)
+	complexWords := []string{
+		"如何", "怎么", "为什么", "怎样", "是什么", // Chinese question words
+		"how", "why", "what", "where", "when", // English question words
+		"关于", "related to", "about", // About/relation words
+		"笔记中提到", "note mention", // Mention patterns (direct match)
 	}
 
-	for _, pattern := range complexPatterns {
-		if strings.Contains(strings.ToLower(query), pattern) {
-			return false
+	queryLower := strings.ToLower(query)
+	for _, pattern := range complexWords {
+		if strings.Contains(queryLower, pattern) {
+			return false // Not a simple keyword if it matches complex pattern
 		}
 	}
 
 	// Single word or short phrase = keyword
-	return len(query) <= 15
+	// Only return true if no complex patterns matched AND query is short
+	return len(query) <= maxSimpleQueryLength
 }
 
 // ExtractTimeFilter extracts time range from a filter query.
