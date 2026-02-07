@@ -291,8 +291,8 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 					}
 					callback(EventToolUse, &EventWithMeta{
 						EventType: EventTypeToolUse,
-						EventData:   toolInput, // Use toolInput (parameters) instead of toolName
-						Meta:        meta,
+						EventData: toolInput, // Use toolInput (parameters) instead of toolName
+						Meta:      meta,
 					})
 				}
 

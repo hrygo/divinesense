@@ -551,9 +551,9 @@ func (h *ParrotHandler) executeAgent(
 					"file_path":         eventMeta.FilePath,
 					"line_count":        eventMeta.LineCount,
 					// Frontend compatibility fields (extractToolCalls expects these)
-					"is_error":          eventMeta.Status == "error",
-					"duration":          eventMeta.DurationMs,
-					"exit_code":         0, // No exit code in EventMetadata, default to 0
+					"is_error":  eventMeta.Status == "error",
+					"duration":  eventMeta.DurationMs,
+					"exit_code": 0, // No exit code in EventMetadata, default to 0
 				}
 			}
 
