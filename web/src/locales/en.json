@@ -466,6 +466,7 @@
       "more_input": "appended",
       "more_inputs": "appended",
       "expand_to_read_all": "Click to expand and read all",
+      "block_number": "Block {{number}}",
       "edit": "Edit",
       "edit_title": "Edit User Input",
       "edit_description": "Edit your message to create a new branch and regenerate",

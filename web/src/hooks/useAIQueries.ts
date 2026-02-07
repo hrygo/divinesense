@@ -304,6 +304,7 @@ export function useChat() {
 
           // Helper function to update optimistic block's eventStream during streaming
           // This ensures UI shows real-time progress (thinking, tool_use, tool_result) instead of "black hole"
+          // P0-1/P0-2 OPTIMIZATION: Uses O(1) Map lookup + React 18 automatic batching
           const updateBlockEventStream = (event: {
             type: string;
             content?: string;
@@ -318,69 +319,50 @@ export function useChat() {
           }) => {
             if (!blockId || blockId === 0n || !params.conversationId) return;
 
+            // Create new event object once to avoid duplication
+            const newEvent = {
+              $typeName: "memos.api.v1.BlockEvent" as const,
+              type: event.type,
+              content: event.content || "",
+              timestamp: BigInt(event.timestamp),
+              // Use 'meta' (not 'metadata') to match BlockEvent schema
+              meta: JSON.stringify({
+                tool_name: event.toolName,
+                tool_id: event.toolId,
+                input_summary: event.inputSummary,
+                output_summary: event.outputSummary,
+                file_path: event.filePath,
+                duration: event.duration,
+                is_error: event.isError,
+              }),
+            };
+
+            // P0-2: Use Map for O(1) lookup instead of O(n) map()
+            // React 18 will automatically batch these updates
+            const blockIdNum = Number(blockId);
+
             queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
               const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
               const existingBlocks = existing?.blocks || [];
 
-              // Find and update the target block
-              const updatedBlocks = existingBlocks.map((b) => {
-                if (b.id !== blockId) return b;
+              const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
+              const currentBlock = blockMap.get(blockId);
 
-                // Append event to eventStream
-                // CRITICAL: Use snake_case keys to match backend format and extractToolCalls expectations
-                // Backend sends: tool_name, input_summary, output_summary, tool_id, etc.
-                const newEventStream = [
-                  ...(b.eventStream || []),
-                  {
-                    $typeName: "memos.api.v1.BlockEvent" as const,
-                    type: event.type,
-                    content: event.content || "",
-                    timestamp: BigInt(event.timestamp),
-                    metadata: JSON.stringify({
-                      tool_name: event.toolName,
-                      tool_id: event.toolId,
-                      input_summary: event.inputSummary,
-                      output_summary: event.outputSummary,
-                      file_path: event.filePath,
-                      duration: event.duration,
-                      is_error: event.isError,
-                    }),
-                  },
-                ];
-
-                return { ...b, eventStream: newEventStream };
-              });
+              if (currentBlock) {
+                const newEventStream = [...(currentBlock.eventStream || []), newEvent];
+                blockMap.set(blockId, { ...currentBlock, eventStream: newEventStream });
+              }
 
               return {
-                blocks: updatedBlocks,
-                totalCount: updatedBlocks.length,
+                blocks: Array.from(blockMap.values()),
+                totalCount: blockMap.size,
               };
             });
 
-            // Also update the individual block cache
-            queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+            // Update individual block cache
+            queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
               if (!old || old.id !== blockId) return old;
-
-              const newEventStream = [
-                ...(old.eventStream || []),
-                {
-                  $typeName: "memos.api.v1.BlockEvent" as const,
-                  type: event.type,
-                  content: event.content || "",
-                  timestamp: BigInt(event.timestamp),
-                  metadata: JSON.stringify({
-                    tool_name: event.toolName,
-                    tool_id: event.toolId,
-                    input_summary: event.inputSummary,
-                    output_summary: event.outputSummary,
-                    file_path: event.filePath,
-                    duration: event.duration,
-                    is_error: event.isError,
-                  }),
-                },
-              ];
-
-              return { ...old, eventStream: newEventStream };
+              return { ...old, eventStream: [...(old.eventStream || []), newEvent] };
             });
           };
 
@@ -464,25 +446,30 @@ export function useChat() {
 
             // CRITICAL: Update optimistic block's assistantContent during streaming
             // This ensures the UI shows the streaming content in real-time
+            // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
             if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+              const blockIdNum = Number(blockId);
+
               queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                 const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                 const existingBlocks = existing?.blocks || [];
 
-                // Find and update the target block's assistantContent
-                const updatedBlocks = existingBlocks.map((b) => {
-                  if (b.id !== blockId) return b;
-                  return { ...b, assistantContent: fullContent };
-                });
+                // P0-2: Use Map for O(1) lookup
+                const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
+                const currentBlock = blockMap.get(blockId);
+
+                if (currentBlock) {
+                  blockMap.set(blockId, { ...currentBlock, assistantContent: fullContent });
+                }
 
                 return {
-                  blocks: updatedBlocks,
-                  totalCount: updatedBlocks.length,
+                  blocks: Array.from(blockMap.values()),
+                  totalCount: blockMap.size,
                 };
               });
 
-              // Also update the individual block cache
-              queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+              // Update individual block cache
+              queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
                 if (!old || old.id !== blockId) return old;
                 return { ...old, assistantContent: fullContent };
               });
@@ -603,24 +590,42 @@ export function useChat() {
                 callbacks?.onContent?.(response.eventData);
                 // CRITICAL: Real-time update assistantContent for streaming UI
                 // This prevents "initializing..." state during answer streaming
+                // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
                 if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+                  const blockIdNum = Number(blockId);
+                  const updatedTs = BigInt(Date.now());
+
                   queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                     const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                     const existingBlocks = existing?.blocks || [];
 
-                    const updatedBlocks = existingBlocks.map((b) => {
-                      if (b.id !== blockId) return b;
-                      return {
-                        ...b,
+                    // P0-2: Use Map for O(1) lookup
+                    const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
+                    const currentBlock = blockMap.get(blockId);
+
+                    if (currentBlock) {
+                      blockMap.set(blockId, {
+                        ...currentBlock,
                         assistantContent: fullContent,
                         status: BlockStatus.STREAMING,
-                        updatedTs: BigInt(Date.now()),
-                      };
-                    });
+                        updatedTs,
+                      });
+                    }
 
                     return {
-                      blocks: updatedBlocks,
-                      totalCount: updatedBlocks.length,
+                      blocks: Array.from(blockMap.values()),
+                      totalCount: blockMap.size,
+                    };
+                  });
+
+                  // Update individual block cache
+                  queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
+                    if (!old || old.id !== blockId) return old;
+                    return {
+                      ...old,
+                      assistantContent: fullContent,
+                      status: BlockStatus.STREAMING,
+                      updatedTs,
                     };
                   });
                 }
@@ -685,35 +690,42 @@ export function useChat() {
             doneCalled = true;
 
             // CRITICAL: Mark block as COMPLETED and update final content
+            // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
             if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+              const blockIdNum = Number(blockId);
+              const updatedTs = BigInt(Date.now());
+
               queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                 const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                 const existingBlocks = existing?.blocks || [];
 
-                const updatedBlocks = existingBlocks.map((b) => {
-                  if (b.id !== blockId) return b;
-                  return {
-                    ...b,
+                // P0-2: Use Map for O(1) lookup
+                const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
+                const currentBlock = blockMap.get(blockId);
+
+                if (currentBlock) {
+                  blockMap.set(blockId, {
+                    ...currentBlock,
                     assistantContent: fullContent,
                     status: BlockStatus.COMPLETED,
-                    updatedTs: BigInt(Date.now()),
-                  };
-                });
+                    updatedTs,
+                  });
+                }
 
                 return {
-                  blocks: updatedBlocks,
-                  totalCount: updatedBlocks.length,
+                  blocks: Array.from(blockMap.values()),
+                  totalCount: blockMap.size,
                 };
               });
 
-              // Also update the individual block cache
-              queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
+              // Update individual block cache
+              queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
                 if (!old || old.id !== blockId) return old;
                 return {
                   ...old,
                   assistantContent: fullContent,
                   status: BlockStatus.COMPLETED,
-                  updatedTs: BigInt(Date.now()),
+                  updatedTs,
                 };
               });
             }

@@ -60,7 +60,7 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
-import { StreamingText } from "@/components/AIChat/StreamingText";
+import StreamingMarkdown from "@/components/AIChat/StreamingMarkdown";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
@@ -588,7 +588,7 @@ interface BlockBodyProps {
   additionalUserInputs?: ConversationMessage[];
   assistantMessage?: ConversationMessage;
   blockSummary?: BlockSummary;
-  parrotId?: string;
+  parrotId?: ParrotAgentType;
   isCollapsed: boolean;
   themeColors: (typeof PARROT_THEMES)[keyof typeof PARROT_THEMES];
   streamingPhase?: "thinking" | "tools" | "answer" | null;
@@ -615,10 +615,10 @@ function BlockBody({
 
   // Helper: Get mode-specific thinking text
   const getThinkingText = useCallback(() => {
-    if (parrotId === "GEEK") {
+    if (parrotId === ParrotAgentType.GEEK) {
       return t("ai.geek_mode.thinking");
     }
-    if (parrotId === "EVOLUTION") {
+    if (parrotId === ParrotAgentType.EVOLUTION) {
       return t("ai.evolution_mode.thinking");
     }
     return t("ai.states.thinking");
@@ -867,10 +867,11 @@ function BlockBody({
               >
                 {/* Markdown content with streaming effect */}
                 <div ref={contentRef} className="px-5 py-4">
-                  <StreamingText
+                  <StreamingMarkdown
                     content={assistantMessage.content || getThinkingText()}
                     isStreaming={isStreaming && streamingPhase === "answer"}
-                    enableTypingEffect={false}
+                    parrotId={parrotId ?? ParrotAgentType.AUTO}
+                    enableTypingCursor={true}
                     className="break-words leading-normal font-sans text-[15px]"
                   />
                   {children}

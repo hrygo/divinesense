@@ -266,7 +266,6 @@ const ChatMessages = memo(function ChatMessages({
   const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
   const lastScrollTimeRef = useRef(0);
   const isUserScrollingRef = useRef(false);
-  const lastContentLengthRef = useRef(0);
 
   const scrollToBottomLocked = useCallback(() => {
     if (rafIdRef.current) return;
@@ -304,6 +303,8 @@ const ChatMessages = memo(function ChatMessages({
     handleScroll();
   }, [handleScroll]);
 
+  // P1-1 OPTIMIZATION: Combined scroll management with useLatest pattern
+  // Reduces from 6 useEffect to 2, minimizing re-renders and RAF scheduling
   useEffect(() => {
     if (!scrollRef.current) return;
 
@@ -326,51 +327,52 @@ const ChatMessages = memo(function ChatMessages({
     return () => observer.disconnect();
   }, [scrollToBottomLocked]);
 
+  // P1-1 OPTIMIZATION: Unified scroll-to-bottom logic with single RAF
+  // Replaces 4 separate useEffect with one optimized version
   const prevBlocksLengthRef = useRef(0);
+  const prevStreamingContentLengthRef = useRef(0);
+  const prevIsTypingRef = useRef(false);
+  const prevIsStreamingRef = useRef(false);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollRef intentionally excluded as it's accessed conditionally
   useEffect(() => {
     const blocksLength = blocks?.length ?? 0;
     const hasNewMessage = blocksLength > prevBlocksLengthRef.current;
     prevBlocksLengthRef.current = blocksLength;
 
-    if (hasNewMessage && !isUserScrollingRef.current) {
-      scrollToBottomLocked();
-    }
-  }, [blocks?.length, scrollToBottomLocked]);
-
-  useEffect(() => {
-    if (!isStreaming) return;
-
+    // Streaming content increase detection
     const contentLength = streamingContent.length;
-    const contentIncrease = contentLength - lastContentLengthRef.current;
-    lastContentLengthRef.current = contentLength;
+    const contentIncrease = contentLength - prevStreamingContentLengthRef.current;
+    prevStreamingContentLengthRef.current = contentLength;
 
-    if (contentIncrease > 50 && !isUserScrollingRef.current) {
-      scrollToBottomLocked();
+    // Update refs for state change tracking
+    prevIsTypingRef.current = isTyping;
+    prevIsStreamingRef.current = isStreaming;
+
+    // Unified scroll trigger logic - single RAF for all cases
+    // Reduced threshold from 50 to 15 for more responsive streaming
+    const shouldScroll =
+      (hasNewMessage && !isUserScrollingRef.current) ||
+      (isStreaming && contentIncrease > 15 && !isUserScrollingRef.current) ||
+      (isTyping && !isUserScrollingRef.current);
+
+    if (shouldScroll) {
+      requestAnimationFrame(() => {
+        if (!isUserScrollingRef.current) {
+          scrollToBottomLocked();
+        }
+      });
     }
-  }, [streamingContent, isStreaming, scrollToBottomLocked]);
 
-  useEffect(() => {
-    if (isTyping && !isUserScrollingRef.current) {
-      scrollToBottomLocked();
-    }
-  }, [isTyping, scrollToBottomLocked]);
-
-  const blocksLengthRef = useRef(0);
-  useEffect(() => {
-    const blocksLength = blocks?.length ?? 0;
-    const lengthChanged = blocksLength !== blocksLengthRef.current;
-    blocksLengthRef.current = blocksLength;
-
-    if (!lengthChanged) return;
-
-    if (scrollRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    // Reset user scroll state when block length changes
+    if (blocksLength > 0) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current || ({} as HTMLElement);
+      const distanceToBottom = (scrollHeight || 0) - (scrollTop || 0) - (clientHeight || 0);
       if (distanceToBottom <= SCROLL_THRESHOLD && isUserScrollingRef.current) {
         isUserScrollingRef.current = false;
       }
     }
-  }, [blocks?.length]);
+  }, [blocks?.length, streamingContent, isStreaming, isTyping, scrollToBottomLocked]);
 
   useEffect(() => {
     return () => {
@@ -384,11 +386,39 @@ const ChatMessages = memo(function ChatMessages({
   const { t } = useTranslation();
 
   // Group messages into blocks - Block data is single source of truth
-  // Note: t is excluded from deps as translateThinkingSteps handles it conditionally
+  // P1-2 OPTIMIZATION: Track block IDs to only recompute when blocks actually change
+  // This avoids re-converting historical blocks during streaming updates
+  const blocksIdsRef = useRef<string>("");
+  const messageBlocksRef = useRef<MessageBlock[]>([]);
+
   const messageBlocks = useMemo(() => {
     if (!blocks || blocks.length === 0) return [];
-    return convertAIBlocksToMessageBlocks(blocks, t);
-  }, [blocks]); // t is stable from i18next, no need to track
+
+    // Create stable key from block IDs and their essential properties
+    const currentIds = blocks.map((b) => `${b.id}-${b.status}-${b.updatedTs}`).join(",");
+
+    // If only the last block changed (streaming scenario), reuse cached conversions
+    if (blocksIdsRef.current && currentIds.startsWith(blocksIdsRef.current)) {
+      // Extract the changed part (new or modified blocks at the end)
+      const prevBlocks = blocksIdsRef.current.split(",").map((idWithStatus) => idWithStatus.split("-")[0]);
+      const newBlocks = blocks.filter((b) => !prevBlocks.includes(b.id.toString()));
+
+      if (newBlocks.length > 0 && newBlocks.length < blocks.length) {
+        // Only convert new/modified blocks
+        const newMessageBlocks = convertAIBlocksToMessageBlocks(newBlocks, t);
+        // Update ref and return combined result
+        messageBlocksRef.current = [...messageBlocksRef.current, ...newMessageBlocks];
+        blocksIdsRef.current = currentIds;
+        return messageBlocksRef.current;
+      }
+    }
+
+    // Full conversion needed (initial load or significant changes)
+    const result = convertAIBlocksToMessageBlocks(blocks, t);
+    blocksIdsRef.current = currentIds;
+    messageBlocksRef.current = result;
+    return result;
+  }, [blocks, t]);
 
   // Phase 4: Check streaming status from either blocks or props (using extracted hook)
   const isLastStreaming = useStreamingStatus(blocks, isStreaming ?? false);

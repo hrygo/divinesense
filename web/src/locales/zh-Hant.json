@@ -607,6 +607,7 @@
         "more_input": "追加",
         "more_inputs": "個追加",
         "expand_to_read_all": "點擊展開查看全部內容",
+        "block_number": "第 {{number}} 塊",
         "edit": "編輯",
         "edit_title": "編輯用戶輸入",
         "edit_description": "編輯您的消息以創建新分支並重新生成",
@@ -621,8 +622,7 @@
         "duration": "時長",
         "cost": "成本",
         "tokens": "Token",
-        "branch_path": "分支路徑",
-        "block_number": "第 {{number}} 塊"
+        "branch_path": "分支路徑"
       },
       "states": {
         "thinking": "思考中...",
