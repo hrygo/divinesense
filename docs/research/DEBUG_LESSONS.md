@@ -1,85 +1,51 @@
 # 调试经验教训
 
 > 记录 DivineSense 开发过程中遇到的典型问题和解决方案，避免重复踩坑。
+>
+> **保鲜状态**: ✅ 2026-02-07
 
 ---
 
-## Evolution Mode 路由失败
+## 快速查找
 
-### 问题描述
-进化模式 (`evolutionMode: true`) 无法正确路由到后端，一直使用普通模式处理。
+### 按类型分类
 
-### 根本原因
+| 类型 | 问题 | 状态 |
+|:-----|:-----|:-----|
+| **[前端](#前端问题)** | [布局宽度不统一](#前端布局宽度不统一) | ✅ 已解决 |
+| **[前端](#前端问题)** | [空白页面滚动条溢出](#空白页面滚动条溢出) | ✅ 已解决 |
+| **[后端](#后端问题)** | [Go embed 忽略下划线文件](#go-embed-忽略以下划线开头的文件) | ✅ 已解决 |
+| **[后端](#后端问题)** | [调试日志管理规范](#调试日志管理规范) | ⚠️ 规范 |
+| **[AI](#ai-问题)** | [Evolution Mode 路由失败](#evolution-mode-路由失败) | ✅ 已解决 |
+| **[AI](#ai-问题)** | [AI Token 统计与缓存指标](#ai-token-统计与缓存指标) | ✅ 已解决 |
+| **[部署](#部署问题)** | [二进制部署运维权限](#二进制部署运维权限问题) | ✅ 已解决 |
+| **[开发流程](#开发流程问题)** | [环境意识不足](#环境意识不足导致的重复错误) | ✅ 已解决 |
 
-**Protobuf JSON 序列化行为**：
+### 按关键词索引
 
-```
-@bufbuild/protobuf 的 create() 函数在 JSON 序列化时：
-- true → 保留在 JSON 中
-- false → 省略（Protobuf JSON 规范优化）
-- undefined → 省略
-```
-
-当前端传递 `evolutionMode: true` 时正常工作，但早期版本存在以下边界情况：
-1. connect-web 版本兼容性问题
-2. proto 生成代码的边界情况
-3. create() 函数在特定条件下无法正确设置字段
-
-### 解决方案
-
-**前端 Workaround**：
-```typescript
-// useAIQueries.ts
-if (params.evolutionMode && request.evolutionMode === undefined) {
-  (request as any).evolutionMode = true;
-}
-```
-
-**后端日志验证**：
-```go
-// server/router/api/v1/ai/handler.go
-slog.Info("AI chat handler received request",
-    "evolution_mode", req.EvolutionMode,
-    "evolution_mode_raw", fmt.Sprintf("%v", req.EvolutionMode),
-)
-```
-
-### 经验教训
-
-| 问题 | 教练 |
-|:-----|:-----|
-| **Protobuf JSON 序列化行为不一致** | 明确测试 true/false/undefined 三种情况 |
-| **默认值省略导致歧义** | 对于关键路由字段，明确传递 false 而非省略 |
-| **调试日志散落各处** | 使用统一的日志框架，方便开关 |
-| **临时修复变成永久代码** | WORKAROUND 应标注过期时间或跟踪问题 |
-| **前后端类型不完全对等** | TypeScript `undefined` ≠ Go `false`，需要显式转换 |
-
-### 代码改进建议
-
-```typescript
-// 改进前：依赖 ?? 默认值
-evolutionMode: params.evolutionMode ?? false
-
-// 改进后：显式布尔转换（更安全）
-evolutionMode: Boolean(params.evolutionMode)
-```
+| 关键词 | 相关问题 |
+|:-------|:---------|
+| `Protobuf` | Evolution Mode 路由失败 |
+| `Tailwind` | 布局宽度不统一、空白页面滚动条溢出 |
+| `Go embed` | 忽略下划线文件 |
+| `UTF-8` | AI Token 统计 |
+| `Docker` | 运维权限、环境意识 |
+| `Makefile` | 环境意识 |
 
 ---
 
-## 前端布局宽度不统一 (2025-01)
+## 前端问题
 
-### 问题描述
-不同页面在大屏幕上的最大宽度不一致，用户体验不统一。
+### 前端布局宽度不统一
 
-### 根本原因
+**问题**：不同页面在大屏幕上的最大宽度不一致，用户体验不统一。
 
+**根本原因**：
 1. **布局层级混乱**：Layout 层和 Page 层都设置了 `max-w-*`
 2. **组件内部限制**：`MasonryColumn` 组件内部有 `max-w-2xl` 限制
 3. **语义化类名陷阱**：Tailwind v4 的 `max-w-md/lg/xl` 解析为 ~16px
 
-### 解决方案
-
-**统一规范**：
+**解决方案**：
 ```tsx
 // 所有主内容页面统一使用
 max-w-[100rem]  // 1600px
@@ -87,18 +53,7 @@ mx-auto         // 居中
 px-4 sm:px-6   // 响应式左右内边距
 ```
 
-**Layout 层统一**：
-```tsx
-// MemoLayout.tsx, ScheduleLayout.tsx 等
-<div className={cn("flex-1 ...", lg ? "pl-72" : "")}>
-  <div className={cn("w-full mx-auto px-4 sm:px-6 md:pt-6 pb-8", "max-w-[100rem]")}>
-    <Outlet />
-  </div>
-</div>
-```
-
-### 经验教训
-
+**经验教训**：
 | 问题 | 教练 |
 |:-----|:-----|
 | **宽度规范分散** | 建立统一的设计 token，单一数据源 |
@@ -108,10 +63,83 @@ px-4 sm:px-6   // 响应式左右内边距
 
 ---
 
-## 调试日志管理规范
+### 空白页面滚动条溢出
 
-### 前端日志
+**问题**：AI 聊天页面在空白状态（无消息）时仍显示滚动条。
 
+**根本原因**：双重 padding + h-full 组合导致高度溢出
+```
+内层总高度 = 100% + 64px（上下 padding）→ 内容溢出 → 触发滚动条
+```
+
+**解决方案**：
+```tsx
+// ChatMessages.tsx
+style={{ scrollbarGutter: "auto", ... }}  // 按需显示
+
+// PartnerGreeting.tsx
+className="... min-h-0 w-full px-6 py-8"  // 允许收缩
+```
+
+**经验教训**：
+| 问题 | 教练 |
+|:-----|:-----|
+| **h-full 在 flex 容器中的陷阱** | flex 子元素使用 `h-full` + padding 会溢出 |
+| **min-h-0 的神奇作用** | 允许 flex 子元素正确收缩 |
+| **scrollbarGutter: stable 副作用** | 始终保留滚动条空间，即使不需要 |
+| **嵌套 padding 累积** | 外层 py-4 + 内层 py-8 = 实际超出 100% |
+
+---
+
+## 后端问题
+
+### Go embed 忽略以下划线开头的文件
+
+**问题**：部署到生产环境后，部分 JavaScript 文件无法加载。
+
+**错误表现**：
+```
+Failed to fetch dynamically imported module: .../Inboxes-3qwxzD_s.js
+_baseFlatten-CWeGY8aD.js:1 Failed to load module script (MIME type: text/html)
+```
+
+**根本原因**：Go 的 `//go:embed` 指令会忽略**以下划线 `_` 开头的文件**
+
+```
+lodash-es 内部模块：
+- _baseFlatten-xxx.js   ❌ 被 Go embed 忽略
+- _baseMap-xxx.js        ❌ 被 Go embed 忽略
+- sortBy-xxx.js         ✅ 正常嵌入
+```
+
+**解决方案**：修改 Vite 配置，将 lodash-es 模块打包到单个 chunk
+```typescript
+// vite.config.mts
+manualChunks(id) {
+  if (id.includes("lodash-es") || id.includes("/_base")) {
+    return "lodash-vendor";  // 避免 _ 开头的文件名
+  }
+}
+```
+
+**构建验证**：
+```bash
+ls web/dist/assets/ | grep "^_"  # 应该为空
+```
+
+**经验教训**：
+| 问题 | 教练 |
+|:-----|:-----|
+| **Go embed 文件过滤规则** | 忽略 `_` 开头文件，类似 Unix 的 `.` 隐藏文件 |
+| **第三方库内部模块命名** | lodash-es 使用 `_` 前缀，与 Go embed 冲突 |
+| **Vite/Rollup 默认行为** | 默认拆分模块为独立 chunk |
+| **错误消息误导性** | "Failed to fetch module" 实际是 404 |
+
+---
+
+### 调试日志管理规范
+
+**前端日志**：
 ```typescript
 // ✅ 正确：生产环境移除，DEV 保留
 if (import.meta.env.DEV) {
@@ -125,8 +153,7 @@ console.error("[Component] Error occurred:", error);
 console.log("[Component] Some info");
 ```
 
-### 后端日志
-
+**后端日志**：
 ```go
 // ✅ 正确：使用结构化日志
 slog.Info("AI chat started",
@@ -134,449 +161,160 @@ slog.Info("AI chat started",
     "user_id", req.UserID,
 )
 
-// ✅ 正确：关键路径记录
-if req.EvolutionMode {
-    slog.Info("Evolution mode detected, routing to EvolutionParrot")
-}
-
 // ❌ 错误：过度调试
-slog.Debug("Every single step", ...)  // 应使用条件日志级别
+slog.Debug("Every single step", ...)
 ```
 
 ---
 
-## Go embed 忽略以下划线开头的文件
+## AI 问题
 
-### 问题描述
-部署到生产环境后，部分 JavaScript 文件无法加载，返回 404（实际上是 index.html fallback）。
+### Evolution Mode 路由失败
 
-**错误表现**：
+**问题**：进化模式 (`evolutionMode: true`) 无法正确路由到后端。
+
+**根本原因**：Protobuf JSON 序列化行为
 ```
-Failed to fetch dynamically imported module: http://39.105.209.49/assets/Inboxes-3qwxzD_s.js
-```
-
-浏览器控制台显示：
-```
-_baseFlatten-CWeGY8aD.js:1 Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"
-```
-
-### 根本原因
-
-**Go embed 文件过滤规则**：
-
-Go 的 `//go:embed` 指令会忽略**以下划线 `_` 开头的文件**。这是一个设计决策，与 Unix 忽略以 `.` 开头的隐藏文件类似。
-
-```
-lodash-es 内部模块被 Vite/Rollup 拆分为独立 chunk：
-- _baseFlatten-xxx.js   (331 bytes)  ❌ 被 Go embed 忽略
-- _baseMap-xxx.js        (199 bytes)  ❌ 被 Go embed 忽略
-- sortBy-xxx.js         (1181 bytes)  ✅ 正常嵌入
-- uniq-xxx.js            (98 bytes)   ✅ 正常嵌入
+@bufbuild/protobuf 的 create() 函数：
+- true → 保留在 JSON 中
+- false → 省略（Protobuf JSON 规范优化）
+- undefined → 省略
 ```
 
-**问题链条**：
-1. `lodash-es` 是一个模块化的 lodash 库，包含大量内部模块（`_baseFlatten`、`_baseMap` 等）
-2. Vite/Rollup 默认将这些模块拆分为独立的 chunk 文件
-3. 这些内部模块以 `_` 开头，被 Go embed 忽略
-4. 浏览器请求这些文件时，收到的是 index.html（404 fallback）
-5. HTML 作为 JavaScript 解析失败，导致整个应用崩溃
-
-### 解决方案
-
-**修改 Vite 配置，将 lodash-es 模块打包到单个 chunk**：
-
+**解决方案**：
 ```typescript
-// vite.config.mts
-build: {
-  rollupOptions: {
-    output: {
-      manualChunks(id) {
-        // lodash-es internal modules - bundle into a single chunk
-        if (id.includes("lodash-es") || id.includes("/_base")) {
-          return "lodash-vendor";  // 生成 lodash-vendor-xxx.js
-        }
-        // ... 其他 vendor chunks
-      },
-    },
-  },
+// 前端 Workaround
+if (params.evolutionMode && request.evolutionMode === undefined) {
+  (request as any).evolutionMode = true;
 }
 ```
 
-**构建验证**：
-```bash
-# 检查是否有以下划线开头的文件
-ls web/dist/assets/ | grep "^_"  # 应该为空
-
-# 验证 lodash 被打包
-ls web/dist/assets/ | grep lodash  # 应该看到 lodash-vendor-xxx.js
-```
-
-### 经验教训
-
+**经验教训**：
 | 问题 | 教练 |
 |:-----|:-----|
-| **Go embed 文件过滤规则** | `//go:embed` 忽略 `_` 开头文件，类似 Unix 的 `.` 隐藏文件 |
-| **第三方库内部模块命名** | lodash-es 等库使用 `_` 前缀表示内部模块，与 Go embed 冲突 |
-| **Vite/Rollup 默认行为** | 默认会拆分模块为独立 chunk，需为 Go embed 特殊配置 |
-| **错误消息误导性** | "Failed to fetch module" 实际是 404，而非网络问题 |
-| **SPA fallback 行为** | http.FileServer 的 HTML5 fallback 会返回 index.html，掩盖真实问题 |
-
-### 预防措施
-
-1. **构建时检查**：在 CI/CD 中添加检查脚本
-   ```bash
-   # 检查嵌入目录中是否有以下划线开头的文件
-   if find server/router/frontend/dist/assets -name "_*" | grep -q .; then
-     echo "ERROR: Found files starting with '_' which will be ignored by Go embed"
-     exit 1
-   fi
-   ```
-
-2. **Vite 配置规范**：为单二进制 Go 项目添加特定配置
-   ```typescript
-   // 避免生成 Go embed 不支持的文件名
-   chunkFileNames: "assets/[name]-[hash].js",
-   entryFileNames: "assets/[name]-[hash].js",
-   assetFileNames: "assets/[name]-[hash].[ext]",
-   ```
-
-3. **测试清单**：
-   - [ ] 验证所有 vendor chunks 都能正确加载
-   - [ ] 检查浏览器控制台无 404 错误
-   - [ ] 测试懒加载路由（如 Inboxes 页面）
+| **Protobuf JSON 序列化不一致** | 明确测试 true/false/undefined 三种情况 |
+| **默认值省略导致歧义** | 关键路由字段明确传递 false 而非省略 |
+| **前后端类型不对等** | TypeScript `undefined` ≠ Go `false` |
 
 ---
 
-## 二进制部署运维权限问题 (2026-02)
+### AI Token 统计与缓存指标
 
-### 问题描述
-二进制模式部署后，divine 用户执行运维操作遇到权限问题：
-1. `make restart` 提示需要输入 sudo 密码
-2. `docker ps` 报错 "permission denied while trying to connect to the docker API"
+**问题**：日志显示 `content_length=451`，数据库 `LENGTH(content)=163`
 
-### 错误表现
-```
-==== AUTHENTICATING FOR org.freedesktop.systemd1.manage-units ===
-Authentication is required to restart 'divinesense.service'.
-Authenticating as: root
-Password:
-permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
-```
-
-### 根本原因
-
-1. **docker 组缺失**：divine 用户创建时未加入 docker 组，无法执行 docker 命令
-2. **sudoers 未配置**：divine 用户没有免密执行 systemctl 的权限
-3. **缺少运维工具**：用户主目录没有 Makefile 运维工具
-
-### 解决方案
-
-**安装时自动配置**（`deploy/install.sh`）：
-
-```bash
-# 1. 配置 docker 组
-if ! groups divine | grep -q docker; then
-    usermod -aG docker divine
-fi
-
-# 2. 配置 sudoers 免密（仅限 DivineSense 相关命令）
-cat > /etc/sudoers.d/divinesense << 'EOF'
-divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
-EOF
-chmod 440 /etc/sudoers.d/divinesense
-
-# 3. 创建用户运维 Makefile
-cat > /home/divine/Makefile << 'MAKEFILE'
-# ... (包含 status, restart, logs, db-backup 等命令)
-MAKEFILE_EOF
-
-# 4. 配置 bash 别名
-cat >> /home/divine/.bashrc << 'EOF'
-alias ds-status='make -C /home/divine status'
-alias ds-restart='make -C /home/divine restart'
-# ...
-EOF
-```
-
-### 手动修复（已部署服务器）
-
-如果服务器已部署但遇到权限问题，手动执行以下命令：
-
-```bash
-# 添加 docker 组
-sudo usermod -aG docker divine
-
-# 配置 sudoers
-sudo tee /etc/sudoers.d/divinesense > /dev/null << 'EOF'
-divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl start divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl stop divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
-divine ALL=(ALL) NOPASSWD: /bin/journalctl -u divinesense *
-EOF
-sudo chmod 440 /etc/sudoers.d/divinesense
-
-# 重新登录使 docker 组生效
-exit
-ssh aliyun  # 重新登录
-```
-
-### 经验教训
-
-| 问题 | 教练 |
-|:-----|:-----|
-| **部署脚本不完整** | 安装脚本应自动配置用户运维权限，而非依赖手动配置 |
-| **docker 组需要重新登录** | 用户加入 docker 组后，必须重新登录才能生效 |
-| **sudo 安全最小化** | 仅开放必要的命令免密，而非全部 sudo 权限 |
-| **运维工具缺失** | 应为用户创建友好的运维工具（Makefile），而非让用户直接敲命令 |
-
-### 预防措施
-
-1. **安装脚本改进**：`deploy/install.sh` 自动调用权限配置函数
-2. **文档更新**：部署文档说明安装后自动创建的运维工具
-3. **用户友好**：提供 `ds-*` 快捷别名，降低使用门槛
-
----
-
-## 空白页面滚动条溢出 (2026-02)
-
-### 问题描述
-AI 聊天页面在空白状态（无消息）时仍显示滚动条，虽然内容不多但存在滚动区域。
-
-### 根本原因
-
-**双重 padding + h-full 组合导致高度溢出**：
-
-```
-外层 ChatMessages:
-├── className: "flex-1 overflow-y-auto px-3 md:px-6 py-4"
-│   └── py-4 = 上下各 16px padding
-│
-内层 PartnerGreeting:
-├── className: "... h-full w-full px-6 py-8"
-│   ├── h-full = 100% 高度
-│   └── py-8 = 上下各 32px padding
-```
-
-**计算结果**：内层总高度 = 100% + 64px（上下 padding）→ 内容溢出 → 触发 `overflow-y-auto` 滚动条
-
-### 解决方案
-
-**1. ChatMessages.tsx** — 修改 `scrollbarGutter`：
-```tsx
-// 改动前：始终保留滚动条空间
-style={{ scrollbarGutter: "stable", ... }}
-
-// 改动后：按需显示
-style={{ scrollbarGutter: "auto", ... }}
-```
-
-**2. PartnerGreeting.tsx** — 修改 `h-full`：
-```tsx
-// 改动前：h-full 导致高度溢出
-className="... h-full w-full px-6 py-8"
-
-// 改动后：min-h-0 允许 flex 子元素正确收缩
-className="... min-h-0 w-full px-6 py-8"
-```
-
-### 经验教训
-
-| 问题 | 教练 |
-|:-----|:-----|
-| **h-full 在 flex 容器中的陷阱** | flex 子元素使用 `h-full` + padding 会溢出父容器 |
-| **min-h-0 的神奇作用** | 允许 flex 子元素正确收缩，同时保持 `justify-center` 居中效果 |
-| **scrollbarGutter: stable 的副作用** | 会始终保留滚动条空间，即使内容不需要滚动 |
-| **嵌套 padding 累积效应** | 外层 py-4 + 内层 py-8 = 实际内容高度超出 100% |
-
-### 预防措施
-
-1. **Flex 容器子元素规范**：
-   ```tsx
-   // ❌ 避免在 flex 子元素上使用 h-full + padding
-   <div className="h-full py-8">
-
-   // ✅ 使用 min-h-0 或 min-h-full
-   <div className="min-h-0 py-8">  // 允许收缩
-   <div className="min-h-full py-8"> // 至少撑满，但不溢出
-   ```
-
-2. **滚动容器规范**：
-   ```tsx
-   // 默认使用 auto，除非明确需要保留空间防止布局抖动
-   style={{ scrollbarGutter: "auto" }}
-   ```
-
-3. **调试技巧**：使用浏览器 DevTools 检查元素高度计算
-   - 查看盒模型（Box Model）中的总高度
-   - 检查 `offsetHeight` vs `clientHeight` 差值
-   - 监控父容器的 `scrollHeight` vs `clientHeight`
-
----
-
-## AI Token 统计与缓存指标 (2026-02)
-
-### 问题描述
-分析 AI 聊天日志时发现两个数据差异：
-1. 日志显示 `content_length=451`，但数据库 `LENGTH(content)=163`
-2. 数据库显示 `cache_read_tokens=5760`，但不确定来源
-
-### 根本原因
-
-**1. 内容长度差异：UTF-8 编码**
-
+**根本原因**：UTF-8 编码差异
 ```
 日志：octet_length(assistant_content) = 451 字节
 数据库：LENGTH(assistant_content) = 163 字符
-
 原因：中文字符在 UTF-8 中占用 3 字节
-计算：163 字符 × ~2.77 ≈ 451 字节
 ```
 
-**代码验证**：
-```sql
--- server/router/api/v1/ai/handler.go:860
-SELECT octet_length(assistant_content) as content_length  -- 字节数
-
--- 数据库查询
-SELECT LENGTH(assistant_content)                          -- 字符数
+**cache_read_tokens 数据流**：
+```
+DeepSeek API (prompt_cache_hit_tokens)
+    ↓ go-openai 库映射
+PromptTokensDetails.CachedTokens
+    ↓ ai/llm.go:206
+CacheReadTokens
+    ↓ 数据库
+ai_block.token_usage.cache_read_tokens
 ```
 
-**2. cache_read_tokens 来源：DeepSeek 上下文缓存**
-
-```
-数据流追踪：
-DeepSeek API 响应
-    ↓ prompt_cache_hit_tokens
-go-openai 库映射 (v1.41.2)
-    ↓ PromptTokensDetails.CachedTokens
-ai/llm.go:206
-    ↓ CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens
-LLMCallStats.CacheReadTokens
-    ↓ SessionStats.CacheReadTokens
-数据库 ai_block.token_usage.cache_read_tokens
-    ↓ 5760
-```
-
-**DeepSeek 上下文缓存机制**：
+**DeepSeek 上下文缓存**：
 - **缓存粒度**：64 token 块
 - **工作原理**：相同会话前缀的后续请求自动命中缓存
-- **prompt_cache_hit_tokens**：本次请求中从缓存读取的 token 数量
+- **缓存率**：5760 / 8000 ≈ 72%
 
-### 数据验证
-
-| 轮次 | Prompt Tokens | Cache Hit | 说明 |
-|:-----|:--------------|:---------|:-----|
-| 第1轮 | ~5000 | 0 | 冷启动，无缓存 |
-| 第2轮 | ~6000 | ~5000 | 第1轮内容缓存命中 |
-| 第3轮（本次）| ~8000 | **5760** | 前两轮累积缓存命中 |
-
-**缓存率计算**：5760 / 8000 ≈ 72% 的 prompt tokens 来自缓存
-
-### 代码位置
-
-| 文件 | 行号 | 说明 |
-|:-----|:-----|:-----|
-| `ai/llm.go` | 206 | `CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens` |
-| `server/router/api/v1/ai/handler.go` | 860 | `octet_length(finalContent) as content_length` |
-
-### 经验教训
-
+**经验教训**：
 | 问题 | 教练 |
 |:-----|:-----|
-| **字节 vs 字符混淆** | UTF-8 编码中文字符 = 3 字节，明确区分 `octet_length` 和 `LENGTH` |
+| **字节 vs 字符混淆** | UTF-8 中文字符 = 3 字节，区分 `octet_length` 和 `LENGTH` |
 | **缓存指标来源不明** | 追踪完整数据流：API → SDK → 业务代码 → 数据库 |
-| **Token 计费理解** | cache_read_tokens 降低 API 调用成本，但仍有基础费用 |
-| **日志与数据库一致** | 统一使用字节或字符统计，避免歧义 |
-
-### 预防措施
-
-1. **统一长度统计**：
-   ```sql
-   -- 推荐统一使用 octet_length（与 API 一致）
-   octet_length(content) as content_bytes
-   LENGTH(content) as content_chars
-   ```
-
-2. **Token 用量监控**：
-   ```go
-   // 记录缓存命中率
-   cacheHitRate := float64(cacheReadTokens) / float64(promptTokens)
-   slog.Info("Token usage", "cache_hit_rate", cacheHitRate)
-   ```
-
-3. **成本优化**：
-   - 系统提示词保持稳定，提升缓存命中率
-   - 避免频繁修改会话前缀
-   - 监控 `cache_write_tokens` 与 `cache_read_tokens` 比例
 
 ---
 
-## 环境意识不足导致的重复错误 (2026-02)
+## 部署问题
 
-### 问题描述
-AI Agent 在执行命令时频繁犯错：
-1. 使用错误的 PostgreSQL 容器名（`divinesense-postgres` 而非 `divinesense-postgres-dev`）
-2. 在根目录执行前端命令（`pnpm build`）而非 `web/` 目录或使用 Makefile
+### 二进制部署运维权限问题
 
-### 根本原因
+**问题**：divine 用户执行运维操作遇到权限问题。
 
-**环境/上下文意识不足**：执行命令前没有验证当前环境，而是假设某种默认状态。
+**错误表现**：
+```
+Authentication is required to restart 'divinesense.service'
+permission denied while trying to connect to the docker API
+```
 
-### 错误模式
+**根本原因**：
+1. **docker 组缺失**：用户未加入 docker 组
+2. **sudoers 未配置**：无免密执行 systemctl 权限
+3. **缺少运维工具**：无 Makefile 运维工具
 
+**解决方案**：
+```bash
+# 1. 配置 docker 组
+usermod -aG docker divine
+
+# 2. 配置 sudoers 免密
+cat > /etc/sudoers.d/divinesense << 'EOF'
+divine ALL=(ALL) NOPASSWD: /bin/systemctl status divinesense.service
+divine ALL=(ALL) NOPASSWD: /bin/systemctl restart divinesense.service
+EOF
+
+# 3. 创建用户运维 Makefile
+# 4. 配置 bash 别名 (ds-status, ds-restart, ...)
+```
+
+**经验教训**：
+| 问题 | 教练 |
+|:-----|:-----|
+| **部署脚本不完整** | 安装脚本应自动配置用户运维权限 |
+| **docker 组需重新登录** | 加入 docker 组后必须重新登录生效 |
+| **sudo 安全最小化** | 仅开放必要命令免密 |
+| **运维工具缺失** | 创建友好的 Makefile 而非让用户直接敲命令 |
+
+---
+
+## 开发流程问题
+
+### 环境意识不足导致的重复错误
+
+**问题**：AI Agent 执行命令时频繁犯错。
+
+**错误模式**：
 | 错误操作 | 正确操作 | 原因 |
 |:---------|:---------|:-----|
-| `docker exec divinesense-postgres` | `docker exec divinesense-postgres-dev` | 假设生产容器名，实际是开发环境 |
-| `pnpm build`（根目录） | `make build-web` 或 `cd web && pnpm build` | `package.json` 在 `web/` 下 |
+| `docker exec divinesense-postgres` | `make db-shell` | 容器名自动检测 |
+| `pnpm build`（根目录）| `make build-web` | `package.json` 在 `web/` 下 |
 
-### 环境配置对照
-
+**环境配置对照**：
 | 环境 | 容器名 | 端口 | 用户 |
 |:-----|:-------|:-----|:-----|
 | **开发** | `divinesense-postgres-dev` | 25432 | `divinesense` |
 | **生产** | `divinesense-postgres` | 无映射 | `divine` |
 
-### 解决方案
+**解决方案**：
 
 **1. 优先使用 Makefile wrapper**
-
 ```bash
-# ✅ 正确：使用 Makefile（自动处理目录和容器名）
-make db-shell          # 自动检测正确的 PostgreSQL 容器
-make build-web         # 自动进入 web/ 目录构建
-make web               # 启动前端 dev server
-make ci-frontend       # 前端 lint + build 检查
-make check-i18n        # i18n 验证
-
-# ❌ 错误：直接执行环境相关命令
-pnpm build             # 需要先 cd web/
-docker exec divinesense-postgres ...  # 容器名可能错误
+make db-shell          # 自动检测容器
+make build-web         # 自动处理目录
+make web               # 启动前端
+make ci-frontend       # lint + build
 ```
 
 **2. Makefile 环境自动检测**
-
 ```makefile
-# 自动检测当前运行的 PostgreSQL 容器
 POSTGRES_CONTAINER := $(shell docker ps --filter "name=postgres" --format "{{.Names}}" | head -1)
-
-db-shell:
-	docker exec -it $(POSTGRES_CONTAINER) psql -U divinesense -d divinesense
 ```
 
-**3. 执行命令前的检查清单**
-
+**3. 执行前检查清单**
 - [ ] 当前工作目录是否正确？
 - [ ] 目标文件/容器是否存在？
 - [ ] 是否有 Makefile wrapper 可用？
 - [ ] 环境变量是否正确（dev/prod）？
 
-### 经验教训
-
+**经验教训**：
 | 问题 | 教练 |
 |:-----|:-----|
 | **假设而非验证** | 执行前先检查环境，不要假设默认状态 |
@@ -584,11 +322,10 @@ db-shell:
 | **缺少上下文感知** | 多环境配置下必须明确当前环境 |
 | **重复性错误** | 一次错误是疏忽，重复是流程问题 |
 
-### 预防措施
-
-1. **优先使用 Makefile** —— 所有操作通过 Makefile 执行，避免手动输入环境相关命令
-2. **添加容器检测** —— Makefile 自动检测运行的容器，而非硬编码名称
-3. **环境前缀** —— 开发环境资源名称加 `-dev` 后缀，便于区分
+**预防措施**：
+1. **优先使用 Makefile** — 所有操作通过 Makefile 执行
+2. **添加容器检测** — Makefile 自动检测运行的容器
+3. **环境前缀** — 开发环境资源名称加 `-dev` 后缀
 
 ---
 
@@ -601,6 +338,7 @@ db-shell:
 3. **分析原因**：深入分析，不要停留在表面
 4. **记录方案**：最终采用的解决方案
 5. **提炼教训**：可复用的经验，避免重复踩坑
+6. **更新索引**：在"快速查找"章节添加对应条目
 
 **防腐原则**：
 - 标题使用通用名称，不包含日期
