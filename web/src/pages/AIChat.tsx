@@ -317,9 +317,8 @@ const AIChat = () => {
             setIsThinking(false);
             setCapabilityStatus("idle");
             streamingContentRef.current = "";
-            // Refetch blocks to get the complete assistant content and session stats
-            // This ensures the UI shows the final response with all metadata
-            refetchBlocks();
+            // No need to refetch - the streaming handler has already updated the block
+            // with complete content via optimistic updates. Refetching would cause flicker.
           },
           onError: (error) => {
             setIsTyping(false);

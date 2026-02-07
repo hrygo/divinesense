@@ -386,13 +386,21 @@ export function useChat() {
 
           if (blockId !== undefined && blockId !== 0n && params.conversationId) {
             // Create an optimistic block for instant UI feedback
+            // CRITICAL: Get the current roundNumber from existing blocks to prevent flicker
+            // If this is a new block, roundNumber should be (existing blocks count + 1)
+            const existing = queryClient.getQueryData(blockKeys.list(params.conversationId)) as
+              | { blocks?: Block[]; totalCount?: number }
+              | undefined;
+            const existingBlocks = existing?.blocks || [];
+            const optimisticRoundNumber = existingBlocks.length > 0 ? Math.max(...existingBlocks.map((b) => Number(b.roundNumber))) + 1 : 1;
+
             const now = BigInt(Date.now());
             const optimisticBlock: Block = {
               $typeName: "memos.api.v1.Block" as const,
               id: blockId,
-              uid: `optimistic-${blockId}`,
+              uid: `optimistic-${blockId}`, // Will be replaced by backend data
               conversationId: params.conversationId, // number type
-              roundNumber: 0, // Will be updated by backend (number type)
+              roundNumber: optimisticRoundNumber, // Use predicted roundNumber (number type) to prevent flicker
               mode: getBlockModeFromFlags(params.geekMode, params.evolutionMode),
               blockType: BlockType.MESSAGE,
               userInputs: [
