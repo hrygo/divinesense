@@ -90,7 +90,7 @@ if [ "$HAS_FRONTEND" -gt 0 ]; then
 
         # Quick lint check (auto-fix enabled)
         echo "  → pnpm lint:fix..."
-        if ! pnpm lint:fix --silent >/dev/null 2>&1; then
+        if ! pnpm lint:fix >/dev/null 2>&1; then
             echo "    ${RED}✗ Frontend lint failed${NC}"
             cd ..
             CHECKS_FAILED=true
