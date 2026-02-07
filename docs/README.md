@@ -1,7 +1,7 @@
 # DivineSense 文档中心
 
-> **更新时间**: 2025-02-02
-> **文档版本**: v1.1
+> **更新时间**: 2026-02-07
+> **文档版本**: v1.2
 
 ---
 
@@ -26,21 +26,21 @@ docs/
 │   ├── INDEX.md                 # 规格总索引
 │   ├── SPEC_TEMPLATE.md         # 规格模板
 │   ├── block-design/            # 统一 Block 模型设计 (重要)
-│   ├── evolution/               # 进化模式规格
-│   ├── sprint-0/                # Sprint 0: 接口契约
-│   ├── phase-1/                 # Phase 1: 基础稳定
-│   ├── phase-2/                 # Phase 2: 智能进化
-│   └── phase-3/                 # Phase 3: 极致体验
+│   └── evolution/               # 进化模式规格
 ├── prompts/                     # AI 提示词
 │   └── 202601301323.md
 ├── images/                      # 图片资源
 └── archived/                    # 历史归档
-    ├── cleanup_20260123/        # 早期归档 (2026-01-23)
-    ├── research_cleanup_20260131/ # 研究归档 (2026-01-31)
-    ├── research_20250202/       # 研究路线图归档 (2025-02-02)
-    ├── specs/                   # 已完成规格归档
-    │   └── phase-1-completed/    # Phase-1 已完成规格
-    └── specs/                   # 已完成 AI/FE 规格
+    ├── specs/                   # 规格文档归档
+    │   ├── 20260207_archive/    # 2026-02-07 归档
+    │   └── phase-1-completed/   # Phase-1 已完成规格
+    ├── research/                # 研究文档归档
+    │   ├── 20260207_archive/    # 2026-02-07 归档
+    │   └── 20260131_archive/    # 2026-01-31 归档
+    ├── projects/                # 项目专题归档 (Parrot 等)
+    ├── reviews/                 # 代码评审与审计
+    ├── refactor-plans/          # 重构与集成计划
+    └── misc/                    # 启动计划与 ROI 分析
 ```
 
 ---
@@ -70,13 +70,15 @@ docs/
 
 ### 归档文档 (Archived)
 
-| 目录                                                                         | 归档时间   | 内容                       |
-| :--------------------------------------------------------------------------- | :--------- | :------------------------- |
-| [`archived/cleanup_20260123/`](archived/cleanup_20260123/)                   | 2026-01-23 | 早期实施计划、RAG 研究     |
-| [`archived/research_cleanup_20260131/`](archived/research_cleanup_20260131/) | 2026-01-31 | 历史报告、方法论           |
-| [`archived/research_20250202/`](archived/research_20250202/)                 | 2025-02-02 | 研究路线图（8 个文档）     |
-| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/)     | 2025-02-02 | Phase-1 已完成规格（9 个） |
-| [`archived/specs/`](archived/specs/)                                         | 2026-01-23 | 已完成的 AI/FE 规格        |
+| 目录                                                                         | 归档时间   | 内容                     |
+| :--------------------------------------------------------------------------- | :--------- | :----------------------- |
+| [`archived/specs/20260207_archive/`](archived/specs/20260207_archive/)       | 2026-02-07 | Sprint 0/Phase 2/3 规格  |
+| [`archived/research/20260207_archive/`](archived/research/20260207_archive/) | 2026-02-07 | 历史研究报告 (Agent/UBM) |
+| [`archived/research/20260131_archive/`](archived/research/20260131_archive/) | 2026-01-31 | 历史报告、方法论         |
+| [`archived/projects/parrot/`](archived/projects/parrot/)                     | 2026-01-29 | Parrot 专题文档          |
+| [`archived/reviews/`](archived/reviews/)                                     | -          | 代码评审、审计报告       |
+| [`archived/refactor-plans/`](archived/refactor-plans/)                       | -          | 重构计划、集成设计       |
+| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/)     | 2025-02-02 | Phase-1 已完成规格       |
 
 ---
 

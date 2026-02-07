@@ -11,10 +11,10 @@
 ## 快速导航
 
 - [Spec 编写模板](./SPEC_TEMPLATE.md)
-- [Sprint 0: 接口契约](#sprint-0-接口契约)
+- [Sprint 0: 接口契约](../archived/specs/20260207_archive/sprint-0/S0-interface-contract.md) ✅ 已归档
 - [Phase 1: 基础稳定](#phase-1-基础稳定-sprint-1-2) ⚠️ 已完成规格已归档
-- [Phase 2: 智能进化](#phase-2-智能进化-sprint-3-4)
-- [Phase 3: 极致体验](#phase-3-极致体验-sprint-5-6)
+- [Phase 2: 智能进化](#phase-2-智能进化-sprint-3-4) ⚠️ 已完成规格已归档
+- [Phase 3: 极致体验](#phase-3-极致体验-sprint-5-6) ⚠️ 已完成规格已归档
 
 > **注**: 整体路线图和研究文档已归档至 [`archived/research_20250202/`](../archived/research_20250202/)
 
@@ -66,9 +66,9 @@ Phase 3 (Sprint 5-6) - 极致体验
 **投入**: 9 人天  
 **状态**: ✅ 已完成 (2026-01-27)
 
-| Spec ID                                                      | 功能                | 负责团队 |  投入 | 状态  |
-| :----------------------------------------------------------- | :------------------ | :------: | ----: | :---: |
-| [S0-interface-contract](./sprint-0/S0-interface-contract.md) | 公共接口定义 + Mock |    A     | 5人天 |   ✅   |
+| Spec ID                                                                                       | 功能                | 负责团队 |  投入 |   状态   |
+| :-------------------------------------------------------------------------------------------- | :------------------ | :------: | ----: | :------: |
+| [S0-interface-contract](../archived/specs/20260207_archive/sprint-0/S0-interface-contract.md) | 公共接口定义 + Mock |    A     | 5人天 | ✅ 已归档 |
 
 **Sprint 0 交付检查清单**:
 - [x] 团队A: 7个公共服务接口定义完成
@@ -150,9 +150,9 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 #### 团队 C
 
-| Spec ID                                              | 功能         |  投入 | 依赖    | 状态  |
-| :--------------------------------------------------- | :----------- | ----: | :------ | :---: |
-| [P1-C003](./phase-1/team-c/P1-C003-related-memos.md) | 相关笔记推荐 | 6人天 | P1-A005 |   ✅   |
+| Spec ID                                                                        | 功能         |  投入 | 依赖    |   状态   |
+| :----------------------------------------------------------------------------- | :----------- | ----: | :------ | :------: |
+| [P1-C003](../archived/specs/phase-1-completed/team-c/P1-C003-related-memos.md) | 相关笔记推荐 | 6人天 | P1-A005 | ✅ 已归档 |
 
 **Sprint 2 集成验收点**:
 - [x] A→B: RouterService + TimeService 调用通过
@@ -171,23 +171,23 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 #### 团队 A
 
-| Spec ID                                                | 功能              |  投入 | 依赖    | 状态  |
-| :----------------------------------------------------- | :---------------- | ----: | :------ | :---: |
-| [P2-A001](./phase-2/team-a/P2-A001-self-rag.md)        | Self-RAG 检索优化 | 3人天 | P1-A005 |   ✅   |
-| [P2-A002](./phase-2/team-a/P2-A002-context-builder.md) | 上下文增强构建器  | 3人天 | P1-A001 |   ✅   |
+| Spec ID                                                                                 | 功能              |  投入 | 依赖    |   状态   |
+| :-------------------------------------------------------------------------------------- | :---------------- | ----: | :------ | :------: |
+| [P2-A001](../archived/specs/20260207_archive/phase-2/team-a/P2-A001-self-rag.md)        | Self-RAG 检索优化 | 3人天 | P1-A005 | ✅ 已归档 |
+| [P2-A002](../archived/specs/20260207_archive/phase-2/team-a/P2-A002-context-builder.md) | 上下文增强构建器  | 3人天 | P1-A001 | ✅ 已归档 |
 
 #### 团队 B
 
-| Spec ID                                              | 功能             |  投入 | 依赖    | 状态  |
-| :--------------------------------------------------- | :--------------- | ----: | :------ | :---: |
-| [P2-B001](./phase-2/team-b/P2-B001-habit-learner.md) | 用户习惯学习系统 | 5人天 | P1-A001 |   ✅   |
-| [P2-B002](./phase-2/team-b/P2-B002-fast-create.md)   | 快速创建模式     | 4人天 | P1-A004 |   ✅   |
+| Spec ID                                                                               | 功能             |  投入 | 依赖    |   状态   |
+| :------------------------------------------------------------------------------------ | :--------------- | ----: | :------ | :------: |
+| [P2-B001](../archived/specs/20260207_archive/phase-2/team-b/P2-B001-habit-learner.md) | 用户习惯学习系统 | 5人天 | P1-A001 | ✅ 已归档 |
+| [P2-B002](../archived/specs/20260207_archive/phase-2/team-b/P2-B002-fast-create.md)   | 快速创建模式     | 4人天 | P1-A004 | ✅ 已归档 |
 
 #### 团队 C
 
-| Spec ID                                           | 功能         |  投入 | 依赖    | 状态  |
-| :------------------------------------------------ | :----------- | ----: | :------ | :---: |
-| [P2-C001](./phase-2/team-c/P2-C001-smart-tags.md) | 智能标签建议 | 7人天 | P1-A003 |   ✅   |
+| Spec ID                                                                            | 功能         |  投入 | 依赖    |   状态   |
+| :--------------------------------------------------------------------------------- | :----------- | ----: | :------ | :------: |
+| [P2-C001](../archived/specs/20260207_archive/phase-2/team-c/P2-C001-smart-tags.md) | 智能标签建议 | 7人天 | P1-A003 | ✅ 已归档 |
 
 **Sprint 3 集成验收点**:
 - [x] A→B: 习惯数据写入记忆服务
@@ -199,22 +199,22 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 #### 团队 A
 
-| Spec ID                                              | 功能           |  投入 | 依赖    | 状态  |
-| :--------------------------------------------------- | :------------- | ----: | :------ | :---: |
-| [P2-A003](./phase-2/team-a/P2-A003-session-store.md) | 会话持久化服务 | 3人天 | P1-A001 |   ✅   |
+| Spec ID                                                                               | 功能           |  投入 | 依赖    |   状态   |
+| :------------------------------------------------------------------------------------ | :------------- | ----: | :------ | :------: |
+| [P2-A003](../archived/specs/20260207_archive/phase-2/team-a/P2-A003-session-store.md) | 会话持久化服务 | 3人天 | P1-A001 | ✅ 已归档 |
 
 #### 团队 B
 
-| Spec ID                                              | 功能               |  投入 | 依赖    | 状态  |
-| :--------------------------------------------------- | :----------------- | ----: | :------ | :---: |
-| [P2-B003](./phase-2/team-b/P2-B003-precheck-api.md)  | 后端预检 API       | 2人天 | P1-A005 |   ✅   |
-| [P2-B004](./phase-2/team-b/P2-B004-generative-ui.md) | Generative UI 增强 | 4人天 | -       |   ✅   |
+| Spec ID                                                                               | 功能               |  投入 | 依赖    |   状态   |
+| :------------------------------------------------------------------------------------ | :----------------- | ----: | :------ | :------: |
+| [P2-B003](../archived/specs/20260207_archive/phase-2/team-b/P2-B003-precheck-api.md)  | 后端预检 API       | 2人天 | P1-A005 | ✅ 已归档 |
+| [P2-B004](../archived/specs/20260207_archive/phase-2/team-b/P2-B004-generative-ui.md) | Generative UI 增强 | 4人天 | -       | ✅ 已归档 |
 
 #### 团队 C
 
-| Spec ID                                                    | 功能         |  投入 | 依赖    | 状态  |
-| :--------------------------------------------------------- | :----------- | ----: | :------ | :---: |
-| [P2-C002](./phase-2/team-c/P2-C002-duplicate-detection.md) | 重复检测系统 | 9人天 | P1-A005 |   ✅   |
+| Spec ID                                                                                     | 功能         |  投入 | 依赖    |   状态   |
+| :------------------------------------------------------------------------------------------ | :----------- | ----: | :------ | :------: |
+| [P2-C002](../archived/specs/20260207_archive/phase-2/team-c/P2-C002-duplicate-detection.md) | 重复检测系统 | 9人天 | P1-A005 | ✅ 已归档 |
 
 **Sprint 4 集成验收点**:
 - [ ] A→B: 会话恢复测试
@@ -232,22 +232,22 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 #### 团队 A
 
-| Spec ID                                            | 功能         |  投入 | 依赖 |  状态  |
-| :------------------------------------------------- | :----------- | ----: | :--- | :----: |
-| [P3-A001](./phase-3/team-a/P3-A001-local-model.md) | 本地模型集成 | 5人天 | -    | ⏸️ 搁置 |
+| Spec ID                                                                             | 功能         |  投入 | 依赖 |     状态      |
+| :---------------------------------------------------------------------------------- | :----------- | ----: | :--- | :-----------: |
+| [P3-A001](../archived/specs/20260207_archive/phase-3/team-a/P3-A001-local-model.md) | 本地模型集成 | 5人天 | -    | ⏸️ 已归档/搁置 |
 
 #### 团队 B
 
-| Spec ID                                                  | 功能           |  投入 | 依赖    | 状态  |
-| :------------------------------------------------------- | :------------- | ----: | :------ | :---: |
-| [P3-B001](./phase-3/team-b/P3-B001-prediction-engine.md) | 预测性交互系统 | 5人天 | P1-A001 |   ✅   |
-| [P3-B002](./phase-3/team-b/P3-B002-reminder-system.md)   | 主动提醒系统   | 4人天 | P1-A004 |   ✅   |
+| Spec ID                                                                                   | 功能           |  投入 | 依赖    |   状态   |
+| :---------------------------------------------------------------------------------------- | :------------- | ----: | :------ | :------: |
+| [P3-B001](../archived/specs/20260207_archive/phase-3/team-b/P3-B001-prediction-engine.md) | 预测性交互系统 | 5人天 | P1-A001 | ✅ 已归档 |
+| [P3-B002](../archived/specs/20260207_archive/phase-3/team-b/P3-B002-reminder-system.md)   | 主动提醒系统   | 4人天 | P1-A004 | ✅ 已归档 |
 
 #### 团队 C
 
-| Spec ID                                                | 功能           |  投入 | 依赖    | 状态  |
-| :----------------------------------------------------- | :------------- | ----: | :------ | :---: |
-| [P3-C001](./phase-3/team-c/P3-C001-knowledge-graph.md) | 知识图谱可视化 | 8人天 | P1-A005 |   ✅   |
+| Spec ID                                                                                 | 功能           |  投入 | 依赖    |   状态   |
+| :-------------------------------------------------------------------------------------- | :------------- | ----: | :------ | :------: |
+| [P3-C001](../archived/specs/20260207_archive/phase-3/team-c/P3-C001-knowledge-graph.md) | 知识图谱可视化 | 8人天 | P1-A005 | ✅ 已归档 |
 
 **Sprint 5 集成验收点**:
 - [ ] ~~A: 本地模型 + 路由就绪~~ (已搁置)
@@ -260,22 +260,22 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 #### 团队 A
 
-| Spec ID                                             | 功能       |  投入 | 依赖    |  状态  |
-| :-------------------------------------------------- | :--------- | ----: | :------ | :----: |
-| [P3-A002](./phase-3/team-a/P3-A002-model-router.md) | 模型路由器 | 3人天 | P3-A001 | ⏸️ 搁置 |
+| Spec ID                                                                              | 功能       |  投入 | 依赖    |     状态      |
+| :----------------------------------------------------------------------------------- | :--------- | ----: | :------ | :-----------: |
+| [P3-A002](../archived/specs/20260207_archive/phase-3/team-a/P3-A002-model-router.md) | 模型路由器 | 3人天 | P3-A001 | ⏸️ 已归档/搁置 |
 
 #### 团队 B
 
-| Spec ID                                               | 功能         |  投入 | 依赖    | 状态  |
-| :---------------------------------------------------- | :----------- | ----: | :------ | :---: |
-| [P3-B003](./phase-3/team-b/P3-B003-batch-schedule.md) | 批量日程支持 | 6人天 | P1-A004 |   ✅   |
+| Spec ID                                                                                | 功能         |  投入 | 依赖    |   状态   |
+| :------------------------------------------------------------------------------------- | :----------- | ----: | :------ | :------: |
+| [P3-B003](../archived/specs/20260207_archive/phase-3/team-b/P3-B003-batch-schedule.md) | 批量日程支持 | 6人天 | P1-A004 | ✅ 已归档 |
 
 #### 团队 C
 
-| Spec ID                                                | 功能                |  投入 | 依赖    | 状态  |
-| :----------------------------------------------------- | :------------------ | ----: | :------ | :---: |
-| [P3-C001](./phase-3/team-c/P3-C001-knowledge-graph.md) | 知识图谱可视化 (续) | 5人天 | -       |   ✅   |
-| [P3-C002](./phase-3/team-c/P3-C002-review-system.md)   | 智能回顾系统        | 8人天 | P1-A001 |   ✅   |
+| Spec ID                                                                                 | 功能                |  投入 | 依赖    |   状态   |
+| :-------------------------------------------------------------------------------------- | :------------------ | ----: | :------ | :------: |
+| [P3-C001](../archived/specs/20260207_archive/phase-3/team-c/P3-C001-knowledge-graph.md) | 知识图谱可视化 (续) | 5人天 | -       | ✅ 已归档 |
+| [P3-C002](../archived/specs/20260207_archive/phase-3/team-c/P3-C002-review-system.md)   | 智能回顾系统        | 8人天 | P1-A001 | ✅ 已归档 |
 
 **最终验收**:
 - [x] API 成本降低 60%+
@@ -339,42 +339,42 @@ Phase 3 (Sprint 5-6) - 极致体验
 
 ### Unified Block Model (统一块模型)
 
-| Spec ID | 功能 | 状态 | 说明 |
-|:-------|:-----|:-----|:-----|
-| [unified-block-model](./block-design/unified-block-model.md) | UBM 主规格文档 | ✅ 已实现 (v0.93.0) | 核心架构设计 |
-| [block-design/README.md](./block-design/README.md) | Block Design 目录导航 | ✅ 已完成 | 文档组织和说明 |
-| [block-design/INDEX.md](./block-design/INDEX.md) | Block Design 规格索引 | ✅ 已完成 | Phase 文档索引 |
-| [block-design/ROADMAP.md](./block-design/ROADMAP.md) | Block Design 实施路线 | ✅ 已完成 | 推荐执行顺序 |
+| Spec ID                                                      | 功能                  | 状态               | 说明           |
+| :----------------------------------------------------------- | :-------------------- | :----------------- | :------------- |
+| [unified-block-model](./block-design/unified-block-model.md) | UBM 主规格文档        | ✅ 已实现 (v0.93.0) | 核心架构设计   |
+| [block-design/README.md](./block-design/README.md)           | Block Design 目录导航 | ✅ 已完成           | 文档组织和说明 |
+| [block-design/INDEX.md](./block-design/INDEX.md)             | Block Design 规格索引 | ✅ 已完成           | Phase 文档索引 |
+| [block-design/ROADMAP.md](./block-design/ROADMAP.md)         | Block Design 实施路线 | ✅ 已完成           | 推荐执行顺序   |
 
 ### UBM Phase 规格 (已归档)
 
-| Spec ID | 功能 | 状态 |
-|:-------|:-----|:-----|
-| [block-design/archived/unified-block-model-index.md](./block-design/archived/unified-block-model-index.md) | Phase 实施索引 | ✅ 已实现 (v0.93.0) |
-| [block-design/archived/unified-block-model-phase1.md](./block-design/archived/unified-block-model-phase1.md) | Phase 1: 数据库 & 后端 Store | ✅ 已实现 |
-| [block-design/archived/unified-block-model-phase2.md](./block-design/archived/unified-block-model-phase2.md) | Phase 2: Proto & API | ✅ 已实现 |
-| [block-design/archived/unified-block-model-phase3.md](./block-design/archived/unified-block-model-phase3.md) | Phase 3: 前端类型定义 | ✅ 已实现 |
-| [block-design/archived/unified-block-model-phase4.md](./block-design/archived/unified-block-model-phase4.md) | Phase 4: 前端组件改造 | ✅ 已实现 |
-| [block-design/archived/unified-block-model-phase5.md](./block-design/archived/unified-block-model-phase5.md) | Phase 5: Chat Handler | ✅ 已实现 |
-| [block-design/archived/unified-block-model-phase6.md](./block-design/archived/unified-block-model-phase6.md) | Phase 6: 集成测试 | ✅ 已实现 |
+| Spec ID                                                                                                      | 功能                         | 状态               |
+| :----------------------------------------------------------------------------------------------------------- | :--------------------------- | :----------------- |
+| [block-design/archived/unified-block-model-index.md](./block-design/archived/unified-block-model-index.md)   | Phase 实施索引               | ✅ 已实现 (v0.93.0) |
+| [block-design/archived/unified-block-model-phase1.md](./block-design/archived/unified-block-model-phase1.md) | Phase 1: 数据库 & 后端 Store | ✅ 已实现           |
+| [block-design/archived/unified-block-model-phase2.md](./block-design/archived/unified-block-model-phase2.md) | Phase 2: Proto & API         | ✅ 已实现           |
+| [block-design/archived/unified-block-model-phase3.md](./block-design/archived/unified-block-model-phase3.md) | Phase 3: 前端类型定义        | ✅ 已实现           |
+| [block-design/archived/unified-block-model-phase4.md](./block-design/archived/unified-block-model-phase4.md) | Phase 4: 前端组件改造        | ✅ 已实现           |
+| [block-design/archived/unified-block-model-phase5.md](./block-design/archived/unified-block-model-phase5.md) | Phase 5: Chat Handler        | ✅ 已实现           |
+| [block-design/archived/unified-block-model-phase6.md](./block-design/archived/unified-block-model-phase6.md) | Phase 6: 集成测试            | ✅ 已实现           |
 
 **Phase 总计**: 21 人天 | **状态**: ✅ 全部实现 (v0.93.0) | 详情已归档至 `block-design/archived/`
 
 ### UBM 改进与扩展
 
-| Spec ID | 功能 | 优先级 | 状态 |
-|:-------|:-----|:-------|:-----|
+| Spec ID                                                                                              | 功能                        | 优先级 | 状态     |
+| :--------------------------------------------------------------------------------------------------- | :-------------------------- | :----- | :------- |
 | [block-design/unified-block-model_improvement.md](./block-design/unified-block-model_improvement.md) | UBM 深度改进建议 (Bug 修复) | **P0** | 🔲 待开发 |
-| [block-design/P1-A006-llm-stats-collection.md](./block-design/P1-A006-llm-stats-collection.md) | LLM 层统计收集 | P1 | 🔲 待开发 |
-| [block-design/joint-audit-report.md](./block-design/joint-audit-report.md) | 三方规格联合审计报告 | - | ✅ 已完成 |
-| [block-design/tree-conversation-branching.md](./block-design/tree-conversation-branching.md) | 树状会话分支 (编辑重生成) | P1 | 🔲 待开发 |
+| [block-design/P1-A006-llm-stats-collection.md](./block-design/P1-A006-llm-stats-collection.md)       | LLM 层统计收集              | P1     | 🔲 待开发 |
+| [block-design/joint-audit-report.md](./block-design/joint-audit-report.md)                           | 三方规格联合审计报告        | -      | ✅ 已完成 |
+| [block-design/tree-conversation-branching.md](./block-design/tree-conversation-branching.md)         | 树状会话分支 (编辑重生成)   | P1     | 🔲 待开发 |
 
 ### 其他架构规格
 
-| Spec ID | 功能 | 状态 |
-|:-------|:-----|:-----|
-| [cc_runner_async_arch](./cc_runner_async_arch.md) | CC Runner 异步架构 | ✅ Published |
-| [chat-apps-integration](./chat-apps-integration.md) | 聊天应用集成 (Telegram/钉钉) | ✅ Published |
+| Spec ID                                                                              | 功能                         | 状态     |
+| :----------------------------------------------------------------------------------- | :--------------------------- | :------- |
+| [cc_runner_async_arch](../archived/specs/20260207_archive/cc_runner_async_arch.md)   | CC Runner 异步架构           | ✅ 已归档 |
+| [chat-apps-integration](../archived/specs/20260207_archive/chat-apps-integration.md) | 聊天应用集成 (Telegram/钉钉) | ✅ 已归档 |
 
 ---
 
