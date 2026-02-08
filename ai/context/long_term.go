@@ -66,6 +66,9 @@ func (e *LongTermExtractor) Extract(
 			prefs = DefaultUserPreferences()
 		}
 		result.Preferences = prefs
+	} else {
+		// No provider available, use defaults
+		result.Preferences = DefaultUserPreferences()
 	}
 
 	return result, nil

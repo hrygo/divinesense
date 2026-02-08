@@ -72,6 +72,12 @@ func FormatConversation(messages []*Message) string {
 
 // SplitByRecency splits messages into recent (high priority) and older (lower priority).
 func SplitByRecency(messages []*Message, recentCount int) (recent, older []*Message) {
+	if len(messages) == 0 {
+		return nil, nil
+	}
+	if recentCount <= 0 {
+		return nil, messages
+	}
 	if len(messages) <= recentCount {
 		return messages, nil
 	}

@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSessionCleanupJob(t *testing.T) {
@@ -132,4 +135,149 @@ func TestSessionCleanupJob(t *testing.T) {
 			t.Errorf("expected default cleanup interval %v, got %v", DefaultCleanupInterval, config.CleanupInterval)
 		}
 	})
+}
+
+// Additional tests for cleanup functionality
+
+func TestSessionCleanupJob_NegativeConfigValues(t *testing.T) {
+	mock := NewMockSessionService()
+
+	t.Run("Negative retention uses default", func(t *testing.T) {
+		job := NewSessionCleanupJob(mock, CleanupConfig{
+			RetentionDays:   -5,
+			CleanupInterval: time.Hour,
+		})
+
+		assert.Equal(t, DefaultRetentionDays, job.config.RetentionDays)
+		assert.Equal(t, time.Hour, job.config.CleanupInterval)
+	})
+
+	t.Run("Negative interval uses default", func(t *testing.T) {
+		job := NewSessionCleanupJob(mock, CleanupConfig{
+			RetentionDays:   7,
+			CleanupInterval: -1,
+		})
+
+		assert.Equal(t, 7, job.config.RetentionDays)
+		assert.Equal(t, DefaultCleanupInterval, job.config.CleanupInterval)
+	})
+}
+
+func TestSessionCleanupJob_RunOnce_MultipleExpiredSessions(t *testing.T) {
+	ctx := context.Background()
+	mock := NewMockSessionService()
+	mock.Clear()
+
+	// Add multiple old sessions
+	oldTime := time.Now().Add(-40 * 24 * time.Hour).Unix()
+	for i := 0; i < 5; i++ {
+		mock.SetSessionDirectly("old-"+string(rune('0'+i)), &ConversationContext{
+			SessionID: "old-" + string(rune('0'+i)),
+			UserID:    1,
+			UpdatedAt: oldTime,
+			Messages:  []Message{{Role: "user", Content: "Old message"}},
+		})
+	}
+
+	// Add recent sessions
+	for i := 0; i < 3; i++ {
+		mock.SaveContext(ctx, "recent-"+string(rune('0'+i)), &ConversationContext{
+			UserID:   1,
+			Messages: []Message{{Role: "user", Content: "Recent message"}},
+		})
+	}
+
+	job := NewSessionCleanupJob(mock, CleanupConfig{RetentionDays: 30})
+	deleted, err := job.RunOnce(ctx)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), deleted)
+
+	// Verify recent sessions still exist
+	for i := 0; i < 3; i++ {
+		loaded, _ := mock.LoadContext(ctx, "recent-"+string(rune('0'+i)))
+		assert.NotNil(t, loaded, "recent session should still exist")
+	}
+}
+
+func TestSessionCleanupJob_RunOnce_NoExpiredSessions(t *testing.T) {
+	ctx := context.Background()
+	mock := NewMockSessionService()
+	mock.Clear()
+
+	// Add only recent sessions
+	for i := 0; i < 3; i++ {
+		mock.SaveContext(ctx, "session-"+string(rune('0'+i)), &ConversationContext{
+			UserID:   1,
+			Messages: []Message{{Role: "user", Content: "Message"}},
+		})
+	}
+
+	job := NewSessionCleanupJob(mock, CleanupConfig{RetentionDays: 30})
+	deleted, err := job.RunOnce(ctx)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), deleted)
+}
+
+func TestSessionCleanupJob_RunOnce_EmptyService(t *testing.T) {
+	ctx := context.Background()
+	mock := NewMockSessionService()
+	mock.Clear()
+
+	job := NewSessionCleanupJob(mock, CleanupConfig{RetentionDays: 30})
+	deleted, err := job.RunOnce(ctx)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), deleted)
+}
+
+func TestSessionCleanupJob_ContextCancellation(t *testing.T) {
+	mock := NewMockSessionService()
+	job := NewSessionCleanupJob(mock, CleanupConfig{
+		RetentionDays:   30,
+		CleanupInterval: 10 * time.Millisecond,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	err := job.Start(ctx)
+	require.NoError(t, err)
+
+	// Verify running
+	time.Sleep(5 * time.Millisecond)
+	assert.True(t, job.IsRunning())
+
+	// Cancel context
+	cancel()
+
+	// Wait for goroutine to exit
+	time.Sleep(20 * time.Millisecond)
+
+	// Should have stopped
+	assert.False(t, job.IsRunning())
+}
+
+// Benchmark tests
+
+func BenchmarkRunOnce(b *testing.B) {
+	ctx := context.Background()
+	mock := NewMockSessionService()
+
+	// Add 100 old sessions
+	oldTime := time.Now().Add(-40 * 24 * time.Hour).Unix()
+	for i := 0; i < 100; i++ {
+		mock.SetSessionDirectly("old-"+string(rune(i)), &ConversationContext{
+			UserID:    1,
+			UpdatedAt: oldTime,
+			Messages:  []Message{{Role: "user", Content: "Old"}},
+		})
+	}
+
+	job := NewSessionCleanupJob(mock, CleanupConfig{RetentionDays: 30})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = job.RunOnce(ctx)
+	}
 }
