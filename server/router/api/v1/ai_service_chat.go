@@ -216,8 +216,19 @@ func (s *AIService) Chat(req *v1pb.ChatRequest, stream v1pb.AIService_ChatServer
 
 // createChatHandler creates the chat handler.
 func (s *AIService) createChatHandler() aichat.Handler {
-	// Get cached agent factory (initializes on first use)
-	factory := s.getAgentFactory()
+	factory := aichat.NewAgentFactory(
+		s.LLMService,
+		s.AdaptiveRetriever,
+		s.Store,
+	)
+
+	// Initialize UniversalParrot if configured
+	if s.UniversalParrotConfig != nil {
+		if err := factory.Initialize(s.UniversalParrotConfig); err != nil {
+			slog.Warn("Failed to initialize AgentFactory, AI features may be limited",
+				"error", err)
+		}
+	}
 
 	// Phase 5: Create BlockManager for Unified Block Model support
 	blockManager := aichat.NewBlockManager(s.Store)
