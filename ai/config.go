@@ -8,11 +8,12 @@ import (
 
 // Config represents AI configuration.
 type Config struct {
-	Embedding        EmbeddingConfig
-	Reranker         RerankerConfig
-	IntentClassifier IntentClassifierConfig
-	LLM              LLMConfig
-	Enabled          bool
+	Embedding          EmbeddingConfig
+	Reranker           RerankerConfig
+	IntentClassifier   IntentClassifierConfig
+	LLM                LLMConfig
+	UniversalParrot    UniversalParrotConfig // Phase 2: Configuration-driven parrots
+	Enabled            bool
 }
 
 // EmbeddingConfig represents vector embedding configuration.
@@ -50,6 +51,13 @@ type IntentClassifierConfig struct {
 	APIKey  string
 	BaseURL string
 	Enabled bool
+}
+
+// UniversalParrotConfig represents configuration for UniversalParrot (configuration-driven parrots).
+type UniversalParrotConfig struct {
+	Enabled      bool   // Enable UniversalParrot for creating parrots from YAML configs
+	ConfigDir    string // Path to parrot YAML configs (default: ./config/parrots)
+	FallbackMode string // "legacy" | "error" when config load fails (default: legacy)
 }
 
 // NewConfigFromProfile creates AI config from profile.

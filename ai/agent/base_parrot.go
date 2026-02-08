@@ -43,14 +43,12 @@ type NormalSessionStats struct {
 }
 
 // BaseParrot provides common statistics accumulation functionality for all normal mode agents.
-// Normal mode agents (MemoParrot, ScheduleParrotV2, AmazingParrot) embed BaseParrot
-// to track LLM call statistics across their execution sessions.
+// UniversalParrot and other agents embed BaseParrot to track LLM call statistics.
 //
 // BaseParrot is thread-safe and uses a mutex to protect the stats state.
 //
 // BaseParrot 为所有普通模式代理提供通用的统计累积功能。
-// 普通模式代理（MemoParrot、ScheduleParrotV2、AmazingParrot）嵌入 BaseParrot
-// 以跟踪其执行会话期间的 LLM 调用统计。
+// UniversalParrot 和其他代理嵌入 BaseParrot 以跟踪其执行会话期间的 LLM 调用统计。
 //
 // BaseParrot 是线程安全的，使用互斥锁保护统计状态。
 type BaseParrot struct {

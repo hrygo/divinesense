@@ -497,14 +497,71 @@ func GenerateCacheKey(agentName string, userID int32, userInput string) string {
 	return fmt.Sprintf("%s:%d:%s", agentName, userID, hashStr)
 }
 
+// EventWithMeta extends the basic event with metadata for observability.
+// EventWithMeta 扩展基本事件，添加元数据以增强可观测性。
+//
+// This type is used by executors (DirectExecutor, ReActExecutor, PlanningExecutor)
+// and CCRunner to send detailed event metadata to the frontend.
+type EventWithMeta struct {
+	EventType string     // Event type (thinking, tool_use, tool_result, etc.)
+	EventData string     // Event data content
+	Meta      *EventMeta // Enhanced metadata (never nil when created via NewEventWithMeta)
+}
+
+// NewEventWithMeta creates a new EventWithMeta with guaranteed non-nil Meta.
+// NewEventWithMeta 创建新的 EventWithMeta，确保 Meta 非 nil。
+//
+// If meta is nil, an empty EventMeta{} is used instead.
+// This prevents nil pointer dereferences when accessing Meta fields.
+func NewEventWithMeta(eventType, eventData string, meta *EventMeta) *EventWithMeta {
+	if meta == nil {
+		meta = &EventMeta{}
+	}
+	return &EventWithMeta{
+		EventType: eventType,
+		EventData: eventData,
+		Meta:      meta,
+	}
+}
+
+// EventMeta contains detailed metadata for streaming events.
+// EventMeta 包含流式事件的详细元数据。
+type EventMeta struct {
+	// Timing
+	DurationMs      int64 `json:"duration_ms"`       // Event duration in milliseconds
+	TotalDurationMs int64 `json:"total_duration_ms"` // Total elapsed time since start
+
+	// Tool call info
+	ToolName string `json:"tool_name"` // Tool name (e.g., "bash", "editor_write", "memo_search")
+	ToolID   string `json:"tool_id"`   // Unique tool call ID
+	Status   string `json:"status"`    // "running", "success", "error"
+	ErrorMsg string `json:"error_msg"` // Error message if status=error
+
+	// Token usage (when available)
+	InputTokens      int32 `json:"input_tokens"`       // Input tokens
+	OutputTokens     int32 `json:"output_tokens"`      // Output tokens
+	CacheWriteTokens int32 `json:"cache_write_tokens"` // Cache write tokens
+	CacheReadTokens  int32 `json:"cache_read_tokens"`  // Cache read tokens
+
+	// Summaries for UI
+	InputSummary  string `json:"input_summary"`  // Human-readable input summary
+	OutputSummary string `json:"output_summary"` // Truncated output preview
+
+	// File operations
+	FilePath  string `json:"file_path"`  // Affected file path
+	LineCount int32  `json:"line_count"` // Number of lines affected
+
+	// Progress (for long-running operations)
+	Progress   int32  `json:"progress"`    // Progress percentage (0-100)
+	TotalSteps int32  `json:"total_steps"` // Total number of steps (for multi-stage operations)
+	CurrentStep int32 `json:"current_step"` // Current step number
+}
+
 // Compile-time interface compliance checks.
 // 编译时接口合规性检查。
 // These ensure that all parrot types correctly implement the ParrotAgent interface.
 // 如果任何类型未正确实现接口，编译将失败。
 var (
-	_ ParrotAgent = (*MemoParrot)(nil)       // 灰灰 (Memo)
-	_ ParrotAgent = (*AmazingParrot)(nil)    // 折衷 (Amazing)
-	_ ParrotAgent = (*ScheduleParrotV2)(nil) // 时巧 (Schedule V2)
-	_ ParrotAgent = (*GeekParrot)(nil)       // 极客 (Geek Mode)
-	_ ParrotAgent = (*EvolutionParrot)(nil)  // 进化 (Evolution Mode)
+	_ ParrotAgent = (*GeekParrot)(nil)      // 极客 (Geek Mode)
+	_ ParrotAgent = (*EvolutionParrot)(nil) // 进化 (Evolution Mode)
 )

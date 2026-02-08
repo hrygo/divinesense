@@ -204,42 +204,6 @@ type CCRunner struct {
 	currentStats *SessionStats
 }
 
-// EventWithMeta extends the basic event with metadata for observability.
-// EventWithMeta 扩展基本事件，添加元数据以增强可观测性。
-type EventWithMeta struct {
-	EventType string     // Event type (thinking, tool_use, tool_result, etc.)
-	EventData string     // Event data content
-	Meta      *EventMeta // Enhanced metadata
-}
-
-// EventMeta contains detailed metadata for streaming events.
-// EventMeta 包含流式事件的详细元数据。
-type EventMeta struct {
-	// Timing
-	DurationMs      int64 `json:"duration_ms"`       // Event duration in milliseconds
-	TotalDurationMs int64 `json:"total_duration_ms"` // Total elapsed time since start
-
-	// Tool call info
-	ToolName string `json:"tool_name"` // Tool name (e.g., "bash", "editor_write")
-	ToolID   string `json:"tool_id"`   // Unique tool call ID
-	Status   string `json:"status"`    // "running", "success", "error"
-	ErrorMsg string `json:"error_msg"` // Error message if status=error
-
-	// Token usage (when available)
-	InputTokens      int32 `json:"input_tokens"`       // Input tokens
-	OutputTokens     int32 `json:"output_tokens"`      // Output tokens
-	CacheWriteTokens int32 `json:"cache_write_tokens"` // Cache write tokens
-	CacheReadTokens  int32 `json:"cache_read_tokens"`  // Cache read tokens
-
-	// Summaries for UI
-	InputSummary  string `json:"input_summary"`  // Human-readable input summary
-	OutputSummary string `json:"output_summary"` // Truncated output preview
-
-	// File operations
-	FilePath  string `json:"file_path"`  // Affected file path
-	LineCount int32  `json:"line_count"` // Number of lines affected
-}
-
 // SessionStats collects session-level statistics for Geek/Evolution modes.
 // SessionStats 收集极客/进化模式的会话级别统计数据。
 type SessionStats struct {

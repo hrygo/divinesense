@@ -300,19 +300,51 @@ git push --no-verify
 
 ### 代理类型 (`ai/agent/`)
 
-|  AgentType  | 鹦鹉名称 | 文件                    | 中文名 | 描述                             |
-| :---------: | :------- | :---------------------- | :----- | :------------------------------- |
-|   `AUTO`    | —        | —                       | —      | 路由标记（非鹦鹉），由后端三层路由决定使用哪只鹦鹉 |
-|   `MEMO`    | 灰灰     | `memo_parrot.go`        | 灰灰   | 笔记搜索和检索专家               |
-| `SCHEDULE`  | 时巧     | `schedule_parrot_v2.go` | 时巧   | 日程创建和管理                   |
-|  `AMAZING`  | 折衷     | `amazing_parrot.go`     | 折衷   | 综合助理（笔记 + 日程）          |
-|   `GEEK`    | 极客     | `geek_parrot.go`        | 极客   | Claude Code CLI 通信层（零 LLM） |
-| `EVOLUTION` | 进化     | `evolution_parrot.go`   | 进化   | 自我进化能力（源代码修改）       |
+|  AgentType  | 鹦鹉名称 | 配置/文件              | 中文名 | 描述                             |
+| :---------: | :------- | :--------------------- | :----- | :------------------------------- |
+|   `AUTO`    | —        | —                      | —      | 路由标记（非鹦鹉），由后端三层路由决定使用哪只鹦鹉 |
+|   `MEMO`    | 灰灰     | `config/parrots/memo.yaml` | 灰灰   | 笔记搜索和检索专家               |
+| `SCHEDULE`  | 时巧     | `config/parrots/schedule.yaml` | 时巧 | 日程创建和管理                   |
+|  `AMAZING`  | 折衷     | `config/parrots/amazing.yaml` | 折衷 | 综合助理（笔记 + 日程）          |
+|   `GEEK`    | 极客     | `geek_parrot.go`       | 极客   | Claude Code CLI 通信层（零 LLM） |
+| `EVOLUTION` | 进化     | `evolution_parrot.go`  | 进化   | 自我进化能力（源代码修改）       |
 
 **说明**：
-- **鹦鹉共五只**：MEMO、SCHEDULE、AMAZING、GEEK、EVOLUTION
+- **鹦鹉共五只**：MEMO、SCHEDULE、AMAZING（配置驱动）、GEEK、EVOLUTION（代码实现）
 - **AUTO 不是鹦鹉**：它是前端发送给后端的特殊标记，表示"请后端路由系统决定使用哪只鹦鹉"
 - 当 `AgentType == AUTO` 时，后端触发三层路由（规则匹配 → 历史感知 → LLM 降级）
+
+### UniversalParrot 架构
+
+> **实现状态**: ✅ 完成 (v0.93.0) | **位置**: `ai/agent/universal/`
+
+**概述**：UniversalParrot 是配置驱动的通用代理系统，三只核心鹦鹉（MEMO、SCHEDULE、AMAZING）通过 YAML 配置文件定义，无需编写代码。
+
+**配置目录**：`config/parrots/`
+
+| 配置文件 | 代理名称 | 执行策略 |
+|:--------|:--------|:---------|
+| `memo.yaml` | MemoParrot | ReAct 循环（`react`） |
+| `schedule.yaml` | ScheduleParrot | 原生工具调用（`direct`） |
+| `amazing.yaml` | AmazingParrot | 两阶段规划 + 并发执行（`planning`） |
+
+**核心组件**：
+
+| 组件 | 文件 | 描述 |
+|:-----|:-----|:-----|
+| **UniversalParrot** | `universal_parrot.go` | 配置驱动的通用代理实现 |
+| **ParrotFactory** | `parrot_factory.go` | 从配置创建代理的工厂 |
+| **ParrotConfig** | `parrot_config.go` | 配置加载和验证 |
+| **ExecutionStrategy** | `*_executor.go` | 执行策略接口（Direct/ReAct/Planning） |
+| **ToolRegistry** | `registry/tool_registry.go` | 工具注册表（动态工具发现） |
+
+**执行策略**：
+
+| 策略 | 文件 | 特点 | 适用场景 |
+|:-----|:-----|:-----|:---------|
+| **DirectExecutor** | `direct_executor.go` | 原生 LLM 工具调用 | 简单工具调用 |
+| **ReActExecutor** | `react_executor.go` | 思考-行动循环 | 复杂多步任务 |
+| **PlanningExecutor** | `planning_executor.go` | 两阶段规划 + 并发 | 多工具协作 |
 
 ### 代理路由器
 
@@ -448,17 +480,26 @@ LLMCallStats.CacheReadTokens
 | `schedule_update` | `scheduler.go`   | 更新现有日程            |
 | `find_free_time`  | `scheduler.go`   | 查找空闲时间段          |
 
-### 日程代理 V2
+### 流式工具调用
 
-**位置**：`ai/agent/scheduler_v2.go`
+> **实现状态**: ✅ 完成 (v0.93.0)
 
-实现原生工具调用循环（现代 LLM 不需要 ReAct）：
+**概述**：所有执行策略支持流式事件回调，前端可实时显示工具执行进度。
 
-**特性**：
-- 带结构化参数的直接函数调用
-- 默认 1 小时持续时间
-- 自动冲突检测
-- 时区感知日程安排
+**事件类型**：
+
+| 事件 | 描述 | 元数据 |
+|:-----|:-----|:-------|
+| `thinking` | 思考中 | tokens, duration |
+| `tool_use` | 工具调用 | toolName, input, toolId |
+| `tool_result` | 工具结果 | toolName, status, error |
+| `phase_change` | 阶段切换 | currentStep, totalSteps |
+| `answer` | 最终回答 | — |
+
+**前端组件**：
+- `EventBadge` - 事件类型徽章
+- `CompactToolCall` - 轻量级工具调用卡片
+- `UnifiedMessageBlock` - 统一消息块（集成工具展示）
 
 ---
 

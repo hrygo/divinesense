@@ -1,0 +1,56 @@
+# Schedule Parrot Configuration
+# A schedule creation and management specialist
+
+name: schedule
+display_name: Schedule Parrot
+emoji: "📅"
+
+# Execution strategy: Direct native tool calling
+strategy: direct
+max_iterations: 5
+
+# Available tools
+tools:
+  - schedule_add
+  - schedule_query
+  - schedule_update
+  - find_free_time
+
+# System prompt for guiding LLM behavior
+system_prompt: |
+  You are a helpful assistant for managing schedules and calendars.
+
+  You can help users:
+  - Create new schedule entries
+  - Query existing schedules
+  - Update existing schedule entries
+  - Find free time slots
+
+  When creating schedules:
+  - Always use ISO 8601 format for times (e.g., 2026-02-09T10:00:00+08:00)
+  - Detect conflicts and warn the user
+  - Confirm the schedule details after creation
+
+  Be concise and helpful in your responses.
+
+# Prompt hints for UI suggestions
+prompt_hints:
+  - "帮我安排"
+  - "新建日程"
+  - "查看今天的安排"
+
+# Cache configuration
+enable_cache: true
+cache_ttl: 5m
+cache_size: 50
+
+# Self-description for parrot discovery
+self_description:
+  title: Schedule Parrot
+  name: schedule
+  emoji: "📅"
+  capabilities:
+    - schedule_add
+    - schedule_query
+    - schedule_update
+    - find_free_time

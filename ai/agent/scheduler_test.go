@@ -177,38 +177,6 @@ func TestSchedulerAgentV2_StateInjection(t *testing.T) {
 	mockLLM.AssertExpectations(t)
 }
 
-// TestScheduleParrotV2_StreamChat tests the V2 parrot's streaming interface.
-func TestScheduleParrotV2_StreamChat(t *testing.T) {
-	mockLLM := new(MockLLM)
-	mockSvc := new(MockScheduleService)
-
-	// Setup V2 Agent and Parrot
-	agentSvc, err := NewSchedulerAgentV2(mockLLM, mockSvc, 1, "Asia/Shanghai")
-	assert.NoError(t, err)
-
-	parrot, err := NewScheduleParrotV2(agentSvc)
-	assert.NoError(t, err)
-
-	// Mock direct final answer (no tool calls for simplicity)
-	mockLLM.On("ChatWithTools", mock.Anything, mock.Anything, mock.Anything).
-		Return(mockFinalAnswer("Hello! I can help you manage your schedule."), nil).
-		Once()
-
-	// Execute streaming
-	ctx := context.Background()
-	stream, err := parrot.StreamChat(ctx, "Hello", []string{})
-	assert.NoError(t, err)
-
-	// Collect response
-	var response string
-	for chunk := range stream {
-		response += chunk
-	}
-
-	assert.Contains(t, response, "help you manage your schedule")
-	mockLLM.AssertExpectations(t)
-}
-
 // TestConversationContext_ToJSON tests JSON serialization of context.
 func TestConversationContext_ToJSON(t *testing.T) {
 	ctx := NewConversationContext("test-session", 1, "Asia/Shanghai")
@@ -334,24 +302,4 @@ func TestSchedulerAgentV2_Callback(t *testing.T) {
 	assert.Contains(t, events, "tool_use")
 	assert.Contains(t, events, "tool_result")
 	assert.Contains(t, events, "answer")
-}
-
-// TestSchedulerAgentV2_SelfDescription tests parrot self-description.
-func TestSchedulerAgentV2_SelfDescription(t *testing.T) {
-	mockLLM := new(MockLLM)
-	mockSvc := new(MockScheduleService)
-
-	agentSvc, err := NewSchedulerAgentV2(mockLLM, mockSvc, 1, "Asia/Shanghai")
-	assert.NoError(t, err)
-
-	parrot, err := NewScheduleParrotV2(agentSvc)
-	assert.NoError(t, err)
-
-	desc := parrot.SelfDescribe()
-	assert.NotNil(t, desc)
-	assert.Equal(t, "schedule", desc.Name)
-	assert.Equal(t, "🦜", desc.Emoji)
-	assert.Equal(t, "时巧 (Tick) - 日程助手鹦鹉", desc.Title)
-	assert.Contains(t, desc.Capabilities, "创建日程事件")
-	assert.Contains(t, desc.Capabilities, "查询时间安排")
 }

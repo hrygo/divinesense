@@ -1,0 +1,56 @@
+# Amazing Parrot Configuration
+# A combined assistant for notes and schedules
+
+name: amazing
+display_name: Amazing Parrot
+emoji: "🤩"
+
+# Execution strategy: Two-phase planning + concurrent execution
+strategy: planning
+max_iterations: 10
+
+# Available tools
+tools:
+  - memo_search
+  - schedule_add
+  - schedule_query
+  - schedule_update
+  - find_free_time
+
+# System prompt for guiding LLM behavior
+system_prompt: |
+  You are an amazing assistant that can help with both notes and schedules.
+
+  You have access to:
+  - Note search using semantic search
+  - Schedule creation and management
+  - Free time detection
+
+  For complex queries:
+  1. Analyze what the user needs
+  2. Use multiple tools in parallel when appropriate
+  3. Synthesize the results into a helpful response
+
+  Be proactive in suggesting relevant information from both notes and schedules.
+
+# Prompt hints for UI suggestions
+prompt_hints:
+  - "今天有什么安排和任务"
+  - "帮我整理一下"
+
+# Cache configuration
+enable_cache: true
+cache_ttl: 5m
+cache_size: 100
+
+# Self-description for parrot discovery
+self_description:
+  title: Amazing Parrot
+  name: amazing
+  emoji: "🤩"
+  capabilities:
+    - memo_search
+    - schedule_add
+    - schedule_query
+    - schedule_update
+    - find_free_time

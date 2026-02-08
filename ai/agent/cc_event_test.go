@@ -1238,6 +1238,66 @@ func TestEventMetaStructure(t *testing.T) {
 	}
 }
 
+// TestNewEventWithMeta tests the NewEventWithMeta constructor.
+func TestNewEventWithMeta(t *testing.T) {
+	t.Run("with_meta", func(t *testing.T) {
+		meta := &EventMeta{
+			ToolName: "Bash",
+			Status:   "running",
+		}
+		ewm := NewEventWithMeta("tool_use", `{"command":"ls"}`, meta)
+
+		if ewm.EventType != "tool_use" {
+			t.Errorf("Expected EventType=tool_use, got %s", ewm.EventType)
+		}
+		if ewm.EventData != `{"command":"ls"}` {
+			t.Errorf("Expected EventData={'command':'ls'}, got %s", ewm.EventData)
+		}
+		if ewm.Meta == nil {
+			t.Fatal("Expected Meta to be non-nil")
+		}
+		if ewm.Meta.ToolName != "Bash" {
+			t.Errorf("Expected ToolName=Bash, got %s", ewm.Meta.ToolName)
+		}
+	})
+
+	t.Run("with_nil_meta", func(t *testing.T) {
+		ewm := NewEventWithMeta("thinking", "thinking...", nil)
+
+		if ewm.EventType != "thinking" {
+			t.Errorf("Expected EventType=thinking, got %s", ewm.EventType)
+		}
+		if ewm.EventData != "thinking..." {
+			t.Errorf("Expected EventData='thinking...', got %s", ewm.EventData)
+		}
+		if ewm.Meta == nil {
+			t.Fatal("Expected Meta to be non-nil even when input is nil")
+		}
+		// Empty meta should have zero values
+		if ewm.Meta.ToolName != "" {
+			t.Errorf("Expected empty ToolName, got %s", ewm.Meta.ToolName)
+		}
+		if ewm.Meta.Status != "" {
+			t.Errorf("Expected empty Status, got %s", ewm.Meta.Status)
+		}
+	})
+
+	t.Run("meta_fields_safe_to_access", func(t *testing.T) {
+		// This test verifies that we can safely access Meta fields
+		// without nil pointer dereference when using NewEventWithMeta
+		ewm := NewEventWithMeta("answer", "response", nil)
+
+		// These should not panic
+		_ = ewm.Meta.ToolName
+		_ = ewm.Meta.Status
+		_ = ewm.Meta.DurationMs
+		_ = ewm.Meta.TotalDurationMs
+		_ = ewm.Meta.ErrorMsg
+		_ = ewm.Meta.InputTokens
+		_ = ewm.Meta.OutputTokens
+	})
+}
+
 // TestUnknownMessageTypeHandling tests handling of unknown message types.
 func TestUnknownMessageTypeHandling(t *testing.T) {
 	runner := &CCRunner{

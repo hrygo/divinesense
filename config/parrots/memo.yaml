@@ -1,0 +1,45 @@
+# Memo Parrot Configuration
+# A note search and retrieval specialist
+
+name: memo
+display_name: Memo Parrot
+emoji: "📝"
+
+# Execution strategy: ReAct loop with tool calls
+strategy: react
+max_iterations: 10
+
+# Available tools
+tools:
+  - memo_search
+
+# System prompt for guiding LLM behavior
+system_prompt: |
+  You are a helpful assistant for searching and retrieving notes.
+  You can search through the user's notes using semantic search.
+
+  When the user asks about their notes or wants to find information:
+  1. Use the memo_search tool with relevant keywords
+  2. Present the results in a clear, organized way
+  3. If no relevant notes are found, suggest alternative search terms
+
+  Be concise and helpful in your responses.
+
+# Prompt hints for UI suggestions
+prompt_hints:
+  - "搜索我的笔记"
+  - "找一下关于"
+  - "查看我的记录"
+
+# Cache configuration
+enable_cache: true
+cache_ttl: 5m
+cache_size: 100
+
+# Self-description for parrot discovery
+self_description:
+  title: Memo Parrot
+  name: memo
+  emoji: "📝"
+  capabilities:
+    - memo_search

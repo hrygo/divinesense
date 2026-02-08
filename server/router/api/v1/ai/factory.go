@@ -3,9 +3,13 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync"
 
 	"github.com/hrygo/divinesense/ai"
 	agentpkg "github.com/hrygo/divinesense/ai/agent"
+	"github.com/hrygo/divinesense/ai/agent/tools"
+	"github.com/hrygo/divinesense/ai/agent/universal"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/service/schedule"
@@ -66,10 +70,14 @@ type CreateConfig struct {
 }
 
 // AgentFactory creates parrot agents based on type.
+// Uses ParrotFactory for configuration-driven parrot creation.
 type AgentFactory struct {
-	llm       ai.LLMService
-	retriever *retrieval.AdaptiveRetriever
-	store     *store.Store
+	llm           ai.LLMService
+	retriever     *retrieval.AdaptiveRetriever
+	store         *store.Store
+	parrotFactory *universal.ParrotFactory
+	mu            sync.RWMutex
+	initialized   bool
 }
 
 // NewAgentFactory creates a new agent factory.
@@ -78,15 +86,178 @@ func NewAgentFactory(
 	retriever *retrieval.AdaptiveRetriever,
 	st *store.Store,
 ) *AgentFactory {
-	return &AgentFactory{
-		llm:       llm,
-		retriever: retriever,
-		store:     st,
+	factory := &AgentFactory{
+		llm:         llm,
+		retriever:   retriever,
+		store:       st,
+		initialized: false,
 	}
+	return factory
+}
+
+// Initialize initializes the ParrotFactory with the given configuration.
+func (f *AgentFactory) Initialize(cfg *ai.UniversalParrotConfig) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// Prevent duplicate initialization
+	if f.initialized && f.parrotFactory != nil {
+		slog.Debug("AgentFactory already initialized, skipping")
+		return nil
+	}
+
+	if f.llm == nil || cfg == nil || !cfg.Enabled {
+		return fmt.Errorf("llm service required or config not enabled")
+	}
+
+	configDir := cfg.ConfigDir
+	if configDir == "" {
+		configDir = "./config/parrots"
+	}
+
+	toolFactories := f.buildToolFactories()
+
+	pf, err := universal.NewParrotFactory(
+		universal.WithLLM(f.llm),
+		universal.WithConfigDir(configDir),
+		universal.WithToolFactories(toolFactories),
+	)
+	if err != nil {
+		return fmt.Errorf("initialize parrot factory: %w", err)
+	}
+
+	f.parrotFactory = pf
+	f.initialized = true
+	slog.Info("AgentFactory initialized successfully",
+		"config_dir", configDir)
+	return nil
+}
+
+// buildToolFactories creates tool factory functions for UniversalParrot.
+func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc {
+	factories := make(map[string]universal.ToolFactoryFunc)
+
+	// memo_search tool factory
+	if f.retriever != nil {
+		factories["memo_search"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			tool, err := tools.NewMemoSearchTool(f.retriever, userIDGetter)
+			if err != nil {
+				return nil, err
+			}
+			return agentpkg.NewNativeTool(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"query": map[string]interface{}{
+							"type":        "string",
+							"description": "Search keywords. Use \"*\" to search all memos.",
+						},
+						"limit": map[string]interface{}{
+							"type":        "integer",
+							"description": "Max results, default 10, max 50",
+						},
+						"min_score": map[string]interface{}{
+							"type":        "number",
+							"description": "Min relevance 0-1, default 0.5",
+						},
+					},
+					"required": []string{"query"},
+				},
+			), nil
+		}
+	}
+
+	// schedule tools factories
+	// Note: Each schedule tool has its own InputType() method
+	// We create closures that capture the tool and its InputType method
+	if f.store != nil {
+		factories["schedule_add"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			scheduleSvc := schedule.NewService(f.store)
+			tool := tools.NewScheduleAddTool(scheduleSvc, userIDGetter)
+			return agentpkg.ToolFromLegacy(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				tool.InputType,
+			), nil
+		}
+
+		factories["schedule_query"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			scheduleSvc := schedule.NewService(f.store)
+			tool := tools.NewScheduleQueryTool(scheduleSvc, userIDGetter)
+			return agentpkg.ToolFromLegacy(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				tool.InputType,
+			), nil
+		}
+
+		factories["schedule_update"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			scheduleSvc := schedule.NewService(f.store)
+			tool := tools.NewScheduleUpdateTool(scheduleSvc, userIDGetter)
+			return agentpkg.ToolFromLegacy(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				tool.InputType,
+			), nil
+		}
+
+		factories["find_free_time"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			scheduleSvc := schedule.NewService(f.store)
+			tool := tools.NewFindFreeTimeTool(scheduleSvc, userIDGetter)
+			return agentpkg.ToolFromLegacy(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				tool.InputType,
+			), nil
+		}
+	}
+
+	return factories
 }
 
 // Create creates an agent based on the configuration.
 func (f *AgentFactory) Create(ctx context.Context, cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
+	f.mu.RLock()
+	initialized := f.initialized
+	pf := f.parrotFactory
+	f.mu.RUnlock()
+
+	if !initialized || pf == nil {
+		return nil, fmt.Errorf("factory not initialized, call Initialize first")
+	}
+
 	if f.llm == nil {
 		return nil, fmt.Errorf("llm service is required")
 	}
@@ -99,7 +270,6 @@ func (f *AgentFactory) Create(ctx context.Context, cfg *CreateConfig) (agentpkg.
 	case AgentTypeAmazing:
 		return f.createAmazingParrot(ctx, cfg)
 	default:
-		// Fallback to AMAZING for comprehensive assistance
 		return f.createAmazingParrot(ctx, cfg)
 	}
 }
@@ -109,50 +279,16 @@ func (f *AgentFactory) createMemoParrot(cfg *CreateConfig) (agentpkg.ParrotAgent
 	if f.retriever == nil {
 		return nil, fmt.Errorf("retriever is required for memo parrot")
 	}
-
-	agent, err := agentpkg.NewMemoParrot(
-		f.retriever,
-		f.llm,
-		cfg.UserID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create memo parrot: %w", err)
-	}
-
-	return agent, nil
+	return f.parrotFactory.CreateMemoParrot(cfg.UserID, f.retriever)
 }
 
 // createScheduleParrot creates a schedule parrot agent.
-// Uses the new framework-less SchedulerAgentV2 (no LangChainGo dependency).
 func (f *AgentFactory) createScheduleParrot(_ context.Context, cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
 	if f.store == nil {
 		return nil, fmt.Errorf("store is required for schedule parrot")
 	}
-
-	// Normalize timezone: use provided timezone or default
-	timezone := NormalizeTimezone(cfg.Timezone)
-
-	// Create schedule service
 	scheduleSvc := schedule.NewService(f.store)
-
-	// Create scheduler agent V2 (framework-less, uses native LLM tool calling)
-	schedulerAgent, err := agentpkg.NewSchedulerAgentV2(
-		f.llm,
-		scheduleSvc,
-		cfg.UserID,
-		timezone,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create scheduler agent v2: %w", err)
-	}
-
-	// Wrap in schedule parrot V2
-	parrot, err := agentpkg.NewScheduleParrotV2(schedulerAgent)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create schedule parrot v2: %w", err)
-	}
-
-	return parrot, nil
+	return f.parrotFactory.CreateScheduleParrot(cfg.UserID, scheduleSvc)
 }
 
 // createAmazingParrot creates an amazing parrot agent.
@@ -163,19 +299,6 @@ func (f *AgentFactory) createAmazingParrot(_ context.Context, cfg *CreateConfig)
 	if f.store == nil {
 		return nil, fmt.Errorf("store is required for amazing parrot")
 	}
-
-	// Create schedule service
 	scheduleSvc := schedule.NewService(f.store)
-
-	agent, err := agentpkg.NewAmazingParrot(
-		f.llm,
-		f.retriever,
-		scheduleSvc,
-		cfg.UserID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create amazing parrot: %w", err)
-	}
-
-	return agent, nil
+	return f.parrotFactory.CreateAmazingParrot(cfg.UserID, f.retriever, scheduleSvc)
 }

@@ -481,6 +481,19 @@ func (s *APIV1Service) sendStreamingResponse(
 			s.Store,
 		)
 
+		// Initialize UniversalParrot if configured
+		if s.AIService.UniversalParrotConfig != nil {
+			if err := factory.Initialize(s.AIService.UniversalParrotConfig); err != nil {
+				slog.Error("Failed to initialize AgentFactory for chat app",
+					"error", err,
+					"user_id", cred.UserID,
+					"platform", platform,
+				)
+				chunks <- "抱歉，AI 服务配置错误。请联系管理员。"
+				return
+			}
+		}
+
 		// Create AUTO agent for intelligent routing
 		agent, err := factory.Create(ctx, &aichat.CreateConfig{
 			Type:     aichat.AgentTypeAuto,

@@ -42,6 +42,7 @@ type AIService struct {
 	conversationService      *aichat.ConversationService
 	AdaptiveRetriever        *retrieval.AdaptiveRetriever
 	IntentClassifierConfig   *pluginai.IntentClassifierConfig
+	UniversalParrotConfig    *pluginai.UniversalParrotConfig // Phase 2: Config-driven parrots
 	routerService            *router.Service
 	chatEventBus             *aichat.EventBus
 	Store                    *store.Store
