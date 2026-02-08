@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -43,6 +44,7 @@ type AIService struct {
 	AdaptiveRetriever        *retrieval.AdaptiveRetriever
 	IntentClassifierConfig   *pluginai.IntentClassifierConfig
 	UniversalParrotConfig    *pluginai.UniversalParrotConfig // Phase 2: Config-driven parrots
+	agentFactory             *aichat.AgentFactory            // Cached agent factory
 	routerService            *router.Service
 	chatEventBus             *aichat.EventBus
 	Store                    *store.Store
@@ -55,6 +57,7 @@ type AIService struct {
 	chatEventBusMu           sync.RWMutex
 	contextBuilderMu         sync.RWMutex
 	conversationSummarizerMu sync.RWMutex
+	agentFactoryMu           sync.RWMutex
 	mu                       sync.RWMutex
 }
 
@@ -142,6 +145,49 @@ func (s *AIService) getRouterService() *router.Service {
 	})
 
 	return s.routerService
+}
+
+// getAgentFactory returns the agent factory, initializing it on first use.
+// Thread-safe: uses RWMutex for lazy initialization.
+func (s *AIService) getAgentFactory() *aichat.AgentFactory {
+	// Fast path: read lock
+	s.agentFactoryMu.RLock()
+	if s.agentFactory != nil {
+		s.agentFactoryMu.RUnlock()
+		return s.agentFactory
+	}
+	s.agentFactoryMu.RUnlock()
+
+	// Slow path: write lock for initialization
+	s.agentFactoryMu.Lock()
+	defer s.agentFactoryMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if s.agentFactory != nil {
+		return s.agentFactory
+	}
+
+	// Create new agent factory
+	factory := aichat.NewAgentFactory(
+		s.LLMService,
+		s.AdaptiveRetriever,
+		s.Store,
+	)
+
+	// Initialize UniversalParrot if configured
+	if s.UniversalParrotConfig != nil && s.UniversalParrotConfig.Enabled {
+		if err := factory.Initialize(s.UniversalParrotConfig); err != nil {
+			slog.Warn("Failed to initialize AgentFactory, parrot creation may fail",
+				"error", err)
+		} else {
+			slog.Info("AgentFactory initialized successfully")
+		}
+	} else {
+		slog.Info("UniversalParrot not enabled, using legacy agent creation")
+	}
+
+	s.agentFactory = factory
+	return s.agentFactory
 }
 
 // routerLLMClient adapts LLMService to router.LLMClient interface.
