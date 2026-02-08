@@ -15,6 +15,7 @@ import {
   LinkMemosRequestSchema,
   MergeMemosRequestSchema,
   SemanticSearchRequestSchema,
+  SessionStatsSchema,
   SuggestTagsRequestSchema,
 } from "@/types/proto/api/v1/ai_service_pb";
 // Phase 4: Import blockKeys for invalidating blocks on updates
@@ -718,6 +719,43 @@ export function useChat() {
 
             // CRITICAL: Mark block as COMPLETED and update final content
             if (blockId !== undefined && blockId !== 0n && params.conversationId) {
+              // Build SessionStats from response.blockSummary for persistence
+              // This ensures BlockSummary shows up immediately without page refresh (#55)
+              let sessionStats: ReturnType<typeof create<typeof SessionStatsSchema>> | undefined;
+              if (response.blockSummary) {
+                const now = BigInt(Date.now());
+                const nowSec = BigInt(Math.floor(Date.now() / 1000));
+                sessionStats = create(SessionStatsSchema, {
+                  id: BigInt(0), // Will be set by backend
+                  sessionId: response.blockSummary.sessionId || "",
+                  conversationId: BigInt(params.conversationId),
+                  userId: 0, // Will be set by backend
+                  agentType: "auto", // Will be set by backend
+                  startedAt: nowSec,
+                  endedAt: nowSec,
+                  totalDurationMs: response.blockSummary.totalDurationMs || 0n,
+                  thinkingDurationMs: response.blockSummary.thinkingDurationMs || 0n,
+                  toolDurationMs: response.blockSummary.toolDurationMs || 0n,
+                  generationDurationMs: response.blockSummary.generationDurationMs || 0n,
+                  inputTokens: response.blockSummary.totalInputTokens || 0,
+                  outputTokens: response.blockSummary.totalOutputTokens || 0,
+                  cacheWriteTokens: response.blockSummary.totalCacheWriteTokens || 0,
+                  cacheReadTokens: response.blockSummary.totalCacheReadTokens || 0,
+                  // FIX: totalTokens expects number in proto but calculate as number
+                  totalTokens: (response.blockSummary.totalInputTokens || 0) + (response.blockSummary.totalOutputTokens || 0),
+                  totalCostUsd: response.blockSummary.totalCostUsd || 0,
+                  toolCallCount: response.blockSummary.toolCallCount || 0,
+                  toolsUsed: response.blockSummary.toolsUsed?.length ? response.blockSummary.toolsUsed : [],
+                  filesModified: response.blockSummary.filesModified || 0,
+                  filePaths: response.blockSummary.filePaths?.length ? response.blockSummary.filePaths : [],
+                  modelUsed: "",
+                  isError: response.blockSummary.status === "error",
+                  errorMessage: response.blockSummary.errorMsg || "",
+                  createdAt: now,
+                  updatedAt: now,
+                });
+              }
+
               queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                 const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                 const existingBlocks = existing?.blocks || [];
@@ -730,6 +768,7 @@ export function useChat() {
                     assistantContent: fullContent,
                     status: BlockStatus.COMPLETED,
                     eventStream: currentBlock.eventStream || [], // Preserve eventStream!
+                    sessionStats, // FIX #55: Store sessionStats for BlockSummary display
                     updatedTs: BigInt(Date.now()),
                   };
                   blockMap.set(blockId, updated);
@@ -738,6 +777,19 @@ export function useChat() {
                 return {
                   blocks: Array.from(blockMap.values()),
                   totalCount: blockMap.size,
+                };
+              });
+
+              // Also update the detail cache
+              queryClient.setQueryData(blockKeys.detail(Number(blockId)), (oldBlock: Block | undefined) => {
+                if (!oldBlock || oldBlock.id !== blockId) return oldBlock;
+                return {
+                  ...oldBlock,
+                  assistantContent: fullContent,
+                  status: BlockStatus.COMPLETED,
+                  eventStream: oldBlock.eventStream || [],
+                  sessionStats, // FIX #55: Store sessionStats for BlockSummary display
+                  updatedTs: BigInt(Date.now()),
                 };
               });
             }

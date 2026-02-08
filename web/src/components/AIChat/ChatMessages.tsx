@@ -19,14 +19,16 @@ import { extractThinkingSteps, extractToolCalls, normalizeTimestamp, type Thinki
 // ============================================================================
 
 /** Hook to check if the last block is currently streaming */
-function useStreamingStatus(blocks: AIBlock[] | undefined, isStreaming: boolean): boolean {
+function useStreamingStatus(blocks: AIBlock[] | undefined, _isStreaming: boolean): boolean {
+  // FIX #56: Only check the last block's status, ignore the global isStreaming prop
+  // This prevents all blocks from showing the stop button when a new message is sent
   return useMemo(() => {
     if (blocks && blocks.length > 0) {
-      const lastAIBlock = blocks[blocks.length - 1];
-      return isStreamingStatus(lastAIBlock.status);
+      const lastBlock = blocks[blocks.length - 1];
+      return isStreamingStatus(lastBlock.status);
     }
-    return isStreaming;
-  }, [blocks, isStreaming]);
+    return _isStreaming;
+  }, [blocks]);
 }
 
 /** Hook to determine the effective parrot ID from Block.mode (single source of truth) */
