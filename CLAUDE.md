@@ -255,6 +255,25 @@ type routerIntentLLMClient struct{ apiKey, baseURL, model string }
 - **Database queries**: 优化延迟时注意 N+1 模式
 - **Migrations**: 确保所有表存在（参见 @docs/research/DEBUG_LESSONS.md → "7 个缺失表曾导致冷启动延迟"）
 
+#### Go Lint 常见陷阱 (golangci-lint)
+
+> ⚠️ **必须遵守的模式** - 这些问题在 pre-push 时会被拦截
+
+| 问题 | ❌ 错误写法 | ✅ 正确写法 |
+|:-----|:-----------|:-----------|
+| **类型断言** | `v := x.(T)` | `v, ok := x.(T)` (comma-ok) |
+| **defer 错误** | `defer resp.Body.Close()` | `defer func() { if err := resp.Body.Close(); err != nil { slog.Error(...) } }()` |
+| **错误比较** | `err != expectedErr` | `errors.Is(err, expectedErr)` |
+| **HTTP nil body** | `NewRequest("GET", url, nil)` | `NewRequest("GET", url, http.NoBody)` |
+| **error 变量名** | `var testErr` | `var errTest` (以 `err` 开头) |
+| **正则简化** | `[^\s]*` | `\S*` |
+| **sync.Pool** | `pool.Put(slice)` | ❌ 不放 slice，只放指针 |
+
+**核心原则**：
+1. **所有错误返回值必须检查** - 不能用 `_` 忽略
+2. **类型断言用 comma-ok** - 避免 panic
+3. **defer 也要检查错误** - 即使是 Close()
+
 ---
 
 ## 🚫 Code Change Boundaries
