@@ -228,8 +228,8 @@ func TestValidateFunctions(t *testing.T) {
 		}{
 			{"13812345678", true},
 			{"19912345678", true},
-			{"12812345678", false}, // Invalid prefix
-			{"1381234567", false},  // Too short
+			{"12812345678", false},  // Invalid prefix
+			{"1381234567", false},   // Too short
 			{"138123456789", false}, // Too long
 		}
 
@@ -251,7 +251,7 @@ func TestValidateFunctions(t *testing.T) {
 			{"110101199001011234", true},
 			{"11010119900101123X", true},
 			{"11010119900101123x", true},
-			{"11010119900101123", false},  // Too short
+			{"11010119900101123", false},   // Too short
 			{"1101011990010112345", false}, // Too long
 		}
 
@@ -293,7 +293,7 @@ func TestValidateFunctions(t *testing.T) {
 		}{
 			{"6222021234567890", true},
 			{"123456789012", true},
-			{"12345678901", false},  // Too short
+			{"12345678901", false},          // Too short
 			{"12345678901234567890", false}, // Too long
 		}
 

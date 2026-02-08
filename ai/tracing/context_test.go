@@ -295,17 +295,17 @@ func TestLogExporter(t *testing.T) {
 	exporter := NewLogExporter()
 
 	trace := &TracingContext{
-		TraceID:      "test-trace-id",
-		SpanID:       "test-span-id",
+		TraceID:       "test-trace-id",
+		SpanID:        "test-span-id",
 		OperationName: "test_operation",
-		StartTime:    time.Now(),
-		EndTime:      time.Now().Add(100 * time.Millisecond),
-		Status:       StatusOK,
-		Phases:       make([]*Phase, 0),
-		ToolCalls:    make([]*ToolCall, 0),
-		LLMCalls:     make([]*LLMCall, 0),
-		Metadata:     make(map[string]string),
-		Tags:         make(map[string]string),
+		StartTime:     time.Now(),
+		EndTime:       time.Now().Add(100 * time.Millisecond),
+		Status:        StatusOK,
+		Phases:        make([]*Phase, 0),
+		ToolCalls:     make([]*ToolCall, 0),
+		LLMCalls:      make([]*LLMCall, 0),
+		Metadata:      make(map[string]string),
+		Tags:          make(map[string]string),
 	}
 
 	// Should not panic
@@ -317,12 +317,12 @@ func TestJaegerExporter(t *testing.T) {
 		exporter := NewJaegerExporter(DefaultJaegerConfig())
 
 		trace := &TracingContext{
-			TraceID:      "test-trace-id",
-			SpanID:       "test-span-id",
+			TraceID:       "test-trace-id",
+			SpanID:        "test-span-id",
 			OperationName: "test_operation",
-			StartTime:    time.Now(),
-			EndTime:      time.Now().Add(100 * time.Millisecond),
-			Status:       StatusOK,
+			StartTime:     time.Now(),
+			EndTime:       time.Now().Add(100 * time.Millisecond),
+			Status:        StatusOK,
 			Phases: []*Phase{
 				{
 					Name:      "test_phase",
@@ -381,16 +381,16 @@ func TestCompositeExporter(t *testing.T) {
 	composite := NewCompositeExporter(logExporter)
 
 	trace := &TracingContext{
-		TraceID:      "test-trace-id",
+		TraceID:       "test-trace-id",
 		OperationName: "composite_test",
-		StartTime:    time.Now(),
-		EndTime:      time.Now().Add(50 * time.Millisecond),
-		Status:       StatusOK,
-		Phases:       make([]*Phase, 0),
-		ToolCalls:    make([]*ToolCall, 0),
-		LLMCalls:     make([]*LLMCall, 0),
-		Metadata:     make(map[string]string),
-		Tags:         make(map[string]string),
+		StartTime:     time.Now(),
+		EndTime:       time.Now().Add(50 * time.Millisecond),
+		Status:        StatusOK,
+		Phases:        make([]*Phase, 0),
+		ToolCalls:     make([]*ToolCall, 0),
+		LLMCalls:      make([]*LLMCall, 0),
+		Metadata:      make(map[string]string),
+		Tags:          make(map[string]string),
 	}
 
 	// Should not panic

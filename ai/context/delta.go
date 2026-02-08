@@ -116,13 +116,13 @@ type DeltaBuilder struct {
 }
 
 type deltaStats struct {
-	totalDeltas      int64
-	deltaHits        int64
-	fullRebuilds     int64
-	appendOnlyHits   int64
+	totalDeltas          int64
+	deltaHits            int64
+	fullRebuilds         int64
+	appendOnlyHits       int64
 	conversationOnlyHits int64
-	avgDeltaMs       int64
-	savedTokens      int64
+	avgDeltaMs           int64
+	savedTokens          int64
 }
 
 // NewDeltaBuilder creates a new delta builder.
@@ -245,27 +245,27 @@ func (d *DeltaBuilder) GetStats() *DeltaStats {
 	}
 
 	return &DeltaStats{
-		TotalDeltas:        total,
-		DeltaHits:          d.stats.deltaHits,
-		FullRebuilds:       d.stats.fullRebuilds,
-		AppendOnlyHits:     d.stats.appendOnlyHits,
+		TotalDeltas:          total,
+		DeltaHits:            d.stats.deltaHits,
+		FullRebuilds:         d.stats.fullRebuilds,
+		AppendOnlyHits:       d.stats.appendOnlyHits,
 		ConversationOnlyHits: d.stats.conversationOnlyHits,
-		AverageDeltaMs:     d.stats.avgDeltaMs / total,
-		SavedTokens:        d.stats.savedTokens,
-		HitRate:            float64(d.stats.deltaHits) / float64(total),
+		AverageDeltaMs:       d.stats.avgDeltaMs / total,
+		SavedTokens:          d.stats.savedTokens,
+		HitRate:              float64(d.stats.deltaHits) / float64(total),
 	}
 }
 
 // DeltaStats contains delta building statistics.
 type DeltaStats struct {
-	TotalDeltas         int64
-	DeltaHits           int64
-	FullRebuilds        int64
-	AppendOnlyHits      int64
+	TotalDeltas          int64
+	DeltaHits            int64
+	FullRebuilds         int64
+	AppendOnlyHits       int64
 	ConversationOnlyHits int64
-	AverageDeltaMs      int64
-	SavedTokens         int64
-	HitRate             float64
+	AverageDeltaMs       int64
+	SavedTokens          int64
+	HitRate              float64
 }
 
 // Helper functions
@@ -321,14 +321,14 @@ func (d *DeltaBuilder) recordDelta(duration time.Duration) {
 // CreateSnapshot creates a snapshot from a context result.
 func CreateSnapshot(req *ContextRequest, result *ContextResult) *ContextSnapshot {
 	snap := &ContextSnapshot{
-		Messages:          make([]*Message, 0),
+		Messages:         make([]*Message, 0),
 		RetrievalResults: make([]*RetrievalItem, len(req.RetrievalResults)),
-		Timestamp:         time.Now(),
-		TokenCount:        result.TotalTokens,
-		SystemPromptHash:  hashString(result.SystemPrompt),
-		UserPrefsHash:     hashString(result.UserPreferences),
-		Query:             req.CurrentQuery,
-		AgentType:         req.AgentType,
+		Timestamp:        time.Now(),
+		TokenCount:       result.TotalTokens,
+		SystemPromptHash: hashString(result.SystemPrompt),
+		UserPrefsHash:    hashString(result.UserPreferences),
+		Query:            req.CurrentQuery,
+		AgentType:        req.AgentType,
 	}
 
 	// Copy retrieval results
@@ -373,7 +373,13 @@ func (b *IncrementalBuilder) BuildIncremental(ctx context.Context, req *ContextR
 	slog.Debug("incremental_context_build",
 		"session_id", sessionID,
 		"strategy", strategy.String(),
-		"prev_messages", func() int { if prevSnapshot != nil { return len(prevSnapshot.Messages) } else { return 0 } }(),
+		"prev_messages", func() int {
+			if prevSnapshot != nil {
+				return len(prevSnapshot.Messages)
+			} else {
+				return 0
+			}
+		}(),
 		"retrieval_count", len(req.RetrievalResults),
 	)
 

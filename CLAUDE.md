@@ -48,10 +48,22 @@
 
 ```bash
 # 手动验证 zh-Hant.json 完整性
-node -e "const en=require('./web/src/locales/en.json'); const zh=require('./web/src/locales/zh-Hant.json'); ..."
+cd web/src/locales
+node -e "
+  const en = require('./en.json');
+  const zhHant = require('./zh-Hant.json');
+  const enKeys = JSON.stringify(en).match(/\"[^\"]+\"/g);
+  const zhKeys = JSON.stringify(zhHant).match(/\"[^\"]+\"/g);
+  const missing = enKeys.filter(k => !zhKeys.includes(k));
+  if (missing.length > 0) {
+    console.error('Missing keys in zh-Hant.json:', missing);
+    process.exit(1);
+  }
+  console.log('✅ zh-Hant.json is complete');
+"
 ```
 
-**注意路径差异**：组件使用 `ai.progress.phases.*`，确保所有语言文件在正确路径下有翻译。
+**注意路径差异**：组件 `ProgressIndicator.tsx` 使用 `ai.progress.phases.*`，确保所有语言文件在正确路径下有翻译。
 
 ---
 
@@ -241,7 +253,7 @@ type routerIntentLLMClient struct{ apiKey, baseURL, model string }
 #### Go Backend
 - **Error definitions**: 跨服务共享 - 删除前检查所有引用
 - **Database queries**: 优化延迟时注意 N+1 模式
-- **Migrations**: 确保所有表存在（7 个缺失表曾导致冷启动延迟）
+- **Migrations**: 确保所有表存在（参见 @docs/research/DEBUG_LESSONS.md → "7 个缺失表曾导致冷启动延迟"）
 
 ---
 
@@ -253,14 +265,14 @@ type routerIntentLLMClient struct{ apiKey, baseURL, model string }
 |:-----|:-----|
 | **避免过度删除** | 删除代码前验证错误定义、类型导出、共享工具的所有使用 |
 | **测试后提交** | 推送前从 `web/` 运行 `npm test` - pre-push 会捕获缺失依赖 |
-| **GraphQL/Proto 变更** | Schema 变更后始终重新生成前后端绑定 |
+| **Proto/Schema 变更** | Proto 定义变更后始终重新生成前后端绑定 |
 | **批量重构** | 跨多文件变更 API 时，分阶段提交而非一次性大改 |
 
 ### Critical Workflow Patterns
 
 1. **结构性变更前**：检查文件是否存在于多个位置（如 `web/src` vs `src`）避免目录错误
 2. **删除代码时**：验证没有关键错误定义或类型依赖，先进行死代码分析
-3. **流式/实时特性**：确保组件实际消费 `eventStream/data` - React Query 缓存问题常被误诊
+3. **流式/实时特性**：确保组件实际消费 `eventStream` 和 `data` - React Query 缓存问题常被误诊
 4. **优化方法**：优先简单方案（CSS 移除、标志切换）而非架构变更
 
 ---

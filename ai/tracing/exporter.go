@@ -110,11 +110,11 @@ type JaegerConfig struct {
 // DefaultJaegerConfig returns default Jaeger configuration.
 func DefaultJaegerConfig() JaegerConfig {
 	return JaegerConfig{
-		Endpoint:      "http://localhost:14268/api/traces",
-		ServiceName:   "divinesense",
-		BatchSize:     100,
-		BatchTimeout:  5 * time.Second,
-		MaxQueueSize:  1000,
+		Endpoint:     "http://localhost:14268/api/traces",
+		ServiceName:  "divinesense",
+		BatchSize:    100,
+		BatchTimeout: 5 * time.Second,
+		MaxQueueSize: 1000,
 	}
 }
 
@@ -299,8 +299,8 @@ type JaegerProcess struct {
 }
 
 type JaegerBatch struct {
-	Spans   []*JaegerSpan  `json:"spans"`
-	Process JaegerProcess  `json:"process"`
+	Spans   []*JaegerSpan `json:"spans"`
+	Process JaegerProcess `json:"process"`
 }
 
 // toJaegerID converts a UUID to Jaeger span ID format.
@@ -371,7 +371,7 @@ type batchItem struct {
 
 type batch struct {
 	spans []*JaegerSpan
-	flush  func([]*JaegerSpan)
+	flush func([]*JaegerSpan)
 }
 
 // NewBatcher creates a new batcher.
@@ -459,9 +459,9 @@ func (b *Batcher) Close() {
 
 // OTLPExporter exports traces in OpenTelemetry format.
 type OTLPExporter struct {
-	endpoint    string
-	batcher     *Batcher
-	httpClient  *http.Client
+	endpoint   string
+	batcher    *Batcher
+	httpClient *http.Client
 }
 
 // OTLPConfig configures the OTLP exporter.
@@ -502,7 +502,7 @@ func NewOTLPExporter(cfg OTLPConfig) *OTLPExporter {
 
 	return &OTLPExporter{
 		endpoint: cfg.Endpoint,
-		batcher: NewBatcher(cfg.BatchSize, cfg.BatchTimeout, 1000),
+		batcher:  NewBatcher(cfg.BatchSize, cfg.BatchTimeout, 1000),
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -552,14 +552,14 @@ func (e *CompositeExporter) Export(trace *TracingContext) {
 // CachedExporter wraps an exporter with cache integration.
 type CachedExporter struct {
 	exporter Exporter
-	cache   *cache.Service
+	cache    *cache.Service
 }
 
 // NewCachedExporter creates a new cached exporter.
 func NewCachedExporter(exporter Exporter, cache *cache.Service) *CachedExporter {
 	return &CachedExporter{
 		exporter: exporter,
-		cache:   cache,
+		cache:    cache,
 	}
 }
 

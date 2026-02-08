@@ -70,9 +70,9 @@ func TestDeltaBuilder(t *testing.T) {
 			}
 
 			req := &ContextRequest{
-				SessionID:        "test-session",
-				CurrentQuery:     "Hello",
-				AgentType:        "memo",
+				SessionID:    "test-session",
+				CurrentQuery: "Hello",
+				AgentType:    "memo",
 				RetrievalResults: []*RetrievalItem{
 					{ID: "1", Content: "Result 1", Score: 0.9},
 				},
@@ -87,8 +87,8 @@ func TestDeltaBuilder(t *testing.T) {
 
 	t.Run("SaveAndRetrieveSnapshot", func(t *testing.T) {
 		snap := &ContextSnapshot{
-			Query:  hashString("test"),
-			Timestamp:  time.Now(),
+			Query:     hashString("test"),
+			Timestamp: time.Now(),
 		}
 
 		builder.SaveSnapshot("test-session", snap)
@@ -160,19 +160,19 @@ func TestDeltaBuilder(t *testing.T) {
 func TestCreateSnapshot(t *testing.T) {
 
 	req := &ContextRequest{
-		SessionID:        "test-session",
-		AgentType:        "memo",
-		CurrentQuery:     "Hello",
+		SessionID:    "test-session",
+		AgentType:    "memo",
+		CurrentQuery: "Hello",
 		RetrievalResults: []*RetrievalItem{
 			{ID: "1", Content: "Result 1", Score: 0.9},
 		},
 	}
 
 	result := &ContextResult{
-		SystemPrompt:     "You are a helpful assistant.",
-		TotalTokens:      1000,
-		TokenBreakdown:   &TokenBreakdown{},
-		BuildTime:        50 * time.Millisecond,
+		SystemPrompt:   "You are a helpful assistant.",
+		TotalTokens:    1000,
+		TokenBreakdown: &TokenBreakdown{},
+		BuildTime:      50 * time.Millisecond,
 	}
 
 	snap := CreateSnapshot(req, result)
