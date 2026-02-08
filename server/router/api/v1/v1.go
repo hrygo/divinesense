@@ -125,7 +125,7 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					LLMService:             llmService,
 					AdaptiveRetriever:      adaptiveRetriever,
 					IntentClassifierConfig: &aiConfig.IntentClassifier,
-					UniversalParrotConfig:  &aiConfig.UniversalParrot, // Phase 2: Config-driven parrots
+					UniversalParrotConfig: &aiConfig.UniversalParrot, // Phase 2: Config-driven parrots
 					TitleGenerator:         titleGenerator,
 					persister:              persister,
 				}

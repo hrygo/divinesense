@@ -552,8 +552,8 @@ type EventMeta struct {
 	LineCount int32  `json:"line_count"` // Number of lines affected
 
 	// Progress (for long-running operations)
-	Progress    int32 `json:"progress"`     // Progress percentage (0-100)
-	TotalSteps  int32 `json:"total_steps"`  // Total number of steps (for multi-stage operations)
+	Progress   int32  `json:"progress"`    // Progress percentage (0-100)
+	TotalSteps int32  `json:"total_steps"` // Total number of steps (for multi-stage operations)
 	CurrentStep int32 `json:"current_step"` // Current step number
 }
 

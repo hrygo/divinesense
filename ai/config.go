@@ -8,12 +8,12 @@ import (
 
 // Config represents AI configuration.
 type Config struct {
-	Embedding        EmbeddingConfig
-	Reranker         RerankerConfig
-	IntentClassifier IntentClassifierConfig
-	LLM              LLMConfig
-	UniversalParrot  UniversalParrotConfig // Phase 2: Configuration-driven parrots
-	Enabled          bool
+	Embedding          EmbeddingConfig
+	Reranker           RerankerConfig
+	IntentClassifier   IntentClassifierConfig
+	LLM                LLMConfig
+	UniversalParrot    UniversalParrotConfig // Phase 2: Configuration-driven parrots
+	Enabled            bool
 }
 
 // EmbeddingConfig represents vector embedding configuration.
@@ -124,14 +124,6 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 		Model:   "Qwen/Qwen2.5-7B-Instruct",
 		APIKey:  p.AISiliconFlowAPIKey,
 		BaseURL: p.AISiliconFlowBaseURL,
-	}
-
-	// UniversalParrot configuration
-	// Enable configuration-driven parrot system by default when AI is enabled
-	cfg.UniversalParrot = UniversalParrotConfig{
-		Enabled:      true,
-		ConfigDir:    "./config/parrots",
-		FallbackMode: "legacy",
 	}
 
 	return cfg
