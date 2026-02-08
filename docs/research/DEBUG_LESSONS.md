@@ -14,6 +14,8 @@
 | **[前端](#前端问题)** | [空白页面滚动条溢出](#空白页面滚动条溢出) | ✅ 已解决 |
 | **[前端](#前端问题)** | [快捷指令硬编码未 i18n](#快捷指令硬编码未-i18n) | ✅ 已解决 |
 | **[前端](#前端问题)** | [流式渲染事件缺失](#流式渲染事件缺失) | ✅ 已解决 |
+| **[前端](#前端问题)** | [工具调用元数据错误](#工具调用元数据错误) | ✅ 已解决 |
+| **[前端](#前端问题)** | [过度工程：FIFO 队列](#过度工程fifo-队列) | ✅ 已解决 |
 | **[后端](#后端问题)** | [Go embed 忽略下划线文件](#go-embed-忽略以下划线开头的文件) | ✅ 已解决 |
 | **[后端](#后端问题)** | [调试日志管理规范](#调试日志管理规范) | ⚠️ 规范 |
 | **[AI](#ai-问题)** | [Evolution Mode 路由失败](#evolution-mode-路由失败) | ✅ 已解决 |
@@ -101,6 +103,61 @@ if (response.eventType && response.eventData) {
 // ✅ 正确：只检查 eventType
 if (response.eventType) {
 ```
+
+---
+
+### 工具调用元数据错误
+
+**问题**：工具调用状态显示的工具名称是 JSON 参数字符串，而非实际工具名称。
+
+**现象**：
+- 预期：`toolName: "schedule_query"`
+- 实际：`toolName: '{"start_time": "2026-02-09T00:00:00+08:00", "end_time": "2026-02-10T00:00:00+08:00"}'`
+
+**根本原因**：`useAIQueries.ts` 中 `tool_use` 事件处理使用了错误的数据源：
+```typescript
+// ❌ 错误：response.eventData 是工具的 JSON 参数
+updateBlockEventStream({
+  toolName: response.eventData,
+  // ...
+});
+```
+
+**解决方案**：使用从 `eventMeta` 提取的工具名称：
+```typescript
+// ✅ 正确：toolMeta.toolName 是实际的工具名称
+const toolMeta = response.eventMeta ? { toolName: response.eventMeta.toolName, ... } : undefined;
+updateBlockEventStream({
+  toolName: toolMeta?.toolName,
+  // ...
+});
+```
+
+---
+
+### 过度工程：FIFO 队列
+
+**问题**：引入 ~250 行 FIFO 队列代码来"防止竞态条件"，但实际上队列始终为空。
+
+**根本原因**：
+1. **SSE 是串行的** —— Server-Sent Events 本身是单线程流式传输
+2. **JavaScript 单线程** —— 在 `queueMicrotask` 调度前，队列已被处理
+3. **React Query 同步更新** —— `setQueryData` 是同步的，不需要排队
+
+**证据**：日志显示每次 `queueLength: 0`
+```
+[BlockUpdateQueue] Enqueue: {queueLength: 0, processing: false}
+```
+
+**教训**：
+- **先诊断后治疗** —— 添加日志确认队列确实有积压再引入复杂方案
+- **SSE 不需要排队** —— 流式事件天然串行，不存在并发竞态
+- **简化优于复杂** —— React Query 的 `setQueryData` 已经有内部批处理优化
+
+**解决方案**：移除 FIFO 队列，直接使用 `queryClient.setQueryData()`。
+
+**真正需要的是**：
+- `blockAlreadyExists` 检查 —— 防止每次事件都重新创建 block
 
 ---
 
