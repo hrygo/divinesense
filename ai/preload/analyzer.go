@@ -5,6 +5,7 @@ package preload
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"math"
 	"sort"
 	"sync"
@@ -167,7 +168,10 @@ func (a *Analyzer) RecordActivity(ctx context.Context, userID int64, activity *A
 	// Save asynchronously
 	go func() {
 		if a.store != nil {
-			_ = a.store.SavePattern(context.Background(), userID, pattern)
+			ctx := context.Background()
+			if err := a.store.SavePattern(ctx, userID, pattern); err != nil {
+				slog.Error("failed to save user pattern", "user_id", userID, "error", err)
+			}
 		}
 	}()
 
@@ -525,15 +529,6 @@ func (p *UserPattern) ExportJSON() (string, error) {
 		return "", err
 	}
 	return string(data), nil
-}
-
-// min returns the minimum of two integers.
-// nolint:builtinShadowDecl // Required for Go < 1.21 compatibility
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // CalculateEntropy calculates the entropy of the user's activity distribution.

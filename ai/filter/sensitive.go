@@ -196,8 +196,13 @@ func (f *Filter) FindMatches(text string) []Match {
 		f.recordStats(len(f.regexes), time.Since(start))
 	}()
 
-	matches, _ := f.matchPool.Get().([]Match)
-	matches = matches[:0]
+	v := f.matchPool.Get()
+	matches, ok := v.([]Match)
+	if !ok {
+		matches = make([]Match, 0, 16)
+	} else {
+		matches = matches[:0] // Reset length while keeping capacity
+	}
 
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -219,12 +224,12 @@ func (f *Filter) FindMatches(text string) []Match {
 		}
 	}
 
-	// Return a copy before returning to pool
+	// Return a copy before returning
 	result := make([]Match, len(matches))
 	copy(result, matches)
 
-	// Return matches to pool
-	f.matchPool.Put(matches)
+	// Note: We don't return matches to pool as sync.Pool prefers pointer types
+	// The slice will be garbage collected normally
 
 	return result
 }

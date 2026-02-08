@@ -40,7 +40,7 @@ var (
 	// urlPattern matches HTTP/HTTPS URLs (reserved for future use)
 	//nolint:unused // Reserved for URL filtering feature
 	_ = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`\bhttps?://[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})(?:/[^\s]*)?\b`)
+		return regexp.MustCompile(`\bhttps?://[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})(?:/\S*)?\b`)
 	})
 
 	// wechatPattern matches WeChat IDs (reserved for future use)
@@ -266,7 +266,6 @@ func (ps *PatternSet) Types() []FilterType {
 type FastScanner struct {
 	composite *regexp.Regexp
 	types     []FilterType
-	mu        sync.RWMutex
 }
 
 // NewFastScanner creates a new fast scanner for the given types.

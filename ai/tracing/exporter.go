@@ -262,11 +262,19 @@ func (e *JaegerExporter) sendBatch(spans []*JaegerSpan) {
 		slog.Error("failed to send jaeger batch", "error", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("failed to close response body", "error", err)
+		}
+	}()
 
 	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		slog.Error("jaeger returned error", "status", resp.StatusCode, "body", string(body))
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			slog.Error("failed to read jaeger error response", "error", err)
+		} else {
+			slog.Error("jaeger returned error", "status", resp.StatusCode, "body", string(body))
+		}
 	}
 }
 
@@ -581,8 +589,12 @@ func (e *CachedExporter) Export(trace *TracingContext) {
 	}
 
 	// Cache the trace summary
-	summaryBytes, _ := json.Marshal(summary)
-	_ = e.cache.Set(ctx, "trace:"+trace.TraceID, summaryBytes, 5*time.Minute)
+	summaryBytes, err := json.Marshal(summary)
+	if err != nil {
+		slog.Error("failed to marshal trace summary", "error", err)
+	} else if err := e.cache.Set(ctx, "trace:"+trace.TraceID, summaryBytes, 5*time.Minute); err != nil {
+		slog.Error("failed to cache trace summary", "trace_id", trace.TraceID, "error", err)
+	}
 
 	// Export to underlying exporter
 	e.exporter.Export(trace)

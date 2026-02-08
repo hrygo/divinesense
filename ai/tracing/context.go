@@ -217,16 +217,11 @@ func NewTracer(cfg Config) *Tracer {
 		sampleRate:   cfg.SampleRate,
 		maxTraceSize: cfg.MaxTraceSize,
 		bufferPool: &sync.Pool{
-			New: func() interface{} {
-				return &stringsBuilder{}
+			New: func() any {
+				return &struct{ buf []byte }{}
 			},
 		},
 	}
-}
-
-// stringsBuilder is a pooled builder for efficient string operations.
-type stringsBuilder struct {
-	buf []byte
 }
 
 // StartTrace begins a new trace with the given operation name.
@@ -435,7 +430,10 @@ type staticInfo struct {
 func (t *Tracer) getStaticInfo() *staticInfo {
 	v := t.staticInfo.Load()
 	if v != nil {
-		return v.(*staticInfo)
+		info, ok := v.(*staticInfo)
+		if ok {
+			return info
+		}
 	}
 
 	info := &staticInfo{

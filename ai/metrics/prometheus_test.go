@@ -57,7 +57,7 @@ func TestPrometheusExporterHandler(t *testing.T) {
 	exporter.RecordCacheHit("intent")
 	exporter.RecordLLMTokens("deepseek-chat", "prompt", 100)
 
-	req := httptest.NewRequest("GET", "/metrics", nil)
+	req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 	w := httptest.NewRecorder()
 
 	exporter.ServeHTTP(w, req)
@@ -106,7 +106,7 @@ func TestPrometheusExporterCustomRegistry(t *testing.T) {
 	customReg := NewPrometheusExporter(Config{})
 	customReg.RecordChatRequest("test", "mode", 50*time.Millisecond, true)
 
-	req := httptest.NewRequest("GET", "/metrics", nil)
+	req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 	w := httptest.NewRecorder()
 
 	customReg.ServeHTTP(w, req)

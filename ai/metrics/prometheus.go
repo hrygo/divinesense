@@ -2,6 +2,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"net/http"
 	"sort"
 	"strconv"
@@ -332,7 +333,10 @@ func (e *PrometheusExporter) Snapshot() map[string]interface{} {
 
 	snapshot := make(map[string]interface{})
 	snapshot["timestamp"] = time.Now().Unix()
-	gatherResult, _ := e.registry.Gather()
+	gatherResult, err := e.registry.Gather()
+	if err != nil {
+		slog.Error("failed to gather metrics", "error", err)
+	}
 	snapshot["registry"] = gatherResult
 
 	return snapshot

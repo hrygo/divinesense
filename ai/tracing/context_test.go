@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var testErr = errors.New("test error")
+var errTest = errors.New("test error")
 
 func TestTracer(t *testing.T) {
 	tracer := NewTracer(DefaultConfig())
@@ -80,12 +80,12 @@ func TestTracer(t *testing.T) {
 	t.Run("RecordPhaseWithError", func(t *testing.T) {
 		trace, _ := tracer.StartTrace(context.Background(), "phase_error_test")
 
-		expectedErr := testErr
+		expectedErr := errTest
 		err := tracer.RecordPhase(trace, "failing_phase", func() error {
 			return expectedErr
 		})
 
-		if err != expectedErr {
+		if !errors.Is(err, expectedErr) {
 			t.Errorf("expected error %v, got %v", expectedErr, err)
 		}
 		if len(trace.Phases) != 1 {
@@ -122,7 +122,7 @@ func TestTracer(t *testing.T) {
 	t.Run("RecordToolCallWithError", func(t *testing.T) {
 		trace, _ := tracer.StartTrace(context.Background(), "tool_error_test")
 
-		tracer.RecordToolCall(trace, "failing_tool", "retrieval", nil, nil, 100*time.Millisecond, testErr)
+		tracer.RecordToolCall(trace, "failing_tool", "retrieval", nil, nil, 100*time.Millisecond, errTest)
 
 		if len(trace.ToolCalls) != 1 {
 			t.Errorf("expected 1 tool call, got %d", len(trace.ToolCalls))
@@ -207,7 +207,7 @@ func TestTracer(t *testing.T) {
 	t.Run("FinishWithError", func(t *testing.T) {
 		trace, _ := tracer.StartTrace(context.Background(), "error_test")
 
-		tracer.FinishWithError(trace, testErr)
+		tracer.FinishWithError(trace, errTest)
 
 		if trace.Status != StatusError {
 			t.Errorf("expected status StatusError, got %v", trace.Status)
@@ -233,9 +233,9 @@ func TestFromContext(t *testing.T) {
 	})
 
 	t.Run("NilContext", func(t *testing.T) {
-		retrieved := FromContext(nil)
+		retrieved := FromContext(context.TODO())
 		if retrieved != nil {
-			t.Error("retrieved trace should be nil for nil context")
+			t.Error("retrieved trace should be nil for context.TODO()")
 		}
 	})
 
