@@ -13,8 +13,8 @@ import (
 
 // mockLLM is a test double for LLMService.
 type mockLLM struct {
-	chatFunc    func(ctx context.Context, messages []ai.Message) (string, *ai.LLMCallStats, error)
-	chatStreamFunc func(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error)
+	chatFunc          func(ctx context.Context, messages []ai.Message) (string, *ai.LLMCallStats, error)
+	chatStreamFunc    func(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error)
 	chatWithToolsFunc func(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error)
 }
 
