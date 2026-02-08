@@ -394,6 +394,10 @@
       "thinking": "思考中...",
       "processing": "处理中...",
       "initializing": "初始化中...",
+      "analyzing": "分析中...",
+      "planning": "规划中...",
+      "retrieving": "检索中...",
+      "synthesizing": "综合中...",
       "error": "出错了"
     },
     "typing_indicator": "AI 正在输入",
@@ -480,6 +484,29 @@
       "click_details": "点击查看详情",
       "tool_details": "工具调用详情",
       "no_output": "无输出结果"
+    },
+    "quick_replies": {
+      "view_schedule": "查看日程",
+      "add_another": "再添加一个",
+      "query_today": "查看今天",
+      "adjust_time": "调整时间",
+      "add_related": "添加相关",
+      "view_calendar": "打开日历",
+      "create_at_slot": "在此安排",
+      "find_more_slots": "查找更多时段",
+      "check_week": "查看本周",
+      "search_related": "搜索相关",
+      "summarize": "总结内容",
+      "open_memo": "查看笔记",
+      "create_schedule": "创建日程",
+      "check_tomorrow": "查看明天",
+      "create_memo": "创建笔记",
+      "try_different": "换个关键词",
+      "retry": "重试",
+      "report_issue": "报告问题",
+      "ask_schedule": "查询日程",
+      "ask_memo": "搜索笔记",
+      "create_note": "新建笔记"
     },
     "session_bar": {
       "title": "会话统计",
@@ -801,6 +828,17 @@
         "completed": "已完成",
         "failed": "失败"
       }
+    }
+  },
+  "ai": {
+    "progress": {
+      "phases": {
+        "analyzing": "分析",
+        "planning": "规划",
+        "retrieving": "检索",
+        "synthesizing": "综合"
+      },
+      "timeRemaining": "剩余 {{time}}"
     }
   },
   "schedule": {

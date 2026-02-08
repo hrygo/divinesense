@@ -4,6 +4,7 @@ package router
 import (
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -30,11 +31,15 @@ type RuleMatcher struct {
 	memoKeywords     map[string]int
 	amazingKeywords  map[string]int
 	timePatterns     []*regexp.Regexp
+	// User-specific custom weights (optional, for dynamic adjustment)
+	customWeights   map[int32]map[string]map[string]int // userID -> category -> keyword -> weight
+	customWeightsMu sync.RWMutex
 }
 
 // NewRuleMatcher creates a new rule matcher with predefined keyword weights.
 func NewRuleMatcher() *RuleMatcher {
 	return &RuleMatcher{
+		customWeights: make(map[int32]map[string]map[string]int),
 		// Schedule keywords: weight +2 for core, +1 for supporting
 		scheduleKeywords: map[string]int{
 			// Core keywords (+2)
@@ -231,4 +236,163 @@ func (m *RuleMatcher) normalizeConfidence(score, maxScore int) float32 {
 		return 0.95
 	}
 	return float32(score) / float32(maxScore)
+}
+
+// SetCustomWeights sets custom weights for a specific user.
+// This allows dynamic weight adjustment based on user feedback.
+func (m *RuleMatcher) SetCustomWeights(userID int32, weights map[string]map[string]int) {
+	m.customWeightsMu.Lock()
+	defer m.customWeightsMu.Unlock()
+	m.customWeights[userID] = weights
+}
+
+// GetCustomWeights retrieves custom weights for a specific user.
+func (m *RuleMatcher) GetCustomWeights(userID int32) map[string]map[string]int {
+	m.customWeightsMu.RLock()
+	defer m.customWeightsMu.RUnlock()
+	if w, ok := m.customWeights[userID]; ok {
+		// Return a copy to avoid concurrent modification
+		result := make(map[string]map[string]int, len(w))
+		for cat, kw := range w {
+			result[cat] = make(map[string]int, len(kw))
+			for k, v := range kw {
+				result[cat][k] = v
+			}
+		}
+		return result
+	}
+	return nil
+}
+
+// getKeywordsForCategory returns the list of keywords for a given category.
+// This is used by the feedback collector to identify which keywords to adjust.
+func (m *RuleMatcher) getKeywordsForCategory(category string) []string {
+	switch category {
+	case "schedule":
+		keys := make([]string, 0, len(m.scheduleKeywords))
+		for k := range m.scheduleKeywords {
+			keys = append(keys, k)
+		}
+		return keys
+	case "memo":
+		keys := make([]string, 0, len(m.memoKeywords))
+		for k := range m.memoKeywords {
+			keys = append(keys, k)
+		}
+		return keys
+	case "amazing":
+		keys := make([]string, 0, len(m.amazingKeywords))
+		for k := range m.amazingKeywords {
+			keys = append(keys, k)
+		}
+		return keys
+	default:
+		return nil
+	}
+}
+
+// GetKeywordWeight returns the weight for a keyword, using custom weights if available.
+func (m *RuleMatcher) GetKeywordWeight(userID int32, category, keyword string) int {
+	m.customWeightsMu.RLock()
+	defer m.customWeightsMu.RUnlock()
+
+	// Check for custom weight first
+	if custom, ok := m.customWeights[userID]; ok {
+		if catWeights, ok := custom[category]; ok {
+			if weight, ok := catWeights[keyword]; ok {
+				return weight
+			}
+		}
+	}
+
+	// Fall back to default weight
+	switch category {
+	case "schedule":
+		return m.scheduleKeywords[keyword]
+	case "memo":
+		return m.memoKeywords[keyword]
+	case "amazing":
+		return m.amazingKeywords[keyword]
+	default:
+		return 1
+	}
+}
+
+// MatchWithUser matches input with user-specific custom weights.
+// This is the enhanced version of Match that uses dynamic weights.
+func (m *RuleMatcher) MatchWithUser(input string, userID int32) (Intent, float32, bool) {
+	// Fast path: normalize once
+	lower := m.normalizeInput(input)
+
+	// Get custom weights if available
+	var customSchedule, customMemo, customAmazing map[string]int
+	m.customWeightsMu.RLock()
+	if custom, ok := m.customWeights[userID]; ok {
+		customSchedule = custom["schedule"]
+		customMemo = custom["memo"]
+		customAmazing = custom["amazing"]
+	}
+	m.customWeightsMu.RUnlock()
+
+	// FAST PATH: Time pattern + query pattern → schedule query
+	if m.hasTimePattern(input) && queryPatternRegex.MatchString(lower) {
+		return IntentScheduleQuery, 0.85, true
+	}
+
+	// Calculate scores using custom or default weights
+	scheduleScore := m.calculateScoreWithWeights(lower, m.scheduleKeywords, customSchedule)
+	memoScore := m.calculateScoreWithWeights(lower, m.memoKeywords, customMemo)
+	amazingScore := m.calculateScoreWithWeights(lower, m.amazingKeywords, customAmazing)
+
+	// Time pattern adds score to schedule only if it has core schedule keywords
+	hasTimePattern := m.hasTimePattern(input)
+	hasCoreScheduleKeyword := m.hasCoreKeyword(lower, "schedule")
+	if hasTimePattern && hasCoreScheduleKeyword {
+		scheduleScore += 2
+	}
+
+	// Memo takes priority if it has explicit memo keywords
+	if memoScore >= 3 || (memoScore >= 2 && m.hasCoreKeyword(lower, "memo")) {
+		intent := m.determineMemoIntent(lower)
+		confidence := m.normalizeConfidence(memoScore, 5)
+		return intent, confidence, true
+	}
+
+	// Schedule needs both high score AND core schedule keyword
+	if scheduleScore >= 2 && hasCoreScheduleKeyword {
+		intent := m.determineScheduleIntent(lower, scheduleScore)
+		confidence := m.normalizeConfidence(scheduleScore, 6)
+		return intent, confidence, true
+	}
+
+	// Amazing needs high score AND core amazing keyword
+	if amazingScore >= 3 && m.hasCoreKeyword(lower, "amazing") {
+		confidence := m.normalizeConfidence(amazingScore, 5)
+		return IntentAmazing, confidence, true
+	}
+
+	// No match - needs higher layer processing
+	return IntentUnknown, 0, false
+}
+
+// calculateScoreWithWeights calculates score using custom weights if available.
+func (m *RuleMatcher) calculateScoreWithWeights(input string, defaultKeywords, customWeights map[string]int) int {
+	score := 0
+
+	// Use custom weights if available, otherwise use defaults
+	keywords := defaultKeywords
+	if len(customWeights) > 0 {
+		keywords = customWeights
+	}
+
+	for keyword, weight := range keywords {
+		if strings.Contains(input, keyword) {
+			score += weight
+			// Early exit: max reasonable score is 6-7
+			if score >= 7 {
+				return score
+			}
+		}
+	}
+	return score
 }

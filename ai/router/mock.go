@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"strings"
+	"time"
 )
 
 // MockRouterService is a mock implementation of RouterService for testing.
@@ -144,14 +145,23 @@ func (m *MockRouterService) SelectModel(ctx context.Context, task TaskType) (Mod
 	}
 }
 
-// containsAny checks if s contains any of the patterns.
-func containsAny(s string, patterns []string) bool {
-	for _, p := range patterns {
-		if strings.Contains(s, p) {
-			return true
-		}
-	}
-	return false
+// GetRouterStats returns routing statistics for the mock service.
+func (m *MockRouterService) GetRouterStats(ctx context.Context, userID int32, timeRange time.Duration) (*RouterStats, error) {
+	return &RouterStats{
+		ByIntent:         make(map[Intent]int64),
+		BySource:         make(map[string]int64),
+		TotalPredictions: 0,
+		CorrectCount:     0,
+		IncorrectCount:   0,
+		Accuracy:         0,
+		LastUpdated:      time.Now().Unix(),
+	}, nil
+}
+
+// RecordFeedback records user feedback for a routing decision.
+func (m *MockRouterService) RecordFeedback(ctx context.Context, feedback *RouterFeedback) error {
+	// No-op for mock
+	return nil
 }
 
 // Ensure MockRouterService implements RouterService.

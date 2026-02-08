@@ -399,6 +399,10 @@
       "thinking": "Thinking...",
       "processing": "Processing...",
       "initializing": "Initializing...",
+      "analyzing": "Analyzing...",
+      "planning": "Planning...",
+      "retrieving": "Retrieving...",
+      "synthesizing": "Synthesizing...",
       "error": "Something went wrong"
     },
     "typing_indicator": "AI typing",
@@ -485,6 +489,29 @@
       "click_details": "Click to view details",
       "tool_details": "Tool Call Details",
       "no_output": "No output"
+    },
+    "quick_replies": {
+      "view_schedule": "View Schedule",
+      "add_another": "Add Another",
+      "query_today": "Check Today",
+      "adjust_time": "Adjust Time",
+      "add_related": "Add Related",
+      "view_calendar": "Open Calendar",
+      "create_at_slot": "Schedule Here",
+      "find_more_slots": "Find More Slots",
+      "check_week": "Check Week",
+      "search_related": "Search Related",
+      "summarize": "Summarize",
+      "open_memo": "View Notes",
+      "create_schedule": "Create Schedule",
+      "check_tomorrow": "Check Tomorrow",
+      "create_memo": "Create Note",
+      "try_different": "Try Different",
+      "retry": "Try Again",
+      "report_issue": "Report Issue",
+      "ask_schedule": "Check Schedule",
+      "ask_memo": "Search Notes",
+      "create_note": "New Note"
     },
     "session_bar": {
       "title": "Session Stats",
@@ -806,6 +833,17 @@
         "completed": "Completed",
         "failed": "Failed"
       }
+    }
+  },
+  "ai": {
+    "progress": {
+      "phases": {
+        "analyzing": "Analyzing",
+        "planning": "Planning",
+        "retrieving": "Retrieving",
+        "synthesizing": "Synthesizing"
+      },
+      "timeRemaining": "{{time}} left"
     }
   },
   "schedule": {

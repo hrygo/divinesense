@@ -2,7 +2,10 @@
 // This interface is consumed by Team B (Assistant+Schedule) and Team C (Memo Enhancement).
 package router
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Consumers: Team B (Assistant+Schedule), Team C (Memo Enhancement).
 type RouterService interface {
@@ -14,6 +17,13 @@ type RouterService interface {
 	// SelectModel selects an appropriate model based on task type.
 	// Returns: model configuration (local/cloud)
 	SelectModel(ctx context.Context, task TaskType) (ModelConfig, error)
+
+	// RecordFeedback records user feedback for a routing decision.
+	// This enables dynamic weight adjustment for improved routing accuracy.
+	RecordFeedback(ctx context.Context, feedback *RouterFeedback) error
+
+	// GetRouterStats retrieves routing accuracy statistics.
+	GetRouterStats(ctx context.Context, userID int32, timeRange time.Duration) (*RouterStats, error)
 }
 
 // AgentType represents the agent type for routing.

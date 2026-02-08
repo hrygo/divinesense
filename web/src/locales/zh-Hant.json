@@ -17,7 +17,26 @@
     "new-password": "新密碼",
     "repeat-new-password": "再次輸入新密碼",
     "sign-in-tip": "已經有帳戶了嗎？",
-    "sign-up-tip": "還沒有帳戶嗎？"
+    "sign-up-tip": "還沒有帳戶嗎？",
+    "password-auth-not-allowed": "Password authentication is disabled.",
+    "sign-up-not-allowed": "User registration is disabled.",
+    "error": {
+      "default": "Sign in failed. Please check your credentials and try again.",
+      "empty-fields": "Please enter username and password",
+      "invalid-credentials": "Invalid username or password.",
+      "network": "Network connection failed. Please check your network and try again",
+      "server": "Server is temporarily unavailable. Please try again later",
+      "user-not-found": "User not found. Please check your username.",
+      "rate-limit": "Too many attempts. Please try again in {{count}} minutes.",
+      "sign-up-failed": "Registration failed. Please try again.",
+      "oauth-invalid": "Sign-in configuration is invalid. Please contact the administrator.",
+      "oauth-context": "OAuth sign-in",
+      "oauth-failed": "Failed to sign in with OAuth. Please try again.",
+      "username-exists": "Username already exists. Please use a different username.",
+      "username-format": "Invalid username format (only letters, numbers, and hyphens, 1-32 characters).",
+      "username-email-format": "Username cannot be an email address. Please use a username without @ or .",
+      "invalid-input": "Invalid input format. Please check and try again."
+    }
   },
   "common": {
     "about": "關於",
@@ -107,7 +126,23 @@
     "username": "帳號",
     "version": "版本",
     "visibility": "瀏覽權限",
-    "yourself": "您自己"
+    "yourself": "您自己",
+    "got-it": "Got it",
+    "not-now": "Not now",
+    "apply": "Apply",
+    "ai-assistant": "Copilot",
+    "copy": "Copy",
+    "copied": "Copied",
+    "failed-to-sign-in": "Failed to sign in",
+    "loading": "Loading...",
+    "location": "Location",
+    "map": "Map",
+    "more": "More",
+    "navigation": "Navigation",
+    "related-memos": "Related Memos",
+    "retry": "Retry",
+    "saving": "Saving...",
+    "today": "Today"
   },
   "days": {
     "fri": "五",
@@ -122,7 +157,17 @@
     "add-your-comment-here": "在這裡添加您的評論...",
     "any-thoughts": "任何想法...",
     "save": "儲存",
-    "no-changes-detected": "未發現變更"
+    "no-changes-detected": "未發現變更",
+    "ai-suggest-tags": "AI Suggest Tags",
+    "ai-suggest-tags-empty": "No tags suggested",
+    "ai-suggest-tags-error": "Failed to suggest tags",
+    "ai-suggest-tags-insert": "Insert Selected",
+    "ai-suggest-tags-inserted": "Tags inserted",
+    "ai-suggest-tags-title": "Suggested Tags",
+    "content-too-short": "Content too short for analysis",
+    "exit-focus-mode": "Exit Focus Mode",
+    "focus-mode": "Focus Mode",
+    "slash-commands": "Type `/` for commands"
   },
   "filters": {
     "has-code": "有程式碼",
@@ -132,7 +177,10 @@
   "inbox": {
     "memo-comment": "{{user}} 對您的 {{memo}} 發表了評論。",
     "version-update": "新版本 {{version}} 現已推出！",
-    "failed-to-load": "載入失敗"
+    "failed-to-load": "載入失敗",
+    "no-archived": "No archived notifications",
+    "no-unread": "No unread notifications",
+    "unread": "Unread"
   },
   "markdown": {
     "checkbox": "核取方塊",
@@ -176,7 +224,22 @@
       "public": "公開"
     },
     "list": "列表",
-    "masonry": "瀑布流"
+    "masonry": "瀑布流",
+    "copy-content": "Copy Content",
+    "preview": {
+      "cancel": "Cancel",
+      "confidence": "Confidence",
+      "confirm": "Create Memo",
+      "content": "Content",
+      "tags": "Tags",
+      "title": "Memo Preview"
+    },
+    "search": {
+      "content": "Memo content",
+      "confidence": "Relevance",
+      "tags": "Tags",
+      "view-memo": "View memo"
+    }
   },
   "message": {
     "archived-successfully": "封存成功",
@@ -197,7 +260,8 @@
     "restored-successfully": "還原成功",
     "succeed-copy-link": "複製連結到剪貼簿成功。",
     "update-succeed": "更新成功",
-    "user-not-found": "未找到該使用者"
+    "user-not-found": "未找到該使用者",
+    "succeed-copy-content": "Content copied successfully."
   },
   "reference": {
     "add-references": "引用參考資料",
@@ -238,7 +302,9 @@
     "reset-link": "重設連結",
     "reset-link-prompt": "您確定要重設連結嗎？這將導致當前使用的連結失效。此操作無法恢復。",
     "reset-resource-link": "重設檔案連結",
-    "unused-resources": "未使用的檔案"
+    "unused-resources": "未使用的檔案",
+    "delete-all-unused-error": "Failed to delete unused resources",
+    "delete-all-unused-success": "Resources deleted successfully"
   },
   "router": {
     "back-to-top": "回到頂端",
@@ -302,7 +368,8 @@
       "enable-memo-comments": "啟用備忘錄評論",
       "enable-memo-location": "啟用備忘錄定位",
       "reactions": "表情回應",
-      "title": "備忘錄相關設定"
+      "title": "備忘錄相關設定",
+      "content-length-limit": "Content length limit (Byte)"
     },
     "my-account": "我的帳號",
     "preference": "偏好設定",
@@ -338,7 +405,8 @@
       "template": "範本",
       "token-endpoint": "權杖端點（Token Endpoint）",
       "update-sso": "更新 SSO",
-      "user-endpoint": "使用者端點（User Endpoint）"
+      "user-endpoint": "使用者端點（User Endpoint）",
+      "title": "Single Sign-On"
     },
     "storage": "儲存空間",
     "storage-section": {
@@ -373,7 +441,8 @@
       "url-prefix-placeholder": "自訂網址前綴（選填）",
       "url-suffix": "網址後綴",
       "url-suffix-placeholder": "自訂網址後綴（選填）",
-      "warning-text": "您確定要刪除存儲服務 `{{name}}` 嗎？此操作無法恢復。"
+      "warning-text": "您確定要刪除存儲服務 `{{name}}` 嗎？此操作無法恢復。",
+      "title": "Object Storage"
     },
     "system": "系統",
     "system-section": {
@@ -432,7 +501,80 @@
       "saturday": "星期六",
       "sunday": "星期日",
       "week-start-day": "每週起始日"
-    }
+    },
+    "chat-apps": {
+      "title": "Chat Apps",
+      "description": "Connect DivineSense AI to your favorite chat apps",
+      "add": "Add Account",
+      "add-account": "Add Account",
+      "no-accounts": "No chat app accounts connected yet",
+      "add-first-account": "Add your first chat app account to get started",
+      "platform": "Platform",
+      "platform-user-id": "Platform User ID",
+      "access-token": "Access Token",
+      "app-secret": "App Secret",
+      "bridge-url": "Bridge URL",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "actions": "Actions",
+      "delete": "Delete",
+      "toggle": "Toggle",
+      "view-webhook": "View Webhook",
+      "webhook-info": "Webhook Info",
+      "confirm-delete": "Are you sure you want to delete this chat app account?",
+      "delete-success": "Chat app account deleted successfully",
+      "add-success": "Chat app account added successfully",
+      "toggle-success": "Chat app account {{status}} successfully",
+      "platform-telegram": "Telegram",
+      "platform-whatsapp": "WhatsApp",
+      "platform-dingtalk": "DingTalk",
+      "webhook-url": "Webhook URL",
+      "setup-instructions": "Setup Instructions",
+      "no-credentials": "No chat app credentials configured yet",
+      "created-at": "Created At",
+      "enable": "Enable",
+      "disable": "Disable",
+      "add-credential": "Add Chat App Account",
+      "add-description": "Configure a new chat app integration",
+      "telegram-user-id-hint": "Your Telegram User ID (get from @userinfobot)",
+      "dingtalk-user-id-hint": "Your DingTalk Staff ID or Union ID",
+      "telegram-token-hint": "Bot Token from @BotFather",
+      "dingtalk-token-hint": "AppKey from DingTalk Open Platform",
+      "dingtalk-webhook-hint": "Incoming webhook URL configured in DingTalk",
+      "fetch-failed": "Failed to fetch chat app credentials",
+      "validation-error": "Please fill in all required fields",
+      "register-failed": "Failed to register chat app credential",
+      "delete-failed": "Failed to delete chat app credential",
+      "update-failed": "Failed to update chat app credential"
+    },
+    "mobile": {
+      "api-management-desktop-only": "API access token management is only available on desktop",
+      "desktop-only": "Desktop Only",
+      "desktop-required-title": "Desktop Required",
+      "desktop-required-description": "This feature is only available on desktop. Please access from a computer to manage these settings.",
+      "member-desktop-only": "Member management is only available on desktop",
+      "storage-desktop-only": "Storage configuration is only available on desktop",
+      "system-desktop-only": "System settings are only available on desktop",
+      "sso-desktop-only": "SSO configuration is only available on desktop",
+      "memo-desktop-only": "Memo-related settings are only available on desktop"
+    },
+    "memo-related-title": "Memo Related",
+    "metrics": "Metrics",
+    "metrics-title": "Metrics",
+    "metrics-section": {
+      "title": "Metrics Dashboard",
+      "errors": "Errors",
+      "latency": "Latency (P50)",
+      "mock-data": "Mock data - Metrics service not yet implemented",
+      "overview": "Overview",
+      "p95": "Latency (P95)",
+      "requests": "Total Requests",
+      "success-rate": "Success Rate",
+      "time-range": "Time Range"
+    },
+    "personal": "Personal",
+    "admin": "Admin",
+    "settings": "Settings"
   },
   "tag": {
     "all-tags": "所有標籤",
@@ -628,8 +770,30 @@
         "thinking": "思考中...",
         "processing": "處理中...",
         "initializing": "初始化中...",
+        "analyzing": "分析中...",
+        "planning": "規劃中...",
+        "retrieving": "檢索中...",
+        "synthesizing": "綜合中...",
         "error": "出錯了"
+      },
+      "progress": {
+        "phases": {
+          "analyzing": "分析",
+          "planning": "規劃",
+          "retrieving": "檢索",
+          "synthesizing": "綜合"
+        },
+        "timeRemaining": "剩餘 {{time}}"
       }
+    },
+    "progress": {
+      "phases": {
+        "analyzing": "分析",
+        "planning": "規劃",
+        "retrieving": "檢索",
+        "synthesizing": "綜合"
+      },
+      "timeRemaining": "剩餘 {{time}}"
     }
   },
   "schedule": {
@@ -773,7 +937,17 @@
       "template-applied-message": "已應用\"{title}\"模板，時長 {duration} 分鐘",
       "ai-suggestions": "AI 建議",
       "double-click-create": "雙擊創建",
-      "click-again-create": "再次點擊創建"
+      "click-again-create": "再次點擊創建",
+      "create-schedule-label": "Create schedule: {title}, {date} {time}{endTime}",
+      "creating": "Creating...",
+      "prompt-focus": "Focus work for two hours without interruption",
+      "prompt-meeting-15": "Have a 15min meeting with colleagues to discuss progress",
+      "prompt-meeting-30": "A 30-minute meeting at 3pm to discuss the project",
+      "prompt-video": "Video meeting with product team to review requirements",
+      "prompt-workout": "Go to gym for an hour workout",
+      "schedule-created": "Schedule created successfully",
+      "selected-label": "Selected: {title}, {date} {time}",
+      "selection-canceled": "Selection canceled"
     },
     "time": {
       "tbd": "時間待定",
@@ -788,7 +962,10 @@
     },
     "error": {
       "set-time-range": "請設置開始和結束時間",
-      "create-failed": "創建失敗，請重試"
+      "create-failed": "創建失敗，請重試",
+      "something_went_wrong": "Something went wrong",
+      "loading_failed": "An error occurred while loading schedules",
+      "try_again": "Try Again"
     },
     "conflict": {
       "title": "時間衝突",
@@ -796,7 +973,256 @@
       "type-partial": "重疊",
       "no-conflict-slot": "無衝突時段",
       "end-slot": "末尾時段",
-      "next-day-available": "次日可用"
+      "next-day-available": "次日可用",
+      "ai-suggestions": "AI suggested solutions",
+      "auto-resolved": "Adjusted to {{time}}",
+      "conflicting-schedules": "Conflicting schedules",
+      "manual-resolve": "Manual adjust",
+      "multiple-conflicts": "Found {{count}} schedule conflicts",
+      "new-schedule": "New schedule",
+      "override": "Create anyway",
+      "single-conflict": "Found 1 schedule conflict",
+      "suggestions-available": "suggestions available"
+    },
+    "ai-sidebar": {
+      "hint": "Use natural language to create and manage schedules",
+      "placeholder": "Tell me what you want to schedule...",
+      "quick-suggestions": "Quick Actions",
+      "subtitle": "Smart Schedule Management",
+      "title": "AI Assistant"
+    },
+    "ai": {
+      "alternatives": "Alternative time slots",
+      "checking-schedule": "Checking existing schedules...",
+      "confirm-slot": "Confirm",
+      "creating-schedule": "Creating schedule...",
+      "error": "An error occurred",
+      "finding-free-time": "Finding available time slots...",
+      "processing": "Processing...",
+      "select-time": "Select time",
+      "status-history": "Status history",
+      "thinking": "Thinking...",
+      "tool-completed": "Done",
+      "updating-schedule": "Updating schedule...",
+      "using-tool": "Using tool"
+    },
+    "batch": {
+      "confirm-create": "Confirm Create",
+      "creating": "Creating...",
+      "day-suffix": "",
+      "items": "items",
+      "preview": "Preview",
+      "recurrence": {
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "weekly": "Weekly"
+      },
+      "show-less": "Show less",
+      "show-more": "Show more",
+      "total-count": "Total",
+      "weekday": {
+        "fri": "Fri",
+        "mon": "Mon",
+        "sat": "Sat",
+        "sun": "Sun",
+        "thu": "Thu",
+        "tue": "Tue",
+        "wed": "Wed"
+      }
+    },
+    "cancel-create": "Cancel create",
+    "clear-search": "Clear search",
+    "delete-confirm": "Are you sure you want to delete this schedule?",
+    "end-time": "End time",
+    "has-schedules": "Has schedules",
+    "hint": "Click a date to view schedules",
+    "jump-to-today": "Jump to today",
+    "legend": "Legend",
+    "modify-schedule": "Modify schedule",
+    "next-month": "Next month",
+    "previous-month": "Previous month",
+    "quick": {
+      "input": {
+        "create-failed": "Creation failed, please try again",
+        "created-success": "Schedule created successfully",
+        "creating": "AI is creating your schedule...",
+        "parse-error-fallback": "Processing failed, please try again",
+        "placeholder": "e.g. Meeting at 3pm tomorrow",
+        "schedule-created-fallback": "Schedule created",
+        "select-suggestion": "Please select a suggestion below",
+        "suggestion-message": "Selected date: {{date}}\nCreate: {{title}} {{startTime}}-{{endTime}}"
+      },
+      "quick-edit": {
+        "cancel-schedule": "Cancel schedule",
+        "delay-30m": "Delay 30m",
+        "move-tomorrow": "Move to tomorrow",
+        "placeholder": "e.g., Delay 30 mins, Rename to...",
+        "title": "Quick Edit"
+      }
+    },
+    "list": {
+      "summary": "Found {{count}} schedule(s)",
+      "empty": "No schedules found for this period"
+    },
+    "schedule-updated": "Schedule updated successfully",
+    "update-success": "Schedule updated successfully",
+    "update-failed": "Failed to update schedule",
+    "search-schedule": "Search schedules",
+    "start-time": "Start time",
+    "streaming-assistant": {
+      "executing-tool": "Executing",
+      "hint": "Tell me what you want to schedule, natural language input supported",
+      "placeholder": "Tell me what you want to schedule, e.g., \"Meeting tomorrow at 3pm\"",
+      "thinking": "Thinking..."
+    },
+    "suggestion": {
+      "click-to-create": "Click to create"
+    },
+    "tap-to-view": "Tap a date to view schedule details",
+    "untitled": "Untitled Schedule",
+    "time_filter": "Time Filter"
+  },
+  "chat": {
+    "new": "New Chat",
+    "block-number": "Block {{number}}",
+    "block-summary": {
+      "tokens": "Tokens",
+      "total-tokens": "Total",
+      "input-tokens": "Input",
+      "output-tokens": "Output",
+      "cache-read": "Cache Read",
+      "cache-write": "Cache Write",
+      "estimated-cost": "Estimated Cost",
+      "cost-estimate": "Cost Estimate",
+      "model-version": "Model",
+      "thinking-time": "Thinking",
+      "generation-time": "Generation",
+      "total-time": "Total Time"
+    },
+    "branches": {
+      "title": "Conversation Branches",
+      "branches-available": "{{count}} branch available",
+      "branches-available_plural": "{{count}} branches available",
+      "switch-to": "Switch to",
+      "current-branch": "Current branch",
+      "create-branch": "Create Branch",
+      "delete-branch": "Delete Branch",
+      "confirm-delete": "Are you sure you want to delete this branch?",
+      "confirm-delete-desc": "This will delete this branch and all its descendants.",
+      "branch-path": "Path",
+      "no-branches": "No branches available"
+    }
+  },
+  "duplicate": {
+    "found-similar": "Similar memos found",
+    "merge": "Merge",
+    "link": "Link",
+    "ignore": "Ignore, continue creating",
+    "related-memos": "Related memos",
+    "similarity": "Similarity",
+    "untitled": "Untitled"
+  },
+  "review": {
+    "title": "Daily Review",
+    "subtitle": "Strengthen your memory with spaced repetition",
+    "stats": {
+      "due-today": "Due Today",
+      "reviewed-today": "Reviewed",
+      "new-memos": "New",
+      "mastered": "Mastered"
+    },
+    "quality": {
+      "again": "Again",
+      "again-desc": "Forgot",
+      "hard": "Hard",
+      "hard-desc": "Difficult",
+      "good": "Good",
+      "good-desc": "Correct",
+      "easy": "Easy",
+      "easy-desc": "Perfect"
+    },
+    "show-answer": "Show Answer",
+    "how-well": "How well did you remember?",
+    "view-memo": "View Full Memo",
+    "progress": "Progress",
+    "review-count": "Reviewed {{count}} times",
+    "untitled": "Untitled Memo",
+    "all-done": "All Done!",
+    "all-done-desc": "You've completed all reviews for today. Great job!",
+    "load-error": "Failed to load review data"
+  },
+  "quick": {
+    "actions": {
+      "title": "Suggested Actions",
+      "execute": "Execute"
+    }
+  },
+  "progress": {
+    "tracker": {
+      "title": "Processing",
+      "cancel": "Cancel",
+      "steps": {
+        "pending": "Pending",
+        "in_progress": "Processing",
+        "completed": "Completed",
+        "failed": "Failed"
+      }
+    }
+  },
+  "search": {
+    "ai-error": "AI search unavailable",
+    "ai-mode": "AI Search (Semantic)",
+    "ai-placeholder": "AI Search...",
+    "ai-searching": "AI searching...",
+    "fallback-to-keyword": "Switch to keyword search",
+    "keyword-mode": "Keyword Search",
+    "no-results": "No relevant memos found",
+    "score": "Relevance",
+    "switch-to-ai": "Switch to AI search",
+    "switch-to-keyword": "Switch to keyword search"
+  },
+  "shortcuts": {
+    "bold": "Bold text",
+    "cancel-edit": "Cancel edit",
+    "close-dialog": "Close dialog/drawer",
+    "description": "Press ? to open this help dialog anytime",
+    "editor": "Editor",
+    "formatting": "Formatting",
+    "italic": "Italic text",
+    "link": "Insert link",
+    "navigation": "Navigation",
+    "save-memo": "Save memo",
+    "show-help": "Show keyboard shortcuts",
+    "title": "Keyboard Shortcuts"
+  },
+  "pwa": {
+    "install": {
+      "title": "Install App",
+      "description": "Install DivineSense to your home screen for a better experience",
+      "install": "Install",
+      "iosSteps": {
+        "title": "How to install on iPhone/iPad:",
+        "share": "Tap the Share button",
+        "addToHome": "Scroll down and tap \"Add to Home Screen\"",
+        "confirm": "Tap \"Add\" to confirm"
+      },
+      "androidSteps": {
+        "title": "How to install on Android:",
+        "tapMenu": "Tap the menu button",
+        "installApp": "Tap \"Install app\" or \"Add to Home Screen\"",
+        "confirm": "Tap \"Install\" to confirm"
+      },
+      "desktopSteps": {
+        "title": "How to install on desktop:",
+        "installMenu": "Click the install icon in the address bar (⊞) or menu",
+        "confirm": "Click \"Install\" to confirm"
+      }
+    },
+    "update": {
+      "title": "Update Available",
+      "description": "A new version of DivineSense is available",
+      "update": "Update Now",
+      "later": "Later"
     }
   }
 }

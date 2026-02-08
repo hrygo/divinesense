@@ -61,6 +61,8 @@ import ReactMarkdown from "react-markdown";
 import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import StreamingMarkdown from "@/components/AIChat/StreamingMarkdown";
+import { QuickReplies } from "@/components/AIChat/QuickReplies";
+import { analyzeQuickReplies } from "@/components/AIChat/utils/quickReplyAnalyzer";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
 import { BlockSummary, PARROT_THEMES, ParrotAgentType } from "@/types/parrot";
@@ -408,6 +410,8 @@ export interface UnifiedMessageBlockProps {
   onDelete?: () => void;
   /** Cancel streaming callback (#113) */
   onCancel?: () => void;
+  /** Quick reply action callback - fills input with suggested text */
+  onQuickReply?: (text: string) => void;
   /** Block ID for edit/fork operations */
   blockId?: bigint;
   /** Block sequence number (1-based) for display */
@@ -1022,6 +1026,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   onRegenerate,
   onDelete,
   onCancel,
+  onQuickReply,
   blockId: _blockId,
   blockNumber,
   children,
@@ -1081,6 +1086,26 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     onCopy?.(contentForCopy);
   }, [contentForCopy, onCopy]);
 
+  // Quick Replies Analysis (#98)
+  const toolCalls = useMemo(() => assistantMessage?.metadata?.toolCalls || [], [assistantMessage?.metadata?.toolCalls]);
+  const quickReplyAnalysis = useMemo(
+    () => analyzeQuickReplies(
+      toolCalls,
+      assistantMessage?.content || "",
+      !!assistantMessage?.error
+    ),
+    [toolCalls, assistantMessage?.content, assistantMessage?.error]
+  );
+
+  const handleQuickReply = useCallback((action: { type: string; payload: string }) => {
+    if (action.type === "fill_input" && onQuickReply) {
+      onQuickReply(action.payload);
+    }
+  }, [onQuickReply]);
+
+  // Show quick replies only when streaming is complete and not collapsed
+  const showQuickReplies = !isStreaming && !collapsed && onQuickReply && quickReplyAnalysis.confidence > 0.6;
+
   return (
     <div
       className={cn(
@@ -1137,6 +1162,16 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
           onCancel={onCancel}
         />
       </div>
+
+      {/* Quick Replies - 显示在 Footer 之后 (#98) */}
+      {showQuickReplies && (
+        <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/30">
+          <QuickReplies
+            analysis={quickReplyAnalysis}
+            onAction={handleQuickReply}
+          />
+        </div>
+      )}
     </div>
   );
 });

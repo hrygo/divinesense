@@ -90,6 +90,20 @@ function UnifiedChatView({
     // TODO: Implement message deletion
   };
 
+  // Handle quick reply - fills input with suggested text (#98)
+  const handleQuickReply = useCallback((text: string) => {
+    setInput(text);
+    // Auto-focus input for immediate editing
+    setTimeout(() => {
+      const textarea = document.querySelector("textarea[placeholder*='Chat'], textarea[placeholder*='对话']") as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        // Move cursor to end of text
+        textarea.setSelectionRange(text.length, text.length);
+      }
+    }, 50);
+  }, [setInput]);
+
   // Get mode-specific container classes
   const getModeContainerClass = (mode: AIMode) => {
     switch (mode) {
@@ -126,6 +140,7 @@ function UnifiedChatView({
         currentParrotId={ParrotAgentType.AMAZING}
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
+        onQuickReply={handleQuickReply}
         onCancel={onStop}
         blockSummary={blockSummary}
         conversationId={conversationId}

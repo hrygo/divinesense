@@ -139,6 +139,10 @@ const (
 	EventTypeUIQuickActions       = "ui_quick_actions"       // Quick action buttons
 	EventTypeUIMemoPreview        = "ui_memo_preview"        // Memo preview cards
 	EventTypeUIScheduleList       = "ui_schedule_list"       // Schedule list display
+
+	// Progressive progress events (Issue #97).
+	EventTypePhaseChange = "phase_change" // Processing phase changed
+	EventTypeProgress    = "progress"     // Progress percentage update
 )
 
 // MemoQueryResultData represents the result of a memo search.
@@ -262,6 +266,33 @@ type AgentSessionStatsForStorage struct {
 	ModelUsed            string
 	IsError              bool
 	ErrorMessage         string
+}
+
+// ProcessingPhase represents a processing phase for progressive progress feedback.
+// ProcessingPhase 表示渐进式进度反馈的处理阶段。
+type ProcessingPhase string
+
+const (
+	PhaseAnalyzing    ProcessingPhase = "analyzing"    // Understanding the user request
+	PhasePlanning     ProcessingPhase = "planning"     // Determining the approach
+	PhaseRetrieving   ProcessingPhase = "retrieving"   // Searching for relevant data
+	PhaseSynthesizing ProcessingPhase = "synthesizing" // Generating the response
+)
+
+// PhaseChangeEvent represents a phase change event.
+// PhaseChangeEvent 表示阶段变更事件。
+type PhaseChangeEvent struct {
+	Phase            ProcessingPhase `json:"phase"`
+	PhaseNumber      int             `json:"phase_number"`      // 1-4
+	TotalPhases      int             `json:"total_phases"`      // Always 4
+	EstimatedSeconds int             `json:"estimated_seconds"` // Estimated time for this phase
+}
+
+// ProgressEvent represents a progress update event.
+// ProgressEvent 表示进度更新事件。
+type ProgressEvent struct {
+	Percent              int `json:"percent"`                // 0-100
+	EstimatedTimeSeconds int `json:"estimated_time_seconds"` // Remaining time
 }
 
 // ParrotStream is the interface for streaming responses to the client.

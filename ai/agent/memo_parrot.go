@@ -119,6 +119,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		"prompt_version", promptVersion,
 	)
 
+	// Phase 1: Analyzing - Understanding the user request (Issue #97: Progressive Progress Feedback)
+	SendPhaseChange(callbackSafe, PhaseAnalyzing, 2)
+
 	// Step 1: Check cache (include userID to prevent cross-user cache pollution)
 	// Use hashed cache key to prevent memory issues from long inputs
 	cacheKey := GenerateCacheKey(p.Name(), p.userID, userInput)
@@ -138,6 +141,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 
 	// Step 2: Build system prompt
 	systemPrompt := p.buildSystemPrompt()
+
+	// Phase 2: Planning - Determining the approach (Issue #97)
+	SendPhaseChange(callbackSafe, PhasePlanning, 1)
 
 	// Step 3: ReAct loop
 	messages := []ai.Message{
@@ -166,6 +172,7 @@ func (p *MemoParrot) ExecuteWithCallback(
 	)
 
 	var iteration int
+	var lastPhase ProcessingPhase = ""
 
 	for iteration = 0; iteration < timeout.MaxIterations; iteration++ {
 		// Check for context cancellation
@@ -177,6 +184,13 @@ func (p *MemoParrot) ExecuteWithCallback(
 			)
 			return NewParrotError(p.Name(), "ExecuteWithCallback", ctx.Err())
 		default:
+		}
+
+		// Phase 3: Retrieving - Searching for relevant data (Issue #97)
+		// Send only once per loop iteration
+		if lastPhase != PhaseRetrieving {
+			SendPhaseChange(callbackSafe, PhaseRetrieving, 3)
+			lastPhase = PhaseRetrieving
 		}
 
 		// Notify thinking (non-critical - use safe callback)
@@ -218,6 +232,9 @@ func (p *MemoParrot) ExecuteWithCallback(
 		cleanText, toolCall, toolInput, parseErr := p.parseToolCall(response)
 		if parseErr != nil {
 			// No tool call detected - this is the final answer.
+			// Phase 4: Synthesizing - Generating the response (Issue #97)
+			SendPhaseChange(callbackSafe, PhaseSynthesizing, 2)
+
 			// Stream the existing response for UX consistency instead of making another LLM call.
 			p.cache.Set(cacheKey, response)
 			if callback != nil {
@@ -234,7 +251,12 @@ func (p *MemoParrot) ExecuteWithCallback(
 					if err := callback(EventTypeAnswer, chunk); err != nil {
 						return err
 					}
+					// Update progress during streaming
+					progress := int((float64(i) / float64(len(runes))) * 100)
+					SendProgress(callbackSafe, progress, 0)
 				}
+				// Final progress update
+				SendProgress(callbackSafe, 100, 0)
 			}
 			p.recordMetrics(startTime, promptVersion, true)
 			return nil

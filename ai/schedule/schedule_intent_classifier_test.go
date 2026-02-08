@@ -3,6 +3,7 @@ package schedule
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hrygo/divinesense/ai/router"
 )
@@ -21,6 +22,22 @@ func (m *mockRouterService) ClassifyIntent(ctx context.Context, input string) (r
 
 func (m *mockRouterService) SelectModel(ctx context.Context, task router.TaskType) (router.ModelConfig, error) {
 	return router.ModelConfig{}, nil
+}
+
+func (m *mockRouterService) GetRouterStats(ctx context.Context, userID int32, timeRange time.Duration) (*router.RouterStats, error) {
+	return &router.RouterStats{
+		ByIntent:         make(map[router.Intent]int64),
+		BySource:         make(map[string]int64),
+		TotalPredictions: 0,
+		CorrectCount:     0,
+		IncorrectCount:   0,
+		Accuracy:         0,
+		LastUpdated:      0,
+	}, nil
+}
+
+func (m *mockRouterService) RecordFeedback(ctx context.Context, feedback *router.RouterFeedback) error {
+	return nil
 }
 
 func TestScheduleIntentClassifier_SimpleCreate(t *testing.T) {

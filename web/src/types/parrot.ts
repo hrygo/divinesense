@@ -384,6 +384,8 @@ export interface ParrotChatCallbacks {
   onToolUse?: (toolName: string, meta?: EventMetadata) => void;
   onToolResult?: (result: string, meta?: EventMetadata) => void;
   onDangerBlock?: (event: DangerBlockEvent) => void;
+  onPhaseChange?: (phase: ProcessingPhase, estimatedSeconds: number) => void;
+  onProgress?: (percent: number, estimatedSeconds: number) => void;
   onDone?: () => void;
   onError?: (error: Error) => void;
 }
@@ -446,6 +448,35 @@ export enum ParrotEventType {
   MEMO_QUERY_RESULT = "memo_query_result",
   SCHEDULE_QUERY_RESULT = "schedule_query_result",
   SCHEDULE_UPDATED = "schedule_updated",
+  // Progressive progress events (Issue #97)
+  PHASE_CHANGE = "phase_change",
+  PROGRESS = "progress",
+}
+
+/**
+ * Processing phases for progressive progress feedback
+ * 渐进式进度反馈的处理阶段
+ */
+export type ProcessingPhase = "analyzing" | "planning" | "retrieving" | "synthesizing";
+
+/**
+ * Phase change event data
+ * 阶段变更事件数据
+ */
+export interface PhaseChangeEvent {
+  phase: ProcessingPhase;
+  phase_number: number; // 1-4
+  total_phases: number; // Always 4
+  estimated_seconds: number;
+}
+
+/**
+ * Progress event data
+ * 进度事件数据
+ */
+export interface ProgressEvent {
+  percent: number; // 0-100
+  estimated_time_seconds: number;
 }
 
 /**

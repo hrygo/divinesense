@@ -21,18 +21,22 @@ type LLMClient interface {
 
 // Service implements three-layer routing: cache -> rule -> history -> LLM.
 type Service struct {
-	ruleMatcher    *RuleMatcher
-	historyMatcher *HistoryMatcher
-	llmClient      LLMClient // Direct LLM client (no wrapper layer)
-	memoryService  memory.MemoryService
-	cache          *RouterCache // Performance optimization: cache routing decisions
+	ruleMatcher       *RuleMatcher
+	historyMatcher    *HistoryMatcher
+	llmClient         LLMClient // Direct LLM client (no wrapper layer)
+	memoryService     memory.MemoryService
+	cache             *RouterCache // Performance optimization: cache routing decisions
+	feedbackCollector *FeedbackCollector
+	weightStorage     RouterWeightStorage
 }
 
 // Config contains the configuration for the router service.
 type Config struct {
-	MemoryService memory.MemoryService
-	LLMClient     LLMClient
-	EnableCache   bool // Enable routing result cache (default: true)
+	MemoryService  memory.MemoryService
+	LLMClient      LLMClient
+	EnableCache    bool                // Enable routing result cache (default: true)
+	WeightStorage  RouterWeightStorage // Storage for dynamic weights (optional)
+	EnableFeedback bool                // Enable feedback-based weight adjustment (default: true)
 }
 
 // NewService creates a new router service.
@@ -42,6 +46,7 @@ func NewService(cfg Config) *Service {
 		historyMatcher: NewHistoryMatcher(cfg.MemoryService),
 		llmClient:      cfg.LLMClient,
 		memoryService:  cfg.MemoryService,
+		weightStorage:  cfg.WeightStorage,
 	}
 
 	// Enable cache by default for performance
@@ -51,6 +56,11 @@ func NewService(cfg Config) *Service {
 			DefaultTTL:   5 * time.Minute,
 			LLMResultTTL: 30 * time.Minute,
 		})
+	}
+
+	// Initialize feedback collector if weight storage is provided
+	if cfg.WeightStorage != nil && cfg.EnableFeedback {
+		svc.feedbackCollector = NewFeedbackCollector(cfg.WeightStorage, svc.ruleMatcher)
 	}
 
 	return svc
@@ -73,7 +83,18 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 	}
 
 	// Layer 1: Rule-based matching
-	intent, confidence, matched := s.ruleMatcher.Match(input)
+	// Use MatchWithUser if userID is available to apply custom weights
+	userID := getUserIDFromContext(ctx)
+	var intent Intent
+	var confidence float32
+	var matched bool
+
+	if userID > 0 {
+		intent, confidence, matched = s.ruleMatcher.MatchWithUser(input, userID)
+	} else {
+		intent, confidence, matched = s.ruleMatcher.Match(input)
+	}
+
 	if matched {
 		if s.cache != nil {
 			s.cache.Set(input, intent, confidence, "rule")
@@ -87,7 +108,6 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 	}
 
 	// Layer 2: History matching (requires userID from context)
-	userID := getUserIDFromContext(ctx)
 	if userID > 0 && s.historyMatcher != nil {
 		result, err := s.historyMatcher.Match(ctx, userID, input)
 		if err != nil {
@@ -222,14 +242,6 @@ func getUserIDFromContext(ctx context.Context) int32 {
 	return 0
 }
 
-// truncate truncates a string to maxLen characters.
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}
-
 // GetCacheStats returns cache statistics if cache is enabled.
 func (s *Service) GetCacheStats() *Stats {
 	if s.cache == nil {
@@ -326,4 +338,55 @@ func (s *Service) stringToIntent(str string) Intent {
 		// Default to amazing for ambiguous inputs
 		return IntentAmazing
 	}
+}
+
+// RecordFeedback records user feedback for a routing decision.
+// This enables dynamic weight adjustment for improved routing accuracy.
+func (s *Service) RecordFeedback(ctx context.Context, feedback *RouterFeedback) error {
+	if s.feedbackCollector == nil {
+		// Feedback collection not enabled, return without error
+		return nil
+	}
+
+	// Set timestamp if not provided
+	if feedback.Timestamp == 0 {
+		feedback.Timestamp = time.Now().Unix()
+	}
+
+	// Record feedback and trigger weight adjustment
+	return s.feedbackCollector.RecordFeedback(ctx, feedback)
+}
+
+// GetRouterStats retrieves routing accuracy statistics.
+func (s *Service) GetRouterStats(ctx context.Context, userID int32, timeRange time.Duration) (*RouterStats, error) {
+	if s.weightStorage == nil {
+		// Return empty stats if weight storage is not configured
+		return &RouterStats{
+			ByIntent:    make(map[Intent]int64),
+			BySource:    make(map[string]int64),
+			LastUpdated: time.Now().Unix(),
+		}, nil
+	}
+
+	return s.weightStorage.GetStats(ctx, userID, timeRange)
+}
+
+// LoadUserWeights loads custom weights for a user into the rule matcher.
+// This should be called when a user session starts.
+func (s *Service) LoadUserWeights(ctx context.Context, userID int32) error {
+	if s.weightStorage == nil {
+		return nil
+	}
+
+	weights, err := s.weightStorage.GetWeights(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to load user weights: %w", err)
+	}
+
+	if len(weights) > 0 {
+		s.ruleMatcher.SetCustomWeights(userID, weights)
+		slog.Debug("loaded custom weights for user", "user_id", userID, "categories", len(weights))
+	}
+
+	return nil
 }

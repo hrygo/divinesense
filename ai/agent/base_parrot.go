@@ -268,3 +268,51 @@ func (b *BaseParrot) Reset(agentType string) {
 		ToolsUsed: make([]string, 0),
 	}
 }
+
+// SendPhaseChange sends a phase_change event to notify the frontend of processing progress.
+// SendPhaseChange 发送 phase_change 事件以通知前端处理进度。
+func SendPhaseChange(callback SafeCallbackFunc, phase ProcessingPhase, estimatedSeconds int) {
+	if callback == nil {
+		return
+	}
+	phaseNumber := 1
+	totalPhases := 4
+	switch phase {
+	case PhaseAnalyzing:
+		phaseNumber = 1
+	case PhasePlanning:
+		phaseNumber = 2
+	case PhaseRetrieving:
+		phaseNumber = 3
+	case PhaseSynthesizing:
+		phaseNumber = 4
+	}
+	event := &PhaseChangeEvent{
+		Phase:            phase,
+		PhaseNumber:      phaseNumber,
+		TotalPhases:      totalPhases,
+		EstimatedSeconds: estimatedSeconds,
+	}
+	// Non-critical event - log error but don't propagate
+	callback(EventTypePhaseChange, event)
+}
+
+// SendProgress sends a progress event with the current percentage.
+// SendProgress 发送带有当前百分比的进度事件。
+func SendProgress(callback SafeCallbackFunc, percent int, estimatedSeconds int) {
+	if callback == nil {
+		return
+	}
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 100 {
+		percent = 100
+	}
+	event := &ProgressEvent{
+		Percent:              percent,
+		EstimatedTimeSeconds: estimatedSeconds,
+	}
+	// Non-critical event - log error but don't propagate
+	callback(EventTypeProgress, event)
+}

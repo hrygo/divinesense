@@ -52,6 +52,7 @@ interface ChatMessagesProps {
   onCopyMessage?: (content: string) => void;
   onRegenerate?: () => void;
   onDeleteMessage?: (index: number) => void;
+  onQuickReply?: (text: string) => void;
   children?: ReactNode;
   className?: string;
   /** 流式渲染支持 */
@@ -248,6 +249,7 @@ const ChatMessages = memo(function ChatMessages({
   onCopyMessage,
   onRegenerate,
   onDeleteMessage,
+  onQuickReply,
   children,
   className,
   isStreaming = false,
@@ -491,6 +493,7 @@ const ChatMessages = memo(function ChatMessages({
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
                 onCancel={block.isLatest && isLastStreaming ? onCancel : undefined}
+                onQuickReply={block.isLatest ? onQuickReply : undefined}
                 blockId={blockId}
                 blockNumber={blockNumber}
               >
