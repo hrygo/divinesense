@@ -195,16 +195,6 @@ function convertAIBlocksToMessageBlocks(blocks: AIBlock[], _t: (key: string) => 
     const rawThinkingSteps = extractThinkingSteps(block.eventStream);
     const toolCalls = extractToolCalls(block.eventStream);
 
-    // DEBUG: Log eventStream and toolCalls
-    if (import.meta.env.DEV && block.eventStream && block.eventStream.length > 0) {
-      console.log(
-        "[ChatMessages] Block",
-        block.id,
-        "eventStream:",
-        block.eventStream.map((e) => e.type),
-      );
-      console.log("[ChatMessages] Block", block.id, "toolCalls:", toolCalls);
-    }
     // Extract toolResults from toolCalls (toolCalls with outputSummary are completed)
     const toolResults = toolCalls
       .filter((call) => call.outputSummary !== undefined)
