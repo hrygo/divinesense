@@ -146,4 +146,4 @@ func (e *UnsupportedStrategyError) Error() string {
 }
 
 // Ensure UnsupportedStrategyError implements error at compile time.
-var _ error = (*UnsupportedStrategyError)(nil)
+var _ error = (*UnsupportedStrategyError)(nil) // nolint:errcheck // compile-time check

@@ -158,7 +158,9 @@ func (e *PlanningExecutor) Execute(
 	})
 
 	synthesisPrompt := e.buildSynthesisPrompt(input, results)
-	messages := append(history, ai.Message{Role: "user", Content: synthesisPrompt})
+	messages := make([]ai.Message, 0, len(history)+1)
+	messages = append(messages, history...)
+	messages = append(messages, ai.Message{Role: "user", Content: synthesisPrompt})
 
 	// Use ChatStream for synthesis
 	contentChan, statsChan, errChan := llm.ChatStream(ctx, messages)
@@ -282,10 +284,8 @@ func (e *PlanningExecutor) parsePlan(response string) *retrievalPlan {
 			}
 		} else if strings.HasPrefix(line, "schedule_update:") {
 			plan.NeedsDirectAnswer = false
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				// Store update params
-			}
+			// Store update params if needed
+			_ = strings.SplitN(line, ":", 2)
 		} else if line == "direct_answer" {
 			plan.NeedsDirectAnswer = true
 		}

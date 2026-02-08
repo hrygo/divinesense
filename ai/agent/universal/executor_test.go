@@ -258,7 +258,7 @@ func TestReActExecutor_ContextCancellation(t *testing.T) {
 
 	_, _, err := exec.Execute(ctx, "test input", nil, tools, llm, callback)
 
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got %v", err)
 	}
 }
@@ -567,7 +567,7 @@ func TestPlanningExecutor_Execute_ContextCancellation(t *testing.T) {
 		t.Error("expected context cancellation error")
 	}
 	// Error should be context.Canceled or wrapped version
-	if err != context.Canceled && !errors.Is(err, context.Canceled) {
+	if !errors.Is(err, context.Canceled) {
 		t.Logf("got error (may be wrapped): %v", err)
 	}
 }
@@ -952,7 +952,7 @@ func TestCollectChatStream_ContextCancellation(t *testing.T) {
 		return nil
 	})
 
-	if result.Error != context.Canceled {
+	if !errors.Is(result.Error, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got %v", result.Error)
 	}
 }

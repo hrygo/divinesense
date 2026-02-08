@@ -28,6 +28,7 @@ func streamAnswer(answer string, callback agent.EventCallback) {
 			end = len(runes)
 		}
 		chunk := string(runes[i:end])
+		// nolint:errcheck // streaming callback is best-effort
 		callback(agent.EventTypeAnswer, chunk)
 	}
 }
@@ -53,8 +54,8 @@ func FindAndExecuteTool(
 // BuildMessagesWithInput creates a message slice from history and user input.
 // This is the single source of truth for building message arrays.
 func BuildMessagesWithInput(history []ai.Message, input string) []ai.Message {
-	messages := make([]ai.Message, len(history))
-	copy(messages, history)
+	messages := make([]ai.Message, 0, len(history)+1)
+	messages = append(messages, history...)
 	messages = append(messages, ai.Message{
 		Role:    "user",
 		Content: input,
