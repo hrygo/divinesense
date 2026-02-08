@@ -154,23 +154,23 @@ function getScheduleCreatedActions(_content: string): QuickReplyAction[] {
       icon: "Calendar",
       type: "navigate",
       payload: "/schedule",
-      hint: "View on calendar",
+      hint: "ai.quick_replies.hint_view_calendar",
     },
     {
       id: "add_another",
       label: "ai.quick_replies.add_another",
       icon: "Plus",
       type: "fill_input",
-      payload: "help me schedule",
-      hint: "Create another event",
+      payload: "ai.quick_replies.payload_schedule",
+      hint: "ai.quick_replies.hint_create_another",
     },
     {
       id: "query_today",
       label: "ai.quick_replies.query_today",
       icon: "Clock",
       type: "fill_input",
-      payload: "what do I have planned for today",
-      hint: "Check today's schedule",
+      payload: "ai.quick_replies.payload_today_schedule",
+      hint: "ai.quick_replies.hint_check_today",
     },
   ];
 
@@ -191,16 +191,16 @@ function getScheduleQueryActions(content: string): QuickReplyAction[] {
         label: "ai.quick_replies.create_schedule",
         icon: "Plus",
         type: "fill_input",
-        payload: "schedule a ",
-        hint: "Create a new schedule",
+        payload: "ai.quick_replies.payload_schedule_prefix",
+        hint: "ai.quick_replies.hint_create_schedule",
       },
       {
         id: "check_tomorrow",
         label: "ai.quick_replies.check_tomorrow",
         icon: "CalendarDays",
         type: "fill_input",
-        payload: "what's on my schedule tomorrow",
-        hint: "Check tomorrow",
+        payload: "ai.quick_replies.payload_tomorrow_schedule",
+        hint: "ai.quick_replies.hint_check_tomorrow",
       },
     ];
   }
@@ -212,16 +212,16 @@ function getScheduleQueryActions(content: string): QuickReplyAction[] {
       label: "ai.quick_replies.adjust_time",
       icon: "Clock",
       type: "fill_input",
-      payload: "move my ",
-      hint: "Adjust schedule time",
+      payload: "ai.quick_replies.payload_move_prefix",
+      hint: "ai.quick_replies.hint_adjust_time",
     },
     {
       id: "add_related",
       label: "ai.quick_replies.add_related",
       icon: "Plus",
       type: "fill_input",
-      payload: "also schedule ",
-      hint: "Add related event",
+      payload: "ai.quick_replies.payload_also_schedule",
+      hint: "ai.quick_replies.hint_add_related",
     },
     {
       id: "view_calendar",
@@ -229,7 +229,7 @@ function getScheduleQueryActions(content: string): QuickReplyAction[] {
       icon: "Calendar",
       type: "navigate",
       payload: "/schedule",
-      hint: "Open calendar view",
+      hint: "ai.quick_replies.hint_view_calendar",
     },
   ];
 }
@@ -237,43 +237,31 @@ function getScheduleQueryActions(content: string): QuickReplyAction[] {
 /**
  * Actions for FreeTimeFound response
  */
-function getFreeTimeFoundActions(toolCalls: ToolCall[]): QuickReplyAction[] {
-  // Try to extract the time slot from tool output
-  let timeSlot = "";
-  for (const tool of toolCalls) {
-    if (typeof tool === "object" && tool.outputSummary) {
-      const match = tool.outputSummary.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-      if (match) {
-        timeSlot = match[0];
-        break;
-      }
-    }
-  }
-
+function getFreeTimeFoundActions(_toolCalls: ToolCall[]): QuickReplyAction[] {
   return [
     {
       id: "create_at_slot",
       label: "ai.quick_replies.create_at_slot",
       icon: "CalendarPlus",
       type: "fill_input",
-      payload: timeSlot ? `schedule a meeting at ${timeSlot}` : "schedule a meeting",
-      hint: "Schedule at this time",
+      payload: "ai.quick_replies.payload_schedule_at_slot", // Simplified to use template on front-end
+      hint: "ai.quick_replies.hint_schedule_at_slot",
     },
     {
       id: "find_more_slots",
       label: "ai.quick_replies.find_more_slots",
       icon: "Search",
       type: "fill_input",
-      payload: "find more free time",
-      hint: "Find other slots",
+      payload: "ai.quick_replies.payload_find_free_time",
+      hint: "ai.quick_replies.hint_find_more_slots",
     },
     {
       id: "check_week",
       label: "ai.quick_replies.check_week",
       icon: "CalendarDays",
       type: "fill_input",
-      payload: "what does my week look like",
-      hint: "View weekly schedule",
+      payload: "ai.quick_replies.payload_week_schedule",
+      hint: "ai.quick_replies.hint_view_weekly",
     },
   ];
 }
@@ -293,15 +281,15 @@ function getMemoFoundActions(content: string): QuickReplyAction[] {
         icon: "Plus",
         type: "navigate",
         payload: "/",
-        hint: "Create a new note",
+        hint: "ai.quick_replies.hint_create_note",
       },
       {
         id: "try_different",
         label: "ai.quick_replies.try_different",
         icon: "Search",
         type: "fill_input",
-        payload: "search for ",
-        hint: "Try different keywords",
+        payload: "ai.quick_replies.payload_search_prefix",
+        hint: "ai.quick_replies.hint_try_keywords",
       },
     ];
   }
@@ -313,16 +301,16 @@ function getMemoFoundActions(content: string): QuickReplyAction[] {
       label: "ai.quick_replies.search_related",
       icon: "Search",
       type: "fill_input",
-      payload: "find more about ",
-      hint: "Search related content",
+      payload: "ai.quick_replies.payload_find_more_prefix",
+      hint: "ai.quick_replies.hint_search_related",
     },
     {
       id: "summarize",
       label: "ai.quick_replies.summarize",
       icon: "FileText",
       type: "fill_input",
-      payload: "summarize these notes",
-      hint: "Get a summary",
+      payload: "ai.quick_replies.payload_summarize",
+      hint: "ai.quick_replies.hint_get_summary",
     },
     {
       id: "open_memo",
@@ -330,7 +318,7 @@ function getMemoFoundActions(content: string): QuickReplyAction[] {
       icon: "ExternalLink",
       type: "navigate",
       payload: "/explore",
-      hint: "View in explore",
+      hint: "ai.quick_replies.hint_view_explore",
     },
   ];
 }
@@ -346,7 +334,7 @@ function getErrorActions(): QuickReplyAction[] {
       icon: "RefreshCw",
       type: "fill_input",
       payload: "",
-      hint: "Try again",
+      hint: "ai.quick_replies.hint_try_again",
     },
     {
       id: "report_issue",
@@ -354,7 +342,7 @@ function getErrorActions(): QuickReplyAction[] {
       icon: "AlertTriangle",
       type: "navigate",
       payload: "https://github.com/hrygo/divinesense/issues",
-      hint: "Report on GitHub",
+      hint: "ai.quick_replies.hint_report_github",
     },
   ];
 }
@@ -369,16 +357,16 @@ function getGenericActions(): QuickReplyAction[] {
       label: "ai.quick_replies.ask_schedule",
       icon: "Calendar",
       type: "fill_input",
-      payload: "what's on my schedule today",
-      hint: "Check schedule",
+      payload: "ai.quick_replies.payload_today_schedule",
+      hint: "ai.quick_replies.hint_check_schedule",
     },
     {
       id: "ask_memo",
       label: "ai.quick_replies.ask_memo",
       icon: "Search",
       type: "fill_input",
-      payload: "search my notes for ",
-      hint: "Search notes",
+      payload: "ai.quick_replies.payload_search_notes",
+      hint: "ai.quick_replies.hint_search_notes",
     },
     {
       id: "create_note",
@@ -386,7 +374,7 @@ function getGenericActions(): QuickReplyAction[] {
       icon: "Plus",
       type: "navigate",
       payload: "/",
-      hint: "Create a note",
+      hint: "ai.quick_replies.hint_create_note",
     },
   ];
 }

@@ -297,14 +297,25 @@ export function useChat() {
 
         for await (const response of stream) {
           responseCount++;
+
+          // DEBUG: Log all events to diagnose streaming issues
+          if (import.meta.env.DEV && response.eventType) {
+            console.log(
+              "[AI Chat] Received event:",
+              response.eventType,
+              "blockId:",
+              String(response.blockId),
+              "eventData:",
+              response.eventData,
+            );
+          }
+
           // Phase 4: Handle Block ID - create optimistic block immediately for instant UI feedback
           // When we receive a block_id, it means a new block was created/updated
           // Instead of just invalidating, we create an optimistic block for instant rendering
           const blockId = response.blockId;
 
           // Helper function to update optimistic block's eventStream during streaming
-          // This ensures UI shows real-time progress (thinking, tool_use, tool_result) instead of "black hole"
-          // P0-1/P0-2 OPTIMIZATION: Uses O(1) Map lookup + React 18 automatic batching
           const updateBlockEventStream = (event: {
             type: string;
             content?: string;
@@ -317,15 +328,22 @@ export function useChat() {
             isError?: boolean;
             timestamp: number;
           }) => {
+            if (import.meta.env.DEV) {
+              console.log("[AI Chat] updateBlockEventStream called:", {
+                eventType: event.type,
+                blockId: String(blockId),
+                blockIdIsZero: blockId === 0n,
+                conversationId: params.conversationId,
+              });
+            }
             if (!blockId || blockId === 0n || !params.conversationId) return;
 
-            // Create new event object once to avoid duplication
+            // Create new event object
             const newEvent = {
               $typeName: "memos.api.v1.BlockEvent" as const,
               type: event.type,
               content: event.content || "",
               timestamp: BigInt(event.timestamp),
-              // Use 'meta' (not 'metadata') to match BlockEvent schema
               meta: JSON.stringify({
                 tool_name: event.toolName,
                 tool_id: event.toolId,
@@ -337,20 +355,20 @@ export function useChat() {
               }),
             };
 
-            // P0-2: Use Map for O(1) lookup instead of O(n) map()
-            // React 18 will automatically batch these updates
-            const blockIdNum = Number(blockId);
-
+            // Direct cache update (SSE is serial, no race conditions)
             queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
               const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
               const existingBlocks = existing?.blocks || [];
-
               const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
               const currentBlock = blockMap.get(blockId);
 
               if (currentBlock) {
-                const newEventStream = [...(currentBlock.eventStream || []), newEvent];
-                blockMap.set(blockId, { ...currentBlock, eventStream: newEventStream });
+                const updated = {
+                  ...currentBlock,
+                  eventStream: [...(currentBlock.eventStream || []), newEvent],
+                  updatedTs: BigInt(Date.now()),
+                };
+                blockMap.set(blockId, updated);
               }
 
               return {
@@ -359,78 +377,98 @@ export function useChat() {
               };
             });
 
-            // Update individual block cache
-            queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
+            // Also update detail cache
+            queryClient.setQueryData(blockKeys.detail(Number(blockId)), (old: Block | undefined) => {
               if (!old || old.id !== blockId) return old;
-              return { ...old, eventStream: [...(old.eventStream || []), newEvent] };
+              return {
+                ...old,
+                eventStream: [...(old.eventStream || []), newEvent],
+                updatedTs: BigInt(Date.now()),
+              };
             });
           };
 
           if (blockId !== undefined && blockId !== 0n && params.conversationId) {
-            // Create an optimistic block for instant UI feedback
-            // CRITICAL: Get the current roundNumber from existing blocks to prevent flicker
-            // If this is a new block, roundNumber should be (existing blocks count + 1)
+            // CRITICAL: Only create optimistic block if it doesn't exist yet!
+            // If the block already exists in cache, we should NOT overwrite it,
+            // as that would reset eventStream and lose accumulated events.
             const existing = queryClient.getQueryData(blockKeys.list(params.conversationId)) as
               | { blocks?: Block[]; totalCount?: number }
               | undefined;
             const existingBlocks = existing?.blocks || [];
-            const optimisticRoundNumber = existingBlocks.length > 0 ? Math.max(...existingBlocks.map((b) => Number(b.roundNumber))) + 1 : 1;
+            const blockAlreadyExists = existingBlocks.some((b) => b.id === blockId);
 
-            const now = BigInt(Date.now());
-            const optimisticBlock: Block = {
-              $typeName: "memos.api.v1.Block" as const,
-              id: blockId,
-              uid: `optimistic-${blockId}`, // Will be replaced by backend data
-              conversationId: params.conversationId, // number type
-              roundNumber: optimisticRoundNumber, // Use predicted roundNumber (number type) to prevent flicker
-              mode: getBlockModeFromFlags(params.geekMode, params.evolutionMode),
-              blockType: BlockType.MESSAGE,
-              userInputs: [
-                {
-                  $typeName: "memos.api.v1.UserInput" as const,
-                  content: params.message,
-                  timestamp: now,
-                  metadata: "{}",
-                },
-              ],
-              assistantContent: "", // Will be filled during streaming
-              eventStream: [],
-              status: BlockStatus.STREAMING,
-              metadata: "{}",
-              createdTs: now,
-              updatedTs: now,
-              assistantTimestamp: now,
-              ccSessionId: "",
-              parentBlockId: BigInt(0),
-              branchPath: "",
-              costEstimate: BigInt(0),
-              modelVersion: "",
-              userFeedback: "",
-              regenerationCount: 0,
-              errorMessage: "",
-              archivedAt: BigInt(0),
-              sessionStats: undefined,
-            };
+            if (import.meta.env.DEV) {
+              console.log("[AI Chat] Optimistic block creation check:", {
+                blockId: String(blockId),
+                blockAlreadyExists,
+                existingBlocksCount: existingBlocks.length,
+                eventType: response.eventType,
+                action: blockAlreadyExists ? "Skipping - block already exists" : "Creating new optimistic block",
+              });
+            }
 
-            // Immediately update the block list cache with the optimistic block
-            // Use Map to ensure uniqueness and avoid race conditions
-            queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
-              const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
-              const existingBlocks = existing?.blocks || [];
+            // CRITICAL FIX: Only create if block doesn't exist
+            if (!blockAlreadyExists) {
+              // Get the current roundNumber from existing blocks to prevent flicker
+              const optimisticRoundNumber =
+                existingBlocks.length > 0 ? Math.max(...existingBlocks.map((b) => Number(b.roundNumber))) + 1 : 1;
 
-              // Use Map for O(1) lookup and automatic deduplication
-              const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
-              blockMap.set(blockId, optimisticBlock); // Set will overwrite if exists, ensuring no duplicates
-
-              const newBlocks = Array.from(blockMap.values());
-              return {
-                blocks: newBlocks,
-                totalCount: newBlocks.length,
+              const now = BigInt(Date.now());
+              const optimisticBlock: Block = {
+                $typeName: "memos.api.v1.Block" as const,
+                id: blockId,
+                uid: `optimistic-${blockId}`, // Will be replaced by backend data
+                conversationId: params.conversationId, // number type
+                roundNumber: optimisticRoundNumber, // Use predicted roundNumber (number type) to prevent flicker
+                mode: getBlockModeFromFlags(params.geekMode, params.evolutionMode),
+                blockType: BlockType.MESSAGE,
+                userInputs: [
+                  {
+                    $typeName: "memos.api.v1.UserInput" as const,
+                    content: params.message,
+                    timestamp: now,
+                    metadata: "{}",
+                  },
+                ],
+                assistantContent: "", // Will be filled during streaming
+                eventStream: [], // Start empty, will be populated by event handlers
+                status: BlockStatus.STREAMING,
+                metadata: "{}",
+                createdTs: now,
+                updatedTs: now,
+                assistantTimestamp: now,
+                ccSessionId: "",
+                parentBlockId: BigInt(0),
+                branchPath: "",
+                costEstimate: BigInt(0),
+                modelVersion: "",
+                userFeedback: "",
+                regenerationCount: 0,
+                errorMessage: "",
+                archivedAt: BigInt(0),
+                sessionStats: undefined,
               };
-            });
 
-            // Also cache the individual block detail
-            queryClient.setQueryData(blockKeys.detail(Number(blockId)), optimisticBlock);
+              // CRITICAL: 同步写入缓存（不走队列），确保后续事件能找到这个 block
+              queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
+                const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
+                const existingBlocksInner = existing?.blocks || [];
+
+                // Use Map for O(1) lookup and automatic deduplication
+                const blockMap = new Map(existingBlocksInner.map((b) => [b.id, b]));
+                blockMap.set(blockId, optimisticBlock); // Set will overwrite if exists, ensuring no duplicates
+
+                const newBlocks = Array.from(blockMap.values());
+                return {
+                  blocks: newBlocks,
+                  totalCount: newBlocks.length,
+                };
+              });
+
+              // Also cache the individual block detail
+              queryClient.setQueryData(blockKeys.detail(Number(blockId)), optimisticBlock);
+            }
           }
 
           // Handle sources (sent in first response)
@@ -441,37 +479,39 @@ export function useChat() {
 
           // Handle content chunks
           if (response.content) {
+            if (import.meta.env.DEV) {
+              console.log("[AI Chat] response.content found:", {
+                content: response.content,
+                blockId: String(blockId),
+                note: "response.content should not be set by backend!",
+              });
+            }
             fullContent += response.content;
             callbacks?.onContent?.(response.content);
 
             // CRITICAL: Update optimistic block's assistantContent during streaming
-            // This ensures the UI shows the streaming content in real-time
-            // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
+            // CRITICAL: Preserve eventStream to avoid losing accumulated events
             if (blockId !== undefined && blockId !== 0n && params.conversationId) {
-              const blockIdNum = Number(blockId);
-
               queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                 const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                 const existingBlocks = existing?.blocks || [];
-
-                // P0-2: Use Map for O(1) lookup
                 const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
                 const currentBlock = blockMap.get(blockId);
 
                 if (currentBlock) {
-                  blockMap.set(blockId, { ...currentBlock, assistantContent: fullContent });
+                  const updated = {
+                    ...currentBlock,
+                    assistantContent: fullContent,
+                    eventStream: currentBlock.eventStream || [], // Preserve eventStream!
+                    updatedTs: BigInt(Date.now()),
+                  };
+                  blockMap.set(blockId, updated);
                 }
 
                 return {
                   blocks: Array.from(blockMap.values()),
                   totalCount: blockMap.size,
                 };
-              });
-
-              // Update individual block cache
-              queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
-                if (!old || old.id !== blockId) return old;
-                return { ...old, assistantContent: fullContent };
               });
             }
           }
@@ -506,7 +546,8 @@ export function useChat() {
           }
 
           // Handle parrot-specific events
-          if (response.eventType && response.eventData) {
+          // Note: eventData may be empty for some events (e.g., tool_use with no params), so check eventType only
+          if (response.eventType) {
             switch (response.eventType) {
               case "thinking":
                 callbacks?.onThinking?.(response.eventData);
@@ -539,9 +580,10 @@ export function useChat() {
                   : undefined;
                 callbacks?.onToolUse?.(response.eventData, toolMeta);
                 // Update optimistic block's eventStream to show tool_use in UI
+                // CRITICAL FIX: Use toolMeta.toolName instead of response.eventData (which is the JSON parameters)
                 updateBlockEventStream({
                   type: "tool_use",
-                  toolName: response.eventData,
+                  toolName: toolMeta?.toolName,
                   toolId: toolMeta?.toolId,
                   inputSummary: toolMeta?.inputSummary,
                   outputSummary: toolMeta?.outputSummary,
@@ -589,43 +631,28 @@ export function useChat() {
                 fullContent += response.eventData;
                 callbacks?.onContent?.(response.eventData);
                 // CRITICAL: Real-time update assistantContent for streaming UI
-                // This prevents "initializing..." state during answer streaming
-                // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
+                // CRITICAL: Preserve eventStream to avoid losing accumulated events
                 if (blockId !== undefined && blockId !== 0n && params.conversationId) {
-                  const blockIdNum = Number(blockId);
-                  const updatedTs = BigInt(Date.now());
-
                   queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                     const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                     const existingBlocks = existing?.blocks || [];
-
-                    // P0-2: Use Map for O(1) lookup
                     const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
                     const currentBlock = blockMap.get(blockId);
 
                     if (currentBlock) {
-                      blockMap.set(blockId, {
+                      const updated = {
                         ...currentBlock,
                         assistantContent: fullContent,
                         status: BlockStatus.STREAMING,
-                        updatedTs,
-                      });
+                        eventStream: currentBlock.eventStream || [], // Preserve eventStream!
+                        updatedTs: BigInt(Date.now()),
+                      };
+                      blockMap.set(blockId, updated);
                     }
 
                     return {
                       blocks: Array.from(blockMap.values()),
                       totalCount: blockMap.size,
-                    };
-                  });
-
-                  // Update individual block cache
-                  queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
-                    if (!old || old.id !== blockId) return old;
-                    return {
-                      ...old,
-                      assistantContent: fullContent,
-                      status: BlockStatus.STREAMING,
-                      updatedTs,
                     };
                   });
                 }
@@ -690,42 +717,27 @@ export function useChat() {
             doneCalled = true;
 
             // CRITICAL: Mark block as COMPLETED and update final content
-            // P0-2 OPTIMIZATION: O(1) Map lookup (React 18 auto-batches updates)
             if (blockId !== undefined && blockId !== 0n && params.conversationId) {
-              const blockIdNum = Number(blockId);
-              const updatedTs = BigInt(Date.now());
-
               queryClient.setQueryData(blockKeys.list(params.conversationId), (old) => {
                 const existing = old as { blocks?: Block[]; totalCount?: number } | undefined;
                 const existingBlocks = existing?.blocks || [];
-
-                // P0-2: Use Map for O(1) lookup
                 const blockMap = new Map(existingBlocks.map((b) => [b.id, b]));
                 const currentBlock = blockMap.get(blockId);
 
                 if (currentBlock) {
-                  blockMap.set(blockId, {
+                  const updated = {
                     ...currentBlock,
                     assistantContent: fullContent,
                     status: BlockStatus.COMPLETED,
-                    updatedTs,
-                  });
+                    eventStream: currentBlock.eventStream || [], // Preserve eventStream!
+                    updatedTs: BigInt(Date.now()),
+                  };
+                  blockMap.set(blockId, updated);
                 }
 
                 return {
                   blocks: Array.from(blockMap.values()),
                   totalCount: blockMap.size,
-                };
-              });
-
-              // Update individual block cache
-              queryClient.setQueryData(blockKeys.detail(blockIdNum), (old: Block | undefined) => {
-                if (!old || old.id !== blockId) return old;
-                return {
-                  ...old,
-                  assistantContent: fullContent,
-                  status: BlockStatus.COMPLETED,
-                  updatedTs,
                 };
               });
             }

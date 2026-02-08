@@ -44,24 +44,7 @@
 
 ### i18n 完整性陷阱
 
-> ⚠️ `make check-i18n` **只检查 en.json 和 zh-Hans.json**，不检查 zh-Hant.json
-
-```bash
-# 手动验证 zh-Hant.json 完整性
-cd web/src/locales
-node -e "
-  const en = require('./en.json');
-  const zhHant = require('./zh-Hant.json');
-  const enKeys = JSON.stringify(en).match(/\"[^\"]+\"/g);
-  const zhKeys = JSON.stringify(zhHant).match(/\"[^\"]+\"/g);
-  const missing = enKeys.filter(k => !zhKeys.includes(k));
-  if (missing.length > 0) {
-    console.error('Missing keys in zh-Hant.json:', missing);
-    process.exit(1);
-  }
-  console.log('✅ zh-Hant.json is complete');
-"
-```
+> ⚠️ `make check-i18n` **检查 en.json 和 zh-Hans.json 的同步**
 
 **注意路径差异**：组件 `ProgressIndicator.tsx` 使用 `ai.progress.phases.*`，确保所有语言文件在正确路径下有翻译。
 
@@ -199,6 +182,27 @@ pending → in_progress → completed
 | **检查** | `make check-all` | 提交前完整检查 |
 | **CI** | `make ci-check` | 模拟 CI 环境 |
 | **测试** | `make test-ai` | AI 相关测试 |
+
+### 服务重启规范
+
+> **⚠️ 关键规则：修改后端代码后，需要通知用户手动重启服务**
+>
+> **禁止直接执行** `make stop`、`make start`、`make run` 等服务启停命令。
+
+**需要重启服务的场景**：
+| 修改类型 | 是否需要重启 | 说明 |
+|:---------|:-------------|:-----|
+| **后端 Go 代码** | ✅ 是 | 任何 `*.go` 文件修改 |
+| **前端代码** | ✅ 否 | Vite HMR 自动更新 |
+| **数据库迁移** | ✅ 是 | 新增/修改 SQL 文件 |
+| **配置文件** | ✅ 是 | `.env` 或系统配置 |
+| **文档** | ❌ 否 | 不影响运行状态 |
+
+**正确操作流程**：
+1. 完成代码修改和构建
+2. **通知用户**："后端代码已修改，请手动重启服务：`make restart`"
+3. 等待用户确认重启
+4. 继续后续工作
 
 ### 提交流程
 ```

@@ -82,7 +82,7 @@ divinesense/
 │   │   ├── pages/       # 页面组件
 │   │   ├── layouts/     # 布局组件
 │   │   ├── components/  # UI 组件
-│   │   ├── locales/     # i18n 翻译（en、zh-Hans、zh-Hant）
+│   │   ├── locales/     # i18n 翻译（en、zh-Hans）
 │   │   └── hooks/       # React hooks
 │   └── package.json
 ├── docs/                # 文档

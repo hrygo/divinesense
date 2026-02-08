@@ -238,6 +238,19 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 		hasStructuredToolCalls := len(resp.ToolCalls) > 0
 		hasTextToolCalls := textToolCallRegex.MatchString(resp.Content)
 
+		// Debug: Log what we received from LLM
+		contentPreview := resp.Content
+		if len(contentPreview) > 100 {
+			contentPreview = contentPreview[:100]
+		}
+		slog.Debug("agent tool call check",
+			"agent", a.config.Name,
+			"iteration", iteration+1,
+			"structured_tool_calls", len(resp.ToolCalls),
+			"text_tool_calls", hasTextToolCalls,
+			"content_length", len(resp.Content),
+			"content_preview", contentPreview)
+
 		// Case 1: No tool calls at all = final answer
 		if !hasStructuredToolCalls && !hasTextToolCalls {
 			if callback != nil && resp.Content != "" {

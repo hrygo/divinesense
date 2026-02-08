@@ -99,6 +99,19 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
     return [];
   }
 
+  // DEBUG: Log event stream for debugging tool call extraction
+  if (import.meta.env.DEV) {
+    console.log("[extractToolCalls] Input eventStream:", {
+      eventStreamLength: eventStream.length,
+      eventTypes: eventStream.map((e) => e.type),
+      eventStream: eventStream.map((e) => ({
+        type: e.type,
+        content: e.content?.substring(0, 50),
+        meta: e.meta,
+      })),
+    });
+  }
+
   // Map to store tool calls, using a deduplication key
   // Priority: tool_id > name > occurrence-index
   const toolCallsMap = new Map<string, { toolCall: ToolCall; occurrence: number }>();
@@ -179,7 +192,23 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
   }
 
   // Return tool calls sorted by occurrence (if available) or insertion order
-  return Array.from(toolCallsMap.values())
+  const result = Array.from(toolCallsMap.values())
     .sort((a, b) => a.occurrence - b.occurrence)
     .map((item) => item.toolCall);
+
+  // DEBUG: Log extracted tool calls
+  if (import.meta.env.DEV) {
+    console.log("[extractToolCalls] Extracted tool calls:", {
+      count: result.length,
+      toolCalls: result.map((tc) => ({
+        name: tc.name,
+        inputSummary: tc.inputSummary?.substring(0, 50),
+        outputSummary: tc.outputSummary?.substring(0, 50),
+        isError: tc.isError,
+        duration: tc.duration,
+      })),
+    });
+  }
+
+  return result;
 }

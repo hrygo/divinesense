@@ -20,7 +20,7 @@ import SettingRow from "./SettingRow";
 import SettingSection from "./SettingSection";
 import WebhookSection from "./WebhookSection";
 
-const LOCALE_OPTIONS: Locale[] = ["en", "zh-Hans", "zh-Hant"];
+const LOCALE_OPTIONS: Locale[] = ["en", "zh-Hans"];
 
 const VISIBILITY_OPTIONS = [
   { value: Visibility.PRIVATE, labelKey: "memo.visibility.private" },

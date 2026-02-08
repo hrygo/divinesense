@@ -93,18 +93,20 @@ function UnifiedChatView({
   // Handle quick reply - fills input with suggested text (#98)
   const handleQuickReply = useCallback(
     (text: string) => {
-      setInput(text);
+      // Translate i18n keys in the payload
+      const translatedText = text.startsWith("ai.quick_replies.payload_") || text.startsWith("ai.") ? t(text) : text;
+      setInput(translatedText);
       // Auto-focus input for immediate editing
       setTimeout(() => {
         const textarea = document.querySelector("textarea[placeholder*='Chat'], textarea[placeholder*='对话']") as HTMLTextAreaElement;
         if (textarea) {
           textarea.focus();
           // Move cursor to end of text
-          textarea.setSelectionRange(text.length, text.length);
+          textarea.setSelectionRange(translatedText.length, translatedText.length);
         }
       }, 50);
     },
-    [setInput],
+    [setInput, t],
   );
 
   // Get mode-specific container classes

@@ -266,8 +266,7 @@ const FeatureLayout = () => {
 ```
 web/src/locales/
     ├── en.json       # 英文翻译
-    ├── zh-Hans.json  # 简体中文
-    └── zh-Hant.json  # 繁体中文
+    └── zh-Hans.json  # 简体中文
 ```
 
 ### 添加新翻译

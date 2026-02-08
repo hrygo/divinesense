@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import "dayjs/locale/en";
 import "dayjs/locale/zh-cn";
-import "dayjs/locale/zh-tw";
 import { FallbackLngObjList } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n, { locales, TLocale } from "@/i18n";
@@ -104,15 +103,13 @@ export const loadLocale = (locale: string): Locale => {
   // Set dayjs locale
   if (validLocale === "zh-Hans") {
     dayjs.locale("zh-cn");
-  } else if (validLocale === "zh-Hant") {
-    dayjs.locale("zh-tw");
   } else {
     dayjs.locale("en");
   }
 
   // Update HTML lang attribute to prevent browser translation prompts
   // Map internal locale codes to standard BCP 47 language tags
-  const htmlLang = validLocale === "zh-Hans" ? "zh-CN" : validLocale === "zh-Hant" ? "zh-TW" : validLocale;
+  const htmlLang = validLocale === "zh-Hans" ? "zh-CN" : validLocale;
   document.documentElement.lang = htmlLang;
 
   return validLocale;
@@ -128,7 +125,7 @@ export const applyLocaleEarly = (): void => {
   loadLocale(locale);
 
   // Update HTML lang attribute to prevent browser translation prompts
-  document.documentElement.lang = locale === "zh-Hans" ? "zh-CN" : locale === "zh-Hant" ? "zh-TW" : locale;
+  document.documentElement.lang = locale === "zh-Hans" ? "zh-CN" : locale;
 };
 
 // Get the display name for a locale in its native language

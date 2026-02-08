@@ -80,6 +80,9 @@ const QuickReplyButton = memo(function QuickReplyButton({ action, onClick, index
   // Get display label (try i18n first, fallback to plain text)
   const label = action.label.startsWith("ai.") ? t(action.label) : action.label;
 
+  // Get display hint (try i18n first, fallback to plain text or label)
+  const hint = action.hint?.startsWith("ai.") ? t(action.hint) : action.hint || label;
+
   return (
     <button
       type="button"
@@ -96,7 +99,7 @@ const QuickReplyButton = memo(function QuickReplyButton({ action, onClick, index
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
         "disabled:opacity-50 disabled:cursor-not-allowed",
       )}
-      title={action.hint || label}
+      title={hint}
       style={{
         animationDelay: `${index * 50}ms`,
       }}
