@@ -60,8 +60,8 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
-import StreamingMarkdown from "@/components/AIChat/StreamingMarkdown";
 import { QuickReplies } from "@/components/AIChat/QuickReplies";
+import StreamingMarkdown from "@/components/AIChat/StreamingMarkdown";
 import { analyzeQuickReplies } from "@/components/AIChat/utils/quickReplyAnalyzer";
 import { cn } from "@/lib/utils";
 import { type ConversationMessage } from "@/types/aichat";
@@ -1089,19 +1089,18 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   // Quick Replies Analysis (#98)
   const toolCalls = useMemo(() => assistantMessage?.metadata?.toolCalls || [], [assistantMessage?.metadata?.toolCalls]);
   const quickReplyAnalysis = useMemo(
-    () => analyzeQuickReplies(
-      toolCalls,
-      assistantMessage?.content || "",
-      !!assistantMessage?.error
-    ),
-    [toolCalls, assistantMessage?.content, assistantMessage?.error]
+    () => analyzeQuickReplies(toolCalls, assistantMessage?.content || "", !!assistantMessage?.error),
+    [toolCalls, assistantMessage?.content, assistantMessage?.error],
   );
 
-  const handleQuickReply = useCallback((action: { type: string; payload: string }) => {
-    if (action.type === "fill_input" && onQuickReply) {
-      onQuickReply(action.payload);
-    }
-  }, [onQuickReply]);
+  const handleQuickReply = useCallback(
+    (action: { type: string; payload: string }) => {
+      if (action.type === "fill_input" && onQuickReply) {
+        onQuickReply(action.payload);
+      }
+    },
+    [onQuickReply],
+  );
 
   // Show quick replies only when streaming is complete and not collapsed
   const showQuickReplies = !isStreaming && !collapsed && onQuickReply && quickReplyAnalysis.confidence > 0.6;
@@ -1166,10 +1165,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
       {/* Quick Replies - 显示在 Footer 之后 (#98) */}
       {showQuickReplies && (
         <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/30">
-          <QuickReplies
-            analysis={quickReplyAnalysis}
-            onAction={handleQuickReply}
-          />
+          <QuickReplies analysis={quickReplyAnalysis} onAction={handleQuickReply} />
         </div>
       )}
     </div>

@@ -15,17 +15,17 @@
  */
 
 import {
-  type LucideIcon,
+  AlertTriangle,
   Calendar,
   CalendarDays,
   CalendarPlus,
   Clock,
   ExternalLink,
   FileText,
+  type LucideIcon,
   Plus,
   RefreshCw,
   Search,
-  AlertTriangle,
 } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -69,11 +69,7 @@ interface QuickReplyButtonProps {
   index: number;
 }
 
-const QuickReplyButton = memo(function QuickReplyButton({
-  action,
-  onClick,
-  index,
-}: QuickReplyButtonProps) {
+const QuickReplyButton = memo(function QuickReplyButton({ action, onClick, index }: QuickReplyButtonProps) {
   const { t } = useTranslation();
   const IconComponent = ICON_MAP[action.icon] || Search;
 
@@ -116,11 +112,7 @@ const QuickReplyButton = memo(function QuickReplyButton({
 /**
  * QuickReplies - Container for quick reply suggestions
  */
-export const QuickReplies = memo(function QuickReplies({
-  analysis,
-  onAction,
-  className,
-}: QuickRepliesProps) {
+export const QuickReplies = memo(function QuickReplies({ analysis, onAction, className }: QuickRepliesProps) {
   const navigate = useNavigate();
 
   // Handle quick reply action
@@ -146,7 +138,7 @@ export const QuickReplies = memo(function QuickReplies({
           break;
       }
     },
-    [navigate, onAction]
+    [navigate, onAction],
   );
 
   // Don't render if no valid actions

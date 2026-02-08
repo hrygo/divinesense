@@ -13,10 +13,10 @@
  * Issue #97: Progressive Progress Feedback
  */
 
+import { Brain, FileText, Loader2, Search } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { Loader2, Search, Brain, Database, FileText } from "lucide-react";
 
 /**
  * Processing phases in order
@@ -26,10 +26,7 @@ export type ProcessingPhase = "analyzing" | "planning" | "retrieving" | "synthes
 /**
  * Phase configuration with icon and translation key
  */
-const PHASE_CONFIG: Record<
-  ProcessingPhase,
-  { icon: typeof Loader2; i18nKey: string; color: string }
-> = {
+const PHASE_CONFIG: Record<ProcessingPhase, { icon: typeof Loader2; i18nKey: string; color: string }> = {
   analyzing: {
     icon: Brain,
     i18nKey: "ai.states.analyzing",
@@ -55,12 +52,7 @@ const PHASE_CONFIG: Record<
 /**
  * Order of phases for progress bar
  */
-const PHASE_ORDER: ProcessingPhase[] = [
-  "analyzing",
-  "planning",
-  "retrieving",
-  "synthesizing",
-];
+const PHASE_ORDER: ProcessingPhase[] = ["analyzing", "planning", "retrieving", "synthesizing"];
 
 export interface ProgressIndicatorProps {
   /** Current processing phase */
@@ -109,16 +101,14 @@ export const ProgressIndicator = memo(function ProgressIndicator({
   const config = PHASE_CONFIG[phase];
   const Icon = config.icon;
   const phaseIndex = PHASE_ORDER.indexOf(phase);
-  const phaseProgress = ((phaseIndex + (progress / 100)) / PHASE_ORDER.length) * 100;
+  const phaseProgress = ((phaseIndex + progress / 100) / PHASE_ORDER.length) * 100;
 
   return (
     <div className={cn("flex flex-col gap-3 py-2", className)}>
       {/* Phase indicator with icon and text */}
       <div className="flex items-center gap-2 text-sm">
         <Icon className={cn("w-4 h-4", config.color, phase === "planning" && "animate-spin")} />
-        <span className={cn(config.color, "font-medium")}>
-          {t(config.i18nKey)}
-        </span>
+        <span className={cn(config.color, "font-medium")}>{t(config.i18nKey)}</span>
         {estimatedTimeRemaining !== undefined && (
           <span className="text-xs text-muted-foreground ml-auto">
             {t("ai.progress.timeRemaining", { time: formatTimeRemaining(estimatedTimeRemaining) })}
@@ -135,11 +125,7 @@ export const ProgressIndicator = memo(function ProgressIndicator({
               key={p}
               className="flex-1 border-r border-background/20 last:border-r-0"
               style={{
-                backgroundColor:
-                  index < phaseIndex ||
-                  (index === phaseIndex && progress > 0)
-                    ? "currentColor"
-                    : undefined,
+                backgroundColor: index < phaseIndex || (index === phaseIndex && progress > 0) ? "currentColor" : undefined,
               }}
             />
           ))}
@@ -147,10 +133,7 @@ export const ProgressIndicator = memo(function ProgressIndicator({
 
         {/* Animated progress overlay */}
         <div
-          className={cn(
-            "absolute top-0 left-0 h-full transition-all duration-300 ease-out",
-            config.color.replace("text-", "bg-")
-          )}
+          className={cn("absolute top-0 left-0 h-full transition-all duration-300 ease-out", config.color.replace("text-", "bg-"))}
           style={{ width: `${phaseProgress}%` }}
         />
 
@@ -159,7 +142,7 @@ export const ProgressIndicator = memo(function ProgressIndicator({
           className={cn(
             "absolute top-0 left-0 h-full w-1/3",
             "bg-gradient-to-r from-transparent via-white/20 to-transparent",
-            "animate-[shimmer_1.5s_infinite]"
+            "animate-[shimmer_1.5s_infinite]",
           )}
           style={{
             animationDelay: `${phaseIndex * 0.1}s`,
@@ -170,13 +153,7 @@ export const ProgressIndicator = memo(function ProgressIndicator({
       {/* Phase labels */}
       <div className="flex justify-between text-xs text-muted-foreground px-1">
         {PHASE_ORDER.map((p) => (
-          <span
-            key={p}
-            className={cn(
-              "transition-colors",
-              PHASE_ORDER.indexOf(p) <= phaseIndex && config.color
-            )}
-          >
+          <span key={p} className={cn("transition-colors", PHASE_ORDER.indexOf(p) <= phaseIndex && config.color)}>
             {t(`ai.progress.phases.${p}`)}
           </span>
         ))}

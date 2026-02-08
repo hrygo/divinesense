@@ -524,6 +524,15 @@
       "expand": "Expand session stats",
       "collapse": "Collapse session stats",
       "less_than_1s": "<1s"
+    },
+    "progress": {
+      "phases": {
+        "analyzing": "Analyzing",
+        "planning": "Planning",
+        "retrieving": "Retrieving",
+        "synthesizing": "Synthesizing"
+      },
+      "timeRemaining": "{{time}} left"
     }
   },
   "auth": {
@@ -833,17 +842,6 @@
         "completed": "Completed",
         "failed": "Failed"
       }
-    }
-  },
-  "ai": {
-    "progress": {
-      "phases": {
-        "analyzing": "Analyzing",
-        "planning": "Planning",
-        "retrieving": "Retrieving",
-        "synthesizing": "Synthesizing"
-      },
-      "timeRemaining": "{{time}} left"
     }
   },
   "schedule": {

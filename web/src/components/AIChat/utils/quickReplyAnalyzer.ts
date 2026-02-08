@@ -58,11 +58,7 @@ export interface QuickReplyAnalysis {
 /**
  * Analyzes tool calls and response content to determine response type
  */
-export function analyzeQuickReplies(
-  toolCalls: ToolCall[],
-  responseContent: string,
-  hasError: boolean
-): QuickReplyAnalysis {
+export function analyzeQuickReplies(toolCalls: ToolCall[], responseContent: string, hasError: boolean): QuickReplyAnalysis {
   // Error state takes priority
   if (hasError) {
     return {
@@ -84,24 +80,12 @@ export function analyzeQuickReplies(
 /**
  * Detects response type based on tool calls and content
  */
-function detectResponseType(
-  toolNames: string[],
-  content: string,
-  toolCalls: ToolCall[]
-): QuickReplyAnalysis {
+function detectResponseType(toolNames: string[], content: string, toolCalls: ToolCall[]): QuickReplyAnalysis {
   const lowerContent = content.toLowerCase();
 
   // Check for schedule_add success (Chinese and English patterns)
   const hasScheduleAdd = toolNames.some((n) => n.toLowerCase().includes("schedule_add"));
-  const scheduleCreatedPatterns = [
-    "已创建",
-    "created",
-    "successfully created",
-    "✓",
-    "✅",
-    "安排好了",
-    "scheduled",
-  ];
+  const scheduleCreatedPatterns = ["已创建", "created", "successfully created", "✓", "✅", "安排好了", "scheduled"];
   const isScheduleCreated = hasScheduleAdd && scheduleCreatedPatterns.some((p) => lowerContent.includes(p.toLowerCase()));
 
   if (isScheduleCreated) {
@@ -114,13 +98,7 @@ function detectResponseType(
 
   // Check for schedule_query results
   const hasScheduleQuery = toolNames.some((n) => n.toLowerCase().includes("schedule_query"));
-  const scheduleQueryPatterns = [
-    "found",
-    "schedule",
-    "日程",
-    "找到",
-    "no schedules",
-  ];
+  const scheduleQueryPatterns = ["found", "schedule", "日程", "找到", "no schedules"];
   const isScheduleQuery = hasScheduleQuery && scheduleQueryPatterns.some((p) => lowerContent.includes(p.toLowerCase()));
 
   if (isScheduleQuery) {
@@ -133,13 +111,7 @@ function detectResponseType(
 
   // Check for find_free_time results
   const hasFindFreeTime = toolNames.some((n) => n.toLowerCase().includes("find_free_time"));
-  const freeTimePatterns = [
-    "available",
-    "free slot",
-    "free time",
-    "空闲",
-    "available time",
-  ];
+  const freeTimePatterns = ["available", "free slot", "free time", "空闲", "available time"];
   const isFreeTimeFound = hasFindFreeTime && freeTimePatterns.some((p) => lowerContent.includes(p.toLowerCase()));
 
   if (isFreeTimeFound) {
@@ -152,15 +124,7 @@ function detectResponseType(
 
   // Check for memo_search results
   const hasMemoSearch = toolNames.some((n) => n.toLowerCase().includes("memo_search"));
-  const memoFoundPatterns = [
-    "found",
-    "memo",
-    "note",
-    "笔记",
-    "找到",
-    "related",
-    "search result",
-  ];
+  const memoFoundPatterns = ["found", "memo", "note", "笔记", "找到", "related", "search result"];
   const isMemoFound = hasMemoSearch && memoFoundPatterns.some((p) => lowerContent.includes(p.toLowerCase()));
 
   if (isMemoFound) {

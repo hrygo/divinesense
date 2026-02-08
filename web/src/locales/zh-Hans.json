@@ -519,6 +519,15 @@
       "expand": "展开会话统计",
       "collapse": "折叠会话统计",
       "less_than_1s": "<1秒"
+    },
+    "progress": {
+      "phases": {
+        "analyzing": "分析",
+        "planning": "规划",
+        "retrieving": "检索",
+        "synthesizing": "综合"
+      },
+      "timeRemaining": "剩余 {{time}}"
     }
   },
   "auth": {
@@ -828,17 +837,6 @@
         "completed": "已完成",
         "failed": "失败"
       }
-    }
-  },
-  "ai": {
-    "progress": {
-      "phases": {
-        "analyzing": "分析",
-        "planning": "规划",
-        "retrieving": "检索",
-        "synthesizing": "综合"
-      },
-      "timeRemaining": "剩余 {{time}}"
     }
   },
   "schedule": {
