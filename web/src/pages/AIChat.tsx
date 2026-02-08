@@ -7,7 +7,8 @@ import { ChatHeader } from "@/components/AIChat/ChatHeader";
 import { ChatInput } from "@/components/AIChat/ChatInput";
 import { ChatMessages } from "@/components/AIChat/ChatMessages";
 import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
-import { SessionBar } from "@/components/AIChat/SessionBar";
+// SessionBar 已移除 - PC 端 SessionStats 已整合到 ChatHeader
+// import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
@@ -135,8 +136,7 @@ function UnifiedChatView({
         blocks={blocks}
       />
 
-      {/* SessionBar - mobile only (PC 端 SessionStats 已整合到 ChatHeader) */}
-      <SessionBar blocks={blocks} blockSummary={blockSummary} className="lg:hidden" />
+      {/* SessionBar - 已移除（PC 端 SessionStats 已整合到 ChatHeader） */}
 
       {/* Messages Area with Welcome */}
       <ChatMessages

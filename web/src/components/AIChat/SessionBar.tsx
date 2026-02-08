@@ -164,8 +164,10 @@ export function SessionBar({ blocks, blockSummary, defaultCollapsed = false, mob
     <div
       className={cn(
         "border-b border-border/50 bg-background/95 backdrop-blur-sm transition-all duration-200",
-        // Hide on mobile unless mobileOnly is true
-        !mobileOnly && "hidden md:flex",
+        // Hide on mobile unless mobileOnly is true, show on tablet
+        !mobileOnly && "hidden md:flex lg:hidden",
+        // Always show when mobileOnly is true (for mobile screens)
+        mobileOnly && "flex md:hidden",
         // Collapsed state
         isCollapsed ? "h-10" : "h-auto min-h-12",
         "flex-col items-center justify-center gap-1 md:gap-2 px-3 py-2 md:py-1.5",
