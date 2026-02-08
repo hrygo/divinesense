@@ -151,7 +151,9 @@ func CollectChatStream(
 				contentChan = nil
 				continue
 			}
-			safeCallback(agent.EventTypeThinking, content)
+			if safeCallback != nil {
+				safeCallback(agent.EventTypeThinking, content)
+			}
 			result.Content += content
 
 		case llmStats, ok := <-statsChan:
