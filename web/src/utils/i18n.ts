@@ -110,6 +110,11 @@ export const loadLocale = (locale: string): Locale => {
     dayjs.locale("en");
   }
 
+  // Update HTML lang attribute to prevent browser translation prompts
+  // Map internal locale codes to standard BCP 47 language tags
+  const htmlLang = validLocale === "zh-Hans" ? "zh-CN" : validLocale === "zh-Hant" ? "zh-TW" : validLocale;
+  document.documentElement.lang = htmlLang;
+
   return validLocale;
 };
 
@@ -121,6 +126,9 @@ export const applyLocaleEarly = (): void => {
   const stored = getStoredLocale();
   const locale = stored ?? findNearestMatchedLanguage(navigator.language);
   loadLocale(locale);
+
+  // Update HTML lang attribute to prevent browser translation prompts
+  document.documentElement.lang = locale === "zh-Hans" ? "zh-CN" : locale === "zh-Hant" ? "zh-TW" : locale;
 };
 
 // Get the display name for a locale in its native language
