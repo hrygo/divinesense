@@ -168,7 +168,7 @@ jobs:
         run: |
           echo "📝 Creating checksums..."
           if [ "${{ matrix.goos }}" = "darwin" ]; then
-            shasum -a  "${{ matrix.artifact_name }}" > checksums.txt
+            shasum -a 256 "${{ matrix.artifact_name }}" > checksums.txt
           else
             sha256sum "${{ matrix.artifact_name }}" > checksums.txt
           fi
