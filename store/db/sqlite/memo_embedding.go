@@ -557,7 +557,7 @@ func (d *DB) FindMemosWithoutEmbedding(ctx context.Context, find *store.FindMemo
 			m.visibility, m.pinned, m.content, m.payload
 		FROM memo m
 		LEFT JOIN memo_embedding e ON m.id = e.memo_id AND e.model = ?
-		WHERE e.id IS NULL
+		WHERE e.memo_id IS NULL
 			AND m.row_status = 'NORMAL'
 			AND LENGTH(m.content) > 0
 		ORDER BY m.created_ts DESC
