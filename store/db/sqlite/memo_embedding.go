@@ -79,6 +79,23 @@ func float32ArrayToBLOB(vec []float32) ([]byte, error) {
 	return buf, nil
 }
 
+// blobToFloat32Array converts a vec0 BLOB back to a float32 array.
+// This is the inverse of float32ArrayToBLOB.
+func blobToFloat32Array(blob []byte) ([]float32, error) {
+	expectedLen := DefaultEmbeddingDim * 4
+	if len(blob) != expectedLen {
+		return nil, fmt.Errorf("invalid BLOB length: got %d, want %d",
+			len(blob), expectedLen)
+	}
+
+	vec := make([]float32, DefaultEmbeddingDim)
+	for i := 0; i < DefaultEmbeddingDim; i++ {
+		bits := binary.LittleEndian.Uint32(blob[i*4 : i*4+4])
+		vec[i] = math.Float32frombits(bits)
+	}
+	return vec, nil
+}
+
 // TestFloat32ArrayToBLOB is a test helper that exports float32ArrayToBLOB for testing.
 // This is only used in test packages.
 func TestFloat32ArrayToBLOB(vec []float32) ([]byte, error) {
@@ -86,31 +103,25 @@ func TestFloat32ArrayToBLOB(vec []float32) ([]byte, error) {
 }
 
 // UpsertMemoEmbedding inserts or updates a memo embedding.
-// It stores both JSON (for compatibility) and BLOB (for sqlite-vec) formats.
+// It stores vector as BLOB in vec0 format for sqlite-vec.
 func (d *DB) UpsertMemoEmbedding(ctx context.Context, embedding *store.MemoEmbedding) (*store.MemoEmbedding, error) {
-	// Serialize vector to JSON
-	vectorJSON, err := json.Marshal(embedding.Embedding)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal embedding vector")
-	}
-
 	// Convert vector to BLOB for sqlite-vec
 	vectorBLOB, err := float32ArrayToBLOB(embedding.Embedding)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert embedding vector to BLOB")
 	}
 
-	stmt := `INSERT INTO memo_embedding (memo_id, embedding, embedding_vec, model, created_ts, updated_ts)
-		VALUES (?, ?, ?, ?, ?, ?)
+	// SQLite stores vector as BLOB in 'embedding' column
+	// PRIMARY KEY is (memo_id, model) - composite key
+	stmt := `INSERT INTO memo_embedding (memo_id, embedding, model, created_ts, updated_ts)
+		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (memo_id, model) DO UPDATE SET
 			embedding = excluded.embedding,
-			embedding_vec = excluded.embedding_vec,
 			updated_ts = excluded.updated_ts
-		RETURNING id, created_ts, updated_ts`
+		RETURNING memo_id, created_ts, updated_ts`
 
 	err = d.db.QueryRowContext(ctx, stmt,
 		embedding.MemoID,
-		vectorJSON,
 		vectorBLOB,
 		embedding.Model,
 		embedding.CreatedTs,
@@ -294,7 +305,7 @@ func (d *DB) vectorSearchVec0(ctx context.Context, opts *store.VectorSearchOptio
 
 	// Build query using vec0 MATCH syntax
 	// vec0 MATCH returns distance (not similarity). Convert: similarity = 1 - distance
-	// We use embedding_vec BLOB column for the search
+	// We use embedding BLOB column (memo_id is the primary key)
 	baseQuery := `
 		SELECT
 			m.id, m.uid, m.creator_id, m.created_ts, m.updated_ts, m.row_status,
@@ -308,11 +319,11 @@ func (d *DB) vectorSearchVec0(ctx context.Context, opts *store.VectorSearchOptio
 			WHERE embedding MATCH ?
 			ORDER BY distance
 			LIMIT ?
-		) search_results ON search_results.rowid = e.id
+		) search_results ON search_results.rowid = e.memo_id
 		WHERE m.creator_id = ?
 			AND m.row_status = 'NORMAL'
 			AND e.model = ?
-			AND e.embedding_vec IS NOT NULL
+			AND e.embedding IS NOT NULL
 	`
 
 	// Add time-based filtering if specified
@@ -445,7 +456,7 @@ func (d *DB) vectorSearchGo(ctx context.Context, opts *store.VectorSearchOptions
 	for rows.Next() {
 		var memo store.Memo
 		var payloadBytes []byte
-		var vectorJSON []byte
+		var vectorBLOB []byte
 
 		err := rows.Scan(
 			&memo.ID,
@@ -458,7 +469,7 @@ func (d *DB) vectorSearchGo(ctx context.Context, opts *store.VectorSearchOptions
 			&memo.Pinned,
 			&memo.Content,
 			&payloadBytes,
-			&vectorJSON,
+			&vectorBLOB,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to scan vector search result")
@@ -473,10 +484,10 @@ func (d *DB) vectorSearchGo(ctx context.Context, opts *store.VectorSearchOptions
 			memo.Payload = payload
 		}
 
-		// Deserialize embedding
-		var embedding []float32
-		if err := json.Unmarshal(vectorJSON, &embedding); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal embedding vector")
+		// Deserialize embedding from BLOB (vec0 format)
+		embedding, err := blobToFloat32Array(vectorBLOB)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert embedding BLOB to array")
 		}
 
 		candidates = append(candidates, candidate{
