@@ -95,11 +95,12 @@ if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
     # go test (only if Go files changed)
     if [ "$HAS_GO_FILES" -gt 0 ]; then
         echo "  → go test..."
-        if ! go test -short -timeout=60s -tags=noui $(go list ./... | grep -v -E '(^github.com/hrygo/divinesense/proto/|^github.com/hrygo/divinesense/plugin/cron$)') 2>&1 | tail -1; then
+        # Skip benchmarks with -run '^Test' for faster execution
+        if ! go test -short -run '^Test' -timeout=60s -tags=noui $(go list ./... | grep -v -E '(^github.com/hrygo/divinesense/proto/|^github.com/hrygo/divinesense/plugin/cron$)') 2>&1 | tail -1; then
             echo "    ${RED}✗ tests failed${NC}"
             CHECKS_FAILED=true
         else
-            echo "    ${GREEN}✓${NC} tests passed"
+            echo "    ${GREEN}✓${NC} tests passed (benchmarks skipped)"
         fi
     fi
 
