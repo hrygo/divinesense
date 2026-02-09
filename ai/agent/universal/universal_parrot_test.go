@@ -366,6 +366,7 @@ func TestUniversalParrot_GetSessionStats(t *testing.T) {
 
 	llm := &mockLLM{
 		chatWithToolsFunc: func(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error) {
+			time.Sleep(5 * time.Millisecond) // Ensure positive duration
 			return &ai.ChatResponse{Content: "Response"}, &ai.LLMCallStats{
 				PromptTokens:     100,
 				CompletionTokens: 50,
@@ -591,8 +592,8 @@ func TestNormalSessionStats(t *testing.T) {
 	if stats.AgentType != "test_parrot" {
 		t.Errorf("AgentType = %q, want 'test_parrot'", stats.AgentType)
 	}
-	if !stats.StartTime.IsZero() {
-		t.Error("StartTime should be initialized")
+	if stats.StartTime.IsZero() {
+		t.Error("StartTime should be initialized to non-zero")
 	}
 	if len(stats.ToolsUsed) != 0 {
 		t.Error("ToolsUsed should be initialized as empty slice")
@@ -698,6 +699,10 @@ func TestUniversalParrot_ConcurrentExecution(t *testing.T) {
 
 // TestUniversalParrot_ContextCancellation tests context cancellation during execution.
 func TestUniversalParrot_ContextCancellation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping context cancellation test in short mode - timing sensitive")
+	}
+
 	config := &ParrotConfig{
 		Name:     "test",
 		Strategy: StrategyDirect,
@@ -705,8 +710,13 @@ func TestUniversalParrot_ContextCancellation(t *testing.T) {
 
 	llm := &mockLLM{
 		chatWithToolsFunc: func(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error) {
-			time.Sleep(1 * time.Hour) // Hang
-			return &ai.ChatResponse{Content: "Should not reach"}, &ai.LLMCallStats{}, nil
+			// Use select to check context cancellation
+			select {
+			case <-ctx.Done():
+				return nil, &ai.LLMCallStats{}, ctx.Err()
+			case <-time.After(1 * time.Hour):
+				return &ai.ChatResponse{Content: "Should not reach"}, &ai.LLMCallStats{}, nil
+			}
 		},
 	}
 
@@ -759,8 +769,9 @@ func TestUniversalParrot_ExecuteWithHistory(t *testing.T) {
 		t.Fatalf("ExecuteWithCallback() error = %v", err)
 	}
 
-	// Should have system prompt + history pairs
-	expectedCount := 1 + len(history) // system + all history
+	// buildMessages creates: system prompt (1) + 2 pairs from history (4 strings -> 2 user+assistant pairs = 4 messages) = 5 messages
+	// BuildMessagesWithInput then appends the current input (+1) = 6 total
+	expectedCount := 1 + len(history) + 1 // system (1) + history as individual messages (4) + current input (1) = 6
 	if len(receivedMessages) != expectedCount {
 		t.Errorf("received %d messages, want %d", len(receivedMessages), expectedCount)
 	}

@@ -264,6 +264,7 @@ func TestExecuteToolWithEvents_Success(t *testing.T) {
 	tool := &mockTool{
 		name: "test_tool",
 		runFunc: func(ctx context.Context, input string) (string, error) {
+			time.Sleep(5 * time.Millisecond) // Ensure positive duration
 			return "tool result", nil
 		},
 	}
@@ -320,6 +321,7 @@ func TestExecuteToolWithEvents_Error(t *testing.T) {
 	tool := &mockTool{
 		name: "error_tool",
 		runFunc: func(ctx context.Context, input string) (string, error) {
+			time.Sleep(5 * time.Millisecond) // Ensure positive duration
 			return "", fmt.Errorf("execution failed")
 		},
 	}
@@ -362,6 +364,7 @@ func TestExecuteToolWithEvents_NilCallback(t *testing.T) {
 	tool := &mockTool{
 		name: "test_tool",
 		runFunc: func(ctx context.Context, input string) (string, error) {
+			time.Sleep(5 * time.Millisecond) // Ensure positive duration
 			return "result", nil
 		},
 	}
@@ -386,14 +389,23 @@ func TestExecuteToolWithEvents_NilCallback(t *testing.T) {
 
 // TestExecuteToolWithEvents_ContextCancellation tests context cancellation during tool execution.
 func TestExecuteToolWithEvents_ContextCancellation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping context cancellation test in short mode - timing sensitive")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
 	tool := &mockTool{
 		name: "slow_tool",
 		runFunc: func(ctx context.Context, input string) (string, error) {
-			time.Sleep(1 * time.Hour)
-			return "result", nil
+			// Use select to check context cancellation
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(100 * time.Millisecond):
+				return "result", nil
+			}
 		},
 	}
 

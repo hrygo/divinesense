@@ -78,46 +78,52 @@ func ExecuteToolWithEvents(
 	safeCallback := agent.SafeCallback(callback)
 	toolStartTime := time.Now()
 
-	// Send tool use event
-	safeCallback(agent.EventTypeToolUse, &agent.EventWithMeta{
-		EventType: agent.EventTypeToolUse,
-		EventData: toolInput,
-		Meta: &agent.EventMeta{
-			ToolName:        toolName,
-			Status:          "running",
-			TotalDurationMs: time.Since(startTime).Milliseconds(),
-		},
-	})
+	// Send tool use event (if callback exists)
+	if safeCallback != nil {
+		safeCallback(agent.EventTypeToolUse, &agent.EventWithMeta{
+			EventType: agent.EventTypeToolUse,
+			EventData: toolInput,
+			Meta: &agent.EventMeta{
+				ToolName:        toolName,
+				Status:          "running",
+				TotalDurationMs: time.Since(startTime).Milliseconds(),
+			},
+		})
+	}
 
 	// Execute tool
 	result, err := FindAndExecuteTool(ctx, tools, toolName, toolInput)
 	toolDuration := time.Since(toolStartTime).Milliseconds()
 
 	if err != nil {
+		if safeCallback != nil {
+			safeCallback(agent.EventTypeToolResult, &agent.EventWithMeta{
+				EventType: agent.EventTypeToolResult,
+				EventData: fmt.Sprintf("Error: %v", err),
+				Meta: &agent.EventMeta{
+					ToolName:        toolName,
+					Status:          "error",
+					ErrorMsg:        err.Error(),
+					DurationMs:      toolDuration,
+					TotalDurationMs: time.Since(startTime).Milliseconds(),
+				},
+			})
+		}
+		return "", toolDuration, err
+	}
+
+	if safeCallback != nil {
 		safeCallback(agent.EventTypeToolResult, &agent.EventWithMeta{
 			EventType: agent.EventTypeToolResult,
-			EventData: fmt.Sprintf("Error: %v", err),
+			EventData: result,
 			Meta: &agent.EventMeta{
 				ToolName:        toolName,
-				Status:          "error",
-				ErrorMsg:        err.Error(),
+				Status:          "success",
 				DurationMs:      toolDuration,
 				TotalDurationMs: time.Since(startTime).Milliseconds(),
 			},
 		})
-		return "", toolDuration, err
 	}
-
-	safeCallback(agent.EventTypeToolResult, &agent.EventWithMeta{
-		EventType: agent.EventTypeToolResult,
-		EventData: result,
-		Meta: &agent.EventMeta{
-			ToolName:        toolName,
-			Status:          "success",
-			DurationMs:      toolDuration,
-			TotalDurationMs: time.Since(startTime).Milliseconds(),
-		},
-	})
 
 	// Update stats
 	stats.ToolCalls++
@@ -148,29 +154,27 @@ func CollectChatStream(
 	for {
 		select {
 		case content, ok := <-contentChan:
-			if !ok {
+			if ok {
+				if safeCallback != nil {
+					safeCallback(agent.EventTypeThinking, content)
+				}
+				result.Content += content
+			} else {
 				contentChan = nil
-				continue
 			}
-			if safeCallback != nil {
-				safeCallback(agent.EventTypeThinking, content)
-			}
-			result.Content += content
 
 		case llmStats, ok := <-statsChan:
-			if !ok {
+			if ok {
+				result.Stats = llmStats
+			} else {
 				statsChan = nil
-				continue
 			}
-			result.Stats = llmStats
 
 		case err, ok := <-errChan:
-			if !ok {
-				errChan = nil
-				continue
-			}
-			if err != nil {
+			if ok && err != nil {
 				result.Error = err
+			} else {
+				errChan = nil
 			}
 
 		case <-ctx.Done():
