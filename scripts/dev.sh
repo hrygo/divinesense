@@ -608,9 +608,11 @@ cmd_start() {
 
     check_docker
 
-    # 按顺序启动服务
-    start_postgres || exit 1
-    sleep 2
+    # 按顺序启动服务（SQLite 模式跳过 PostgreSQL）
+    if [ "$SQLITE_VEC" != "true" ]; then
+        start_postgres || exit 1
+        sleep 2
+    fi
     start_backend || exit 1
     sleep 1
     start_frontend || exit 1
@@ -618,6 +620,7 @@ cmd_start() {
     echo ""
     log_success "所有服务已启动！"
     echo ""
+    echo "数据库: $([ "$SQLITE_VEC" = "true" ] && echo "SQLite + sqlite-vec" || echo "PostgreSQL")"
     echo "服务地址:"
     echo "  - 后端: http://localhost:$BACKEND_PORT"
     echo "  - 前端: http://localhost:$FRONTEND_PORT"
@@ -642,10 +645,12 @@ cmd_stop() {
     log_info "停止 DivineSense 开发环境..."
     echo ""
 
-    # 按逆序停止服务
+    # 按逆序停止服务（SQLite 模式跳过 PostgreSQL）
     stop_frontend
     stop_backend
-    stop_postgres
+    if [ "$SQLITE_VEC" != "true" ]; then
+        stop_postgres
+    fi
 
     echo ""
     log_success "所有服务已停止"
