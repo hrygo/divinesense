@@ -13,9 +13,18 @@ endif
 
 .DEFAULT_GOAL := help
 
-# Database Configuration (PostgreSQL)
+# Database Configuration (PostgreSQL by default)
 DIVINESENSE_DRIVER ?= postgres
 DIVINESENSE_DSN ?= postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable
+
+# SQLite + sqlite-vec Configuration (optional)
+SQLITE_VEC ?= false  # Set to true to enable sqlite-vec (requires CGO)
+ifeq ($(SQLITE_VEC),true)
+    DIVINESENSE_DRIVER = sqlite
+    DIVINESENSE_DSN = divinesense.db?_loc=auto&_allow_load_extension=1
+    BUILD_TAGS = -tags sqlite_vec
+    CGO_ENABLED = 1
+endif
 
 # 自动检测当前运行的 PostgreSQL 容器 (优先级: 环境变量 > 自动检测 > 默认值)
 ifeq ($(POSTGRES_CONTAINER),)
@@ -111,7 +120,11 @@ version-verbose: ## 显示详细版本信息 (运行时)
 	@go run $(LDFLAGS) ./$(BACKEND_CMD) --version
 
 run: ## 启动后端 (PostgreSQL + AI)
-	@echo "Starting DivineSense with AI support..."
+	@echo "Starting DivineSense ($(DIVINESENSE_DRIVER))..."
+	@if [ "$(SQLITE_VEC)" = "true" ]; then \
+		echo "→ sqlite-vec enabled"; \
+		$(MAKE) -s ensure-sqlite-vec; \
+	fi
 	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) \
 		DIVINESENSE_DSN=$(DIVINESENSE_DSN) \
 		DIVINESENSE_AI_ENABLED=true \
@@ -124,20 +137,26 @@ run: ## 启动后端 (PostgreSQL + AI)
 		DIVINESENSE_AI_EMBEDDING_MODEL=$(AI_EMBEDDING_MODEL) \
 		DIVINESENSE_AI_RERANK_MODEL=$(AI_RERANK_MODEL) \
 		DIVINESENSE_AI_LLM_MODEL=$(AI_LLM_MODEL) \
-		go run ./$(BACKEND_CMD) --mode dev --port $(BACKEND_PORT)
+		CGO_ENABLED=$(CGO_ENABLED) \
+		go run $(BUILD_TAGS) ./$(BACKEND_CMD) --mode dev --port $(BACKEND_PORT)
 
 dev: run ## Alias for run
 
 web: ## 启动前端开发服务器
 	@cd $(WEB_DIR) && pnpm dev
 
-start: ## 一键启动所有服务 (使用 go run 开发模式)
+start: ## 一键启动所有服务 (PostgreSQL 默认)
 	@$(SCRIPT_DIR)/dev.sh start
+
+start-sqlite-vec: ## 一键启动所有服务 (SQLite + sqlite-vec)
+	@echo "📦 Starting with SQLite + sqlite-vec..."
+	@$(MAKE) -s ensure-sqlite-vec
+	@SQLITE_VEC=true $(SCRIPT_DIR)/dev.sh start
 
 start-ai: ## 一键启动所有服务 (AI 模式，自动下载 sqlite-vec 静态库)
 	@echo "🤖 Preparing AI-enabled environment..."
 	@cd store/db/sqlite && $(MAKE) -s ensure-sqlite-vec
-	@AI_MODE=true $(SCRIPT_DIR)/dev.sh start
+	@SQLITE_VEC=true $(SCRIPT_DIR)/dev.sh start
 
 stop: ## 一键停止所有服务
 	@$(SCRIPT_DIR)/dev.sh stop
@@ -240,6 +259,24 @@ docker-prod-down: ## 停止生产环境
 
 docker-prod-logs: ## 查看生产环境日志
 	@docker compose -f $(DOCKER_COMPOSE_PROD) logs -f
+
+# SQLite + sqlite-vec Docker commands
+docker-sqlite-vec-up: ## 启动 SQLite + sqlite-vec 版本
+	@echo "Starting DivineSense with SQLite + sqlite-vec..."
+	@docker compose -f docker/compose/sqlite-vec.yml up -d
+	@echo "✅ DivineSense (SQLite) started at http://localhost:5230"
+
+docker-sqlite-vec-down: ## 停止 SQLite + sqlite-vec 版本
+	@echo "Stopping DivineSense (SQLite)..."
+	@docker compose -f docker/compose/sqlite-vec.yml down
+
+docker-sqlite-vec-logs: ## 查看 SQLite 版本日志
+	@docker compose -f docker/compose/sqlite-vec.yml logs -f
+
+docker-sqlite-vec-rebuild: ## 重新构建 SQLite 版本
+	@echo "Rebuilding DivineSense with SQLite + sqlite-vec..."
+	@docker compose -f docker/compose/sqlite-vec.yml up -d --build
+	@echo "✅ Rebuild complete"
 
 # ===========================================================================
 # Database Commands

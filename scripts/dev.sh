@@ -195,10 +195,18 @@ start_backend() {
     # 加载环境变量
     load_env
 
-    # 检测是否启用 AI 模式
+    # 检测是否启用 AI 模式或 sqlite-vec
     local ai_tags="noui"
-    if [ "$DIVINESENSE_AI_MODE" = "true" ] || [ "$AI_MODE" = "true" ]; then
-        log_info "🤖 AI 模式已启用"
+    local use_sqlite_vec=false
+
+    if [ "$SQLITE_VEC" = "true" ]; then
+        log_info "📦 SQLite + sqlite-vec 模式已启用"
+        ai_tags="sqlite_vec"
+        use_sqlite_vec=true
+        export DIVINESENSE_DRIVER="sqlite"
+        export DIVINESENSE_DSN="divinesense.db?_loc=auto&_allow_load_extension=1"
+    elif [ "$DIVINESENSE_AI_MODE" = "true" ] || [ "$AI_MODE" = "true" ]; then
+        log_info "🤖 AI 模式已启用 (PostgreSQL)"
         ai_tags="sqlite_vec"
     fi
 

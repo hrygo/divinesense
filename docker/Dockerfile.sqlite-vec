@@ -1,0 +1,91 @@
+# DivineSense with SQLite + sqlite-vec
+# This Dockerfile builds DivineSense with full AI support using SQLite and sqlite-vec
+
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS backend
+WORKDIR /backend-build
+
+# Install build dependencies (including gcc for CGO)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    git \
+    ca-certificates \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy go mod files and download dependencies (cached layer)
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    GOPROXY=https://goproxy.cn,https://goproxy.io,direct \
+    go mod download
+
+# Copy source code
+COPY . .
+
+# Download sqlite-vec static library for target platform
+ARG TARGETOS TARGETARCH
+RUN if [ "$TARGETOS" = "linux" ]; then \
+        echo "📦 Downloading sqlite-vec for Linux/$TARGETARCH..."; \
+        cd store/db/sqlite && \
+        GOOS=linux GOARCH=$TARGETARCH bash download_sqlite_vec.sh && \
+        cd ../../../; \
+    fi
+
+# Build with CGO and sqlite_vec tag
+ARG TARGETOS TARGETARCH VERSION COMMIT
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 \
+    GOOS=$TARGETOS \
+    GOARCH=$TARGETARCH \
+    go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -tags sqlite_vec \
+    -o divinesense \
+    ./cmd/divinesense
+
+# Runtime image
+FROM debian:bookworm-slim AS runtime
+WORKDIR /usr/local/divinesense
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    tzdata \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Optional: Node.js for Geek Mode
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r -g 10001 nonroot && \
+    useradd -r -u 10001 -g nonroot -d /var/opt/divinesense nonroot && \
+    mkdir -p /var/opt/divinesense && \
+    chown -R nonroot:nonroot /var/opt/divinesense
+
+# Copy binary
+COPY --from=backend /backend-build/divinesense /usr/local/divinesense/divinesense
+COPY --from=backend --chmod=755 /backend-build/scripts/entrypoint.sh /usr/local/divinesense/entrypoint.sh
+
+# Switch to non-root user
+USER nonroot:nonroot
+
+# Data directory
+VOLUME /var/opt/divinesense
+
+# Environment variables
+ENV TZ="UTC" \
+    DIVINESENSE_MODE="prod" \
+    DIVINESENSE_PORT="5230" \
+    DIVINESENSE_DRIVER="sqlite" \
+    DIVINESENSE_DSN="/var/opt/divinesense/divinesense.db"
+
+EXPOSE 5230
+
+ENTRYPOINT ["/usr/local/divinesense/entrypoint.sh", "/usr/local/divinesense/divinesense"]
