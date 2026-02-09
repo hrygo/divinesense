@@ -232,7 +232,11 @@ func (d *DB) GetAIBlock(ctx context.Context, id int64) (*store.AIBlock, error) {
 }
 
 func (d *DB) ListAIBlocks(ctx context.Context, find *store.FindAIBlock) ([]*store.AIBlock, error) {
-	return nil, errors.New("AIBlock not supported in SQLite (use PostgreSQL for AI features)")
+	// TODO: Implement full AIBlock support for SQLite
+	// For now, return empty list to prevent frontend errors
+	// AIBlock is the new unified conversation model from main branch
+	// Current SQLite implementation uses AIConversation instead
+	return []*store.AIBlock{}, nil
 }
 
 func (d *DB) UpdateAIBlock(ctx context.Context, update *store.UpdateAIBlock) (*store.AIBlock, error) {
