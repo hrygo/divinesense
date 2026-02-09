@@ -120,6 +120,25 @@ jobs:
           echo "✓ Static library verified: $size bytes"
         shell: bash
 
+      - name: Download SQLite amalgamation (for Linux cross-compilation)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "📦 Downloading SQLite amalgamation..."
+          SQLITE_VERSION="3450000"
+          SQLITE_AMALGAMATION_URL="https://www.sqlite.org/2024/sqlite-amalgamation-${SQLITE_VERSION}.zip"
+
+          # Download and extract SQLite amalgamation
+          curl -sL "${SQLITE_AMALGAMATION_URL}" -o /tmp/sqlite-amalgamation.zip
+          unzip -q /tmp/sqlite-amalgamation.zip -d /tmp/
+
+          # Copy to .lib directory alongside libvec0.a
+          cp /tmp/sqlite-amalgamation-${SQLITE_VERSION}/sqlite3.h store/db/sqlite/.lib/
+          cp /tmp/sqlite-amalgamation-${SQLITE_VERSION}/sqlite3.c store/db/sqlite/.lib/
+
+          echo "✓ SQLite amalgamation downloaded"
+          ls -lh store/db/sqlite/.lib/
+        shell: bash
+
       - name: Build with AI support (sqlite-vec)
         run: |
           echo "🔨 Building DivineSense with AI support..."
@@ -127,8 +146,10 @@ jobs:
 
           # Set cross-compilation environment for Linux
           if [ "${{ matrix.goos }}" = "linux" ]; then
-            export CC="zig cc -target ${{ matrix.zig_target }}"
-            export CXX="zig c++ -target ${{ matrix.zig_target }}"
+            export CC="zig cc -target ${{ matrix.zig_target }} -Istore/db/sqlite/.lib"
+            export CXX="zig c++ -target ${{ matrix.zig_target }} -Istore/db/sqlite/.lib"
+            export CGO_CFLAGS="-Istore/db/sqlite/.lib"
+            export CGO_LDFLAGS="-Lstore/db/sqlite/.lib"
           fi
 
           # Build with sqlite_vec tag
