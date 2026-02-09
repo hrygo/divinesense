@@ -90,10 +90,9 @@ jobs:
           echo "📦 Downloading sqlite-vec static library for ${{ matrix.goos }}/${{ matrix.goarch }}..."
           cd store/db/sqlite
 
-          # Run go generate to download static library
-          # Note: GOOS/GOARCH affect the download URL
-          # Must use -tags sqlite_vec to process sqlite_vec_internal.go
-          go generate -tags sqlite_vec -v ./...
+          # Download sqlite-vec static library directly
+          # This is more reliable than go generate for CI environments
+          bash ./download_sqlite_vec.sh
 
           echo "✓ Download completed"
           ls -lh .lib/libvec0.a
