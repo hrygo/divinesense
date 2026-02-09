@@ -11,22 +11,43 @@ BASE_URL="https://github.com/asg017/sqlite-vec/releases/download"
 LIB_DIR=".lib"
 
 # Detect platform
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-ARCH="$(uname -m)"
+# Priority: GOOS/GOARCH environment variables > uname
+if [ -n "${GOOS}" ]; then
+    OS="${GOOS}"
+else
+    OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+fi
 
-# Convert to sqlite-vec naming
+if [ -n "${GOARCH}" ]; then
+    ARCH="${GOARCH}"
+else
+    ARCH="$(uname -m)"
+fi
+
+# Convert Go OS names to sqlite-vec naming
 case "${OS}" in
     darwin)
         OS="macos"
         ;;
+    linux)
+        OS="linux"
+        ;;
 esac
 
+# Convert Go ARCH names to sqlite-vec naming
 case "${ARCH}" in
-    x86_64)
+    amd64)
         ARCH="x86_64"
         ;;
-    aarch64|arm64)
+    arm64)
         ARCH="aarch64"
+        ;;
+    386)
+        echo "Error: 386 architecture is not supported by sqlite-vec"
+        exit 1
+        ;;
+    x86_64|aarch64)
+        # Already in correct format
         ;;
     *)
         echo "Unsupported architecture: ${ARCH}"
