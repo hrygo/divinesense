@@ -8,6 +8,8 @@ package sqlite
 /*
 #cgo CFLAGS: -I${SRCDIR}/.lib
 #cgo LDFLAGS: ${SRCDIR}/.lib/libvec0.a
+
+#include <sqlite3.h>
 */
 import "C"
 
@@ -19,7 +21,7 @@ import (
 )
 
 // loadVecExtension verifies the sqlite-vec extension is loaded from static library.
-// The extension is automatically registered via sqlite3_auto_extension when statically linked.
+// The statically linked libvec0.a should auto-register via sqlite3_auto_extension.
 func loadVecExtension(db *sql.DB) error {
 	// Verify the extension is working by checking if vec0 functions are available
 	var result int
@@ -29,6 +31,7 @@ func loadVecExtension(db *sql.DB) error {
 	}
 
 	if result == 0 {
+		slog.Warn("sqlite-vec extension not loaded, vector search will use Go fallback")
 		return errors.New("sqlite-vec extension not loaded (no vec_ functions found)")
 	}
 
