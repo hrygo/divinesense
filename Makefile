@@ -353,12 +353,12 @@ build-sqlite-vec: ## 构建 sqlite-vec 静态库（本机平台）
 	@chmod +x $(SCRIPT_DIR)/build-sqlite-vec-static.sh
 	@$(SCRIPT_DIR)/build-sqlite-vec-static.sh
 
-ensure-sqlite-vec: ## 确保 sqlite-vec 静态库已下载（通过 go generate）
+ensure-sqlite-vec: ## 确保 sqlite-vec 静态库已下载（直接调用脚本）
 	@echo "📦 Checking sqlite-vec static library..."
 	@cd store/db/sqlite && \
 	if [ ! -f ".lib/libvec0.a" ]; then \
 		echo "  → Not found, downloading from official releases..."; \
-		go generate -v ./...; \
+		bash ./download_sqlite_vec.sh; \
 	else \
 		echo "  ✓ Found at store/db/sqlite/.lib/libvec0.a"; \
 	fi
