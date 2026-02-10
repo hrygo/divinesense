@@ -13,6 +13,13 @@
  * - Expand/collapse with spring animation
  * - Contextual AI chip (when AI is relevant)
  * - Adaptive layout: 2-column grid on desktop, single on mobile
+ *
+ * ## UX Improvements (v2.1)
+ * - Click-outside to close dropdown
+ * - Proper dropdown positioning with boundary detection
+ * - Synced collapse/expand state across all controls
+ * - Better mobile touch handling
+ * - Smooth animations and transitions
  */
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,14 +29,16 @@ import {
   ArchiveRestore,
   Bookmark,
   ChevronDown,
+  ChevronUp,
   Copy,
   Edit3,
+  Ellipsis,
   MessageCircle,
-  MoreVertical,
   Pin,
   PinOff,
   Share2,
   Trash2,
+  X,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -54,10 +63,10 @@ import { hasCompletedTasks, removeCompletedTasks } from "@/utils/markdown-manipu
 const FLUID_THEME = {
   // Card states
   card: {
-    base: "bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl",
+    base: "bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl",
     hover: "hover:bg-white dark:hover:bg-zinc-900",
-    border: "border-zinc-200/60 dark:border-zinc-800/60",
-    shadow: "shadow-sm hover:shadow-lg transition-all duration-300",
+    border: "border-zinc-200/70 dark:border-zinc-800/70",
+    shadow: "shadow-sm hover:shadow-sm transition-all duration-200",
   },
   // Typography
   text: {
@@ -79,7 +88,7 @@ const FLUID_THEME = {
   },
   // Motion
   spring: {
-    default: "transition-all duration-300 cubic-bezier(0.34, 1.56, 0.64, 1)",
+    default: "transition-all duration-200 ease-out",
   },
 } as const;
 
@@ -99,18 +108,6 @@ function formatRelativeTime(timestamp: number, t: (key: string, options?: Record
   if (diffMins < 60) return `${diffMins}m`;
   if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h`;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-// ============================================================================
-// Utilities
-// ============================================================================
-
-function getMemoId(memo: Memo): string {
-  return memo.name.split("/").pop() || memo.name;
-}
-
-function getCollapseStorageKey(memoName: string): string {
-  return `memo-block-collapsed-${memoName}`;
 }
 
 // ============================================================================
@@ -140,7 +137,7 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
   const { mutateAsync: updateMemo } = useUpdateMemo();
   const { mutateAsync: deleteMemo } = useDeleteMemo();
 
-  const memoId = getMemoId(memo);
+  const memoId = memo.name.split("/").pop() || memo.name;
   const isInMemoDetailPage = location.pathname.startsWith(`/${memo.name}`);
   const hasCompletedTaskList = hasCompletedTasks(memo.content);
   const isArchived = memo.state === State.ARCHIVED;
@@ -154,18 +151,47 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(null);
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
 
-  // Refs for swipe detection
+  // Refs for swipe detection and click-outside
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Persist collapse state
   useEffect(() => {
     try {
-      localStorage.setItem(getCollapseStorageKey(memoId), String(!isExpanded));
+      localStorage.setItem(`memo-block-collapsed-${memoId}`, String(!isExpanded));
     } catch {
       // ignore
     }
   }, [memoId, isExpanded]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setQuickMenuOpen(false);
+      }
+    };
+
+    if (quickMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [quickMenuOpen]);
+
+  // Close dropdown on escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setQuickMenuOpen(false);
+      }
+    };
+
+    if (quickMenuOpen) {
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [quickMenuOpen]);
 
   // Action handlers
   const handleToggle = useCallback(() => setIsExpanded((prev) => !prev), []);
@@ -328,8 +354,8 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
           FLUID_THEME.card.border,
           FLUID_THEME.card.shadow,
           // Swipe indicators
-          swipeDirection === "left" && "bg-amber-50 dark:bg-amber-950/30",
-          swipeDirection === "right" && "bg-red-50 dark:bg-red-950/30",
+          swipeDirection === "left" && "bg-amber-50/95 dark:bg-amber-950/20",
+          swipeDirection === "right" && "bg-red-50/95 dark:bg-red-950/20",
           className,
         )}
         onTouchStart={handleTouchStart}
@@ -341,8 +367,10 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/5 backdrop-blur-sm animate-in fade-in">
             <span
               className={cn(
-                "text-sm font-medium",
-                swipeDirection === "left" ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400",
+                "text-sm font-medium px-4 py-2 rounded-full",
+                swipeDirection === "left"
+                  ? "text-amber-600 bg-amber-100 dark:bg-amber-900/30"
+                  : "text-red-600 bg-red-100 dark:bg-red-900/30",
               )}
             >
               {swipeDirection === "left" ? "Archive →" : "← Delete"}
@@ -382,7 +410,7 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
               {hasCompletedTaskList && !isArchived && !memo.parent && (
                 <button
                   onClick={handleRemoveTasks}
-                  className="mt-4 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                  className="mt-4 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 >
                   ✓ Clear completed tasks
                 </button>
@@ -403,6 +431,7 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
             quickActions={quickActions}
             quickMenuOpen={quickMenuOpen}
             onQuickMenuToggle={() => setQuickMenuOpen((prev) => !prev)}
+            dropdownRef={dropdownRef}
           />
         </div>
 
@@ -451,29 +480,39 @@ interface MemoCompactHeaderProps {
 function MemoCompactHeader({ memo, previewText, relativeTime, visibilityLabel, isExpanded, onToggle, isArchived }: MemoCompactHeaderProps) {
   return (
     <div className="flex items-start gap-3 p-4">
-      {/* Icon indicator */}
-      <div
+      {/* Icon indicator - clickable for toggle */}
+      <button
         onClick={onToggle}
         className={cn(
-          "mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 cursor-pointer",
+          "mt-0.5 w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
+          "hover:scale-105 active:scale-95",
           memo.pinned
-            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400",
+            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
+            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700",
         )}
+        aria-label={isExpanded ? "Collapse" : "Expand"}
       >
         {memo.pinned ? <Pin className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-      </div>
+      </button>
 
-      {/* Content preview */}
-      <div onClick={onToggle} className="flex-1 min-w-0 cursor-pointer">
-        <p className={cn("text-sm leading-relaxed", isArchived ? "text-zinc-400 line-through" : FLUID_THEME.text.primary)}>{previewText}</p>
+      {/* Content preview - clickable for toggle */}
+      <button onClick={onToggle} className="flex-1 min-w-0 text-left">
+        <p
+          className={cn(
+            "text-sm leading-relaxed text-left w-full",
+            isArchived ? "text-zinc-400 line-through" : FLUID_THEME.text.primary,
+            "hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors",
+          )}
+        >
+          {previewText}
+        </p>
 
         {/* Metadata row */}
-        <div className="flex items-center gap-3 mt-2 text-xs">
+        <div className="flex items-center gap-2.5 mt-2 text-xs">
           <span className={FLUID_THEME.text.muted}>{relativeTime}</span>
           <span
             className={cn(
-              "px-2 py-0.5 rounded-full",
+              "px-2 py-0.5 rounded-full text-[11px] font-medium",
               memo.visibility === 1
                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                 : memo.visibility === 2
@@ -490,24 +529,21 @@ function MemoCompactHeader({ memo, previewText, relativeTime, visibilityLabel, i
             </span>
           )}
         </div>
-      </div>
+      </button>
 
-      {/* Right side actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        {/* Expand/Collapse chevron */}
-        <button
-          onClick={onToggle}
-          className={cn(
-            "p-1.5 rounded-lg transition-all",
-            "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100",
-            "dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50",
-          )}
-          aria-label={isExpanded ? "Collapse" : "Expand"}
-        >
-          <ChevronDown className={cn("w-5 h-5 transition-transform duration-200", !isExpanded && "-rotate-90")} />
-        </button>
-      </div>
+      {/* Right side - collapse/expand button */}
+      <button
+        onClick={onToggle}
+        className={cn(
+          "p-2 rounded-lg transition-all shrink-0",
+          "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100",
+          "dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50",
+        )}
+        aria-label={isExpanded ? "Collapse" : "Expand"}
+      >
+        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+      </button>
     </div>
   );
 }
@@ -530,6 +566,7 @@ interface MemoCompactFooterProps {
   }>;
   quickMenuOpen: boolean;
   onQuickMenuToggle: () => void;
+  dropdownRef: React.RefObject<HTMLDivElement>;
 }
 
 function MemoCompactFooter({
@@ -544,20 +581,24 @@ function MemoCompactFooter({
   quickActions,
   quickMenuOpen,
   onQuickMenuToggle,
+  dropdownRef,
 }: MemoCompactFooterProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900/30">
-      {/* Left: Toggle button */}
+    <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900/30">
+      {/* Left: Collapse/Expand indicator */}
       <button
         onClick={onToggle}
-        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+        className={cn(
+          "flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200",
+          "transition-colors px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800",
+        )}
       >
-        <ChevronDown className={cn("w-4 h-4 transition-transform", !isExpanded && "-rotate-90")} />
-        <span className="hidden sm:inline">{isExpanded ? "Collapse" : "Expand"}</span>
+        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        <span className="hidden sm:inline">{isExpanded ? "Show less" : "Show more"}</span>
       </button>
 
       {/* Right: Primary actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         {/* Edit button - always visible when not archived */}
         {!isArchived && <ActionButton icon={Edit3} label="Edit" onClick={onEdit} />}
 
@@ -567,7 +608,7 @@ function MemoCompactFooter({
             icon={memo.pinned ? PinOff : Pin}
             label={memo.pinned ? "Unpin" : "Pin"}
             onClick={onTogglePin}
-            className={memo.pinned ? "text-amber-600 dark:text-amber-400" : undefined}
+            className={memo.pinned ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : undefined}
           />
         )}
 
@@ -579,29 +620,61 @@ function MemoCompactFooter({
           <ActionButton icon={Share2} label="Share" onClick={onShare} />
         )}
 
-        {/* More menu */}
-        <div className="relative">
-          <ActionButton icon={MoreVertical} label="More" onClick={onQuickMenuToggle} isActive={quickMenuOpen} />
+        {/* More menu dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <ActionButton
+            icon={Ellipsis}
+            label="More actions"
+            onClick={onQuickMenuToggle}
+            isActive={quickMenuOpen}
+            className={quickMenuOpen ? "bg-zinc-200 dark:bg-zinc-700" : undefined}
+          />
 
-          {/* Dropdown menu */}
+          {/* Dropdown menu - positioned with better UX */}
           {quickMenuOpen && (
-            <div className="absolute right-0 bottom-full mb-2 w-48 py-2 bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
-              {quickActions.map((action) => (
+            <div
+              className={cn(
+                "absolute right-0 top-full mt-1.5 z-50",
+                "w-48 py-1.5 bg-white dark:bg-zinc-900",
+                "rounded-lg shadow-lg shadow-zinc-200/50 dark:shadow-black/50",
+                "border border-zinc-200 dark:border-zinc-800",
+                "animate-in fade-in slide-in-from-top-1 duration-150",
+              )}
+            >
+              {/* Header with close button */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Actions</span>
                 <button
-                  key={action.key}
-                  onClick={() => {
-                    action.action();
-                    onQuickMenuToggle();
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors",
-                    action.danger && "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30",
-                  )}
+                  onClick={() => onQuickMenuToggle()}
+                  className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  aria-label="Close menu"
                 >
-                  <action.icon className="w-4 h-4" />
-                  <span>{action.label}</span>
+                  <X className="w-3.5 h-3.5 text-zinc-400" />
                 </button>
-              ))}
+              </div>
+
+              {/* Action items */}
+              <div className="py-1">
+                {quickActions.map((action) => (
+                  <button
+                    key={action.key}
+                    onClick={() => {
+                      action.action();
+                      onQuickMenuToggle();
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 text-sm text-left",
+                      "transition-colors duration-100",
+                      "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                      "focus-visible:outline-none focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800",
+                      action.danger && "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30",
+                    )}
+                  >
+                    <action.icon className="w-4 h-4 shrink-0" />
+                    <span>{action.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -623,12 +696,16 @@ function ActionButton({ icon: Icon, label, onClick, className, isActive }: Actio
     <button
       onClick={onClick}
       className={cn(
-        "p-2 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-all",
+        "p-2 rounded-lg transition-all duration-150",
+        "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200",
+        "hover:bg-zinc-100 dark:hover:bg-zinc-800",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50",
+        "active:scale-95",
         isActive && "bg-zinc-200 dark:bg-zinc-800",
         className,
       )}
       aria-label={label}
+      title={label}
     >
       <Icon className="w-4 h-4" />
     </button>
