@@ -83,9 +83,6 @@ tmp/
 # SQLite-Vec static library (auto-downloaded via go generate)
 store/db/sqlite/.lib/
 
-# SQLite-Vec static library (auto-downloaded via go generate)
-store/db/sqlite/.lib/
-
 # Claude Code
 .claude/sessions/
 .claude/settings.local.json

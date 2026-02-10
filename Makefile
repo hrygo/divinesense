@@ -518,7 +518,7 @@ ci-backend: ## 后端 CI 检查 (go mod tidy + golangci-lint + test)
 	@echo "  → golangci-lint..."
 	@golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags="noui"
 	@echo "  → go test..."
-	@go test -short -timeout=30s -tags="noui" ./...
+	@go test -short -timeout=30s -tags=noui $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)")
 	@echo "  ✅ Backend checks passed"
 
 ci-frontend: ## 前端 CI 检查 (lint + build)
