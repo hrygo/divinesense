@@ -11,7 +11,8 @@ on:
         default: 'v0.71.0'
 
 jobs:
-  build-linux-windows:
+  # Build standard binaries (no SQLite support)
+  build-linux-windows-standard:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -54,7 +55,7 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Build Binaries (Linux + Windows)
+      - name: Build Standard Binaries (Linux + Windows, no SQLite)
         shell: bash
         run: |
           mkdir -p dist
@@ -70,10 +71,12 @@ jobs:
               output_name="${output_name}.exe"
             fi
 
-            echo "Building $output_name"
-            env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o dist/$output_name ./cmd/divinesense
+            echo "🔨 Building standard binary (no SQLite): $output_name"
+            env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
+              -ldflags "-s -w -X main.Version=$VERSION" \
+              -o dist/$output_name ./cmd/divinesense
 
-            # Configure SHA256 generation based on OS
+            # Generate SHA256 checksum
             cd dist
             if command -v sha256sum > /dev/null; then
               sha256sum "$output_name" > "$output_name.sha256"
@@ -96,7 +99,8 @@ jobs:
           tag_name: ${{ github.event.inputs.tag_name }}
           files: dist/*
 
-  build-macos:
+  # Build macOS standard binaries (no SQLite support)
+  build-macos-standard:
     runs-on: macos-latest
     permissions:
       contents: write
@@ -139,7 +143,7 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Build Binaries (macOS + Ad-hoc Sign)
+      - name: Build Standard Binaries (macOS, no SQLite)
         shell: bash
         run: |
           mkdir -p dist
@@ -151,13 +155,15 @@ jobs:
             GOARCH=${platform_split[1]}
             output_name="divinesense-${VERSION}-${GOOS}-${GOARCH}"
 
-            echo "Building $output_name"
-            env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o dist/$output_name ./cmd/divinesense
+            echo "🔨 Building standard binary (no SQLite): $output_name"
+            env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
+              -ldflags "-s -w -X main.Version=$VERSION" \
+              -o dist/$output_name ./cmd/divinesense
 
             # Ad-hoc sign to bypass Gatekeeper
             codesign --force --deep --sign - dist/$output_name
 
-            # Generate checksum
+            # Generate SHA256 checksum
             cd dist
             shasum -a 256 "$output_name" > "$output_name.sha256"
             cd ..
@@ -175,3 +181,181 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           files: dist/*
+
+  # Build SQLite-enabled binaries for all platforms
+  build-sqlite:
+    name: Build SQLite ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Intel (x86_64)
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            zig_target: x86_64-macos-none
+            artifact_name: divinesense-${{ github.event.inputs.tag_name || github.ref_name }}-darwin-amd64-sqlite
+
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            zig_target: aarch64-macos-none
+            artifact_name: divinesense-${{ github.event.inputs.tag_name || github.ref_name }}-darwin-arm64-sqlite
+
+          # Linux AMD64 (x86_64)
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            zig_target: x86_64-linux-musl
+            artifact_name: divinesense-${{ github.event.inputs.tag_name || github.ref_name }}-linux-amd64-sqlite
+
+          # Linux ARM64 (aarch64)
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            zig_target: aarch64-linux-musl
+            artifact_name: divinesense-${{ github.event.inputs.tag_name || github.ref_name }}-linux-arm64-sqlite
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
+
+      - name: Set Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Install Zig (for Linux cross-compilation)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ZIG_VERSION="0.13.0"
+          ZIG_ARCH="x86_64-linux"
+          ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+
+          echo "📦 Installing Zig ${ZIG_VERSION}..."
+          cd /tmp
+          curl -L "${ZIG_URL}" -o zig.tar.xz
+          tar -xf zig.tar.xz
+          sudo mv "zig-linux-x86_64-${ZIG_VERSION}" /opt/zig
+          sudo ln -sf /opt/zig/zig /usr/local/bin/zig
+          zig version
+          echo "✓ Zig installed successfully"
+        shell: bash
+
+      - name: Download sqlite-vec static library
+        run: |
+          echo "📦 Downloading sqlite-vec static library for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          cd store/db/sqlite
+          bash ./download_sqlite_vec.sh
+          echo "✓ Download completed"
+          ls -lh .lib/libvec0.a
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: Verify static library
+        run: |
+          echo "🔍 Verifying sqlite-vec static library..."
+          cd store/db/sqlite
+          if [ ! -f ".lib/libvec0.a" ]; then
+            echo "❌ Static library not found!"
+            exit 1
+          fi
+          size=$(wc -c < .lib/libvec0.a | tr -d ' ')
+          if [ "$size" -lt 100000 ]; then
+            echo "❌ Static library too small: $size bytes (corrupted?)"
+            exit 1
+          fi
+          echo "✓ Static library verified: $size bytes"
+        shell: bash
+
+      - name: Download SQLite amalgamation (for Linux cross-compilation)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "📦 Downloading SQLite amalgamation..."
+          SQLITE_VERSION="3450000"
+          SQLITE_AMALGAMATION_URL="https://www.sqlite.org/2024/sqlite-amalgamation-${SQLITE_VERSION}.zip"
+          curl -sL "${SQLITE_AMALGAMATION_URL}" -o /tmp/sqlite-amalgamation.zip
+          unzip -q /tmp/sqlite-amalgamation.zip -d /tmp/
+          cp /tmp/sqlite-amalgamation-${SQLITE_VERSION}/sqlite3.h store/db/sqlite/.lib/
+          cp /tmp/sqlite-amalgamation-${SQLITE_VERSION}/sqlite3.c store/db/sqlite/.lib/
+          echo "✓ SQLite amalgamation downloaded"
+          ls -lh store/db/sqlite/.lib/
+        shell: bash
+
+      - name: Build with AI support (sqlite-vec)
+        run: |
+          echo "🔨 Building DivineSense with AI support (sqlite-vec)..."
+          set -x
+
+          # Set cross-compilation environment for Linux
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            export CC="zig cc -target ${{ matrix.zig_target }} -Istore/db/sqlite/.lib"
+            export CXX="zig c++ -target ${{ matrix.zig_target }} -Istore/db/sqlite/.lib"
+            export CGO_CFLAGS="-Istore/db/sqlite/.lib"
+            export CGO_LDFLAGS="-Lstore/db/sqlite/.lib"
+          fi
+
+          # Build with sqlite_vec tag
+          CGO_ENABLED=1 \
+          GOOS=${{ matrix.goos }} \
+          GOARCH=${{ matrix.goarch }} \
+          go build -tags sqlite_vec \
+            -ldflags "-s -w -X main.Version=${{ env.VERSION }}" \
+            -o "${{ matrix.artifact_name }}" \
+            ./cmd/divinesense
+
+          if [ ! -f "${{ matrix.artifact_name }}" ]; then
+            echo "❌ Build failed: binary not found"
+            exit 1
+          fi
+
+          ls -lh "${{ matrix.artifact_name }}"
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            file "${{ matrix.artifact_name }}"
+          fi
+        shell: bash
+
+      - name: Create checksums
+        run: |
+          echo "📝 Creating checksums..."
+          if [ "${{ matrix.goos }}" = "darwin" ]; then
+            shasum -a 256 "${{ matrix.artifact_name }}" > checksums.txt
+          else
+            sha256sum "${{ matrix.artifact_name }}" > checksums.txt
+          fi
+          cat checksums.txt
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+        with:
+          files: |
+            ${{ matrix.artifact_name }}
+            checksums.txt
+
+      - name: Upload Release Assets (Manual)
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: |
+            ${{ matrix.artifact_name }}
+            checksums.txt

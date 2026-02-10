@@ -173,3 +173,119 @@ jobs:
       - name: Inspect images
         run: |
           docker buildx imagetools inspect ghcr.io/hrygo/divinesense:stable
+
+  build-push-sqlite:
+    needs: [prepare, build-frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm/v7
+          - linux/arm64
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: server/router/frontend/dist
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push SQLite image by digest
+        id: build-sqlite
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile.sqlite-vec
+          platforms: ${{ matrix.platform }}
+          cache-from: type=gha,scope=build-sqlite-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=build-sqlite-${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.title=DivineSense (SQLite Edition)
+            org.opencontainers.image.description=AI-powered note-taking with PostgreSQL + SQLite support
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}-sqlite
+          outputs: type=image,name=ghcr.io/hrygo/divinesense,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests-sqlite
+          digest="${{ steps.build-sqlite.outputs.digest }}"
+          touch "/tmp/digests-sqlite/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-sqlite-${{ strategy.job-index }}
+          path: /tmp/digests-sqlite/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-sqlite:
+    needs: [prepare, build-push-sqlite]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-sqlite-*
+          merge-multiple: true
+          path: /tmp/digests-sqlite
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta for SQLite
+        id: meta-sqlite
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/hrygo/divinesense
+          flavor: |
+            latest=false
+            suffix=-sqlite
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.prepare.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.prepare.outputs.version }}
+            type=raw,value=stable-sqlite
+          labels: |
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}-sqlite
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Create manifest list and push (SQLite)
+        working-directory: /tmp/digests-sqlite
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'ghcr.io/hrygo/divinesense@sha256:%s ' *)
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta-sqlite.outputs.json }}
+
+      - name: Inspect SQLite images
+        run: |
+          docker buildx imagetools inspect ghcr.io/hrygo/divinesense:stable-sqlite
