@@ -223,7 +223,7 @@ const Attachments = () => {
         )}
 
         {/* Content */}
-        <div className="w-full flex flex-col justify-start items-start px-4 py-6">
+        <div className="w-full flex flex-col justify-start items-start py-6">
           {loadingState.isLoading ? (
             <div className="w-full h-32 flex flex-col justify-center items-center">
               <p className="w-full text-center text-base my-6">{t("resource.fetching-data")}</p>

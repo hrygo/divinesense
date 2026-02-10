@@ -101,7 +101,7 @@ const Setting = () => {
   return (
     <>
       {!sm && <MobileHeader />}
-      <div className="w-full px-4 sm:px-6">
+      <div className="w-full">
         <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-lg bg-background text-muted-foreground">
           {sm && (
             <div className="flex flex-col justify-start items-start w-40 h-auto shrink-0 py-2">

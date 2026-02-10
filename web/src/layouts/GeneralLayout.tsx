@@ -5,17 +5,22 @@ import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 /**
- * GeneralLayout - Layout for pages without sidebar (full-width like AIChat)
+ * GeneralLayout - Layout for pages without sidebar
  *
  * Used by: Inboxes, Attachments, KnowledgeGraph, Review, Setting, MemoDetail
  *
  * Design specification:
- * - Full-width layout (same as AIChat for consistency)
+ * - Responsive width: max-w-3xl → max-w-6xl (same as Home/Explore/Archived)
  * - Mobile top padding: pt-4 (16px)
  * - Desktop top padding: pt-6 (24px)
  * - Bottom padding: pb-8 (32px)
  * - Horizontal padding: px-4 / sm:px-6
- * - No max-width limit (full-width app experience)
+ *
+ * Responsive breakpoints:
+ * - max-w-3xl (768px) - default
+ * - lg:max-w-4xl (896px) - 1024px+
+ * - xl:max-w-5xl (1024px) - 1280px+
+ * - 2xl:max-w-6xl (1152px) - 1536px+
  *
  * @see docs/research/layout-spacing-unification.md
  */
@@ -34,9 +39,9 @@ const GeneralLayout = () => {
         </div>
       )}
 
-      {/* Main Content - Full width like AIChat */}
+      {/* Main Content - Responsive width matching Home/Explore/Archived */}
       <div className="w-full h-full overflow-y-auto">
-        <div className={cn("w-full px-4 sm:px-6 pt-4 sm:pt-6 pb-8")}>
+        <div className={cn("w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-8", "max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl")}>
           <Outlet />
         </div>
       </div>
