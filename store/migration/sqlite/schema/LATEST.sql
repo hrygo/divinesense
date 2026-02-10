@@ -107,119 +107,24 @@ CREATE TABLE reaction (
   UNIQUE(creator_id, content_id, reaction_type)
 );
 
--- ai_conversation
-CREATE TABLE ai_conversation (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  uid TEXT NOT NULL UNIQUE,
-  creator_id INTEGER NOT NULL,
-  title TEXT NOT NULL DEFAULT '',
-  parrot_id TEXT NOT NULL DEFAULT '',
-  pinned INTEGER NOT NULL CHECK (pinned IN (0, 1)) DEFAULT 0,
-  created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
-  updated_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
-  row_status TEXT NOT NULL CHECK (row_status IN ('NORMAL', 'ARCHIVED')) DEFAULT 'NORMAL'
-);
-
--- ai_message
-CREATE TABLE ai_message (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  uid TEXT NOT NULL UNIQUE,
-  conversation_id INTEGER NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('MESSAGE', 'SEPARATOR')) DEFAULT 'MESSAGE',
-  role TEXT NOT NULL CHECK (role IN ('USER', 'ASSISTANT', 'SYSTEM')) DEFAULT 'USER',
-  content TEXT NOT NULL DEFAULT '',
-  metadata TEXT NOT NULL DEFAULT '{}',
-  created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now'))
-);
-
--- memo_embedding (Vector storage using sqlite-vec)
+-- memo_embedding (Vector storage for semantic search)
+-- Note: This table supports vector storage for SQLite using sqlite-vec.
+--       For full AI features including conversation persistence (AIBlock),
+--       use PostgreSQL with pgvector extension.
 CREATE TABLE memo_embedding (
-  memo_id INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  memo_id INTEGER NOT NULL,
+  embedding TEXT NOT NULL,       -- JSON-encoded float32 array (fallback)
+  embedding_vec BLOB,            -- vec0 format BLOB for sqlite-vec (optional)
   model TEXT NOT NULL DEFAULT 'BAAI/bge-m3',
-  embedding BLOB NOT NULL,  -- JSON-encoded float32 array for backward compatibility
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   UNIQUE(memo_id, model),
   CONSTRAINT fk_memo_embedding_memo FOREIGN KEY (memo_id) REFERENCES memo(id) ON DELETE CASCADE
 );
 
--- vec0 virtual table for efficient vector similarity search
--- Vectors are stored in vec0's optimized format for fast KNN queries
-CREATE VIRTUAL TABLE IF NOT EXISTS vec0_embeddings USING vec0(
-  embedding float32[1024]  -- BAAI/bge-m3 dimension
-);
-
--- Note: vec0 virtual tables don't require manual indexes
--- The vec0 extension provides optimized KNN search internally
-
--- episodic_memory (AI agent long-term memory)
-CREATE TABLE episodic_memory (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  timestamp INTEGER NOT NULL,
-  agent_type TEXT NOT NULL,
-  user_input TEXT,
-  outcome TEXT,
-  summary TEXT,
-  importance REAL,
-  created_ts INTEGER NOT NULL,
-  CONSTRAINT fk_episodic_memory_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
-);
-CREATE INDEX idx_episodic_memory_user_id ON episodic_memory(user_id);
-CREATE INDEX idx_episodic_memory_timestamp ON episodic_memory(timestamp DESC);
-
--- user_preferences (AI personalization settings)
-CREATE TABLE user_preferences (
-  user_id INTEGER PRIMARY KEY,
-  preferences TEXT NOT NULL DEFAULT '{}',
-  created_ts INTEGER NOT NULL,
-  updated_ts INTEGER NOT NULL,
-  CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
-);
-
--- conversation_context (AI session persistence)
-CREATE TABLE conversation_context (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id TEXT NOT NULL UNIQUE,
-  user_id INTEGER NOT NULL,
-  agent_type TEXT NOT NULL,
-  context_data TEXT NOT NULL DEFAULT '{}',
-  created_ts INTEGER NOT NULL,
-  updated_ts INTEGER NOT NULL,
-  CONSTRAINT fk_conversation_context_user FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE,
-  CONSTRAINT chk_conversation_context_agent_type CHECK (agent_type IN ('memo', 'schedule', 'amazing', 'assistant'))
-);
-CREATE INDEX idx_conversation_context_user ON conversation_context(user_id);
-CREATE INDEX idx_conversation_context_updated ON conversation_context(updated_ts DESC);
-
--- agent_metrics (AI agent performance tracking)
-CREATE TABLE agent_metrics (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  hour_bucket INTEGER NOT NULL,
-  agent_type TEXT NOT NULL,
-  request_count INTEGER NOT NULL DEFAULT 0,
-  success_count INTEGER NOT NULL DEFAULT 0,
-  latency_sum_ms INTEGER NOT NULL DEFAULT 0,
-  latency_p50_ms INTEGER,
-  latency_p95_ms INTEGER,
-  errors TEXT NOT NULL DEFAULT '{}',
-  created_at INTEGER NOT NULL,
-  CONSTRAINT uq_agent_metrics_hour_type UNIQUE (hour_bucket, agent_type)
-);
-CREATE INDEX idx_agent_metrics_hour ON agent_metrics(hour_bucket DESC);
-
--- tool_metrics (AI tool usage tracking)
-CREATE TABLE tool_metrics (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  hour_bucket INTEGER NOT NULL,
-  tool_name TEXT NOT NULL,
-  call_count INTEGER NOT NULL DEFAULT 0,
-  success_count INTEGER NOT NULL DEFAULT 0,
-  latency_sum_ms INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL,
-  CONSTRAINT uq_tool_metrics_hour_name UNIQUE (hour_bucket, tool_name)
-);
-CREATE INDEX idx_tool_metrics_hour ON tool_metrics(hour_bucket DESC);
+CREATE INDEX idx_memo_embedding_memo_id ON memo_embedding(memo_id);
+CREATE INDEX idx_memo_embedding_model ON memo_embedding(model);
 
 -- schedule (AI-powered schedule assistant)
 CREATE TABLE schedule (
@@ -248,4 +153,3 @@ CREATE INDEX idx_schedule_creator_status ON schedule(creator_id, row_status);
 CREATE INDEX idx_schedule_start_ts ON schedule(start_ts);
 CREATE INDEX idx_schedule_uid ON schedule(uid);
 CREATE TRIGGER trigger_schedule_updated_ts AFTER UPDATE ON schedule FOR EACH ROW WHEN NEW.updated_ts <= OLD.updated_ts BEGIN UPDATE schedule SET updated_ts = strftime('%s', 'now') WHERE id = NEW.id; END;
-

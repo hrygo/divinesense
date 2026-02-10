@@ -333,3 +333,63 @@ func (d *DB) DeleteAIConversation(ctx context.Context, delete *store.DeleteAICon
 func (d *DB) ListAIConversationsBasic(ctx context.Context, find *store.FindAIConversation) ([]*store.AIConversation, error) {
 	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
 }
+
+// ============================================================================
+// EpisodicMemory Methods (NOT SUPPORTED - use PostgreSQL)
+// ============================================================================
+
+func (d *DB) CreateEpisodicMemory(ctx context.Context, create *store.EpisodicMemory) (*store.EpisodicMemory, error) {
+	return nil, errors.New("episodic memory not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListEpisodicMemories(ctx context.Context, find *store.FindEpisodicMemory) ([]*store.EpisodicMemory, error) {
+	return nil, errors.New("episodic memory not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListActiveUserIDs(ctx context.Context, cutoff time.Time) ([]int32, error) {
+	return nil, errors.New("episodic memory not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) DeleteEpisodicMemory(ctx context.Context, delete *store.DeleteEpisodicMemory) error {
+	return errors.New("episodic memory not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+// ============================================================================
+// UserPreferences Methods (NOT SUPPORTED - use PostgreSQL)
+// ============================================================================
+
+func (d *DB) UpsertUserPreferences(ctx context.Context, upsert *store.UpsertUserPreferences) (*store.UserPreferences, error) {
+	return nil, errors.New("user preferences not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) GetUserPreferences(ctx context.Context, find *store.FindUserPreferences) (*store.UserPreferences, error) {
+	return nil, errors.New("user preferences not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+// ============================================================================
+// AgentMetrics Methods (NOT SUPPORTED - use PostgreSQL)
+// ============================================================================
+
+func (d *DB) UpsertAgentMetrics(ctx context.Context, upsert *store.UpsertAgentMetrics) (*store.AgentMetrics, error) {
+	return nil, errors.New("agent metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListAgentMetrics(ctx context.Context, find *store.FindAgentMetrics) ([]*store.AgentMetrics, error) {
+	return nil, errors.New("agent metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) DeleteAgentMetrics(ctx context.Context, delete *store.DeleteAgentMetrics) error {
+	return errors.New("agent metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) UpsertToolMetrics(ctx context.Context, upsert *store.UpsertToolMetrics) (*store.ToolMetrics, error) {
+	return nil, errors.New("tool metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListToolMetrics(ctx context.Context, find *store.FindToolMetrics) ([]*store.ToolMetrics, error) {
+	return nil, errors.New("tool metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) DeleteToolMetrics(ctx context.Context, delete *store.DeleteToolMetrics) error {
+	return errors.New("tool metrics not supported in SQLite (use PostgreSQL for AI features)")
+}
