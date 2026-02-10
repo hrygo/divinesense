@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **最后检查**: v0.91.0 (Chat Apps 集成)
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.94.0 (智能路由 + 成本管理)
 
 ## 数据库支持策略
 
@@ -12,21 +12,22 @@
 - **端口**：25432（开发环境）
 - **版本**：PostgreSQL 16+
 
-### SQLite（开发环境 - 向量搜索支持）
+### SQLite（开发环境 - 向量搜索支持 v0.94.0）
 
 - **状态**：开发环境
 - **AI 功能**：**部分支持** —— 仅向量搜索（语义检索）
-- **向量搜索**：sqlite-vec 扩展或应用层 cosine 相似度计算
+- **向量搜索**：sqlite-vec 扩展（2026年1月新增）
 - **全文搜索**：FTS5（可用）或 LIKE fallback
 - **推荐用途**：本地开发、语义搜索功能测试
 - **限制**：
-  - **不**支持 AI 对话持久化（AIBlock/AIConversation）—— 需使用 PostgreSQL
+  - **不**支持 AI 对话持久化（ai_block、ai_conversation）—— 需使用 PostgreSQL
   - **不**支持情景记忆（episodic_memory）—— 需使用 PostgreSQL
   - **不**支持用户偏好（user_preferences）—— 需使用 PostgreSQL
+  - **不**支持智能路由（router_feedback、router_weight）—— 需使用 PostgreSQL
   - 向量搜索性能不如 PostgreSQL + pgvector
   - 大数据集（>10k 向量）性能下降
-- **维护状态**：仅向量搜索功能
-- **注意**：完整 AI 功能（对话、记忆、偏好）必须使用 PostgreSQL
+- **维护状态**：向量搜索功能已启用
+- **注意**：完整 AI 功能（对话、记忆、偏好、路由）必须使用 PostgreSQL
 
 ### MySQL（已移除）
 - **状态**：**不支持** —— 已移除所有 MySQL 支持
@@ -238,10 +239,17 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 **聊天路由流程**（`chat_router.go`）：
 ```
-输入 → 规则匹配（0ms）→ 历史感知（~10ms）→ LLM 降级（~400ms）
-       ↓                ↓                   ↓
-    关键词         对话上下文          语义理解
+输入 → 规则匹配（0ms）→ 历史感知（~10ms）→ 权重匹配（~5ms）→ LLM 分类（~400ms）
+       ↓                ↓                  ↓                    ↓
+    关键词         对话上下文          个性化路由          语义理解
 ```
+
+**五层路由系统（v0.94.0）**：
+- Layer 0: Cache (LRU, 0ms)
+- Layer 1: RuleMatcher (关键词匹配, 0ms)
+- Layer 2: HistoryMatcher (对话历史, ~10ms)
+- Layer 3: WeightMatcher (动态权重, ~5ms) — 新增
+- Layer 4: LLM Classifier (~400ms)
 
 ### 查询引擎
 
@@ -263,31 +271,107 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 ### 核心 AI 表
 
+| 表名 | 用途 | 版本 | 关键列 |
+|:-----|:-----|:-----|:-----|
+| `ai_conversation` | AI 对话会话 | v0.93.0 | `id`, `creator_id`, `title` |
+| `ai_block` | **统一块模型**：对话持久化 | v0.93.0 | `conversation_id`, `round_number`, `mode` |
+| `memo_embedding` | 语义搜索的向量嵌入 | v0.93.0 | `memo_id`、`embedding`（vector(1024)） |
+| `conversation_context` | 会话上下文（多渠道） | v0.93.0 | `session_id`、`channel_type`、`context_data`（JSONB） |
+| `episodic_memory` | 长期用户记忆 | - | `user_id`、`summary`、`importance` |
+
+### 增强功能表
+
+| 表名 | 用途 | 版本 | 关键列 |
+|:-----|:-----|:-----|:-----|
+| `user_preferences` | 用户沟通偏好 | - | `user_id`、`preferences`（JSONB） |
+| `agent_session_stats` | 会话统计（成本追踪） | v0.93.0 | `session_id`、`token_usage`、`cost_estimate` |
+| `user_cost_settings` | 用户成本预算设置 | v0.93.0 | `user_id`、`daily_budget` |
+| `agent_security_audit` | 安全审计日志 | v0.93.0 | `user_id`、`risk_level`、`operation` |
+
+### 智能路由表（v0.94.0 新增）
+
 | 表名 | 用途 | 关键列 |
 |:-----|:-----|:-----|
-| `memo_embedding` | 语义搜索的向量嵌入 | `memo_id`、`embedding`（vector(1024)） |
-| `conversation_context` | AI 代理的会话持久化 | `session_id`、`user_id`、`context_data`（JSONB） |
-| `episodic_memory` | 长期用户记忆 | `user_id`、`summary`、`embedding`（vector） |
-| `user_preferences` | 用户沟通偏好 | `user_id`、`preferences`（JSONB） |
-| `agent_metrics` | 代理性能追踪 | `agent_type`、`prompt_version`、`success_rate`、`avg_latency` |
+| `router_feedback` | 路由反馈收集 | `predicted_intent`, `actual_intent`, `confidence` |
+| `router_weight` | 动态权重存储 | `user_id`, `keyword`, `weight` |
+
+### 集成表
+
+| 表名 | 用途 | 关键列 |
+|:-----|:-----|:-----|
 | `chat_app_credential` | 聊天应用接入凭证 | `platform`、`platform_user_id`、`access_token`（AES-256-GCM 加密） |
 
-### conversation_context 结构
+---
+
+### ai_block 结构（统一块模型）
+
+```sql
+CREATE TABLE ai_block (
+  id                  BIGSERIAL PRIMARY KEY,
+  uid                 VARCHAR(64) UNIQUE,
+  conversation_id     INTEGER NOT NULL REFERENCES ai_conversation(id) ON DELETE CASCADE,
+  round_number        INTEGER DEFAULT 0,
+  block_type          TEXT DEFAULT 'message',
+  mode                TEXT DEFAULT 'normal',  -- normal | geek | evolution
+
+  -- 数据存储
+  user_inputs         JSONB DEFAULT '[]',
+  assistant_content   TEXT,
+  event_stream        JSONB DEFAULT '[]',
+  session_stats       JSONB,
+  cc_session_id       VARCHAR(64),
+
+  -- 状态管理
+  status              TEXT DEFAULT 'pending',  -- pending | streaming | completed | error
+  parent_block_id     BIGINT DEFAULT 0,
+  branch_path         TEXT,
+  regeneration_count  INTEGER DEFAULT 0,
+  archived_at         BIGINT,
+
+  -- 成本追踪
+  token_usage         JSONB,
+  cost_estimate       BIGINT DEFAULT 0,
+  model_version       TEXT,
+
+  -- 元数据
+  metadata            JSONB,
+  created_ts          BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
+  updated_ts          BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
+);
+
+-- 索引
+CREATE INDEX idx_ai_block_conversation ON ai_block(conversation_id, round_number);
+CREATE INDEX idx_ai_block_status ON ai_block(status);
+CREATE INDEX idx_ai_block_cc_session ON ai_block(cc_session_id);
+CREATE INDEX idx_ai_block_mode ON ai_block(mode);
+CREATE INDEX idx_ai_block_created ON ai_block(created_ts DESC);
+
+-- HNSW 向量索引用于语义搜索
+CREATE INDEX idx_ai_block_embedding_hnsw
+ON ai_block USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+```
+
+---
+
+### conversation_context 结构（多渠道支持）
 
 ```sql
 CREATE TABLE conversation_context (
   id            SERIAL PRIMARY KEY,
   session_id    VARCHAR(64) NOT NULL UNIQUE,
   user_id       INTEGER NOT NULL REFERENCES "user"(id),
-  agent_type    VARCHAR(20) NOT NULL,  -- 'memo', 'schedule', 'amazing'
-  context_data  JSONB NOT NULL,         -- 消息 + 元数据
-  created_ts    BIGINT NOT NULL,
-  updated_ts    BIGINT NOT NULL
+  agent_type    VARCHAR(20) NOT NULL,  -- 'memo', 'schedule', 'amazing', 'auto'
+  channel_type  VARCHAR(20) DEFAULT 'web',  -- 'web', 'telegram', 'whatsapp', 'dingtalk'
+  context_data  JSONB NOT NULL DEFAULT '{}',
+  created_ts    BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
+  updated_ts    BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
 );
 
 -- 索引
 CREATE INDEX idx_conversation_context_user ON conversation_context(user_id);
 CREATE INDEX idx_conversation_context_updated ON conversation_context(updated_ts DESC);
+CREATE INDEX idx_conversation_context_channel_type ON conversation_context(channel_type);
 ```
 
 **context_data 结构**：
@@ -297,24 +381,110 @@ CREATE INDEX idx_conversation_context_updated ON conversation_context(updated_ts
     {"role": "user", "content": "..."},
     {"role": "assistant", "content": "..."}
   ],
-  "metadata": {"topic": "...", ...}
+  "metadata": {
+    "topic": "...",
+    "channel": "web",
+    "platform_user_id": "..."
+  }
 }
 ```
 
 **保留期**：会话在 30 天后自动过期（可通过清理任务配置）。
 
-### agent_metrics 结构
+---
+
+### agent_session_stats 结构（v0.93.0）
 
 ```sql
-CREATE TABLE agent_metrics (
-  id             SERIAL PRIMARY KEY,
-  agent_type     VARCHAR(20) NOT NULL,
-  prompt_version VARCHAR(20) NOT NULL,  -- A/B 测试
-  success_count  INTEGER DEFAULT 0,
-  failure_count  INTEGER DEFAULT 0,
-  avg_latency_ms BIGINT DEFAULT 0,
-  updated_ts     BIGINT NOT NULL
+CREATE TABLE agent_session_stats (
+  id                      BIGSERIAL PRIMARY KEY,
+  user_id                 INTEGER NOT NULL REFERENCES "user"(id),
+  session_id              VARCHAR(64) NOT NULL,
+  agent_type              VARCHAR(20) NOT NULL,
+  parrot_id               VARCHAR(20),
+
+  -- Token 统计
+  prompt_tokens           INTEGER DEFAULT 0,
+  completion_tokens       INTEGER DEFAULT 0,
+  cache_read_tokens       INTEGER DEFAULT 0,
+  cache_write_tokens      INTEGER DEFAULT 0,
+  total_tokens            INTEGER DEFAULT 0,
+
+  -- 成本统计（毫美分）
+  prompt_cost             BIGINT DEFAULT 0,
+  completion_cost         BIGINT DEFAULT 0,
+  total_cost              BIGINT DEFAULT 0,
+
+  -- 性能指标
+  latency_ms              BIGINT DEFAULT 0,
+  tool_calls              INTEGER DEFAULT 0,
+  thinking_time_ms        BIGINT DEFAULT 0,
+
+  -- 状态
+  status                  VARCHAR(20) DEFAULT 'success',
+
+  created_ts              BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
 );
+```
+
+---
+
+### user_cost_settings 结构（v0.93.0）
+
+```sql
+CREATE TABLE user_cost_settings (
+  id              SERIAL PRIMARY KEY,
+  user_id         INTEGER NOT NULL UNIQUE REFERENCES "user"(id),
+  daily_budget    BIGINT DEFAULT 100000,  -- 每日预算（毫美分）
+  alert_threshold REAL DEFAULT 0.8,       -- 告警阈值（百分比）
+  cost_alerts_enabled BOOLEAN DEFAULT true,
+  created_ts      BIGINT NOT NULL,
+  updated_ts      BIGINT NOT NULL
+);
+```
+
+---
+
+### router_feedback 结构（v0.94.0 新增）
+
+```sql
+CREATE TABLE router_feedback (
+  id                SERIAL PRIMARY KEY,
+  user_id           INTEGER NOT NULL REFERENCES "user"(id),
+  session_id        VARCHAR(64),
+  query_text        TEXT NOT NULL,
+  predicted_intent  VARCHAR(20) NOT NULL,
+  actual_intent     VARCHAR(20),
+  confidence        REAL,
+  feedback_type     VARCHAR(20),  -- 'auto', 'manual', 'correction'
+  created_ts        BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
+);
+
+-- 索引
+CREATE INDEX idx_router_feedback_user ON router_feedback(user_id);
+CREATE INDEX idx_router_feedback_intent ON router_feedback(predicted_intent);
+CREATE INDEX idx_router_feedback_created ON router_feedback(created_ts DESC);
+```
+
+---
+
+### router_weight 结构（v0.94.0 新增）
+
+```sql
+CREATE TABLE router_weight (
+  id            SERIAL PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES "user"(id),
+  keyword       VARCHAR(100) NOT NULL,
+  weight        REAL DEFAULT 1.0,
+  intent_type   VARCHAR(20),
+  created_ts    BIGINT NOT NULL,
+  updated_ts    BIGINT NOT NULL,
+  UNIQUE (user_id, keyword)
+);
+
+-- 索引
+CREATE INDEX idx_router_weight_user ON router_weight(user_id);
+CREATE INDEX idx_router_weight_keyword ON router_weight(keyword);
 ```
 
 ### chat_app_credential 结构

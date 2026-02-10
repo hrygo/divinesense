@@ -1,6 +1,6 @@
 # 前端开发指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-05) | **最后检查**: v0.93.0 (Unified Block Model)
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.94.0 (智能路由 + 多模式支持)
 
 ## 技术栈
 - **框架**：React 18 + Vite 7
@@ -134,7 +134,7 @@ ls web/dist/assets/ | grep "^_"  # 应该为空
 
 ## 布局架构
 
-> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `web/src/layouts/*.tsx` | **最后检查**: v0.90.0
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/layouts/*.tsx` | **最后检查**: v0.94.0
 
 ### 布局层级
 
@@ -142,12 +142,12 @@ ls web/dist/assets/ | grep "^_"  # 应该为空
 RootLayout (全局导航 + 认证)
     │
     ├── MemoLayout (可折叠侧边栏：MemoExplorer)
-    │   └── /, /explore, /archived, /u/:username
+    │   └── /home, /explore, /archived, /u/:username, /review
     │
     ├── GeneralLayout (无侧边栏，全宽内容)
-    │   └── /knowledge-graph, /inboxes, /attachments
+    │   └── /knowledge-graph, /inbox, /attachments, /setting, /memos/:uid
     │
-    ├── AIChatLayout (固定侧边栏：AIChatSidebar)
+    ├── AIChatLayout (固定侧边栏：AIChatSidebar，多模式主题)
     │   └── /chat
     │
     └── ScheduleLayout (固定侧边栏：ScheduleCalendar)
@@ -219,30 +219,29 @@ const FeatureLayout = () => {
 
 ## 页面组件
 
-> **保鲜状态**: ✅ 已验证 (2025-02-02) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.90.0
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.94.0
 
 ### 可用页面
 
 | 路径 | 组件 | 布局 | 用途 |
 |:-----|:-----|:-----|:-----|
-| `/` | `Home.tsx` | MemoLayout | 主时间线 + 笔记编辑器 |
+| `/` | 重定向到 `/chat` | RootLayout | 默认入口 |
+| `/auth/*` | 认证页面组 | RootLayout | 登录/注册/OAuth 回调 |
+| `/home` | `Home.tsx` | MemoLayout | 主时间线 + 笔记编辑器 |
 | `/explore` | `Explore.tsx` | MemoLayout | 搜索和探索内容 |
 | `/archived` | `Archived.tsx` | MemoLayout | 已归档笔记 |
-| `/m/:id` | `MemoDetail.tsx` | None | 笔记详情页 |
-| `/chat` | `AIChat.tsx` | AIChatLayout | AI 聊天界面 |
+| `/chat` | `AIChat.tsx` | AIChatLayout | AI 聊天界面（多模式） |
 | `/schedule` | `Schedule.tsx` | ScheduleLayout | 日历视图 |
-| `/inboxes` | `Inboxes.tsx` | GeneralLayout | 收件箱 |
+| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱可视化 |
+| `/inbox` | `Inboxes.tsx` | GeneralLayout | 收件箱 |
 | `/attachments` | `Attachments.tsx` | GeneralLayout | 附件管理 |
-| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱 |
 | `/review` | `Review.tsx` | MemoLayout | 每日回顾 |
-| `/setting` | `Setting.tsx` | MemoLayout | 用户设置 |
+| `/setting` | `Setting.tsx` | GeneralLayout | 用户设置 |
 | `/u/:username` | `UserProfile.tsx` | MemoLayout | 公开用户资料 |
-| `/auth/callback` | `AuthCallback.tsx` | None | OAuth 回调处理 |
-| `/auth/signin` | `SignIn.tsx` | None | 登录页 |
-| `/auth/signup` | `SignUp.tsx` | None | 注册页 |
-| `/auth/admin` | `AdminSignIn.tsx` | None | 管理员登录 |
-| `/404` | `NotFound.tsx` | None | 404 页面 |
-| `/403` | `PermissionDenied.tsx` | None | 权限拒绝 |
+| `/memos/:uid` | `MemoDetail.tsx` | GeneralLayout | 笔记详情页 |
+| `/m/:uid` | `MemoDetailRedirect` | GeneralLayout | 笔记详情重定向 |
+| `/403` | `PermissionDenied.tsx` | RootLayout | 权限拒绝 |
+| `/404` | `NotFound.tsx` | RootLayout | 404 页面 |
 
 ### 添加新页面
 
@@ -386,6 +385,80 @@ import ChatAppsSection from "@/components/Settings/ChatAppsSection";
 - `api.chatApp.deleteCredential()` - 删除凭证
 
 **详见**：[Chat Apps 用户指南](../guides/CHAT_APPS.md)
+
+---
+
+## 核心 Hooks
+
+### AI 相关 Hooks（49KB）
+
+| Hook | 大小 | 描述 |
+|:-----|:-----|:-----|
+| `useAIQueries` | 41KB | AI 查询管理（流式聊天） |
+| `useBlockQueries` | 21KB | Block 模型支持（Unified Block Model） |
+| `useParrotChat` | 8KB | 鹦鹉聊天 Hook |
+| `useScheduleQueries` | 20KB | 日程查询 |
+| `useBranchTree` | 5KB | 分支树管理（支持 Block 分支） |
+| `useIntentPrediction` | - | 意图预测 |
+
+### 其他核心 Hooks
+
+| Hook | 描述 |
+|:-----|:-----|
+| `useUserQueries` | 用户查询（8KB） |
+| `useMemoQueries` | 笔记查询（5KB） |
+| `useAttachmentQueries` | 附件查询 |
+| `useScheduleAgent` | 日程代理 |
+| `useInstanceQueries` | 实例查询 |
+| `useParrots` | 鹦鹉配置 |
+
+---
+
+## AI 聊天组件架构
+
+### 组件结构（49+ 组件）
+
+**核心组件**：
+- `ChatMessages` (21KB) - 消息列表渲染
+- `ChatInput` (12KB) - 输入框（支持快捷指令）
+- `AIChatSidebar` - 会话侧边栏
+- `UnifiedMessageBlock` (49KB) - 统一消息块
+- `StreamingMarkdown` - 流式 Markdown 渲染
+
+**Block 相关**：
+- `BlockHeader` - Block 头部（状态/时间戳）
+- `BlockBody` - Block 内容（可折叠）
+- `BlockFooter` - Block 操作栏
+- `BlockCostBadge` - 成本徽章
+- `BlockEditDialog` - Block 编辑对话框
+- `BlockStatusBadge` - 状态徽章
+
+**Session 相关**：
+- `SessionBar` - 会话栏
+- `SessionSummaryPanel` - 会话摘要面板
+- `SessionSwitcher` - 会话切换器
+
+**工具展示**：
+- `CompactToolCall` - 轻量级工具调用卡片
+- `ToolCallsSection` - 工具调用区域
+- `ThinkingSection` - 思考过程展示
+- `EventBadge` - 事件类型徽章
+
+**其他**：
+- `QuickReplies` - 快捷回复
+- `ModeSwitcher` - 模式切换（NORMAL/GEEK/EVOLUTION）
+- `BranchIndicator` - 分支指示器
+- `RegenerateButton` - 重新生成按钮
+
+### 多模式主题支持
+
+| 模式 | 主题色 | 用途 |
+|:-----|:------|:-----|
+| `NORMAL` | 默认蓝 | 普通模式（三层路由） |
+| `GEEK` | 极客紫 | Geek Mode（Claude Code CLI） |
+| `EVOLUTION` | 进化橙 | Evolution Mode（系统自我进化） |
+
+主题通过 `PARROT_THEMES` 配置，支持动态切换。
 
 ---
 
