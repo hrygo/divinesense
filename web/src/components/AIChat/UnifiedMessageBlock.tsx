@@ -230,7 +230,7 @@ function CompactToolCall({
   return (
     <div
       className={cn(
-        "rounded-lg border px-3 py-2 transition-all duration-200",
+        "rounded-md border px-3 py-2 transition-all duration-200",
         "bg-card hover:shadow-sm",
         // Add cursor pointer when expandable
         hasExpandableContent && "cursor-pointer",
@@ -554,7 +554,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
           allInputs.map((input, index) => (
             <div
               key={input.id}
-              className={cn("rounded-lg border p-3 transition-colors", "bg-muted/20 border-border/50 hover:border-border")}
+              className={cn("rounded-md border p-3 transition-colors", "bg-muted/20 border-border/50 hover:border-border")}
             >
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-medium">
@@ -571,7 +571,7 @@ function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="w-full text-left rounded-lg border p-3 bg-muted/20 border-border/50 cursor-pointer hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full text-left rounded-md border p-3 bg-muted/20 border-border/50 cursor-pointer hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="text-sm text-muted-foreground line-clamp-3 italic">
               {allInputs.map((m) => m.content.split("\n")[0]).join(" ")}...
@@ -781,7 +781,7 @@ function BlockBody({
 
                 {/* Expanded View - 只在有真实内容时显示 */}
                 {isThinkingExpanded && allThinkingContent.length > 0 && (
-                  <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200 prose prose-xs dark:prose-invert max-w-none">
+                  <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200 prose prose-xs dark:prose-invert max-w-none">
                     <ReactMarkdown>{allThinkingContent}</ReactMarkdown>
                   </div>
                 )}
@@ -908,7 +908,7 @@ function BlockBody({
               <div className="absolute -left-[2rem] top-0">
                 <TimelineNode type="error" />
               </div>
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
+              <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 text-sm">
                 <p className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
                   {t("ai.unified_block.error_occurred")}
                 </p>

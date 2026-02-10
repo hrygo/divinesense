@@ -85,7 +85,7 @@ export const ExpandedSessionSummary = memo(function ExpandedSessionSummary({ sum
   return (
     <div
       className={cn(
-        "rounded-xl border overflow-hidden",
+        "rounded-lg border overflow-hidden",
         "bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-950/50",
         "border-slate-200 dark:border-slate-700",
         className,

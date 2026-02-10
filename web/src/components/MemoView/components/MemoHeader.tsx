@@ -20,6 +20,8 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
   showCreator,
   showVisibility,
   showPinned,
+  hideActionMenu = false,
+  hideInteractionButtons = false,
   onEdit,
   onGotoDetail,
   onUnpin,
@@ -52,7 +54,7 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
       </div>
 
       <div className="flex flex-row justify-end items-center select-none shrink-0 gap-2">
-        {currentUser && !isArchived && (
+        {!hideInteractionButtons && currentUser && !isArchived && (
           <ReactionSelector
             className={cn("border-none w-auto h-auto", reactionSelectorOpen && "block!", "block sm:hidden sm:group-hover:block")}
             memo={memo}
@@ -60,7 +62,7 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
           />
         )}
 
-        {!isInMemoDetailPage && commentAmount > 0 && (
+        {!hideInteractionButtons && !isInMemoDetailPage && commentAmount > 0 && (
           <Link
             className={cn("flex flex-row justify-start items-center rounded-md px-1 hover:opacity-80 gap-0.5")}
             to={`/${memo.name}#comments`}
@@ -106,7 +108,7 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
           </span>
         )}
 
-        <MemoActionMenu memo={memo} readonly={readonly} onEdit={onEdit} />
+        {!hideActionMenu && <MemoActionMenu memo={memo} readonly={readonly} onEdit={onEdit} />}
       </div>
     </div>
   );

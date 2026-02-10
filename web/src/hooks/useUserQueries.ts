@@ -48,8 +48,9 @@ export function useUserStats(username?: string) {
   return useQuery({
     queryKey: username ? userKeys.userStats(username) : userKeys.stats(),
     queryFn: async () => {
+      // Guard against undefined username (should never happen due to enabled check)
       if (!username) {
-        throw new Error("Username is required");
+        return null;
       }
       const stats = await userServiceClient.getUserStats({ name: username });
       return stats;

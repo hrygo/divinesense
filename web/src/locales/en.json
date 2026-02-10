@@ -4,6 +4,17 @@
     "name-alt": "神识",
     "description": "AI-driven personal digital second brain"
   },
+  "error": {
+    "service_unavailable": {
+      "title": "Service Unavailable",
+      "message": "Unable to connect to the server. Please check if the backend service is running.",
+      "reasons_title": "Possible reasons:",
+      "reason_backend": "Backend service is not running",
+      "reason_network": "Network connection issue",
+      "reason_temporary": "Server is temporarily unavailable",
+      "retry": "Retry Connection"
+    }
+  },
   "ai": {
     "aichat": {
       "amazing-insight": {

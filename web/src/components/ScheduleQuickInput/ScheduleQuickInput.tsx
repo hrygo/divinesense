@@ -205,7 +205,7 @@ export function ScheduleQuickInput({
     <div className={cn("w-full flex flex-col gap-2", className)}>
       {/* Priority 2: Success Message (only when not processing) */}
       {showSuccess && !isProcessing && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20 animate-in slide-in-from-top-2">
+        <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-lg border border-green-500/20 animate-in slide-in-from-top-2">
           <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
             <Check className="h-5 w-5 text-white" />
           </div>
@@ -220,7 +220,7 @@ export function ScheduleQuickInput({
         <>
           {/* Processing Status Bar - shown when streaming has no events yet */}
           {streamingChat.events.length === 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20 animate-pulse">
+            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20 animate-pulse">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">{t("schedule.quick.input.creating") as string}</p>
@@ -243,7 +243,7 @@ export function ScheduleQuickInput({
 
       {/* Priority 4: AI Response Message (only when not processing) */}
       {aiMessage && !isProcessing && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-muted/50 rounded-xl border border-border/50">
+        <div className="flex items-start gap-3 px-4 py-3 bg-muted/50 rounded-lg border border-border/50">
           <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-foreground/90">{aiMessage}</p>
@@ -263,7 +263,7 @@ export function ScheduleQuickInput({
       {/* Input Bar */}
       <div
         className={cn(
-          "flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all duration-300",
+          "flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all duration-300",
           isProcessing && "border-primary/40 bg-primary/5",
           showSuccess && "border-green-500/40 bg-green-500/5",
           !isProcessing && !showSuccess && "border-border bg-background",

@@ -34,7 +34,7 @@ const Inboxes = () => {
   return (
     <section className="@container w-full min-h-full flex flex-col justify-start items-center">
       <div className="w-full">
-        <div className="w-full border border-border flex flex-col justify-start items-start rounded-xl bg-background text-foreground overflow-hidden">
+        <div className="w-full border border-border flex flex-col justify-start items-start rounded-lg bg-background text-foreground overflow-hidden">
           {/* Header - Hidden on Mobile */}
           {sm && (
             <div className="w-full px-4 py-4 border-b border-border">

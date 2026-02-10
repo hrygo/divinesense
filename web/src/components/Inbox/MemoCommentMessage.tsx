@@ -103,7 +103,7 @@ function MemoCommentMessage({ notification }: Props) {
           <div className="flex-1 space-y-3">
             <div className="h-4 bg-muted/50 rounded-md w-2/5" />
             <div className="h-3 bg-muted/40 rounded-md w-3/4" />
-            <div className="h-20 bg-muted/30 rounded-xl" />
+            <div className="h-20 bg-muted/30 rounded-lg" />
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ function MemoCommentMessage({ notification }: Props) {
           <UserAvatar className="w-10 h-10 ring-1 ring-border/40" avatarUrl={sender?.avatarUrl} />
           <div
             className={cn(
-              "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background flex items-center justify-center shadow-md transition-all",
+              "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background flex items-center justify-center shadow-sm transition-all",
               isUnread ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground",
             )}
           >

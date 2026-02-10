@@ -165,7 +165,7 @@ export function QuickInput({
         {/* Input Box */}
         <div
           className={cn(
-            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border shadow-sm",
+            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border shadow-sm",
             "bg-muted/50 hover:bg-muted/70 transition-colors",
             "focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50",
           )}
@@ -191,7 +191,7 @@ export function QuickInput({
           <Button
             size="icon"
             className={cn(
-              "shrink-0 h-11 min-w-[44px] rounded-xl transition-all",
+              "shrink-0 h-11 min-w-[44px] rounded-lg transition-all",
               "hover:scale-105 active:scale-95",
               value.trim() ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",

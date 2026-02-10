@@ -289,7 +289,7 @@ export function AISuggestionCards({ suggestions, onConfirmSuggestion, className 
               onKeyDown={(e) => handleKeyDown(e, suggestion)}
               className={cn(
                 "group flex-1 min-w-0 text-left relative",
-                "p-3 rounded-xl border-2 transition-all duration-200",
+                "p-3 rounded-lg border-2 transition-all duration-200",
                 "active:scale-[0.98]",
                 // Focus visible styles for keyboard navigation
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
@@ -297,7 +297,7 @@ export function AISuggestionCards({ suggestions, onConfirmSuggestion, className 
                 !isSelected &&
                   "border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:bg-amber-50/80 dark:hover:bg-amber-950/30",
                 // Selected state - improved contrast with amber theme for parrot
-                isSelected && "border-amber-600 bg-amber-100 dark:bg-amber-900/50 ring-2 ring-amber-500/40 shadow-md",
+                isSelected && "border-amber-600 bg-amber-100 dark:bg-amber-900/50 ring-2 ring-amber-500/40 shadow-sm",
               )}
             >
               {/* Selected indicator */}

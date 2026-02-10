@@ -13,7 +13,7 @@ const KnowledgeGraph = () => {
           </div>
         }
       >
-        <KnowledgeGraphView className="w-full h-full border rounded-xl overflow-hidden bg-background shadow-sm" />
+        <KnowledgeGraphView className="w-full h-full border rounded-lg overflow-hidden bg-background shadow-sm" />
       </Suspense>
     </div>
   );

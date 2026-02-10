@@ -51,7 +51,7 @@ export const CalendarCell = memo((props: CalendarCellProps) => {
     intensityClass,
     day.isToday && "ring-2 ring-primary/30 ring-offset-1 font-semibold z-10",
     day.isSelected && "ring-2 ring-primary ring-offset-1 font-bold z-10",
-    isInteractive ? "cursor-pointer hover:scale-110 hover:shadow-md hover:z-20" : "cursor-default",
+    isInteractive ? "cursor-pointer hover:scale-110 hover:shadow-sm hover:z-20" : "cursor-default",
   );
 
   const button = (

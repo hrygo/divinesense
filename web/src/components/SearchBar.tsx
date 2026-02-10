@@ -5,7 +5,6 @@ import { useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { useSemanticSearch } from "@/hooks/useAIQueries";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { cn } from "@/lib/utils";
-import MemoDisplaySettingMenu from "./MemoDisplaySettingMenu";
 
 const SearchBar = () => {
   const { t } = useTranslation();
@@ -85,7 +84,7 @@ const SearchBar = () => {
           </button>
           <input
             className={cn(
-              "w-full text-sidebar-foreground leading-6 bg-transparent border border-transparent text-sm rounded-lg p-1.5 pl-8 pr-9 outline-0",
+              "w-full text-sidebar-foreground leading-6 bg-transparent border border-transparent text-sm rounded-lg p-1.5 pl-8 pr-3 outline-0",
               !isSemantic && "border-border",
             )}
             placeholder={isSemantic ? t("search.ai-placeholder") : t("memo.search-placeholder")}
@@ -94,14 +93,11 @@ const SearchBar = () => {
             onKeyDown={onKeyDown}
             ref={inputRef}
           />
-          <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-            <MemoDisplaySettingMenu className="text-sidebar-foreground/60 hover:text-sidebar-foreground" />
-          </div>
         </div>
       </div>
 
       {isSemantic && queryText.length > 1 && (
-        <div className="absolute top-full mt-2 w-full bg-background border border-border rounded-lg shadow-xl overflow-hidden max-h-80 overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full bg-background border border-border rounded-lg shadow-lg overflow-hidden max-h-80 overflow-y-auto">
           {isLoading && (
             <div className="p-4 flex items-center justify-center text-muted-foreground">
               <LoaderIcon className="w-4 h-4 animate-spin mr-2" />

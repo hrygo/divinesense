@@ -55,7 +55,7 @@ const DateStrip = ({ currentDate, selectedDate, schedules, onDateSelect, onPrevW
               key={i}
               onClick={() => onDateSelect(date)}
               className={cn(
-                "flex flex-col items-center justify-center w-11 h-16 rounded-2xl transition-all duration-200 relative group",
+                "flex flex-col items-center justify-center w-11 h-16 rounded-xl transition-all duration-200 relative group",
                 isSelected
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
                   : isToday
@@ -138,7 +138,7 @@ export const ScheduleTimeline = ({ schedules, selectedDate, onDateClick, onSched
 
       {/* Agenda List Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scroll-smooth">
-        <div className="max-w-3xl mx-auto min-h-full flex flex-col">
+        <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto min-h-full flex flex-col">
           {/* Day Header */}
           <div className="mb-6 mt-2 flex items-baseline justify-between px-2">
             <div className="flex items-baseline gap-3">
@@ -192,8 +192,8 @@ export const ScheduleTimeline = ({ schedules, selectedDate, onDateClick, onSched
                     <div className="flex-1 min-w-0">
                       <div
                         className={cn(
-                          "relative w-full rounded-xl border transition-all duration-200 overflow-hidden",
-                          "hover:shadow-md hover:border-primary/20",
+                          "relative w-full rounded-lg border transition-all duration-200 overflow-hidden",
+                          "hover:shadow-sm hover:border-primary/20",
                           isCurrent ? "bg-primary/5 border-primary/20" : "bg-card border-border",
                         )}
                       >

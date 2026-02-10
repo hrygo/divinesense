@@ -20,7 +20,7 @@ const ScheduleSidebar = () => {
   const schedules = schedulesData?.schedules || [];
 
   return (
-    <div className="h-full overflow-y-auto py-4 px-3">
+    <div className="h-full overflow-y-auto pt-4 px-4">
       <ScheduleCalendar schedules={schedules} selectedDate={selectedDate} onDateClick={setSelectedDate} showMobileHint={false} />
     </div>
   );
@@ -29,13 +29,11 @@ const ScheduleSidebar = () => {
 /**
  * ScheduleLayout - Layout for schedule/calendar pages
  *
- * === SPACING DEVIATION NOTES ===
- * This layout intentionally deviates from the standard spacing specification:
- * - Sidebar width: w-80 (320px) instead of w-72 (288px) - needs more space for calendar
- * - Sidebar padding: py-4 px-3 instead of px-3 py-6 - adjusted for calendar widget
- * - NO top padding (pt-6) on main content - calendar views manage their own spacing
- *
- * These deviations are by design to accommodate the FullCalendar widget.
+ * === APPLICATION LAYOUT NOTES ===
+ * This is an app-style layout with its own spacing management:
+ * - Sidebar width: w-80 (320px)
+ * - Sidebar padding: pt-4 px-4 (16px)
+ * - Main content: NO top padding - app manages its own spacing
  *
  * @see docs/research/layout-spacing-unification.md
  */

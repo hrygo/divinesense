@@ -81,7 +81,7 @@ const MemoDetail = () => {
           )}
           <MemoView
             key={`${memo.name}-${memo.displayTime}`}
-            className="shadow hover:shadow-md transition-all"
+            className="shadow hover:shadow-sm transition-all"
             memo={memo}
             compact={false}
             parentPage={locationState?.from}

@@ -50,15 +50,15 @@ export const FixedEditor = memo(function FixedEditor({ placeholder, className }:
     <div
       ref={containerRef}
       className={cn(
-        "sticky bottom-0 left-0 right-0 z-50",
-        "bg-background border-t border-border",
+        "sticky bottom-0 left-0 right-0 z-50 bg-background",
         // Padding for mobile keyboard
         keyboardHeight > 0 && "pb-safe",
         className,
       )}
       style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined }}
     >
-      <div className="mx-auto max-w-[100rem] px-4 py-3">
+      {/* Width container matching HeroSection - matches AIChat responsive width */}
+      <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 py-3">
         {/* Memo Editor */}
         <MemoEditor
           placeholder={placeholder || t("editor.any-thoughts")}

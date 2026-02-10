@@ -19,7 +19,7 @@ export function SidebarTabs({ activeTab, onTabChange, className }: SidebarTabsPr
   return (
     <div className={cn("w-full", className)}>
       {/* Segmented Control Container */}
-      <div className="flex p-1 bg-muted rounded-xl">
+      <div className="flex p-1 bg-muted rounded-lg">
         <TabButton
           active={activeTab === "history"}
           onClick={() => onTabChange("history")}

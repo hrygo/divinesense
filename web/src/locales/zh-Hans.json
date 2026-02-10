@@ -4,6 +4,17 @@
     "name-alt": "DivineSense",
     "description": "以 AI Agent 为核心驱动的个人数字化第二大脑"
   },
+  "error": {
+    "service_unavailable": {
+      "title": "服务不可用",
+      "message": "无法连接到服务器，请检查后端服务是否正在运行。",
+      "reasons_title": "可能的原因：",
+      "reason_backend": "后端服务未运行",
+      "reason_network": "网络连接问题",
+      "reason_temporary": "服务器暂时不可用",
+      "retry": "重试连接"
+    }
+  },
   "ai": {
     "aichat": {
       "amazing-insight": {

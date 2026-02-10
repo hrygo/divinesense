@@ -522,7 +522,7 @@ export const PartnerGreeting = memo(function PartnerGreeting({
             disabled={isSending}
             onClick={() => handlePromptClick(item)}
             className={cn(
-              "flex flex-row items-center gap-3 p-3 rounded-xl",
+              "flex flex-row items-center gap-3 p-3 rounded-lg",
               "bg-card",
               "border border-border",
               "hover:border-primary/50",
@@ -558,7 +558,7 @@ export const MiniPartnerGreeting = memo(function MiniPartnerGreeting({ message, 
 
   return (
     <div className={cn("flex items-start gap-3 p-4", className)}>
-      <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-primary flex items-center justify-center text-lg shrink-0 shadow-sm">
+      <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-primary flex items-center justify-center text-lg shrink-0 shadow-sm">
         <span>🦜</span>
       </div>
       <div className="flex-1 min-w-0">

@@ -57,9 +57,9 @@ export const AnimatedAvatar = memo(
           className={cn(
             "relative flex items-center justify-center overflow-hidden cursor-pointer rounded-full transition-all duration-300 ease-out",
             // 基础样式
-            "shadow-md",
+            "shadow-sm",
             // Hover 效果
-            isHovered && "scale-110 shadow-xl",
+            isHovered && "scale-110 shadow-sm",
             // 思考状态 - 呼吸动画
             isThinking && "animate-avatar-breathe",
             // 打字状态 - 脉冲效果
@@ -82,9 +82,9 @@ export const AnimatedAvatar = memo(
           {/* 波纹环 - 打字时显示 */}
           {isTyping && (
             <>
-              <div className="absolute inset-0 rounded-xl border-2 border-primary/30 animate-avatar-wave" />
-              <div className="absolute inset-0 rounded-xl border-2 border-primary/20 animate-avatar-wave delay-100" />
-              <div className="absolute inset-0 rounded-xl border-2 border-primary/10 animate-avatar-wave delay-200" />
+              <div className="absolute inset-0 rounded-lg border-2 border-primary/30 animate-avatar-wave" />
+              <div className="absolute inset-0 rounded-lg border-2 border-primary/20 animate-avatar-wave delay-100" />
+              <div className="absolute inset-0 rounded-lg border-2 border-primary/10 animate-avatar-wave delay-200" />
             </>
           )}
 

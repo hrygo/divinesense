@@ -186,7 +186,7 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
                 rows={1}
                 className={cn(
                   "w-full min-h-[44px] max-h-[120px] px-4 py-3 pr-24",
-                  "bg-muted/50 border border-border/50 rounded-2xl",
+                  "bg-muted/50 border border-border/50 rounded-xl",
                   "text-sm resize-none outline-none",
                   "focus:bg-background focus:border-primary/50",
                   "transition-colors",
@@ -203,7 +203,7 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
                   variant="ghost"
                   size="icon"
                   onClick={handleExpand}
-                  className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
                   aria-label={t("editor.expand-toolbar")}
                 >
                   <Paperclip className="w-5 h-5" />
@@ -216,7 +216,7 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
                   onClick={handleSend}
                   disabled={!canSend}
                   className={cn(
-                    "h-9 w-9 rounded-xl transition-all",
+                    "h-9 w-9 rounded-md transition-all",
                     canSend ? "bg-primary text-primary-foreground hover:scale-105" : "bg-muted text-muted-foreground",
                   )}
                   aria-label={t("editor.send")}
@@ -277,7 +277,7 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
                   key={tool.label}
                   type="button"
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl",
+                    "flex flex-col items-center justify-center gap-2 p-4 rounded-xl",
                     "hover:bg-accent transition-colors",
                     "active:scale-95 transition-transform",
                   )}
@@ -295,14 +295,14 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
           <div className="mt-4 space-y-2">
             <button
               type="button"
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
             >
               <span className="text-sm">{t("editor.visibility")}</span>
               <span className="text-sm text-muted-foreground">{t("editor.private")}</span>
             </button>
             <button
               type="button"
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
             >
               <span className="text-sm">{t("editor.related-memo")}</span>
               <span className="text-xs text-muted-foreground">...</span>
@@ -318,7 +318,7 @@ export const MobileEditor = memo(function MobileEditor({ placeholder, className,
               }}
               disabled={!canSend}
               className={cn(
-                "w-full h-12 rounded-xl text-base font-medium transition-all",
+                "w-full h-12 rounded-lg text-base font-medium transition-all",
                 canSend ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
               )}
             >

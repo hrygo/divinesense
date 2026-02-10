@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { instanceServiceClient } from "@/connect";
 import { updateInstanceConfig } from "@/instance-config";
 import {
@@ -27,6 +27,7 @@ interface InstanceState {
   settings: InstanceSetting[];
   isInitialized: boolean;
   isLoading: boolean;
+  isServiceAvailable: boolean;
 }
 
 interface InstanceContextValue extends InstanceState {
@@ -46,6 +47,7 @@ export function InstanceProvider({ children }: { children: ReactNode }) {
     settings: [],
     isInitialized: false,
     isLoading: true,
+    isServiceAvailable: true,
   });
 
   // Memoize derived settings to prevent unnecessary recalculations
@@ -74,7 +76,7 @@ export function InstanceProvider({ children }: { children: ReactNode }) {
   }, [state.settings]);
 
   const initialize = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true }));
+    setState((prev) => ({ ...prev, isLoading: true, isServiceAvailable: true }));
     try {
       const profile = await instanceServiceClient.getInstanceProfile({});
 
@@ -97,6 +99,7 @@ export function InstanceProvider({ children }: { children: ReactNode }) {
         settings: [generalSetting, memoRelatedSettingResponse],
         isInitialized: true,
         isLoading: false,
+        isServiceAvailable: true,
       });
     } catch (error) {
       console.error("Failed to initialize instance:", error);
@@ -104,27 +107,52 @@ export function InstanceProvider({ children }: { children: ReactNode }) {
         ...prev,
         isInitialized: true,
         isLoading: false,
+        isServiceAvailable: false,
       }));
     }
   }, []);
 
-  const fetchSetting = useCallback(async (key: InstanceSetting_Key) => {
-    const setting = await instanceServiceClient.getInstanceSetting({
-      name: buildInstanceSettingName(key),
-    });
-    setState((prev) => ({
-      ...prev,
-      settings: [...prev.settings.filter((s) => s.name !== setting.name), setting],
-    }));
-  }, []);
+  // Listen for online/offline events to re-check service availability
+  useEffect(() => {
+    const handleOnline = () => {
+      if (!state.isServiceAvailable) {
+        initialize();
+      }
+    };
 
-  const updateSetting = useCallback(async (setting: InstanceSetting) => {
-    await instanceServiceClient.updateInstanceSetting({ setting });
-    setState((prev) => ({
-      ...prev,
-      settings: [...prev.settings.filter((s) => s.name !== setting.name), setting],
-    }));
-  }, []);
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [state.isServiceAvailable, initialize]);
+
+  const fetchSetting = useCallback(
+    async (key: InstanceSetting_Key) => {
+      if (!state.isServiceAvailable) {
+        throw new Error("Service is not available");
+      }
+      const setting = await instanceServiceClient.getInstanceSetting({
+        name: buildInstanceSettingName(key),
+      });
+      setState((prev) => ({
+        ...prev,
+        settings: [...prev.settings.filter((s) => s.name !== setting.name), setting],
+      }));
+    },
+    [state.isServiceAvailable],
+  );
+
+  const updateSetting = useCallback(
+    async (setting: InstanceSetting) => {
+      if (!state.isServiceAvailable) {
+        throw new Error("Service is not available");
+      }
+      await instanceServiceClient.updateInstanceSetting({ setting });
+      setState((prev) => ({
+        ...prev,
+        settings: [...prev.settings.filter((s) => s.name !== setting.name), setting],
+      }));
+    },
+    [state.isServiceAvailable],
+  );
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   const value = useMemo(

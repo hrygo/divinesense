@@ -68,7 +68,7 @@ export function MobileToolbarSheet({
           {onUploadFile && (
             <Button
               variant="ghost"
-              className="flex flex-col gap-2 h-auto py-4 rounded-xl hover:bg-accent"
+              className="flex flex-col gap-2 h-auto py-4 rounded-lg hover:bg-accent"
               onClick={() => handleAction(onUploadFile)}
             >
               <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
@@ -82,7 +82,7 @@ export function MobileToolbarSheet({
           {onLinkMemo && (
             <Button
               variant="ghost"
-              className="flex flex-col gap-2 h-auto py-4 rounded-xl hover:bg-accent"
+              className="flex flex-col gap-2 h-auto py-4 rounded-lg hover:bg-accent"
               onClick={() => handleAction(onLinkMemo)}
             >
               <div className="w-10 h-10 mx-auto rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -96,7 +96,7 @@ export function MobileToolbarSheet({
           {onAddLocation && (
             <Button
               variant="ghost"
-              className="flex flex-col gap-2 h-auto py-4 rounded-xl hover:bg-accent"
+              className="flex flex-col gap-2 h-auto py-4 rounded-lg hover:bg-accent"
               onClick={() => handleAction(onAddLocation)}
             >
               <div className="w-10 h-10 mx-auto rounded-full bg-green-500/10 flex items-center justify-center">
@@ -109,7 +109,7 @@ export function MobileToolbarSheet({
 
         {/* Cancel Button */}
         <div className="px-4 pb-6">
-          <Button variant="outline" className="w-full rounded-xl" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="w-full rounded-lg" onClick={() => onOpenChange(false)}>
             {t("cancel")}
           </Button>
         </div>

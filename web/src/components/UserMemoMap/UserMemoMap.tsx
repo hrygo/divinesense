@@ -25,7 +25,7 @@ interface ClusterGroup {
 
 const createClusterCustomIcon = (cluster: ClusterGroup) => {
   return new DivIcon({
-    html: `<span class="flex items-center justify-center w-full h-full bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-md border-2 border-background">${cluster.getChildCount()}</span>`,
+    html: `<span class="flex items-center justify-center w-full h-full bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-sm border-2 border-background">${cluster.getChildCount()}</span>`,
     className: "custom-marker-cluster",
     iconSize: L.point(32, 32, true),
   });
@@ -66,7 +66,7 @@ const UserMemoMap = ({ creator, className }: Props) => {
 
   if (isLoading) {
     return (
-      <div className="w-full h-[380px] flex items-center justify-center rounded-xl border border-border bg-muted/30">
+      <div className="w-full h-[380px] flex items-center justify-center rounded-lg border border-border bg-muted/30">
         <Spinner className="w-8 h-8" />
       </div>
     );
@@ -75,10 +75,10 @@ const UserMemoMap = ({ creator, className }: Props) => {
   const defaultCenter = { lat: 48.8566, lng: 2.3522 };
 
   return (
-    <div className={cn("relative z-0 w-full h-[380px] rounded-xl overflow-hidden border border-border shadow-sm", className)}>
+    <div className={cn("relative z-0 w-full h-[380px] rounded-lg overflow-hidden border border-border shadow-sm", className)}>
       {memosWithLocation.length === 0 && (
         <div className="absolute inset-0 z-[1000] flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-background/70 px-4 py-2 shadow-sm backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background/70 px-4 py-2 shadow-sm backdrop-blur-sm">
             <MapPinIcon className="h-5 w-5 text-muted-foreground opacity-60" />
             <p className="text-xs font-medium text-muted-foreground">No location data found</p>
           </div>

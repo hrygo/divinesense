@@ -1,22 +1,19 @@
 /**
- * MemoList - Single-column Timeline List Container
- *
- * Replaces PagedMemoList + MasonryView with a simpler
- * single-column timeline layout.
+ * MemoList - Modern Grid Layout with MemoBlockV2
  *
  * Features:
- * - Infinite scroll (reuses existing logic)
+ * - Responsive 2-column grid (desktop) / 1-column (mobile)
+ * - MemoBlockV2 with Fluid Card design
+ * - Infinite scroll with intersection observer
  * - Filter integration
- * - Loading states
- * - Empty states
+ * - Loading and empty states
+ * - Staggered reveal animations
  */
 
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import Empty from "@/components/Empty";
-import { MemoBlock } from "@/components/Memo";
-import { MemoTimelineNode } from "@/components/Memo/MemoTimelineNode";
-import MemoFilters from "@/components/MemoFilters";
+import { MemoBlockV2 } from "@/components/Memo/MemoBlockV2";
 import Skeleton from "@/components/Skeleton";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
@@ -31,10 +28,6 @@ export interface MemoListProps {
   pageSize?: number;
   showCreator?: boolean;
   onEdit?: (memo: Memo) => void;
-  onDelete?: (memo: Memo) => void;
-  onArchive?: (name: string, archived: boolean) => void;
-  onPin?: (name: string, pinned: boolean) => void;
-  onCopy?: (content: string) => void;
   className?: string;
 }
 
@@ -102,10 +95,6 @@ export const MemoList = memo(function MemoList({
   pageSize = DEFAULT_LIST_MEMOS_PAGE_SIZE,
   showCreator,
   onEdit,
-  onDelete,
-  onArchive,
-  onPin,
-  onCopy,
   className,
 }: MemoListProps) {
   const { t } = useTranslation();
@@ -119,7 +108,7 @@ export const MemoList = memo(function MemoList({
   });
 
   // Flatten pages into a single array of memos
-  const memos = useMemo(() => data?.pages.flatMap((page) => page.memos) || [], [data]);
+  const memos = useMemo(() => data?.pages.flatMap((page) => page.memos) || [], [data?.pages]);
 
   // Auto-fetch hook: fetches more content when page isn't scrollable
   useAutoFetchWhenNotScrollable({
@@ -144,7 +133,7 @@ export const MemoList = memo(function MemoList({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Handle memo actions
+  // Handle memo actions - MemoBlock 内部处理大部分操作，只有 Edit 需要外部处理
   const handleEdit = useCallback(
     (memo: Memo) => {
       onEdit?.(memo);
@@ -152,90 +141,57 @@ export const MemoList = memo(function MemoList({
     [onEdit],
   );
 
-  const handleDelete = useCallback(
-    (memo: Memo) => {
-      onDelete?.(memo);
-    },
-    [onDelete],
-  );
-
-  const handleArchive = useCallback(
-    (name: string, archived: boolean) => {
-      onArchive?.(name, archived);
-    },
-    [onArchive],
-  );
-
-  const handlePin = useCallback(
-    (name: string, pinned: boolean) => {
-      onPin?.(name, pinned);
-    },
-    [onPin],
-  );
-
-  const handleCopy = useCallback(
-    (content: string) => {
-      onCopy?.(content);
-    },
-    [onCopy],
-  );
+  // Animation delay for staggered reveal
+  const getAnimationDelay = (index: number): number => {
+    return index < 5 ? index * 50 : 50 + (index - 5) * 30;
+  };
 
   return (
     <div className={cn("flex flex-col w-full", className)}>
       {/* Show skeleton loader during initial load */}
       {isLoading ? (
-        <Skeleton showCreator={showCreator} count={4} />
+        <div className="w-full">
+          <Skeleton showCreator={showCreator} count={4} />
+        </div>
       ) : (
         <>
-          {/* Filter Bar */}
-          <div className="mb-4">
-            <MemoFilters />
-          </div>
-
-          {/* Memo List - Single Column Timeline */}
-          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
+          {/* Memo Grid - Single column layout */}
+          <div className="flex flex-col gap-4 w-full">
             {memos.map((memo, index) => (
-              <div key={memo.name} className="flex items-start gap-2">
-                {/* Timeline Node - Inspired by Chat's design */}
-                <div className="flex flex-col items-center pt-2 shrink-0">
-                  <MemoTimelineNode memo={memo} isLatest={index === 0} size="sm" />
-                  {/* Timeline connector line */}
-                  {index < memos.length - 1 && <div className="w-px h-6 bg-border/40 mt-0.5" />}
-                </div>
-
-                {/* Memo Block */}
-                <div className="flex-1 min-w-0">
-                  <MemoBlock
-                    memo={memo}
-                    isLatest={index === 0}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onArchive={handleArchive}
-                    onPin={handlePin}
-                    onCopy={handleCopy}
-                  />
-                </div>
+              <div
+                key={memo.name}
+                className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+                style={{
+                  animationDelay: `${getAnimationDelay(index)}ms`,
+                  animationFillMode: "both",
+                }}
+              >
+                <MemoBlockV2 memo={memo} onEdit={handleEdit} />
               </div>
             ))}
-
-            {/* Loading indicator for pagination */}
-            {isFetchingNextPage && <Skeleton showCreator={showCreator} count={2} />}
-
-            {/* Empty state */}
-            {!isFetchingNextPage && memos.length === 0 && (
-              <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center">
-                <Empty />
-                <p className="mt-2 text-muted-foreground">{t("message.no-data")}</p>
-              </div>
-            )}
-
-            {/* End of list indicator */}
-            {!isFetchingNextPage && !hasNextPage && memos.length > 0 && (
-              <div className="w-full text-center py-8 text-muted-foreground text-sm">
-                {t("memo.end_of_list") || "You've reached the end"}
-              </div>
-            )}
           </div>
+
+          {/* Loading indicator for pagination */}
+          {isFetchingNextPage && (
+            <div className="flex flex-col gap-4 mt-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={`skeleton-${i}`} className="h-40 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isFetchingNextPage && memos.length === 0 && (
+            <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center">
+              <Empty />
+              <p className="mt-2 text-muted-foreground">{t("message.no-data")}</p>
+            </div>
+          )}
+
+          {/* End of list indicator */}
+          {!isFetchingNextPage && !hasNextPage && memos.length > 0 && (
+            <div className="w-full text-center py-8 text-muted-foreground text-sm">{t("memo.end_of_list") || "You've reached the end"}</div>
+          )}
         </>
       )}
     </div>

@@ -133,7 +133,7 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
       {/* Main focus mode container */}
       <div
         className={cn(
-          "fixed z-50 w-auto max-w-5xl mx-auto shadow-2xl border-border bg-background rounded-lg overflow-hidden",
+          "fixed z-50 w-auto max-w-5xl mx-auto shadow-lg border-border bg-background rounded-lg overflow-hidden",
           "transition-all duration-300 ease-in-out",
           "top-2 left-2 right-2 bottom-2 sm:top-4 sm:left-4 sm:right-4 sm:bottom-4",
           "md:top-8 md:left-8 md:right-8 md:bottom-8",

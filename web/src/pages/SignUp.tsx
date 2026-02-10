@@ -7,6 +7,7 @@ import { setAccessToken } from "@/auth-state";
 import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import AuthFooter from "@/components/AuthFooter";
 import { AuthSkeleton } from "@/components/AuthSkeleton";
+import { ServiceUnavailable } from "@/components/ServiceUnavailable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authServiceClient, userServiceClient } from "@/connect";
@@ -56,11 +57,16 @@ const SignUp = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { generalSetting: instanceGeneralSetting, profile, isLoading: instanceLoading } = useInstance();
+  const { generalSetting: instanceGeneralSetting, profile, isLoading: instanceLoading, isServiceAvailable } = useInstance();
 
   // Show loading state while instance config is loading
   if (instanceLoading) {
     return <AuthSkeleton />;
+  }
+
+  // Show service unavailable message if backend is not reachable
+  if (!isServiceAvailable) {
+    return <ServiceUnavailable showDetails fullscreen={false} />;
   }
 
   const handleUsernameInputChanged = (e: React.ChangeEvent<HTMLInputElement>) => {

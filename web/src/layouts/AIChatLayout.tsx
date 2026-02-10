@@ -22,11 +22,11 @@ import { PARROT_THEMES } from "@/types/parrot";
  * - 改进侧边栏和主内容的视觉层次
  * - 移动端 Header 支持三种模式视觉反馈（普通/极客/进化）
  *
- * === SPACING DEVIATION NOTES ===
- * This layout intentionally deviates from the standard spacing specification:
- * - NO top padding (pt-6) on main content - full-screen chat experience
- * - Sidebar padding: pt-2 (8px) instead of py-6 - more compact
- * - This is by design for immersive chat interface
+ * === APPLICATION LAYOUT NOTES ===
+ * This is an app-style layout with its own spacing management:
+ * - Sidebar width: w-80 (320px)
+ * - Sidebar padding: managed by AIChatSidebar internally (pt-4 for new button)
+ * - Main content: NO top padding - full-screen app experience
  *
  * @see docs/research/layout-spacing-unification.md
  */
@@ -172,7 +172,7 @@ const AIChatLayoutContent = () => {
       <div
         className={cn(
           // Fixed positioning
-          "fixed top-0 left-16 shrink-0 h-svh border-r backdrop-blur-sm w-72 overflow-hidden pt-2 transition-colors",
+          "fixed top-0 left-16 shrink-0 h-svh border-r backdrop-blur-sm w-80 overflow-hidden transition-colors",
           // Visibility: hide on mobile or in immersive mode, always keep DOM for layout stability
           !lg || immersiveMode ? "hidden" : "",
           // Mode-specific styles (applied based on current mode)
@@ -188,7 +188,7 @@ const AIChatLayoutContent = () => {
         className={cn(
           "flex-1 min-h-0 overflow-hidden transition-all duration-300",
           modeStyles.contentBg,
-          lg && !immersiveMode ? "pl-72" : "",
+          lg && !immersiveMode ? "pl-80" : "",
         )}
       >
         <Outlet />

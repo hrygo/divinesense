@@ -269,7 +269,7 @@ export function ChatInput({
         {/* Input Box */}
         <div
           className={cn(
-            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border shadow-sm transition-colors",
+            "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border shadow-sm transition-colors",
             modeStyles.inputBg,
             modeStyles.inputBorder,
             modeStyles.inputFocus,
@@ -296,7 +296,7 @@ export function ChatInput({
           <Button
             size="icon"
             className={cn(
-              "shrink-0 h-11 min-w-[44px] rounded-xl transition-all",
+              "shrink-0 h-11 min-w-[44px] rounded-lg transition-all",
               "hover:scale-105 active:scale-95",
               isTyping
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"

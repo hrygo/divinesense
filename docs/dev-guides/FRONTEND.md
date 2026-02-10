@@ -164,9 +164,40 @@ RootLayout (全局导航 + 认证)
 | `AIChatLayout.tsx` | AI 聊天界面 | 固定 `AIChatSidebar` | 始终固定 |
 | `ScheduleLayout.tsx` | 日程/日历 | 固定 `ScheduleCalendar` | 始终固定 |
 
-### 功能布局模板
+### 侧边栏宽度规范（统一标准）
 
-对于需要专用侧边栏的新功能页面：
+> **更新时间**: 2026-02-10 | **规范版本**: v1.0
+
+**所有 Sidebar 组件必须使用 `w-80` (320px) 作为标准宽度。**
+
+| 组件类型 | 宽度类 | 像素值 | 主内容左边距 |
+|:---------|:-------|:-------|:-------------|
+| **Desktop Sidebar** | `w-80` | 320px | `pl-80` |
+| **Mobile Sheet** | `w-80 max-w-full` | 320px | - |
+| **Navigation Drawer** | `w-80 max-w-full` | 320px | - |
+| **MemoDetail Sidebar** | `sm:w-80` | 320px | - |
+
+**适用范围**（所有已实现组件）：
+- `MemoLayout` Desktop Sidebar (`w-80` + `pl-80`)
+- `MemoLayout` Mobile Sheet (`w-80 max-w-full`)
+- `AIChatLayout` Desktop Sidebar (`w-80` + `pl-80`)
+- `AIChatLayout` Mobile Sheet (`w-80 max-w-full`)
+- `ScheduleLayout` Desktop Sidebar (`w-80` + `pl-80`)
+- `NavigationDrawer` (`w-80 max-w-full`)
+- `MemoDetailSidebarDrawer` (`sm:w-80`)
+- `MemoExplorerDrawer` (`w-80 max-w-full`)
+
+**内部间距规范**（与 AIChatSidebar 对齐）：
+```tsx
+// Sidebar 内容容器
+<MemoExplorer className="h-full px-4 pt-4" />
+<AIChatSidebar className="h-full" />
+  ├── 新建按钮区域: px-4 pt-4 pb-2
+  ├── Tabs 区域: px-4 pb-2
+  └── 面板内容: overflow-hidden
+```
+
+**新建功能布局模板**：
 
 ```tsx
 import { Outlet } from "react-router-dom";
@@ -184,15 +215,15 @@ const FeatureLayout = () => {
         <NavigationDrawer />
       </div>
 
-      {/* 桌面侧边栏 */}
+      {/* 桌面侧边栏 - 统一宽度 w-80 */}
       {lg && (
-        <div className="fixed top-0 left-16 shrink-0 h-svh border-r border-border bg-background w-72 overflow-auto">
-          <FeatureSidebar />
+        <div className="fixed top-0 left-16 shrink-0 h-svh border-r border-border bg-background w-80 overflow-hidden">
+          <FeatureSidebar className="h-full px-4 pt-4" />
         </div>
       )}
 
-      {/* 主内容 */}
-      <div className={cn("flex-1 min-h-0 overflow-x-hidden", lg ? "pl-72" : "")}>
+      {/* 主内容 - 统一左边距 pl-80 */}
+      <div className={cn("flex-1 min-h-0 overflow-x-hidden", lg ? "pl-80" : "")}>
         <Outlet />
       </div>
     </section>
@@ -200,13 +231,12 @@ const FeatureLayout = () => {
 };
 ```
 
-**侧边栏宽度选项**：
-| 类 | 像素 | 用途 |
+**废弃宽度选项**（以下宽度不再使用）：
+| 类 | 像素 | 状态 |
 |:-------|:-----|:-----|
-| `w-56` | 224px | 可折叠侧边栏（MemoLayout md） |
-| `w-64` | 256px | 标准侧边栏 |
-| `w-72` | 288px | 默认功能侧边栏（AIChat 等） |
-| `w-80` | 320px | 宽侧边栏（Schedule） |
+| `w-56` | 224px | ❌ 已废弃 |
+| `w-64` | 256px | ❌ 已废弃 |
+| `w-72` | 288px | ❌ 已废弃 |
 
 **响应式断点**：
 | 断点 | 宽度 | 行为 |

@@ -200,7 +200,7 @@ export const PCEditor = memo(function PCEditor({ placeholder, className, onConfi
                 rows={1}
                 className={cn(
                   "w-full min-h-[48px] max-h-[200px] px-4 py-3 pr-14",
-                  "bg-muted/50 border border-border/50 rounded-xl",
+                  "bg-muted/50 border border-border/50 rounded-lg",
                   "text-sm resize-none outline-none",
                   "focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
                   "transition-all",
@@ -263,7 +263,7 @@ export const PCEditor = memo(function PCEditor({ placeholder, className, onConfi
                 autoFocus
                 className={cn(
                   "w-full min-h-[300px] max-h-[60vh] px-4 py-3",
-                  "bg-muted/50 border border-border/50 rounded-xl",
+                  "bg-muted/50 border border-border/50 rounded-lg",
                   "text-sm resize-none outline-none",
                   "focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
                   "transition-all",

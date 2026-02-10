@@ -51,7 +51,7 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
   const processingText = (t("schedule.ai.processing") as string) || "Processing...";
 
   return (
-    <div className={cn("flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl border border-border/50", className)}>
+    <div className={cn("flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-lg border border-border/50", className)}>
       <Loader2 className="h-5 w-5 animate-spin text-primary" />
       <div className="flex-1">
         {lastToolUse ? (

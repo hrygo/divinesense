@@ -48,7 +48,7 @@ const MemoCardSkeleton = ({ showCreator = false, index = 0 }: { showCreator?: bo
  * For generic page/route loading, use Spinner instead.
  */
 const Skeleton = ({ showCreator = false, count = 4 }: Props) => (
-  <div className="w-full max-w-2xl mx-auto">
+  <div className="w-full">
     {Array.from({ length: count }).map((_, index) => (
       <MemoCardSkeleton key={index} showCreator={showCreator} index={index} />
     ))}

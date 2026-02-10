@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import AuthFooter from "@/components/AuthFooter";
 import { AuthSkeleton } from "@/components/AuthSkeleton";
 import PasswordSignInForm from "@/components/PasswordSignInForm";
+import { ServiceUnavailable } from "@/components/ServiceUnavailable";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { identityProviderServiceClient } from "@/connect";
@@ -23,7 +24,7 @@ const SignIn = () => {
   const { currentUser, isInitialized: authInitialized } = useAuth();
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
   const [idpLoading, setIdpLoading] = useState(true);
-  const { generalSetting: instanceGeneralSetting, isLoading: instanceLoading } = useInstance();
+  const { generalSetting: instanceGeneralSetting, isLoading: instanceLoading, isServiceAvailable } = useInstance();
 
   // Redirect to root page if already signed in (only after auth is initialized)
   useEffect(() => {
@@ -51,6 +52,11 @@ const SignIn = () => {
   // Show loading state while instance config is loading
   if (instanceLoading) {
     return <AuthSkeleton />;
+  }
+
+  // Show service unavailable message if backend is not reachable
+  if (!isServiceAvailable) {
+    return <ServiceUnavailable showDetails fullscreen={false} />;
   }
 
   const handleSignInWithIdentityProvider = async (identityProvider: IdentityProvider) => {
