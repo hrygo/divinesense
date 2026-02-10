@@ -15,6 +15,13 @@ on:
 permissions:
   statuses: write
 
+env:
+  GO_VERSION: "1.25"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     name: Detect Changes
@@ -57,10 +64,47 @@ jobs:
               - 'go.mod'
               - 'go.sum'
 
-  backend-tests:
-    name: Backend Tests
+  # 后端静态检查 (lint)
+  backend-static-checks:
+    name: Backend Static Checks
     runs-on: ubuntu-latest
     needs: changes
+    if: needs.changes.outputs.backend == 'true' && needs.changes.outputs.docs != 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy -go=${{ env.GO_VERSION }} 2>&1 | grep -v "^go: downloading" || true
+          git diff --exit-code go.mod go.sum
+
+      - name: Cache golangci-lint
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ runner.os }}-golangci-lint-${{ hashFiles('.golangci.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-golangci-lint-
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.8.0
+          args: --config=.golangci.yaml --timeout=3m --build-tags=noui
+          skip-pkg-cache: true
+          skip-build-cache: true
+
+  # 后端单元测试
+  backend-tests:
+    name: Backend Tests (${{ matrix.test-group }})
+    runs-on: ubuntu-latest
+    needs: [changes, backend-static-checks]
     if: needs.changes.outputs.backend == 'true' && needs.changes.outputs.docs != 'true'
     strategy:
       fail-fast: false
@@ -75,9 +119,19 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: 1.25
+          go-version: ${{ env.GO_VERSION }}
           cache: true
           cache-dependency-path: go.sum
+
+      - name: Cache test results
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-test-${{ matrix.test-group }}-${{ hashFiles('**/go.sum', '**/go.mod', '**/*_test.go') }}
+          restore-keys: |
+            ${{ runner.os }}-go-test-${{ matrix.test-group }}-
 
       - name: Run tests - ${{ matrix.test-group }}
         run: |
@@ -100,8 +154,18 @@ jobs:
         env:
           DRIVER: sqlite
 
+      - name: Upload coverage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          flags: ${{ matrix.test-group }}
+          fail_ci_if_error: false
+          verbose: false
+
+  # 前端测试
   frontend-tests:
-    name: Frontend Tests
+    name: Frontend (${{ matrix.check }})
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.docs != 'true'
@@ -137,6 +201,7 @@ jobs:
           esac
         working-directory: web
 
+  # Proto 检查
   proto-check:
     name: Proto Generation Check
     runs-on: ubuntu-latest
@@ -147,7 +212,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: 1.25
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Install protoc
@@ -166,28 +231,7 @@ jobs:
           fi
           echo "Proto generation is up to date"
 
-  go-mod-check:
-    name: Go Mod Tidy Check
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.go_mod == 'true'
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: 1.25
-          cache: true
-
-      - name: Verify go.mod is tidy
-        run: |
-          go mod tidy -go=1.25 2>&1 | grep -v "^go: downloading" || true
-          if ! git diff --exit-code go.mod go.sum; then
-            echo "go.mod/go.sum is not tidy. Run 'go mod tidy'"
-            exit 1
-          fi
-          echo "go.mod is tidy"
-
+  # 文档专用状态
   docs-status:
     name: Docs Status
     runs-on: ubuntu-latest
