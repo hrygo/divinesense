@@ -1,6 +1,6 @@
 # 前端开发指南
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.94.0 (智能路由 + 多模式支持)
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.97.0 (智能路由 + 多模式支持)
 
 ## 技术栈
 - **框架**：React 18 + Vite 7
@@ -134,7 +134,7 @@ ls web/dist/assets/ | grep "^_"  # 应该为空
 
 ## 布局架构
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/layouts/*.tsx` | **最后检查**: v0.94.0
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/layouts/*.tsx` | **最后检查**: v0.97.0
 
 ### 布局层级
 
@@ -142,10 +142,10 @@ ls web/dist/assets/ | grep "^_"  # 应该为空
 RootLayout (全局导航 + 认证)
     │
     ├── MemoLayout (可折叠侧边栏：MemoExplorer)
-    │   └── /home, /explore, /archived, /u/:username, /review
+    │   └── /home, /explore, /archived, /u/:username
     │
     ├── GeneralLayout (无侧边栏，全宽内容)
-    │   └── /knowledge-graph, /inbox, /attachments, /setting, /memos/:uid
+    │   └── /knowledge-graph, /inbox, /attachments, /setting, /memos/:uid, /review, /403, /404
     │
     ├── AIChatLayout (固定侧边栏：AIChatSidebar，多模式主题)
     │   └── /chat
@@ -219,7 +219,7 @@ const FeatureLayout = () => {
 
 ## 页面组件
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.94.0
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.97.0
 
 ### 可用页面
 
@@ -235,13 +235,13 @@ const FeatureLayout = () => {
 | `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱可视化 |
 | `/inbox` | `Inboxes.tsx` | GeneralLayout | 收件箱 |
 | `/attachments` | `Attachments.tsx` | GeneralLayout | 附件管理 |
-| `/review` | `Review.tsx` | MemoLayout | 每日回顾 |
+| `/review` | `Review.tsx` | GeneralLayout | 每日回顾 |
 | `/setting` | `Setting.tsx` | GeneralLayout | 用户设置 |
 | `/u/:username` | `UserProfile.tsx` | MemoLayout | 公开用户资料 |
 | `/memos/:uid` | `MemoDetail.tsx` | GeneralLayout | 笔记详情页 |
 | `/m/:uid` | `MemoDetailRedirect` | GeneralLayout | 笔记详情重定向 |
-| `/403` | `PermissionDenied.tsx` | RootLayout | 权限拒绝 |
-| `/404` | `NotFound.tsx` | RootLayout | 404 页面 |
+| `/403` | `PermissionDenied.tsx` | GeneralLayout | 权限拒绝 |
+| `/404` | `NotFound.tsx` | GeneralLayout | 404 页面 |
 
 ### 添加新页面
 

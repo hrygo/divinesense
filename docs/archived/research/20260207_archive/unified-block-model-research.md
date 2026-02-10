@@ -243,8 +243,8 @@ FROM (
 
 - [Issue #69: Warp Block UI](https://github.com/hrygo/divinesense/issues/69)
 - [Issue #57: 会话嵌套模型](https://github.com/hrygo/divinesense/issues/57)
-- [CC Runner 异步架构](../specs/cc_runner_async_arch.md)（已归档）
-- [前端开发指南](../dev-guides/FRONTEND.md)
+- [CC Runner 异步架构](../specs/20260207_archive/cc_runner_async_arch.md)（已归档）
+- [前端开发指南](../../dev-guides/FRONTEND.md)
 
 ---
 

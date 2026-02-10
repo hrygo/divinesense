@@ -196,10 +196,15 @@ sudo systemctl restart divinesense
 
 安装完成后，需要在云控制台开放对应端口：
 
-| 服务 | 默认端口 | 说明 |
-|:-----|:---------|:-----|
-| DivineSense | 5230 | Web 访问端口 |
-| PostgreSQL | 25432 | 数据库端口（建议仅内网） |
+| 服务 | 开发环境端口 | 生产环境端口 | 说明 |
+|:-----|:------------|:-------------|:-----|
+| DivineSense (后端) | 28081 | 5230 | HTTP/gRPC API 端口 |
+| DivineSense (前端) | 25173 | - | Vite 开发服务器（生产环境嵌入二进制） |
+| PostgreSQL | 25432 | 25432 | 数据库端口（建议仅内网） |
+
+**注意**：
+- 开发环境：后端使用 28081，前端开发服务器使用 25173
+- 生产环境：Web 服务默认使用 5230（可通过 `DIVINESENSE_PORT` 修改）
 
 **阿里云操作路径**：
 1. ECS 实例 → 安全组 → 配置规则
@@ -234,7 +239,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:5230;
+        proxy_pass http://localhost:5230;  # 生产环境默认端口，可通过 DIVINESENSE_PORT 修改
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -317,7 +322,9 @@ sudo journalctl -u divinesense -n 50 --no-pager
 sudo cat /etc/divinesense/config
 
 # 检查端口占用
-sudo ss -tlnp | grep 5230
+sudo ss -tlnp | grep 5230  # 生产环境
+# 或
+sudo ss -tlnp | grep 28081  # 开发环境
 ```
 
 ### 数据库连接失败

@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已验证 (2026-02-07) | **最后检查**: v0.93.1 (路由优化 + 模型策略修正)
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.97.0 (智能路由 + 性能优化)
 
 ## 项目概述
 
@@ -213,13 +213,17 @@ plugin/chat_apps/
 
 ### API 服务
 
-> **保鲜状态**: ✅ 已验证 (2026-02-03) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v0.91.0
+> **保鲜状态**: ✅ 已验证 (2026-02-10) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v0.97.0
 
 | 服务 | Proto 文件 | 描述 |
 |:-----|:-----------|:-----|
 | **ActivityService** | `activity_service.proto` | 用户活动记录 |
 | **AttachmentService** | `attachment_service.proto` | 附件管理 |
 | **AuthService** | `auth_service.proto` | 认证授权 |
+<<<<<<< HEAD
+=======
+| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索（含 Unified Block Model） |
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 | **ChatAppService** | `chat_app_service.proto` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
 | **IdpService** | `idp_service.proto` | 身份提供商集成 |
 | **InstanceService** | `instance_service.proto` | 实例配置 |
@@ -254,7 +258,8 @@ DivineSense 使用 **智能 pre-commit + pre-push** hooks，根据修改内容�
 | 后端 | `*.go`, `go.mod`, `go.sum` |
 | 前端 | `web/**`, `server/router/frontend/**` |
 | 文档 | `docs/**`, `*.md` (不匹配上述) |
-| Proto | `proto/**` |
+
+**注意**：Proto 文件变更会被归类为"后端"（因为修改后需要重新生成 Go 代码）。
 
 ### 安装与使用
 
@@ -316,7 +321,7 @@ git push --no-verify
 
 ### UniversalParrot 架构
 
-> **实现状态**: ✅ 完成 (v0.93.0) | **位置**: `ai/agent/universal/`
+> **实现状态**: ✅ 完成 (v0.97.0) | **位置**: `ai/agent/universal/`
 
 **概述**：UniversalParrot 是配置驱动的通用代理系统，三只核心鹦鹉（MEMO、SCHEDULE、AMAZING）通过 YAML 配置文件定义，无需编写代码。
 
@@ -402,6 +407,15 @@ ChatRouter 实现**四层**意图分类系统：
 - 输出格式：JSON Schema `{intent, confidence}`
 - 延迟：~400ms
 
+<<<<<<< HEAD
+=======
+**智能路由反馈（v0.97.0 新增）**：
+- 收集用户对路由结果的反馈
+- 存储表：`router_feedback`（predicted_intent, actual_intent, confidence）
+- 用于优化关键词权重和 LLM 分类器
+- 支持 A/B 测试不同路由策略
+
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 **EvolutionMode 最高优先级路由**：
 - 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
 - **工作目录**: DivineSense 源代码根目录
@@ -482,7 +496,7 @@ LLMCallStats.CacheReadTokens
 
 ### 流式工具调用
 
-> **实现状态**: ✅ 完成 (v0.93.0)
+> **实现状态**: ✅ 完成 (v0.97.0)
 
 **概述**：所有执行策略支持流式事件回调，前端可实时显示工具执行进度。
 
@@ -617,6 +631,22 @@ Claude Code CLI Process
 | Cache   | `cache/`   | 带 TTL 的 LRU 缓存（查询结果）  |
 | Metrics | `metrics/` | 代理 & 工具性能追踪（A/B 测试） |
 | Vector  | `vector/`  | 多提供商 Embedding 服务         |
+<<<<<<< HEAD
+=======
+| Filter  | `filter/`  | 敏感信息过滤器（<1ms 响应）     |
+| Preload | `preload/` | 预测性缓存预加载                |
+| Tracing | `tracing/` | 分布式链路追踪                  |
+
+### 新增 AI 模块 (v0.97.0)
+
+| 模块 | 功能 | 性能指标 |
+|:-----|:-----|:---------|
+| **ai/filter/** | 敏感信息过滤（手机号、身份证、邮箱、银行卡、IP） | <1ms 响应时间 |
+| **ai/preload/** | 基于用户行为模式的智能预加载 | 命中率 >60% |
+| **ai/stats/** | 告警持久化、指标存储 | 实时聚合 |
+| **ai/tracing/** | 分布式追踪（OpenTelemetry 兼容） | <5% 开销 |
+| **ai/agent/registry/** | 动态工具发现、执行策略注册 | 热加载 |
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 
 ### 会话服务 (`ai/session/`)
 
@@ -683,23 +713,49 @@ BAAI/bge-reranker-v2-m3 用于结果精炼（可通过策略配置）。
 | `/archived`    | `Archived.tsx`    | MainLayout     | 已归档笔记               |
 | `/chat`        | `AIChat.tsx`      | AIChatLayout   | AI 聊天界面 + 自动路由   |
 | `/schedule`    | `Schedule.tsx`    | ScheduleLayout | 日历视图（FullCalendar） |
+<<<<<<< HEAD
 | `/review`      | `Review.tsx`      | MainLayout     | 每日回顾                 |
 | `/setting`     | `Setting.tsx`     | MainLayout     | 用户设置                 |
 | `/u/:username` | `UserProfile.tsx` | MainLayout     | 公开用户资料             |
+=======
+| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱可视化          |
+| `/inbox`       | `Inboxes.tsx`     | GeneralLayout  | 收件箱                   |
+| `/attachments` | `Attachments.tsx` | GeneralLayout  | 附件管理                 |
+| `/review`      | `Review.tsx`      | GeneralLayout  | 每日回顾                 |
+| `/setting`     | `Setting.tsx`     | GeneralLayout  | 用户设置                 |
+| `/u/:username` | `UserProfile.tsx` | MemoLayout     | 公开用户资料             |
+| `/memos/:uid`  | `MemoDetail.tsx`  | GeneralLayout  | 笔记详情页               |
+| `/m/:uid`      | `MemoDetailRedirect` | GeneralLayout | 笔记详情重定向           |
+| `/403`         | `PermissionDenied.tsx` | GeneralLayout | 权限拒绝                 |
+| `/404`         | `NotFound.tsx`    | GeneralLayout  | 404 页面                 |
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 
 ### 布局层级
 
 ```
 RootLayout（全局导航 + 认证）
     │
+<<<<<<< HEAD
     ├── MainLayout（可折叠侧边栏：MemoExplorer）
     │   └── /, /explore, /archived, /u/:username
+=======
+    ├── MemoLayout（可折叠侧边栏：MemoExplorer）
+    │   └── /home, /explore, /archived, /u/:username
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
     │
     ├── AIChatLayout（固定侧边栏：AIChatSidebar）
     │   └── /chat
     │
+<<<<<<< HEAD
     └── ScheduleLayout（固定侧边栏：ScheduleCalendar）
         └── /schedule
+=======
+    ├── ScheduleLayout（固定侧边栏：ScheduleCalendar）
+    │   └── /schedule
+    │
+    └── GeneralLayout（无侧边栏，全宽内容）
+        └── /knowledge-graph, /inbox, /attachments, /setting, /memos/:uid, /review, /403, /404
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 ```
 
 ### 静态资源优化 (Static Asset Optimization)
@@ -749,7 +805,7 @@ RootLayout（全局导航 + 认证）
 
 ## Unified Block Model (统一块模型)
 
-> **实现状态**: ✅ 完成 (Issue #71) | **版本**: v0.93.0
+> **实现状态**: ✅ 完成 (Issue #71) | **版本**: v0.97.0
 
 **概述**：Unified Block Model 是一种新的 AI 聊天对话持久化方案，替代原有的 ChatItem[] 结构。
 
@@ -862,7 +918,7 @@ pending ──▶ streaming ──▶ completed
 | `AIService` | `AppendEvent` | 追加事件到流 |
 | `AIService` | `AppendUserInput` | 追加用户输入 |
 
-**详细规格**：[Unified Block Model 规格](../specs/unified-block-model.md)
+**详细规格**：[Unified Block Model 规格](../specs/block-design/unified-block-model.md)
 
 **界面设计**：[AI Chat 界面架构](AI_CHAT_INTERFACE.md) - 包含完整的 UI 布局、组件层级和交互设计
 
@@ -872,6 +928,7 @@ pending ──▶ streaming ──▶ completed
 
 ### 核心表
 
+<<<<<<< HEAD
 | 表名                   | 用途                                      |
 | :--------------------- | :---------------------------------------- |
 | `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     |
@@ -880,6 +937,31 @@ pending ──▶ streaming ──▶ completed
 | `episodic_memory`      | 长期用户记忆和学习                        |
 | `user_preferences`     | 用户沟通偏好                              |
 | `agent_metrics`        | A/B 测试指标（prompt 版本、延迟、成功率） |
+=======
+| 表名                   | 用途                                      | 版本    |
+| :--------------------- | :---------------------------------------- | :------ |
+| `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     | v0.97.0 |
+| `ai_conversation`     | AI 对话会话                              | v0.97.0 |
+| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           | v0.97.0 |
+| `conversation_context` | 会话持久化（多渠道支持）                  | v0.97.0 |
+| `episodic_memory`      | 长期用户记忆和学习                        | -       |
+| `user_preferences`     | 用户沟通偏好                              | -       |
+
+### 增强功能表
+
+| 表名                   | 用途                                      | 版本    |
+| :--------------------- | :---------------------------------------- | :------ |
+| `agent_session_stats`  | 会话统计（成本追踪）                       | v0.97.0 |
+| `user_cost_settings`   | 用户成本预算设置                          | v0.97.0 |
+| `agent_security_audit` | 安全审计（高风险操作记录）                 | v0.97.0 |
+
+### 智能路由表（v0.97.0 新增）
+
+| 表名                   | 用途                                      | 功能     |
+| :--------------------- | :---------------------------------------- | :------- |
+| `router_feedback`      | 路由反馈收集                              | 意图分类优化 |
+| `router_weight`        | 动态权重存储                              | 个性化路由 |
+>>>>>>> 41d4d9f (docs: update project documentation to v0.97.0 and fix broken links)
 
 ---
 

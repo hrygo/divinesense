@@ -14,7 +14,9 @@ docs/
 │   ├── ARCHITECTURE.md          # 系统架构
 │   ├── BACKEND_DB.md            # 后端与数据库
 │   ├── FRONTEND.md              # 前端开发
-│   ├── QUICKSTART_AGENT.md      # Agent 快速开始
+│   ├── AI_CHAT_INTERFACE.md     # AI Chat 界面架构
+│   ├── COMMON_TASKS.md          # 常见开发任务
+│   ├── PROJECT_PATHS.md         # 项目路径速查
 │   └── UNEXPOSED_FEATURES.md    # 未暴露功能
 ├── deployment/                  # 部署文档
 │   └── BINARY_DEPLOYMENT.md     # 二进制部署指南
@@ -45,10 +47,9 @@ docs/
 
 | 角色           | 入口文档                                                | 说明             |
 | :------------- | :------------------------------------------------------ | :--------------- |
-| **新开发者**   | [ARCHITECTURE.md](dev-guides/ARCHITECTURE.md)           | 了解系统架构     |
-| **后端开发**   | [BACKEND_DB.md](dev-guides/BACKEND_DB.md)               | 数据库、API、AI  |
-| **前端开发**   | [FRONTEND.md](dev-guides/FRONTEND.md)                   | 布局、组件、样式 |
-| **Agent 开发** | [QUICKSTART_AGENT.md](dev-guides/QUICKSTART_AGENT.md)   | AI 代理开发      |
+| **新开发者**   | [ARCHITECTURE.md](dev-guides/ARCHITECTURE.md)       | 了解系统架构     |
+| **后端开发**   | [BACKEND_DB.md](dev-guides/BACKEND_DB.md)           | 数据库、API、AI  |
+| **前端开发**   | [FRONTEND.md](dev-guides/FRONTEND.md)               | 布局、组件、样式 |
 | **运维部署**   | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
 
 ---
@@ -74,7 +75,7 @@ docs/
 | [`archived/projects/parrot/`](archived/projects/parrot/)                     | 2026-01-29 | Parrot 专题文档          |
 | [`archived/reviews/`](archived/reviews/)                                     | -          | 代码评审、审计报告       |
 | [`archived/refactor-plans/`](archived/refactor-plans/)                       | -          | 重构计划、集成设计       |
-| [`archived/specs/phase-1-completed/`](archived/specs/phase-1-completed/)     | 2025-02-02 | Phase-1 已完成规格       |
+| [`archived/specs/20260207_archive/`](archived/specs/20260207_archive/)     | 2026-02-07 | Phase 1/2/3 已完成规格   |
 
 ---
 

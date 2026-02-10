@@ -414,4 +414,4 @@ MIT
 ---
 
 **最后更新**: 2026-02-03
-**相关文档**: [Chat Apps 用户指南](../../../../docs/user-guides/CHAT_APPS.md) | [开发者指南](../../../../docs/guides/CHAT_APPS.md)
+**相关文档**: [Chat Apps 用户指南](../../../../docs/user-guides/CHAT_APPS.md) | [架构文档](../../../../docs/dev-guides/ARCHITECTURE.md)

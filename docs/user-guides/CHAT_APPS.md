@@ -515,4 +515,4 @@ DivineSense 会根据您的问题自动选择最合适的 AI 代理：
 ---
 
 **最后更新**: 2026-02-03
-**相关文档**: [技术规格](../specs/archived/chat-apps-integration.md) | [系统架构](../dev-guides/ARCHITECTURE.md)
+**相关文档**: [技术规格](../archived/specs/20260207_archive/chat-apps-integration.md) | [系统架构](../dev-guides/ARCHITECTURE.md)

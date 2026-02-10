@@ -1,6 +1,6 @@
 # 分布式链路追踪系统
 
-> **实现状态**: ✅ 完成 (v0.94.0) | **位置**: `ai/tracing/`
+> **实现状态**: ✅ 完成 (v0.97.0) | **位置**: `ai/tracing/`
 
 ## 概述
 
@@ -283,7 +283,7 @@ ctx = metadata.NewOutgoingContext(ctx, md)
       "resource": {
         "attributes": [
           {"key": "service.name", "value": {"stringValue": "divinesense"}},
-          {"key": "service.version", "value": {"stringValue": "v0.94.0"}}
+          {"key": "service.version", "value": {"stringValue": "v0.97.0"}}
         ]
       },
       "scopeSpans": [

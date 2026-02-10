@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.94.0 (智能路由 + 成本管理)
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.97.0 (智能路由 + 成本管理)
 
 ## 数据库支持策略
 
@@ -12,7 +12,7 @@
 - **端口**：25432（开发环境）
 - **版本**：PostgreSQL 16+
 
-### SQLite（开发环境 - 向量搜索支持 v0.94.0）
+### SQLite（开发环境 - 向量搜索支持 v0.97.0）
 
 - **状态**：开发环境
 - **AI 功能**：**部分支持** —— 仅向量搜索（语义检索）
@@ -244,7 +244,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
     关键词         对话上下文          个性化路由          语义理解
 ```
 
-**五层路由系统（v0.94.0）**：
+**五层路由系统（v0.97.0）**：
 - Layer 0: Cache (LRU, 0ms)
 - Layer 1: RuleMatcher (关键词匹配, 0ms)
 - Layer 2: HistoryMatcher (对话历史, ~10ms)
@@ -273,10 +273,10 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 | 表名 | 用途 | 版本 | 关键列 |
 |:-----|:-----|:-----|:-----|
-| `ai_conversation` | AI 对话会话 | v0.93.0 | `id`, `creator_id`, `title` |
-| `ai_block` | **统一块模型**：对话持久化 | v0.93.0 | `conversation_id`, `round_number`, `mode` |
-| `memo_embedding` | 语义搜索的向量嵌入 | v0.93.0 | `memo_id`、`embedding`（vector(1024)） |
-| `conversation_context` | 会话上下文（多渠道） | v0.93.0 | `session_id`、`channel_type`、`context_data`（JSONB） |
+| `ai_conversation` | AI 对话会话 | v0.97.0 | `id`, `creator_id`, `title` |
+| `ai_block` | **统一块模型**：对话持久化 | v0.97.0 | `conversation_id`, `round_number`, `mode` |
+| `memo_embedding` | 语义搜索的向量嵌入 | v0.97.0 | `memo_id`、`embedding`（vector(1024)） |
+| `conversation_context` | 会话上下文（多渠道） | v0.97.0 | `session_id`、`channel_type`、`context_data`（JSONB） |
 | `episodic_memory` | 长期用户记忆 | - | `user_id`、`summary`、`importance` |
 
 ### 增强功能表
@@ -284,11 +284,11 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 | 表名 | 用途 | 版本 | 关键列 |
 |:-----|:-----|:-----|:-----|
 | `user_preferences` | 用户沟通偏好 | - | `user_id`、`preferences`（JSONB） |
-| `agent_session_stats` | 会话统计（成本追踪） | v0.93.0 | `session_id`、`token_usage`、`cost_estimate` |
-| `user_cost_settings` | 用户成本预算设置 | v0.93.0 | `user_id`、`daily_budget` |
-| `agent_security_audit` | 安全审计日志 | v0.93.0 | `user_id`、`risk_level`、`operation` |
+| `agent_session_stats` | 会话统计（成本追踪） | v0.97.0 | `session_id`、`token_usage`、`cost_estimate` |
+| `user_cost_settings` | 用户成本预算设置 | v0.97.0 | `user_id`、`daily_budget` |
+| `agent_security_audit` | 安全审计日志 | v0.97.0 | `user_id`、`risk_level`、`operation` |
 
-### 智能路由表（v0.94.0 新增）
+### 智能路由表（v0.97.0 新增）
 
 | 表名 | 用途 | 关键列 |
 |:-----|:-----|:-----|
@@ -345,11 +345,6 @@ CREATE INDEX idx_ai_block_status ON ai_block(status);
 CREATE INDEX idx_ai_block_cc_session ON ai_block(cc_session_id);
 CREATE INDEX idx_ai_block_mode ON ai_block(mode);
 CREATE INDEX idx_ai_block_created ON ai_block(created_ts DESC);
-
--- HNSW 向量索引用于语义搜索
-CREATE INDEX idx_ai_block_embedding_hnsw
-ON ai_block USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
 ```
 
 ---
@@ -393,7 +388,7 @@ CREATE INDEX idx_conversation_context_channel_type ON conversation_context(chann
 
 ---
 
-### agent_session_stats 结构（v0.93.0）
+### agent_session_stats 结构（v0.97.0）
 
 ```sql
 CREATE TABLE agent_session_stats (
@@ -429,7 +424,7 @@ CREATE TABLE agent_session_stats (
 
 ---
 
-### user_cost_settings 结构（v0.93.0）
+### user_cost_settings 结构（v0.97.0）
 
 ```sql
 CREATE TABLE user_cost_settings (
@@ -445,7 +440,7 @@ CREATE TABLE user_cost_settings (
 
 ---
 
-### router_feedback 结构（v0.94.0 新增）
+### router_feedback 结构（v0.97.0 新增）
 
 ```sql
 CREATE TABLE router_feedback (
@@ -468,7 +463,7 @@ CREATE INDEX idx_router_feedback_created ON router_feedback(created_ts DESC);
 
 ---
 
-### router_weight 结构（v0.94.0 新增）
+### router_weight 结构（v0.97.0 新增）
 
 ```sql
 CREATE TABLE router_weight (

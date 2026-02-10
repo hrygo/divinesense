@@ -61,7 +61,7 @@
 ### 2.1 前置依赖 (Must Complete)
 
 - [x] **Issue #69**: Warp Block UI 实现（已完成前端组件）
-- [x] **CC Runner 异步架构**: 会话统计和流式事件处理 (v1.3) [Ref](../cc_runner_async_arch.md)
+- [x] **CC Runner 异步架构**: 会话统计和流式事件处理 (v1.3) [Ref](../../archived/specs/20260207_archive/cc_runner_async_arch.md)
 
 ### 2.2 并行依赖 (Can Parallel)
 

@@ -46,7 +46,7 @@
 
 - [x] **[unified-block-model](./unified-block-model.md)**: `ai_block` 表已包含 `session_stats` 字段
 - [x] **[unified-block-model_improvement](./unified-block-model_improvement.md)**: 确保时间戳标准 (Milliseconds) 统一 (P0)
-- [x] **[cc-runner-async-arch](../cc_runner_async_arch.md)**: SessionStats 结构已定义
+- [x] **[cc_runner_async_arch](../../archived/specs/20260207_archive/cc_runner_async_arch.md)**: SessionStats 结构已定义
 
 ### 2.2 并行依赖
 

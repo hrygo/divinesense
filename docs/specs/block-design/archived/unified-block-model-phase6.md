@@ -560,7 +560,7 @@ test.describe('Unified Block Model - Block History', () => {
 ### A. 参考资料
 
 - [Phase 1-5 Specs](./)
-- [CC Runner 异步架构](../cc_runner_async_arch.md)
+- [CC Runner 异步架构](../../archived/specs/20260207_archive/cc_runner_async_arch.md)
 
 ### B. 变更记录
 

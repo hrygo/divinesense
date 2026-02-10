@@ -2,7 +2,7 @@
 
 > **创建日期**: 2026-02-06
 > **版本**: v1.0
-> **关联**: [AI Chat Interface Architecture](../../dev-guides/AI_CHAT_INTERFACE.md) | [Unified Block Model](../unified-block-model.md)
+> **关联**: [AI Chat Interface Architecture](../../dev-guides/AI_CHAT_INTERFACE.md) | [Unified Block Model](./unified-block-model.md)
 
 ---
 

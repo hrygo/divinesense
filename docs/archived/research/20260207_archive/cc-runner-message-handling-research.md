@@ -557,5 +557,5 @@ BenchmarkStreamMessageParsing-8   	1000000	      1043 ns/op	     416 B/op	      
 ---
 
 **相关文档**:
-- [CCRunner 异步架构说明书](../specs/cc_runner_async_arch.md)（已归档）
-- [调试经验教训](../DEBUG_LESSONS.md)
+- [CCRunner 异步架构说明书](../specs/20260207_archive/cc_runner_async_arch.md)（已归档）
+- [调试经验教训](../../../research/DEBUG_LESSONS.md)

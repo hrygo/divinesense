@@ -1,6 +1,6 @@
 # Unified Block Model - 用户测试验收清单
 
-> **规格版本**: v0.93.0 | **实施日期**: 2026-02-05 | **关联 Issue**: [#71](https://github.com/hrygo/divinesense/issues/71)
+> **规格版本**: v0.97.0 | **实施日期**: 2026-02-10 | **关联 Issue**: [#71](https://github.com/hrygo/divinesense/issues/71)
 
 > **验收目的**: 验证 Unified Block Model 的 6 个 Phase 是否已完全实现，并可以投入用户测试
 
