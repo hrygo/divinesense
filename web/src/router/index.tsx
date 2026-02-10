@@ -13,7 +13,6 @@ import RootLayout from "@/layouts/RootLayout";
 import ScheduleLayout from "@/layouts/ScheduleLayout";
 import Home from "@/pages/Home";
 
-const AdminSignIn = lazy(() => import("@/pages/AdminSignIn"));
 const Archived = lazy(() => import("@/pages/Archived"));
 const AuthCallback = lazy(() => import("@/pages/AuthCallback"));
 const Explore = lazy(() => import("@/pages/Explore"));
@@ -60,7 +59,6 @@ const router = createBrowserRouter([
         path: Routes.AUTH,
         children: [
           { path: "", element: <LazyRoute component={SignIn} /> },
-          { path: "admin", element: <LazyRoute component={AdminSignIn} /> },
           { path: "signup", element: <LazyRoute component={SignUp} /> },
           { path: "callback", element: <LazyRoute component={AuthCallback} /> },
         ],
