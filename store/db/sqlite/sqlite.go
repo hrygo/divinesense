@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -300,4 +301,35 @@ func (d *DB) DeleteBranch(ctx context.Context, blockID int64, cascade bool) erro
 
 func (d *DB) ArchiveInactiveBranches(ctx context.Context, conversationID int32, targetPath string, archivedAt int64) error {
 	return errors.New("AIBlock branching not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+// ============================================================================
+// AIConversation Methods (Legacy API - maintained for compatibility)
+// ============================================================================
+// AIConversation is the legacy conversation model, superseded by AIBlock.
+// These methods return errors for SQLite to prevent silent failures.
+// ============================================================================
+
+func (d *DB) CreateAIConversation(ctx context.Context, create *store.AIConversation) (*store.AIConversation, error) {
+	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListAIConversations(ctx context.Context, find *store.FindAIConversation) ([]*store.AIConversation, error) {
+	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) GetAIConversation(ctx context.Context, id int32) (*store.AIConversation, error) {
+	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) UpdateAIConversation(ctx context.Context, update *store.UpdateAIConversation) (*store.AIConversation, error) {
+	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) DeleteAIConversation(ctx context.Context, delete *store.DeleteAIConversation) error {
+	return errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
+}
+
+func (d *DB) ListAIConversationsBasic(ctx context.Context, find *store.FindAIConversation) ([]*store.AIConversation, error) {
+	return nil, errors.New("AIConversation not supported in SQLite (use PostgreSQL for AI features)")
 }
