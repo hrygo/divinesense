@@ -1,0 +1,212 @@
+name: Smart CI
+
+# 智能路径感知 CI - 根据变更路径决定运行哪些测试
+# 目标: 减少不必要的测试执行，提升 CI 效率
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  statuses: write
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+      proto: ${{ steps.filter.outputs.proto }}
+      go_mod: ${{ steps.filter.outputs.go_mod }}
+      has_changes: ${{ steps.filter.outputs.any }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: main
+          filters: |
+            backend:
+              - 'go.mod'
+              - 'go.sum'
+              - '**.go'
+            frontend:
+              - 'web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            docs:
+              - 'docs/**'
+              - '**.md'
+              - 'README*'
+              - 'CONTRIBUTING*'
+              - 'LICENSE*'
+            proto:
+              - 'proto/**/*.proto'
+            go_mod:
+              - 'go.mod'
+              - 'go.sum'
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' && needs.changes.outputs.docs != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        test-group:
+          - store
+          - server
+          - plugin
+          - other
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run tests - ${{ matrix.test-group }}
+        run: |
+          case "${{ matrix.test-group }}" in
+            store)
+              go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./store/...
+              ;;
+            server)
+              go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./server/...
+              ;;
+            plugin)
+              go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
+                $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$")
+              ;;
+            other)
+              go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
+                ./cmd/... ./internal/...
+              ;;
+          esac
+        env:
+          DRIVER: sqlite
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.docs != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - lint
+          - build
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 9
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: "web/pnpm-lock.yaml"
+
+      - run: pnpm install --silent --frozen-lockfile
+        working-directory: web
+
+      - name: Frontend ${{ matrix.check }}
+        run: |
+          case "${{ matrix.check }}" in
+            lint)
+              pnpm lint
+              ;;
+            build)
+              pnpm build
+              ;;
+          esac
+        working-directory: web
+
+  proto-check:
+    name: Proto Generation Check
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.proto == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
+          cache: true
+
+      - name: Install protoc
+        run: |
+          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v28.4/protoc-28.4-linux-x86_64.zip
+          unzip protoc-28.4-linux-x86_64.zip -d /usr/local
+          protoc --version
+
+      - name: Generate and check
+        run: |
+          make generate
+          if ! git diff --quiet; then
+            echo "Generated files differ from committed files"
+            git diff
+            exit 1
+          fi
+          echo "Proto generation is up to date"
+
+  go-mod-check:
+    name: Go Mod Tidy Check
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.go_mod == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
+          cache: true
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy -go=1.25 2>&1 | grep -v "^go: downloading" || true
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "go.mod/go.sum is not tidy. Run 'go mod tidy'"
+            exit 1
+          fi
+          echo "go.mod is tidy"
+
+  docs-status:
+    name: Docs Status
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' && needs.changes.outputs.backend != 'true' && needs.changes.outputs.frontend != 'true'
+    steps:
+      - name: Set docs-only status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request?.head.sha || context.sha;
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha,
+              state: 'success',
+              context: 'ci/smart-ci',
+              description: 'Documentation only - tests skipped',
+              target_url: `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`
+            });

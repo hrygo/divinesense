@@ -8,6 +8,9 @@ on:
       - main
     paths:
       - "web/**"
+    paths-ignore:
+      - "web/**/*.md"
+      - "web/**/README*"
 
 jobs:
   static-checks:
@@ -30,6 +33,7 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
+    # 与 static-checks 并行执行
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4.1.0
