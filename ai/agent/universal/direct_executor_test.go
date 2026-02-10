@@ -117,7 +117,7 @@ func TestDirectExecutor_Execute_SingleToolCall(t *testing.T) {
 					},
 				}, &ai.LLMCallStats{PromptTokens: 20, CompletionTokens: 10}, nil
 			}
-			// Second call: final answer
+			// Second call: final answer (llmCalls >= 2)
 			return &ai.ChatResponse{
 				Content: "Tool execution completed",
 			}, &ai.LLMCallStats{PromptTokens: 30, CompletionTokens: 15}, nil

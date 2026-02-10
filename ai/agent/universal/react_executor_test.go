@@ -359,29 +359,20 @@ func TestReActExecutor_Execute_Timeout(t *testing.T) {
 }
 
 // TestReActExecutor_StatsAccumulation tests statistics accumulation.
-
-// TestReActExecutor_StatsAccumulation tests statistics accumulation.
 func TestReActExecutor_StatsAccumulation(t *testing.T) {
 	exec := NewReActExecutor(10)
 
 	llm := &mockLLM{
-		chatStreamFunc: func(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error) {
-			contentChan := make(chan string, 1)
-			statsChan := make(chan *ai.LLMCallStats, 1)
-			errChan := make(chan error, 1)
-
-			contentChan <- "Final answer"
-			statsChan <- &ai.LLMCallStats{
-				PromptTokens:     100,
-				CompletionTokens: 50,
-				TotalTokens:      150,
-				CacheReadTokens:  20,
-			}
-			close(contentChan)
-			close(statsChan)
-			close(errChan)
-
-			return contentChan, statsChan, errChan
+		chatWithToolsFunc: func(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error) {
+			return &ai.ChatResponse{
+					Content:   "Final answer",
+					ToolCalls: []ai.ToolCall{},
+				}, &ai.LLMCallStats{
+					PromptTokens:     100,
+					CompletionTokens: 50,
+					TotalTokens:      150,
+					CacheReadTokens:  20,
+				}, nil
 		},
 	}
 
@@ -412,18 +403,11 @@ func TestReActExecutor_FinalAnswer(t *testing.T) {
 	exec := NewReActExecutor(10)
 
 	llm := &mockLLM{
-		chatStreamFunc: func(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error) {
-			contentChan := make(chan string, 1)
-			statsChan := make(chan *ai.LLMCallStats, 1)
-			errChan := make(chan error, 1)
-
-			contentChan <- "This is my final answer without any tool calls."
-			statsChan <- &ai.LLMCallStats{PromptTokens: 10, CompletionTokens: 15}
-			close(contentChan)
-			close(statsChan)
-			close(errChan)
-
-			return contentChan, statsChan, errChan
+		chatWithToolsFunc: func(ctx context.Context, messages []ai.Message, tools []ai.ToolDescriptor) (*ai.ChatResponse, *ai.LLMCallStats, error) {
+			return &ai.ChatResponse{
+				Content:   "This is my final answer without any tool calls.",
+				ToolCalls: []ai.ToolCall{},
+			}, &ai.LLMCallStats{PromptTokens: 10, CompletionTokens: 15}, nil
 		},
 	}
 

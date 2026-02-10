@@ -120,9 +120,8 @@ func (e *DirectExecutor) Execute(
 		return "", stats, fmt.Errorf("ChatWithTools failed: %w", err)
 	}
 
-	// Accumulate stats
+	// Accumulate stats (AccumulateLLM increments LLMCalls)
 	stats.AccumulateLLM(llmStats)
-	stats.LLMCalls++ // Count the initial LLM call
 
 	slog.Info("direct: initial LLM response",
 		"tool_calls", len(response.ToolCalls),
@@ -188,8 +187,8 @@ func (e *DirectExecutor) Execute(
 					return "", stats, fmt.Errorf("follow-up ChatWithTools failed: %w", err)
 				}
 
+				// Accumulate stats (AccumulateLLM increments LLMCalls)
 				stats.AccumulateLLM(llmStats)
-				stats.LLMCalls++
 
 				slog.Info("direct: got LLM response",
 					"tool_calls", len(response.ToolCalls),
