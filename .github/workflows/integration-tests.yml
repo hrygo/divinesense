@@ -1,22 +1,11 @@
 name: Integration Tests
 
-# 阶段二：集成测试分离
-# - 仅运行带 //go:build integration 标签的测试
+# L2 集成测试 - 仅手动触发
+# - 运行带 //go:build integration 标签的测试
 # - 矩阵测试：SQLite + PostgreSQL
-# - 触发条件：相关代码变更、手动触发、或 PR 标签
+# - 使用方法: GitHub Actions 页面 → Integration Tests → Run workflow
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "plugin/scheduler/**"
-      - "ai/router/**"
-      - "server/queryengine/**"
-      - "ai/agent/**"
-      - "store/**"
   workflow_dispatch:
     inputs:
       database:
@@ -33,6 +22,11 @@ on:
         required: false
         default: ""
         type: string
+      reason:
+        description: "Reason for running integration tests"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,53 +36,9 @@ env:
   GO_VERSION: "1.25"
 
 jobs:
-  detect-integration-tests:
-    name: Detect Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      has_scheduler_tests: ${{ steps.detect.outputs.scheduler_tests }}
-      has_router_tests: ${{ steps.detect.outputs.router_tests }}
-      has_query_tests: ${{ steps.detect.outputs.query_tests }}
-      has_agent_tests: ${{ steps.detect.outputs.agent_tests }}
-      run_all: ${{ steps.detect.outputs.run_all }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Detect integration test files
-        id: detect
-        run: |
-          # 检查是否有集成测试变更
-          scheduler_tests=$(git diff --name-only origin/main...HEAD | grep -c "plugin/scheduler/integration_test.go" || echo "0")
-          router_tests=$(git diff --name-only origin/main...HEAD | grep -c "ai/router/integration_test.go" || echo "0")
-          query_tests=$(git diff --name-only origin/main...HEAD | grep -c "server/queryengine/.*integration_test.go" || echo "0")
-          agent_tests=$(git diff --name-only origin/main...HEAD | grep -c "ai/agent/.*integration_test.go" || echo "0")
-
-          echo "scheduler_tests=$scheduler_tests" >> $GITHUB_OUTPUT
-          echo "router_tests=$router_tests" >> $GITHUB_OUTPUT
-          echo "query_tests=$query_tests" >> $GITHUB_OUTPUT
-          echo "agent_tests=$agent_tests" >> $GITHUB_OUTPUT
-
-          # 如果手动触发或 PR 有标签，运行所有
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
-             [[ "${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}" ]]; then
-            echo "run_all=true" >> $GITHUB_OUTPUT
-          else
-            echo "run_all=false" >> $GITHUB_OUTPUT
-          fi
-
   integration-tests:
     name: Integration Tests (${{ matrix.database }})
     runs-on: ubuntu-latest
-    needs: detect-integration-tests
-    if: |
-      needs.detect-integration-tests.outputs.run_all == 'true' ||
-      needs.detect-integration-tests.outputs.has_scheduler_tests == '1' ||
-      needs.detect-integration-tests.outputs.has_router_tests == '1' ||
-      needs.detect-integration-tests.outputs.has_query_tests == '1' ||
-      needs.detect-integration-tests.outputs.has_agent_tests == '1'
     strategy:
       fail-fast: false
       matrix:
@@ -105,7 +55,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Start PostgreSQL
-        if: matrix.database == 'postgres'
+        if: matrix.database == 'postgres' || inputs.database == 'all' || inputs.database == 'postgres'
         run: |
           docker run -d \
             --name divinesense-postgres-test \
@@ -115,7 +65,6 @@ jobs:
             -p 25432:5432 \
             pgvector/pgvector:pg16 \
             -c max_connections=200
-          # 等待 PostgreSQL 启动
           timeout 60 bash -c 'until docker exec divinesense-postgres-test pg_isready -U divinesense; do sleep 1; done'
 
       - name: Run integration tests - ${{ matrix.database }}
@@ -124,51 +73,17 @@ jobs:
           DIVINESENSE_DSN: ${{ matrix.database == 'postgres' && 'postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable' || ':memory:' }}
         run: |
           # 构建测试包列表
-          test_packages=""
-
-          if [[ "${{ needs.detect-integration-tests.outputs.run_all }}" == "true" ]]; then
-            # 运行所有集成测试
-            test_packages=$(go list -tags=integration ./... | grep -E "(integration_test|plugin/scheduler|ai/router|server/queryengine|ai/agent)" | tr '\n' ' ')
-          else
-            # 仅运行变更相关的集成测试
-            if [[ "${{ needs.detect-integration-tests.outputs.has_scheduler_tests }}" == "1" ]]; then
-              test_packages="$test_packages ./plugin/scheduler"
-            fi
-            if [[ "${{ needs.detect-integration-tests.outputs.has_router_tests }}" == "1" ]]; then
-              test_packages="$test_packages ./ai/router"
-            fi
-            if [[ "${{ needs.detect-integration-tests.outputs.has_query_tests }}" == "1" ]]; then
-              test_packages="$test_packages ./server/queryengine"
-            fi
-            if [[ "${{ needs.detect-integration-tests.outputs.has_agent_tests }}" == "1" ]]; then
-              test_packages="$test_packages ./ai/agent"
-            fi
-          fi
-
-          # 如果指定了特定包
           if [[ -n "${{ inputs.test_package }}" ]]; then
             test_packages="${{ inputs.test_package }}"
+          else
+            test_packages=$(go list -tags=integration ./... | grep -E "(integration_test|plugin/scheduler|ai/router|server/queryengine|ai/agent)" | tr '\n' ' ')
           fi
 
           echo "Running integration tests for: $test_packages"
           go test -v -tags=integration,noui -timeout=10m $test_packages
 
       - name: Cleanup PostgreSQL
-        if: always() && matrix.database == 'postgres'
+        if: always() && (matrix.database == 'postgres' || inputs.database == 'all' || inputs.database == 'postgres')
         run: |
           docker stop divinesense-postgres-test || true
           docker rm divinesense-postgres-test || true
-
-  summary:
-    name: Integration Tests Summary
-    runs-on: ubuntu-latest
-    needs: [integration-tests]
-    if: always()
-    steps:
-      - name: Check results
-        run: |
-          if [[ "${{ needs.integration-tests.result }}" == "failure" ]]; then
-            echo "::error::Integration tests failed"
-            exit 1
-          fi
-          echo "::notice::Integration tests passed"
