@@ -436,6 +436,8 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
             onTogglePin={handleTogglePin}
             onCopy={handleCopy}
             onShare={handleShare}
+            onToggleArchive={handleToggleArchive}
+            onDelete={() => setDeleteDialogOpen(true)}
             isArchived={isArchived}
             quickActions={quickActions}
             quickMenuOpen={quickMenuOpen}
@@ -567,6 +569,8 @@ interface MemoCompactFooterProps {
   onTogglePin: () => void;
   onCopy: () => void;
   onShare: () => void;
+  onToggleArchive: () => void;
+  onDelete: () => void;
   isArchived: boolean;
   quickActions: Array<{
     key: QuickAction;
@@ -590,6 +594,8 @@ function MemoCompactFooter({
   onTogglePin,
   onCopy,
   onShare,
+  onToggleArchive,
+  onDelete,
   isArchived,
   quickActions,
   quickMenuOpen,
@@ -635,8 +641,23 @@ function MemoCompactFooter({
           <ActionButton icon={Share2} label="Share" onClick={onShare} />
         )}
 
-        {/* More menu dropdown */}
-        <div className="relative">
+        {/* Desktop (sm+): Show Archive button directly */}
+        <div className="hidden sm:block">
+          <ActionButton icon={isArchived ? ArchiveRestore : Archive} label={isArchived ? "Restore" : "Archive"} onClick={onToggleArchive} />
+        </div>
+
+        {/* Desktop (sm+): Show Delete button directly */}
+        <div className="hidden sm:block">
+          <ActionButton
+            icon={Trash2}
+            label="Delete"
+            onClick={onDelete}
+            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          />
+        </div>
+
+        {/* Mobile only: More menu dropdown */}
+        <div className="sm:hidden relative">
           <ActionButton
             icon={Ellipsis}
             label="More actions"
@@ -648,14 +669,14 @@ function MemoCompactFooter({
         </div>
       </div>
 
-      {/* Dropdown menu - rendered via Portal to avoid overflow clipping */}
+      {/* Mobile only: Dropdown menu - rendered via Portal to avoid overflow clipping */}
       {quickMenuOpen &&
         dropdownPosition &&
         createPortal(
           <div
             ref={dropdownRef}
             className={cn(
-              "fixed z-[100]",
+              "fixed z-[100] sm:hidden",
               "w-48 py-1.5 bg-white dark:bg-zinc-900",
               "rounded-lg shadow-lg shadow-zinc-200/50 dark:shadow-black/50",
               "border border-zinc-200 dark:border-zinc-800",
