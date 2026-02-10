@@ -715,6 +715,7 @@
     "tags": "Tags",
     "title": "Title",
     "today": "Today",
+    "toggle": "Toggle",
     "tree-mode": "Tree mode",
     "type": "Type",
     "unpin": "Unpin",
@@ -723,7 +724,17 @@
     "upload": "Upload",
     "user": "User",
     "username": "Username",
-    "yourself": "Yourself"
+    "yourself": "Yourself",
+    "unknown": "Unknown",
+    "just-now": "Just now",
+    "minutes-ago": "{{count}}m ago",
+    "hours-ago": "{{count}}h ago"
+  },
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "night": "Good night"
   },
   "days": {
     "fri": "Fri",
@@ -746,9 +757,30 @@
     "content-too-short": "Content too short for analysis",
     "exit-focus-mode": "Exit Focus Mode",
     "focus-mode": "Focus Mode",
+    "focus-mode-placeholder": "Enter focus mode, start deep writing...",
     "no-changes-detected": "No changes detected",
     "save": "Save",
-    "slash-commands": "Type `/` for commands"
+    "slash-commands": "Type `/` for commands",
+    "quick-placeholder": "Quick note...",
+    "send": "Send",
+    "newline": "Newline",
+    "more-tools": "More Tools",
+    "expand-to-standard": "Expand to Standard Mode",
+    "upload-file": "Upload File",
+    "link-memo": "Link Memo",
+    "add-location": "Add Location",
+    "expand-toolbar": "Expand Toolbar",
+    "add-attachment": "Add Attachment",
+    "upload-image": "Upload Image",
+    "visibility": "Visibility",
+    "private": "Private",
+    "related-memo": "Related Memo",
+    "send-note": "Send Note",
+    "enter-hint-send": "Enter",
+    "enter-hint-newline": "Shift + Enter",
+    "enter-to-send": "to send",
+    "for-newline": "for newline",
+    "input-content-after-send": "Input content after send"
   },
   "filters": {
     "has-code": "hasCode",
@@ -763,6 +795,15 @@
   },
   "memo": {
     "click-to-show-nsfw-content": "Click to show NSFW content",
+    "end_of_list": "You've reached the end",
+    "hero": {
+      "new_memo": "New Memo",
+      "search": "Search",
+      "subtitle": "Capture your thoughts and ideas",
+      "total_memos": "Total",
+      "tags": "Tags",
+      "streak": "Streak"
+    },
     "code": "Code",
     "comment": {
       "self": "Comments",

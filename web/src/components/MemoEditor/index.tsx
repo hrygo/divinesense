@@ -162,3 +162,16 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
 };
 
 export default MemoEditor;
+
+export { FocusModeEditor } from "./FocusModeEditor";
+export type { EditorMode } from "./hooks/useEditorMode";
+export { useEditorMode } from "./hooks/useEditorMode";
+// Re-export new components
+export { MemoEditorContainer } from "./MemoEditorContainer";
+export {
+  MobileToolbarSheet,
+  MobileToolbarTrigger,
+} from "./MobileToolbarSheet";
+export { QuickInput } from "./QuickInput";
+export { StandardEditor } from "./StandardEditor";
+export { StandardToolbar } from "./StandardToolbar";

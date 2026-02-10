@@ -89,6 +89,10 @@ export const NODE_COLORS = {
   answer: "bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-600 dark:text-amber-400",
   /** Error node - red theme */
   error: "bg-red-100 dark:bg-red-900/30 border-red-500 text-red-600 dark:text-red-400",
+  /** Edit node - green theme (for Memo timeline) */
+  edit: "bg-green-100 border-green-500 dark:bg-green-900/40 dark:border-green-400 text-green-600 dark:text-green-400",
+  /** Archive node - zinc/gray theme (for Memo timeline) */
+  archive: "bg-zinc-100 border-zinc-500 dark:bg-zinc-800 dark:border-zinc-400 text-zinc-600 dark:text-zinc-400",
 } as const;
 
 // ============================================================

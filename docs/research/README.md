@@ -12,3 +12,4 @@
 | 语音交互调研       | 🚧 In Progress   | [voice-interaction-research.md](./voice-interaction-research.md)                 |
 | AI 聊天消息排队    | ✅ Issue Created | [pending-queue-research.md](./pending-queue-research.md)                         |
 | Pre-push 性能优化  | ✅ Issue Created | [pre-push-optimization-research.md](./pre-push-optimization-research.md)         |
+| 笔记编辑器底部重构 | ✅ Issue Created | [memo-editor-bottom-redesign.md](./memo-editor-bottom-redesign.md)                 |

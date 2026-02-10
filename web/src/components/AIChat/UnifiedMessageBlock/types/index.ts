@@ -2,8 +2,11 @@
  * UnifiedMessageBlock Type Definitions
  */
 
-/** Timeline node types */
-export type TimelineNodeType = "user" | "thinking" | "tool" | "answer" | "error";
+/** Timeline node types - imported from shared Timeline types */
+export type { TimelineNodeType } from "@/components/Timeline/types";
+
+// Re-import for use in other types in this file
+import type { TimelineNodeType } from "@/components/Timeline/types";
 
 /** Props for TimelineNode component */
 export interface TimelineNodeProps {

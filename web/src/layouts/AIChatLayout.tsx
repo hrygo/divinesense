@@ -162,7 +162,7 @@ const AIChatLayoutContent = () => {
               <AIChatSidebar className="h-full" onClose={() => setMobileSidebarOpen(false)} />
             </SheetContent>
           </Sheet>
-          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(true)} aria-label="Open sidebar" className="h-9 w-9">
+          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(true)} aria-label="Open sidebar" className="h-11 w-11">
             <MenuIcon className={cn("w-5 h-5", isSpecialMode && modeStyles.iconColor)} />
           </Button>
         </div>

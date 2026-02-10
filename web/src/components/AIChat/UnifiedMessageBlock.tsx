@@ -438,11 +438,11 @@ const BLOCK_THEMES: Record<
   }
 > = {
   default: {
-    border: "border-zinc-200 dark:border-zinc-700",
-    headerBg: "bg-zinc-50 dark:bg-zinc-900/50",
-    footerBg: "bg-zinc-200/80 dark:bg-zinc-800/60",
-    badgeBg: "bg-zinc-100 dark:bg-zinc-800",
-    badgeText: "text-zinc-600 dark:text-zinc-400",
+    border: "border-border",
+    headerBg: "bg-muted/50",
+    footerBg: "bg-muted/80",
+    badgeBg: "bg-muted",
+    badgeText: "text-muted-foreground",
     ringColor: "ring-primary/20",
   },
   // NORMAL - 普通 AI 模式（MEMO/SCHEDULE/AMAZING 都用这个）

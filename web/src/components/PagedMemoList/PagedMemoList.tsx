@@ -1,20 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { matchPath } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { userServiceClient } from "@/connect";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { userKeys } from "@/hooks/useUserQueries";
-import { Routes } from "@/router";
 import { State } from "@/types/proto/api/v1/common_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import Empty from "../Empty";
 import type { MemoRenderContext } from "../MasonryView";
 import MasonryView from "../MasonryView";
-import MemoEditor from "../MemoEditor";
 import MemoFilters from "../MemoFilters";
 import Skeleton from "../Skeleton";
 
@@ -83,10 +80,6 @@ const PagedMemoList = (props: Props) => {
   const t = useTranslate();
   const queryClient = useQueryClient();
 
-  // Show memo editor only on the root route or home route
-  const showMemoEditor =
-    Boolean(matchPath(Routes.ROOT, window.location.pathname)) || Boolean(matchPath(Routes.HOME, window.location.pathname));
-
   // Use React Query's infinite query for pagination
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteMemos({
     state: props.state || State.NORMAL,
@@ -151,19 +144,7 @@ const PagedMemoList = (props: Props) => {
         <Skeleton showCreator={props.showCreator} count={4} />
       ) : (
         <>
-          <MasonryView
-            memoList={sortedMemoList}
-            renderer={props.renderer}
-            prefixElement={
-              <>
-                {showMemoEditor ? (
-                  <MemoEditor className="mb-2" cacheKey="home-memo-editor" placeholder={t("editor.any-thoughts")} />
-                ) : undefined}
-                <MemoFilters />
-              </>
-            }
-            listMode={true}
-          />
+          <MasonryView memoList={sortedMemoList} renderer={props.renderer} prefixElement={<MemoFilters />} listMode={true} />
 
           {/* Loading indicator for pagination */}
           {isFetchingNextPage && <Skeleton showCreator={props.showCreator} count={2} />}

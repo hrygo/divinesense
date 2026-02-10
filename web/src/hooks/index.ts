@@ -5,6 +5,7 @@ export * from "./useFilteredMemoStats";
 export * from "./useLoading";
 export * from "./useMediaQuery";
 export * from "./useMemoFilters";
+export * from "./useMemoQueries";
 export * from "./useMemoSorting";
 export * from "./useNavigateTo";
 export * from "./useScheduleQueries";

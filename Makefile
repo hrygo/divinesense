@@ -564,7 +564,7 @@ ci-frontend: ## 前端 CI 检查 (lint + build)
 	@echo "🎨 Frontend:"
 	@cd web && \
 		echo "  → pnpm lint..." && \
-		pnpm lint --silent && \
+		pnpm lint >/dev/null 2>&1 && \
 		echo "  → pnpm build..." && \
 		pnpm build >/dev/null 2>&1 && \
 		cd .. && \

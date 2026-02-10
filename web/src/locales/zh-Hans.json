@@ -710,6 +710,7 @@
     "tags": "标签",
     "title": "标题",
     "today": "今天",
+    "toggle": "切换",
     "tree-mode": "树模式",
     "type": "类型",
     "unpin": "取消置顶",
@@ -718,7 +719,17 @@
     "upload": "上传",
     "user": "用户",
     "username": "用户名",
-    "yourself": "您自己"
+    "yourself": "您自己",
+    "unknown": "未知",
+    "just-now": "刚刚",
+    "minutes-ago": "{{count}}分钟前",
+    "hours-ago": "{{count}}小时前"
+  },
+  "greeting": {
+    "morning": "早上好",
+    "afternoon": "下午好",
+    "evening": "晚上好",
+    "night": "晚安"
   },
   "days": {
     "fri": "五",
@@ -743,7 +754,28 @@
     "focus-mode": "聚焦模式",
     "no-changes-detected": "未检测到更改",
     "save": "保存",
-    "slash-commands": "按下 `/` 输入命令"
+    "slash-commands": "按下 `/` 输入命令",
+    "quick-placeholder": "快速记录笔记...",
+    "send": "发送",
+    "newline": "换行",
+    "more-tools": "更多工具",
+    "expand-to-standard": "展开为标准模式",
+    "upload-file": "上传文件",
+    "link-memo": "关联笔记",
+    "add-location": "添加位置",
+    "expand-toolbar": "展开工具栏",
+    "add-attachment": "添加附件",
+    "upload-image": "上传图片",
+    "visibility": "可见性",
+    "private": "私有",
+    "related-memo": "关联笔记",
+    "send-note": "发送笔记",
+    "focus-mode-placeholder": "进入聚焦模式，开始深度写作...",
+    "enter-hint-send": "Enter",
+    "enter-hint-newline": "Shift + Enter",
+    "enter-to-send": "发送",
+    "for-newline": "换行",
+    "input-content-after-send": "输入内容后发送"
   },
   "filters": {
     "has-code": "有代码",
@@ -758,6 +790,15 @@
   },
   "memo": {
     "click-to-show-nsfw-content": "点击显示 NSFW 内容",
+    "end_of_list": "已到达末尾",
+    "hero": {
+      "new_memo": "新建笔记",
+      "search": "搜索",
+      "subtitle": "捕捉你的想法和灵感",
+      "total_memos": "总计",
+      "tags": "标签",
+      "streak": "连续"
+    },
     "code": "代码",
     "comment": {
       "self": "评论",

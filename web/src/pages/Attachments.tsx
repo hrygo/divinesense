@@ -1,6 +1,6 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import dayjs from "dayjs";
-import { ExternalLinkIcon, PaperclipIcon, SearchIcon, Trash } from "lucide-react";
+import { PaperclipIcon, SearchIcon, Trash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -22,6 +22,9 @@ import { useTranslate } from "@/utils/i18n";
 
 const PAGE_SIZE = 50;
 
+/**
+ * Group attachments by date (YYYY-MM format)
+ */
 const groupAttachmentsByDate = (attachments: Attachment[]): Map<string, Attachment[]> => {
   const grouped = new Map<string, Attachment[]>();
   const sorted = [...attachments].sort((a, b) => {
@@ -41,35 +44,55 @@ const groupAttachmentsByDate = (attachments: Attachment[]): Map<string, Attachme
   return grouped;
 };
 
+/**
+ * Filter attachments by search query
+ */
 const filterAttachments = (attachments: Attachment[], searchQuery: string): Attachment[] => {
   if (!searchQuery.trim()) return attachments;
   const query = searchQuery.toLowerCase();
   return attachments.filter((attachment) => attachment.filename.toLowerCase().includes(query));
 };
 
+/**
+ * Attachment Item Component
+ * Uses unified card styling matching MemoBlock
+ */
 interface AttachmentItemProps {
   attachment: Attachment;
 }
 
 const AttachmentItem = ({ attachment }: AttachmentItemProps) => (
   <div className="w-24 sm:w-32 h-auto flex flex-col justify-start items-start">
-    <div className="w-24 h-24 flex justify-center items-center sm:w-32 sm:h-32 border border-border overflow-clip rounded-xl cursor-pointer hover:shadow hover:opacity-80">
+    <div className="w-24 h-24 flex justify-center items-center sm:w-32 sm:h-32 border border-border overflow-hidden rounded-lg cursor-pointer hover:shadow-md hover:opacity-80 transition-all">
       <AttachmentIcon attachment={attachment} strokeWidth={0.5} />
     </div>
     <div className="w-full max-w-full flex flex-row justify-between items-center mt-1 px-1">
-      <p className="text-xs shrink text-muted-foreground truncate">{attachment.filename}</p>
+      <p className="text-xs shrink text-muted-foreground truncate" title={attachment.filename}>
+        {attachment.filename}
+      </p>
       {attachment.memo && (
         <Link to={`/${attachment.memo}`} className="text-primary hover:opacity-80 transition-opacity shrink-0 ml-1" aria-label="View memo">
-          <ExternalLinkIcon className="w-3 h-3" />
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
         </Link>
       )}
     </div>
   </div>
 );
 
+/**
+ * Attachments Page
+ * Unified design matching MemoBlock and Chat styles
+ */
 const Attachments = () => {
   const t = useTranslate();
-  const sm = useMediaQuery("sm"); // Use 'sm' for mobile breakpoint
+  const sm = useMediaQuery("sm");
   const loadingState = useLoading();
   const deleteUnusedAttachmentsDialog = useDialog();
   const { mutateAsync: deleteAttachment } = useDeleteAttachment();
@@ -81,22 +104,19 @@ const Attachments = () => {
 
   // Memoized computed values
   const filteredAttachments = useMemo(() => filterAttachments(attachments, searchQuery), [attachments, searchQuery]);
-
   const usedAttachments = useMemo(() => filteredAttachments.filter((attachment) => attachment.memo), [filteredAttachments]);
-
   const unusedAttachments = useMemo(() => filteredAttachments.filter((attachment) => !attachment.memo), [filteredAttachments]);
-
   const groupedAttachments = useMemo(() => groupAttachmentsByDate(usedAttachments), [usedAttachments]);
 
   // Fetch initial attachments
   useEffect(() => {
     const fetchInitialAttachments = async () => {
       try {
-        const { attachments: fetchedAttachments, nextPageToken } = await attachmentServiceClient.listAttachments({
+        const { attachments: fetchedAttachments, nextPageToken: token } = await attachmentServiceClient.listAttachments({
           pageSize: PAGE_SIZE,
         });
         setAttachments(fetchedAttachments);
-        setNextPageToken(nextPageToken ?? "");
+        setNextPageToken(token ?? "");
       } catch (error) {
         handleError(error, toast.error, {
           context: "Failed to fetch attachments",
@@ -137,11 +157,11 @@ const Attachments = () => {
   const handleRefetch = useCallback(async () => {
     try {
       loadingState.setLoading();
-      const { attachments: fetchedAttachments, nextPageToken } = await attachmentServiceClient.listAttachments({
+      const { attachments: fetchedAttachments, nextPageToken: token } = await attachmentServiceClient.listAttachments({
         pageSize: PAGE_SIZE,
       });
       setAttachments(fetchedAttachments);
-      setNextPageToken(nextPageToken ?? "");
+      setNextPageToken(token ?? "");
       loadingState.setFinish();
     } catch (error) {
       handleError(error, toast.error, {
@@ -186,120 +206,86 @@ const Attachments = () => {
 
   return (
     <section className="@container w-full min-h-full flex flex-col justify-start items-center">
-      <div className="w-full">
-        <div className="w-full border border-border flex flex-col justify-start items-start px-4 py-3 rounded-xl bg-background text-foreground">
-          {/* Header - Hidden on Mobile */}
+      <div className="w-full max-w-6xl">
+        {/* Header Card - Unified style */}
+        <div className="border border-border rounded-lg bg-card shadow-sm overflow-hidden">
+          {/* Desktop Header */}
           {sm && (
-            <div className="relative w-full flex flex-row justify-between items-center">
-              <p className="py-1 flex flex-row justify-start items-center select-none opacity-80">
-                <PaperclipIcon className="w-6 h-auto mr-1 opacity-80" />
-                <span className="text-lg">{t("common.attachments")}</span>
-              </p>
-              <div>
-                <div className="relative max-w-32">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input className="pl-9" placeholder={t("common.search")} value={searchQuery} onChange={handleSearchChange} />
-                </div>
+            <div className="relative w-full flex flex-row justify-between items-center px-4 py-3 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <PaperclipIcon className="w-5 h-5 text-muted-foreground" />
+                <h1 className="text-lg font-medium">{t("common.attachments")}</h1>
+              </div>
+              <div className="relative max-w-48">
+                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input className="pl-9 h-9" placeholder={t("common.search")} value={searchQuery} onChange={handleSearchChange} />
               </div>
             </div>
           )}
 
-          {/* Mobile Search - Show input only on mobile since header is hidden? 
-              Actually, if we hide the header row, we lose the search bar.
-              User said "extra line".
-              The SVG header is purely visual. It doesn't have a search bar built-in (unlike Schedule).
-              So if I hide this row, I lose Search.
-              Schedule implemented a toggle. Attachments/Inbox don't have that.
-              
-              Maybe I should just hide the TITLE part, but keep the search?
-              But the user said "double header".
-              
-              If I hide the internal header, where does Search go?
-              The user might just want the visual separation line removed.
-              The extra line was border-b in Inbox.
-              In Attachments, it didn't have border-b.
-              But it looked like a header.
-              
-              If I hide the whole row, Search is gone.
-              Let's TRY hiding just the TITLE text on mobile.
-              Or assume the user accepts losing search on mobile for now? Or search should be elsewhere?
-              Schedule has a search button in the SVG header area.
-              Attachments does not.
-              
-              Let's stick to hiding the internal header (which contains the title 'Attachments').
-              If search is needed, we might need a better mobile solution later (like Schedule).
-              But redundancy is the main issue reported.
-              
-              Wait, if I hide it, I lose search.
-              The user complained about "extra line".
-              Maybe I just remove border? But Attachments header has no border-b.
-              Maybe the "extra line" is the gap or top border of the container?
-              
-              Let's proceed with hiding the header row on mobile as requested for visual consistency.
-              I'll note that search is hidden on mobile for now as a trade-off, similar to how standard Memos mobile view might work or if it needs a specific mobile UI update later.
-              Actually, the user sees "Double Header".
-              The SVG header has "Attachments". The internal header has "Attachments".
-              So hiding the internal element is correct to fix "Double Header".
-          */}
-          <div className="w-full flex flex-col justify-start items-start mt-4 mb-6">
+          {/* Content */}
+          <div className="w-full flex flex-col justify-start items-start px-4 py-6">
             {loadingState.isLoading ? (
               <div className="w-full h-32 flex flex-col justify-center items-center">
-                <p className="w-full text-center text-base my-6 mt-8">{t("resource.fetching-data")}</p>
+                <p className="w-full text-center text-base my-6">{t("resource.fetching-data")}</p>
               </div>
             ) : (
               <>
                 {filteredAttachments.length === 0 ? (
-                  <div className="w-full mt-8 mb-8 flex flex-col justify-center items-center italic">
+                  <div className="w-full mt-8 mb-8 flex flex-col justify-center items-center">
                     <Empty />
                     <p className="mt-4 text-muted-foreground">{t("message.no-data")}</p>
                   </div>
                 ) : (
                   <>
-                    <div className={"w-full h-auto px-2 flex flex-col justify-start items-start gap-y-8"}>
-                      {Array.from(groupedAttachments.entries()).map(([monthStr, attachments]) => {
-                        return (
-                          <div key={monthStr} className="w-full flex flex-row justify-start items-start">
-                            <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start">
-                              <span className="text-sm opacity-60">{dayjs(monthStr).year()}</span>
-                              <span className="font-medium text-xl">
-                                {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
-                              </span>
-                            </div>
-                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
-                              {attachments.map((attachment) => (
-                                <AttachmentItem key={attachment.name} attachment={attachment} />
-                              ))}
-                            </div>
+                    <div className="w-full h-auto flex flex-col justify-start items-start gap-y-8">
+                      {Array.from(groupedAttachments.entries()).map(([monthStr, monthAttachments]) => (
+                        <div key={monthStr} className="w-full flex flex-row justify-start items-start">
+                          {/* Date Label */}
+                          <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start shrink-0">
+                            <span className="text-sm text-muted-foreground/60">{dayjs(monthStr).year()}</span>
+                            <span className="font-medium text-xl text-foreground">
+                              {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
+                            </span>
                           </div>
-                        );
-                      })}
+                          {/* Attachments Grid */}
+                          <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
+                            {monthAttachments.map((attachment) => (
+                              <AttachmentItem key={attachment.name} attachment={attachment} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
 
+                      {/* Unused Attachments Section */}
                       {unusedAttachments.length > 0 && (
                         <>
                           <Separator />
                           <div className="w-full flex flex-row justify-start items-start">
-                            <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start"></div>
-                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
-                              <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start shrink-0"></div>
+                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-col gap-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div className="flex flex-row items-center gap-2">
                                   <span className="text-muted-foreground">{t("resource.unused-resources")}</span>
-                                  <span className="text-muted-foreground opacity-80">({unusedAttachments.length})</span>
+                                  <span className="text-muted-foreground/70">({unusedAttachments.length})</span>
                                 </div>
-                                <div>
-                                  <Button variant="destructive" onClick={() => deleteUnusedAttachmentsDialog.open()} size="sm">
-                                    <Trash />
-                                    {t("resource.delete-all-unused")}
-                                  </Button>
-                                </div>
+                                <Button variant="destructive" size="sm" onClick={() => deleteUnusedAttachmentsDialog.open()}>
+                                  <Trash className="w-4 h-4 mr-1" />
+                                  {t("resource.delete-all-unused")}
+                                </Button>
                               </div>
-                              {unusedAttachments.map((attachment) => (
-                                <AttachmentItem key={attachment.name} attachment={attachment} />
-                              ))}
+                              <div className="flex flex-row justify-start items-start gap-4 flex-wrap">
+                                {unusedAttachments.map((attachment) => (
+                                  <AttachmentItem key={attachment.name} attachment={attachment} />
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </>
                       )}
                     </div>
+
+                    {/* Load More Button */}
                     {nextPageToken && (
                       <div className="w-full flex flex-row justify-center items-center mt-4">
                         <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoadingMore}>
@@ -315,6 +301,7 @@ const Attachments = () => {
         </div>
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteUnusedAttachmentsDialog.isOpen}
         onOpenChange={deleteUnusedAttachmentsDialog.setOpen}

@@ -9,7 +9,7 @@
  * Phase 5: React.memo optimization
  */
 
-import { Brain, Check, ChevronDown, ChevronUp, Copy, StopCircle } from "lucide-react";
+import { Brain, Check, ChevronDown, ChevronUp, Copy, RefreshCw, StopCircle, Trash2 } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -136,15 +136,15 @@ export const BlockFooter = memo(function BlockFooter({
             type="button"
             onClick={onRegenerate}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
               "hover:bg-black/10 dark:hover:bg-white/10",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               theme.badgeText,
             )}
             title={t("ai.regenerate")}
           >
+            <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t("ai.regenerate")}</span>
-            <span className="sm:hidden">↻</span>
           </button>
         )}
 
@@ -193,8 +193,8 @@ export const BlockFooter = memo(function BlockFooter({
             )}
             title={t("common.delete")}
           >
+            <Trash2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t("common.delete")}</span>
-            <span className="sm:hidden">🗑</span>
           </button>
         )}
       </div>

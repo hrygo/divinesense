@@ -677,8 +677,8 @@ cmd_restart() {
     start_postgres || exit 1
     sleep 2
 
-    # 重启应用服务（go run -a 强制重新编译）
-    start_backend_force_rebuild || exit 1
+    # 重启应用服务
+    start_backend || exit 1
     sleep 1
     start_frontend || exit 1
 

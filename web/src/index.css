@@ -502,3 +502,24 @@
     animation: none !important;
   }
 }
+
+/* ============================================================
+   Memo Timeline Animations
+   ============================================================ */
+
+/* Slow pulse for latest timeline node */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}

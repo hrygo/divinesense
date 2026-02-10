@@ -39,7 +39,7 @@ const ReactionSelector = (props: Props) => {
           <SmilePlusIcon className="w-4 h-4 mx-auto text-muted-foreground" />
         </span>
       </PopoverTrigger>
-      <PopoverContent align="center" className="max-w-[90vw] sm:max-w-md">
+      <PopoverContent align="center" className="max-w-[90vw] sm:max-w-[28rem]">
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1 max-h-64 overflow-y-auto">
           {memoRelatedSetting.reactions.map((reactionType) => (
             <button
