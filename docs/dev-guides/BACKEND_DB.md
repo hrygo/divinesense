@@ -110,7 +110,7 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyu
 | 类型 | 约定 | 示例 |
 |:-----|:-----|:-----|
 | Go 文件 | `snake_case.go` | `memo_embedding.go` |
-| 测试文件 | `*_test.go` | `memo_parrot_test.go` |
+| 测试文件 | `*_test.go` | `universal_parrot_test.go` |
 | Go 包 | 简单小写 | `ai`（例如 `ai/agent`，非 `ai_service`） |
 | 脚本 | `kebab-case.sh` | `dev.sh` |
 | 常量 | `PascalCase` | `DefaultCacheTTL` |
@@ -226,11 +226,13 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 所有 AI 聊天逻辑通过 `ai/agent/` 中的 `ChatRouter` 路由：
 
-| 代理 | 文件 | 用途 | 工具 |
-|:-----|:-----|:-----|:-----|
-| **MemoParrot** | `memo_parrot.go` | 笔记搜索和检索 | `memo_search` |
-| **ScheduleParrotV2** | `schedule_parrot_v2.go` | 日程管理 | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
-| **AmazingParrot** | `amazing_parrot.go` | 组合笔记 + 日程 | 所有工具 + 并发执行 |
+| 代理 | 配置文件 | 用途 | 工具 |
+|:-----|:---------|:-----|:-----|
+| **MemoParrot** | `config/parrots/memo.yaml` | 笔记搜索和检索 | `memo_search` |
+| **ScheduleParrot** | `config/parrots/schedule.yaml` | 日程管理 | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
+| **AmazingParrot** | `config/parrots/amazing.yaml` | 组合笔记 + 日程 | 所有工具 + 并发执行 |
+
+> **实现**: 所有三种代理由 `ai/agent/universal/` 中的 **UniversalParrot** 配置驱动系统实现。
 
 **聊天路由流程**（`chat_router.go`）：
 ```

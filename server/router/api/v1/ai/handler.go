@@ -790,7 +790,7 @@ func (h *ParrotHandler) executeAgent(
 	} else {
 		logger.Info("ai.agent.stats.checking_normal")
 
-		// Check for NormalSessionStatsProvider (MemoParrot/ScheduleParrotV2/AmazingParrot)
+		// Check for NormalSessionStatsProvider (UniversalParrot-based agents)
 		// Use type assertion to check if agent has GetSessionStats method returning *NormalSessionStats
 		type normalStatsGetter interface {
 			GetSessionStats() *agentpkg.NormalSessionStats

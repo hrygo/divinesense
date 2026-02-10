@@ -35,7 +35,7 @@ divinesense/
 │   ├── scheduler/       # 日程管理
 │   └── service/         # 业务逻辑层
 ├── ai/                  # 🔴 AI 核心模块（一级模块）
-│   ├── agent/           #   Parrot 代理（MemoParrot、ScheduleParrot、AmazingParrot、GeekParrot、EvolutionParrot）
+│   ├── agent/           #   Parrot 代理（UniversalParrot 配置驱动系统 + GeekParrot、EvolutionParrot）
 │   ├── router/          #   三层意图路由
 │   ├── vector/          #   Embedding 服务
 │   ├── memory/          #   情景记忆

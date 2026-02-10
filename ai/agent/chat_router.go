@@ -11,13 +11,16 @@ import (
 type ChatRouteType string
 
 const (
-	// RouteTypeMemo routes to MemoParrot (灰灰) for memo search and retrieval.
+	// RouteTypeMemo routes to Memo Parrot (灰灰) for memo search and retrieval.
+	// Implemented by UniversalParrot with memo.yaml configuration.
 	RouteTypeMemo ChatRouteType = "memo"
 
-	// RouteTypeSchedule routes to ScheduleParrot (时巧) for schedule management.
+	// RouteTypeSchedule routes to Schedule Parrot (时巧) for schedule management.
+	// Implemented by UniversalParrot with schedule.yaml configuration.
 	RouteTypeSchedule ChatRouteType = "schedule"
 
-	// RouteTypeAmazing routes to AmazingParrot (折衷) for comprehensive assistance.
+	// RouteTypeAmazing routes to Amazing Parrot (折衷) for comprehensive assistance.
+	// Implemented by UniversalParrot with amazing.yaml configuration.
 	RouteTypeAmazing ChatRouteType = "amazing"
 )
 

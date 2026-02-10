@@ -274,7 +274,7 @@ func (f *AgentFactory) Create(ctx context.Context, cfg *CreateConfig) (agentpkg.
 	}
 }
 
-// createMemoParrot creates a memo parrot agent.
+// createMemoParrot creates a UniversalParrot configured as memo agent.
 func (f *AgentFactory) createMemoParrot(cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
 	if f.retriever == nil {
 		return nil, fmt.Errorf("retriever is required for memo parrot")
@@ -282,7 +282,7 @@ func (f *AgentFactory) createMemoParrot(cfg *CreateConfig) (agentpkg.ParrotAgent
 	return f.parrotFactory.CreateMemoParrot(cfg.UserID, f.retriever)
 }
 
-// createScheduleParrot creates a schedule parrot agent.
+// createScheduleParrot creates a UniversalParrot configured as schedule agent.
 func (f *AgentFactory) createScheduleParrot(_ context.Context, cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
 	if f.store == nil {
 		return nil, fmt.Errorf("store is required for schedule parrot")
@@ -291,7 +291,7 @@ func (f *AgentFactory) createScheduleParrot(_ context.Context, cfg *CreateConfig
 	return f.parrotFactory.CreateScheduleParrot(cfg.UserID, scheduleSvc)
 }
 
-// createAmazingParrot creates an amazing parrot agent.
+// createAmazingParrot creates a UniversalParrot configured as amazing agent.
 func (f *AgentFactory) createAmazingParrot(_ context.Context, cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
 	if f.retriever == nil {
 		return nil, fmt.Errorf("retriever is required for amazing parrot")
