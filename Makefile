@@ -91,7 +91,7 @@ WEB_DIR ?= web
 .PHONY: deps deps-web deps-ai deps-all
 .PHONY: build build-web build-all build-verify
 .PHONY: clean clean-all
-.PHONY: test test-ai test-embedding test-runner
+.PHONY: test test-ai test-embedding test-runner test-integration test-all-with-integration
 .PHONY: release-build release-package release-all bin-install bin-deploy
 .PHONY: docs-check docs-ref docs-tree docs-tidy docs-index
 .PHONY: dev-logs dev-logs-backend dev-logs-frontend dev-logs-follow
@@ -333,6 +333,14 @@ test-embedding: ## 运行 Embedding 测试
 test-runner: ## 运行 Runner 测试
 	@echo "Running Runner tests..."
 	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags="noui" ./server/runner/embedding/... -v
+
+test-integration: ## 运行集成测试 (需要 -tags=integration)
+	@echo "Running integration tests..."
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags=noui,integration $$(go list ./... | grep -E "(integration_test)") -v -timeout 10m
+
+test-all-with-integration: ## 运行所有测试包括集成测试
+	@echo "Running all tests including integration..."
+	@DIVINESENSE_DRIVER=$(DIVINESENSE_DRIVER) DIVINESENSE_DSN=$(DIVINESENSE_DSN) go test -tags=noui,integration $$(go list ./... | grep -v -E "(^github.com/hrygo/divinesense/plugin/cron$$|^github.com/hrygo/divinesense/proto/)") -timeout 10m
 
 # ===========================================================================
 # Build Commands

@@ -1,3 +1,5 @@
+//go:build integration
+
 package agent
 
 import (
@@ -806,7 +808,7 @@ func TestSessionStats(t *testing.T) {
 }
 
 // TestCCRunnerIntegration is a minimal integration test that actually calls the CLI.
-// Skip this in CI/CD if CLI is not available.
+// This test requires the 'integration' build tag to run, use: go test -tags=integration
 func TestCCRunnerIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
