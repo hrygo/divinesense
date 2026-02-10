@@ -16,6 +16,25 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
+// getDefaultTitle returns a default title for a conversation based on parrot type.
+// This is used when a conversation has no content yet and user requests title generation.
+func getDefaultTitle(parrotID string) string {
+	// These are fallback English titles. The frontend localizes display titles
+	// using title keys (e.g., "chat.default.title").
+	titles := map[string]string{
+		"MEMO":      "Chat with Memo",
+		"SCHEDULE":  "Chat with Schedule",
+		"AMAZING":   "Chat with Amazing",
+		"GEEK":      "Geek Mode Chat",
+		"EVOLUTION": "Evolution Mode Chat",
+		"AUTO":      "AI Chat",
+	}
+	if title, ok := titles[parrotID]; ok {
+		return title
+	}
+	return "AI Chat"
+}
+
 // MaxBlockLimit is the maximum number of blocks to return in a single request.
 const MaxBlockLimit = 100
 
@@ -166,7 +185,12 @@ func (s *AIService) GenerateConversationTitle(ctx context.Context, req *v1pb.Gen
 	}
 
 	if len(blocks) == 0 {
-		return nil, status.Errorf(codes.FailedPrecondition, "conversation has no content yet")
+		// No content yet - return a default title instead of error
+		// This handles the case where user manually clicks "generate title" on an empty conversation
+		return &v1pb.GenerateConversationTitleResponse{
+			Title:       getDefaultTitle(conversations[0].ParrotID),
+			TitleSource: string(store.TitleSourceDefault),
+		}, nil
 	}
 
 	// Check if title generator is available

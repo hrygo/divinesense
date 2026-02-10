@@ -398,9 +398,24 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
 
     try {
       const response = await aiServiceClient.generateConversationTitle({ id: numericId });
+      // Fetch updated conversation to get the latest blockCount
+      const convResponse = await aiServiceClient.listAIConversations({});
+      const updatedConv = convResponse.conversations.find((c) => String(c.id) === id);
+
       setState((prev) => ({
         ...prev,
-        conversations: prev.conversations.map((c) => (c.id === id ? { ...c, title: response.title, updatedAt: Date.now() } : c)),
+        conversations: prev.conversations.map((c) => {
+          if (c.id === id) {
+            return {
+              ...c,
+              title: response.title,
+              updatedAt: Date.now(),
+              // Update messageCount from the fetched conversation
+              messageCount: updatedConv?.blockCount ?? c.messageCount,
+            };
+          }
+          return c;
+        }),
       }));
       return response.title;
     } catch (error) {
@@ -615,6 +630,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   /**
    * Load blocks for a conversation from the backend
    * Uses React Query for caching and optimistic updates
+   * Also updates the messageCount in conversations list
    */
   const loadBlocks = useCallback(async (conversationId: string) => {
     const numericId = parseInt(conversationId);
@@ -632,6 +648,8 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
           ...prev.blocksByConversation,
           [conversationId]: blocks,
         },
+        // Update messageCount in conversations list
+        conversations: prev.conversations.map((c) => (c.id === conversationId ? { ...c, messageCount: blocks.length } : c)),
       }));
     } catch (e) {
       console.error("Failed to load blocks:", e);
@@ -674,6 +692,17 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
   );
 
   /**
+   * Increment message count for a conversation (optimistic update)
+   * Called when a new block is created/completed
+   */
+  const incrementMessageCount = useCallback((conversationId: string) => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((c) => (c.id === conversationId ? { ...c, messageCount: (c.messageCount || 0) + 1 } : c)),
+    }));
+  }, []);
+
+  /**
    * Update block status locally (optimistic update)
    * Used during streaming to show real-time status changes
    */
@@ -711,12 +740,6 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load from storage on mount (only once)
-  useEffect(() => {
-    loadFromStorage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const contextValue: AIChatContextValue = {
     state,
     currentConversation,
@@ -728,7 +751,6 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     selectConversation,
     updateConversationTitle,
     generateConversationTitle,
-    refreshConversations, // For syncing auto-generated titles from backend
     // Phase 4: Removed addMessage, updateMessage, deleteMessage - Block API handles this
     clearMessages,
     addContextSeparator,
@@ -747,6 +769,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     loadBlocks,
     appendUserInput,
     updateBlockStatus,
+    incrementMessageCount,
     saveToStorage,
     loadFromStorage,
     clearStorage,

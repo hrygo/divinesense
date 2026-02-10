@@ -210,6 +210,8 @@ const AIChat = () => {
   const messageIdRef = useRef(0);
   const streamingContentRef = useRef<string>("");
   const isCreatingConversationRef = useRef(false);
+  // Track conversations that have already triggered title generation (Block 0 completed)
+  const titledConversationsRef = useRef<Set<string>>(new Set());
   // Phase 3: Removed refs that are no longer needed:
   // - lastAssistantMessageIdRef: Block ID tracking handled by useAIQueries
   // - thinkingStepsRef: Written to Block.eventStream
@@ -233,9 +235,9 @@ const AIChat = () => {
     toggleImmersiveMode,
     // Phase 4: Block methods
     appendUserInput,
-    loadBlocks,
+    incrementMessageCount,
     // Title management
-    refreshConversations,
+    generateConversationTitle,
   } = aiChat;
 
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
@@ -261,7 +263,6 @@ const AIChat = () => {
   );
 
   const blocks = blocksQuery.data?.blocks || [];
-  const refetchBlocks = blocksQuery.refetch;
 
   const { t } = useTranslation();
 
@@ -273,6 +274,14 @@ const AIChat = () => {
       }
     };
   }, []);
+
+  // Clean up titledConversationsRef when switching conversations to prevent memory leak
+  // Keep only the current conversation's ID in the set
+  useEffect(() => {
+    if (currentConversation?.id) {
+      titledConversationsRef.current = new Set(Array.from(titledConversationsRef.current).filter((id) => id === currentConversation.id));
+    }
+  }, [currentConversation?.id]);
 
   const resetTypingState = useCallback(() => {
     if (timeoutRef.current) {
@@ -341,10 +350,26 @@ const AIChat = () => {
             streamingContentRef.current = "";
             // No need to refetch - the streaming handler has already updated the block
             // with complete content via optimistic updates. Refetching would cause flicker.
-            // Refresh conversations to get auto-generated title from backend
-            // Backend generates title asynchronously after first block completes
+            // Increment message count for the conversation
+            const convId = String(_conversationIdNum);
             if (_conversationIdNum > 0) {
-              refreshConversations();
+              incrementMessageCount(convId);
+            }
+            // Auto-generate conversation title ONLY when Block 0 (first message) completes
+            // This decouples title generation from user manual edits and subsequent messages
+            if (_conversationIdNum > 0 && !titledConversationsRef.current.has(convId)) {
+              const conv = conversations.find((c) => c.id === convId);
+              // Only generate if still has default title (user hasn't manually edited)
+              if (conv && conv.title?.startsWith("chat.")) {
+                // Mark as titled before API call to prevent duplicate calls
+                titledConversationsRef.current.add(convId);
+                generateConversationTitle(convId).catch((err) => {
+                  // Silently fail - title generation is best-effort
+                  if (import.meta.env.DEV) {
+                    console.debug("[AI Chat] Title generation failed (non-critical):", err);
+                  }
+                });
+              }
             }
           },
           onError: (error) => {
@@ -363,7 +388,7 @@ const AIChat = () => {
         console.error("[Parrot Chat Error]", error);
       }
     },
-    [chatHook, addReferencedMemos, setCapabilityStatus, refetchBlocks, currentMode, refreshConversations],
+    [chatHook, addReferencedMemos, setCapabilityStatus, currentMode, generateConversationTitle, incrementMessageCount, conversations],
   );
 
   const handleSend = useCallback(
@@ -474,7 +499,6 @@ const AIChat = () => {
     },
     [
       input,
-      isTyping,
       currentConversation,
       currentCapability,
       capabilityRouter,
@@ -488,7 +512,6 @@ const AIChat = () => {
       // Phase 4: Block append dependencies
       blocks,
       appendUserInput,
-      loadBlocks,
     ],
   );
 

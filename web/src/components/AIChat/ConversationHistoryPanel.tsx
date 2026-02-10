@@ -21,7 +21,8 @@ interface ConversationHistoryPanelProps {
  */
 export function ConversationHistoryPanel({ className, onSelectConversation }: ConversationHistoryPanelProps) {
   const { t } = useTranslation();
-  const { conversationSummaries, conversations, state, deleteConversation, selectConversation, updateConversationTitle } = useAIChat();
+  const { conversationSummaries, conversations, state, deleteConversation, selectConversation, updateConversationTitle, loadBlocks } =
+    useAIChat();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
@@ -84,6 +85,15 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
     updateConversationTitle(id, newTitle);
   };
 
+  const handleRefresh = async (id: string) => {
+    // Refresh conversation blocks from backend
+    await loadBlocks(id);
+    // Also re-select to trigger UI update
+    if (state.currentConversationId === id) {
+      selectConversation(id);
+    }
+  };
+
   const hasConversations = conversationSummaries.length > 0;
 
   return (
@@ -105,6 +115,7 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
                       isActive={conversation.id === state.currentConversationId}
                       onSelect={handleSelectConversation}
                       onDelete={handleDeleteClick}
+                      onRefresh={handleRefresh}
                       onTitleChange={handleTitleChange}
                       isLoaded={loadedConversationIds.has(conversation.id)}
                     />

@@ -164,7 +164,6 @@ export interface AIChatContextValue {
   selectConversation: (id: string) => void;
   updateConversationTitle: (id: string, title: string) => void;
   generateConversationTitle: (id: string) => Promise<string | null>;
-  refreshConversations: () => Promise<void>;
 
   // Message actions
   // Phase 4: Removed addMessage, updateMessage, deleteMessage, syncMessages, loadMoreMessages - Block API handles this
@@ -200,6 +199,7 @@ export interface AIChatContextValue {
   loadBlocks: (conversationId: string) => Promise<void>;
   appendUserInput: (blockId: number, content: string, conversationId: number) => Promise<void>;
   updateBlockStatus: (blockId: number, status: "pending" | "streaming" | "completed" | "error") => void;
+  incrementMessageCount: (conversationId: string) => void;
 
   // Persistence
   saveToStorage: () => void;
