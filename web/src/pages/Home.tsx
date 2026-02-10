@@ -43,7 +43,8 @@ const Home = () => {
   // Handle memo edit
   const handleEdit = useCallback(
     (memo: Memo) => {
-      navigate(`/m/${memo.name}`);
+      const memoId = memo.name.split("/").pop() || memo.name;
+      navigate(`/m/${memoId}`);
     },
     [navigate],
   );
