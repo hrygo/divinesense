@@ -5,7 +5,7 @@ const KnowledgeGraphView = lazy(() => import("@/components/KnowledgeGraphView"))
 
 const KnowledgeGraph = () => {
   return (
-    <div className="w-full h-full p-4 overflow-hidden">
+    <div className="w-full h-full overflow-hidden">
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-full">
@@ -13,7 +13,7 @@ const KnowledgeGraph = () => {
           </div>
         }
       >
-        <KnowledgeGraphView className="w-full h-full border rounded-lg overflow-hidden bg-background shadow-sm" />
+        <KnowledgeGraphView className="w-full h-[calc(100vh-120px)] border rounded-lg overflow-hidden bg-background shadow-sm" />
       </Suspense>
     </div>
   );
