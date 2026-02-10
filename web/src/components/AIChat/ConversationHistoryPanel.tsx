@@ -21,10 +21,19 @@ interface ConversationHistoryPanelProps {
  */
 export function ConversationHistoryPanel({ className, onSelectConversation }: ConversationHistoryPanelProps) {
   const { t } = useTranslation();
-  const { conversationSummaries, conversations, state, deleteConversation, selectConversation, updateConversationTitle, loadBlocks } =
-    useAIChat();
+  const {
+    conversationSummaries,
+    conversations,
+    state,
+    deleteConversation,
+    selectConversation,
+    updateConversationTitle,
+    loadBlocks,
+    refreshConversations,
+  } = useAIChat();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
   // Use backend-provided messageCount instead of local messages array
   const loadedConversationIds = useMemo(
@@ -86,11 +95,20 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
   };
 
   const handleRefresh = async (id: string) => {
-    // Refresh conversation blocks from backend
-    await loadBlocks(id);
-    // Also re-select to trigger UI update
-    if (state.currentConversationId === id) {
-      selectConversation(id);
+    setRefreshingId(id);
+    try {
+      // Refresh conversation blocks from backend
+      await loadBlocks(id);
+      // Also refresh conversations to get latest messageCount
+      await refreshConversations();
+      // Re-select to trigger UI update
+      if (state.currentConversationId === id) {
+        selectConversation(id);
+      }
+    } catch (error) {
+      console.error("Failed to refresh conversation:", error);
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -118,6 +136,7 @@ export function ConversationHistoryPanel({ className, onSelectConversation }: Co
                       onRefresh={handleRefresh}
                       onTitleChange={handleTitleChange}
                       isLoaded={loadedConversationIds.has(conversation.id)}
+                      isRefreshing={refreshingId === conversation.id}
                     />
                   ))}
                 </div>

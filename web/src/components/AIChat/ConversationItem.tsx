@@ -14,6 +14,7 @@ interface ConversationItemProps {
   onTitleChange?: (id: string, newTitle: string) => void;
   className?: string;
   isLoaded?: boolean; // Whether this conversation has been loaded with messages
+  isRefreshing?: boolean; // Whether this conversation is currently being refreshed
 }
 
 export function ConversationItem({
@@ -25,6 +26,7 @@ export function ConversationItem({
   onTitleChange,
   className,
   isLoaded = false,
+  isRefreshing = false,
 }: ConversationItemProps) {
   const { t } = useTranslation();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -59,7 +61,7 @@ export function ConversationItem({
 
         {/* Action Buttons - Show on hover */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-          <RefreshButton conversationId={conversation.id} onRefresh={onRefresh} />
+          <RefreshButton conversationId={conversation.id} onRefresh={onRefresh} isRefreshing={isRefreshing} />
           <EditButton onEdit={() => setEditDialogOpen(true)} />
           <DeleteButton conversationId={conversation.id} onDelete={onDelete} />
         </div>
@@ -78,22 +80,17 @@ interface EditButtonProps {
 interface RefreshButtonProps {
   conversationId: string;
   onRefresh?: ((id: string) => void) | undefined;
+  isRefreshing?: boolean;
 }
 
-function RefreshButton({ conversationId, onRefresh }: RefreshButtonProps) {
+function RefreshButton({ conversationId, onRefresh, isRefreshing = false }: RefreshButtonProps) {
   const { t } = useTranslation();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (!onRefresh) return null;
 
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsRefreshing(true);
-    try {
-      await onRefresh(conversationId);
-    } finally {
-      setIsRefreshing(false);
-    }
+    await onRefresh(conversationId);
   };
 
   return (
@@ -107,12 +104,11 @@ function RefreshButton({ conversationId, onRefresh }: RefreshButtonProps) {
         "hover:text-primary",
         "hover:bg-primary/10",
         "transition-all duration-200",
-        isRefreshing && "animate-spin",
       )}
       aria-label={t("common.refresh")}
       title={t("common.refresh")}
     >
-      <RefreshCw className="w-4 h-4" />
+      <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
     </button>
   );
 }

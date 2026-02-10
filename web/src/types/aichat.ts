@@ -164,6 +164,7 @@ export interface AIChatContextValue {
   selectConversation: (id: string) => void;
   updateConversationTitle: (id: string, title: string) => void;
   generateConversationTitle: (id: string) => Promise<string | null>;
+  refreshConversations: () => Promise<void>;
 
   // Message actions
   // Phase 4: Removed addMessage, updateMessage, deleteMessage, syncMessages, loadMoreMessages - Block API handles this

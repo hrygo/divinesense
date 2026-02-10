@@ -398,9 +398,6 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
 
     try {
       const response = await aiServiceClient.generateConversationTitle({ id: numericId });
-      // Fetch updated conversation to get the latest blockCount
-      const convResponse = await aiServiceClient.listAIConversations({});
-      const updatedConv = convResponse.conversations.find((c) => String(c.id) === id);
 
       setState((prev) => ({
         ...prev,
@@ -410,8 +407,6 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
               ...c,
               title: response.title,
               updatedAt: Date.now(),
-              // Update messageCount from the fetched conversation
-              messageCount: updatedConv?.blockCount ?? c.messageCount,
             };
           }
           return c;
@@ -751,6 +746,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     selectConversation,
     updateConversationTitle,
     generateConversationTitle,
+    refreshConversations,
     // Phase 4: Removed addMessage, updateMessage, deleteMessage - Block API handles this
     clearMessages,
     addContextSeparator,
