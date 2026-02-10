@@ -596,6 +596,15 @@
   },
   "chat": {
     "new": "New Chat",
+    "default": {
+      "title": "AI Chat",
+      "auto": "AI Chat",
+      "memo": "Chat with Memo",
+      "schedule": "Chat with Schedule",
+      "amazing": "Chat with Amazing",
+      "geek": "Geek Mode",
+      "evolution": "Evolution Mode"
+    },
     "block-number": "Block {{number}}",
     "block-summary": {
       "tokens": "Tokens",

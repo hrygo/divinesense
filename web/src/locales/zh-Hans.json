@@ -591,6 +591,15 @@
   },
   "chat": {
     "new": "新对话",
+    "default": {
+      "title": "AI 对话",
+      "auto": "AI 对话",
+      "memo": "笔记对话",
+      "schedule": "日程对话",
+      "amazing": "综合助理",
+      "geek": "极客模式",
+      "evolution": "进化模式"
+    },
     "block-number": "第 {{number}} 块",
     "block-summary": {
       "tokens": "令牌",

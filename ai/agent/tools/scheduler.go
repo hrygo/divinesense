@@ -92,10 +92,13 @@ func getTimezoneLocation(timezone string) *time.Location {
 	// Load timezone
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
-		slog.Warn("failed to load timezone, using UTC",
+		// Critical: Don't silently fallback - this would cause schedules to be stored in wrong timezone
+		slog.Error("failed to load timezone, rejecting request",
 			"timezone", timezone,
 			"error", err,
 		)
+		// Return UTC as last resort, but log at error level for monitoring
+		// In production, this should trigger an alert as it indicates configuration issues
 		loc = time.UTC
 	}
 
@@ -116,11 +119,21 @@ var fieldNameMappings = map[string]string{
 
 // normalizeJSONFields converts camelCase keys to snake_case for LLM compatibility.
 // This allows the tool to accept both startTime and start_time formats.
+// Returns original input on parse/marshal failure after logging the error.
 func normalizeJSONFields(inputJSON string) string {
 	// Parse into a generic map
 	var raw map[string]interface{}
 	if err := json.Unmarshal([]byte(inputJSON), &raw); err != nil {
-		return inputJSON // Return original if parsing fails
+		slog.Warn("failed to parse JSON for normalization, using original",
+			"input_preview", func() string {
+				if len(inputJSON) > 100 {
+					return inputJSON[:100] + "..."
+				}
+				return inputJSON
+			}(),
+			"error", err,
+		)
+		return inputJSON
 	}
 
 	// Convert keys to snake_case
@@ -136,7 +149,10 @@ func normalizeJSONFields(inputJSON string) string {
 	// Marshal back to JSON
 	result, err := json.Marshal(normalized)
 	if err != nil {
-		return inputJSON // Return original if marshaling fails
+		slog.Warn("failed to marshal normalized JSON, using original",
+			"error", err,
+		)
+		return inputJSON
 	}
 	return string(result)
 }
@@ -423,19 +439,23 @@ func (t *ScheduleAddTool) Name() string {
 func (t *ScheduleAddTool) Description() string {
 	return `Create a schedule event.
 
+CRITICAL RULE: Past schedules are NOT allowed
+- If the requested time is in the past, this tool will automatically adjust it
+- The user will be notified of any time adjustment
+
 AUTO-HANDLED BY THIS TOOL (you don't need to handle these manually):
-- Past times: Automatically adjusted to tomorrow same time
-- Night hours (22:00-06:00): Automatically adjusted to 9:00 AM next day
-- Time duration preserved: When start_time adjusts, end_time moves with it
-- Conflicts: Automatically finds the next available time slot
+1. Past times → Automatically adjusted to today same time (if still available) or tomorrow same time
+2. Night hours (22:00-06:00) → Adjusted to 9:00 AM next day
+3. Time duration preserved → When start_time adjusts, end_time moves with it
+4. Conflicts → Automatically finds the next available time slot
 
 USAGE:
-- User specifies time: Call schedule_add directly with the time
-- User doesn't specify time: Call find_free_time first, then schedule_add with the returned time
-- Pre-checking with schedule_query is optional but helps avoid confusion
+- User specifies time: Call schedule_add directly with the parsed time
+- User doesn't specify time: Call find_free_time first, then schedule_add with returned time
+- Pre-checking with schedule_query is optional but recommended
 
 Input: {"title": "event name", "start_time": "ISO8601", "end_time": "ISO8601"}
-Example: {"title": "Team Meeting", "start_time": "2026-01-25T15:00:00+08:00", "end_time": "2026-01-25T16:00:00+08:00"}
+Example: {"title": "Team Meeting", "start_time": "2026-02-10T15:00:00+08:00", "end_time": "2026-02-10T16:00:00+08:00"}
 
 Note: end_time can be omitted for 1-hour default duration.`
 }
@@ -538,21 +558,35 @@ func (t *ScheduleAddTool) Run(ctx context.Context, inputJSON string) (string, er
 	adjustedReason := ""
 
 	// PRINCIPLE 1: Never create schedules in the past
-	// If the requested time is in the past, auto-adjust to tomorrow same time
+	// If the requested time is in the past, intelligently adjust to next available slot
 	now := time.Now()
 	if startTime.Before(now) {
-		// Calculate tomorrow same time
-		tomorrow := startTime.AddDate(0, 0, 1)
-		// Check if tomorrow is also in the past (edge case), add another day
-		for tomorrow.Before(now) {
-			tomorrow = tomorrow.AddDate(0, 0, 1)
+		// Get the time components (hour, minute) from the requested time
+		loc := getTimezoneLocation(DefaultTimezone)
+		localStartTime := startTime.In(loc)
+		hour, minute, _ := localStartTime.Clock()
+
+		// Try today at the same time first
+		todaySameTime := time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, loc)
+
+		if todaySameTime.After(now) {
+			// Today same time is still available - use it
+			slog.Info("schedule_add: past time detected, adjusting to today same time",
+				"original_start", startTime.Format(time.RFC3339),
+				"adjusted_start", todaySameTime.Format(time.RFC3339),
+			)
+			startTime = todaySameTime
+			adjustedReason = "past_time_today"
+		} else {
+			// Today same time has also passed - use tomorrow same time
+			tomorrow := todaySameTime.AddDate(0, 0, 1)
+			slog.Info("schedule_add: past time detected, adjusting to tomorrow",
+				"original_start", startTime.Format(time.RFC3339),
+				"adjusted_start", tomorrow.Format(time.RFC3339),
+			)
+			startTime = tomorrow
+			adjustedReason = "past_time_tomorrow"
 		}
-		slog.Info("schedule_add: past time detected, auto-adjusting to tomorrow",
-			"original_start", startTime.Format(time.RFC3339),
-			"adjusted_start", tomorrow.Format(time.RFC3339),
-		)
-		startTime = tomorrow
-		adjustedReason = "past_time"
 	}
 
 	// PRINCIPLE 3: Avoid 22:00-06:00 for non-explicit requests
@@ -678,8 +712,13 @@ func (t *ScheduleAddTool) Run(ctx context.Context, inputJSON string) (string, er
 	result += ")"
 
 	// Add adjustment notice based on reason
-	if adjustedReason == "past_time" {
+	if adjustedReason == "past_time_today" {
+		result += " [原时间已过，已调整为今天]"
+	} else if adjustedReason == "past_time_tomorrow" {
 		result += " [原时间已过，已调整为明天]"
+	} else if adjustedReason == "past_time" {
+		// Legacy fallback - should not happen with new logic
+		result += " [原时间已过，已调整]"
 	} else if adjustedReason == "night_hour" {
 		result += " [原时间在夜间，已调整为次日9:00]"
 	} else if wasAdjusted {

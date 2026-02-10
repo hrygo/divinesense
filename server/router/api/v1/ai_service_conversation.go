@@ -16,23 +16,52 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
+// normalizeConversationTitle ensures conversation titles are in a consistent i18n key format.
+// Converts old-style English default titles to i18n keys for frontend translation.
+// Returns the title as-is if it's not a recognized default title.
+func normalizeConversationTitle(title string, _ string) string {
+	// If already in i18n key format, return as-is
+	if strings.HasPrefix(title, "chat.") {
+		return title
+	}
+
+	// Map old-style English default titles to i18n keys
+	oldDefaults := map[string]string{
+		"AI Chat":             "chat.default.auto",
+		"Chat with Memo":      "chat.default.memo",
+		"Chat with Schedule":  "chat.default.schedule",
+		"Chat with Amazing":   "chat.default.amazing",
+		"Geek Mode Chat":      "chat.default.geek",
+		"Evolution Mode Chat": "chat.default.evolution",
+		"New Chat":            "chat.new",
+	}
+
+	if normalized, ok := oldDefaults[title]; ok {
+		return normalized
+	}
+
+	// Otherwise return as-is (user-provided or already-generated title)
+	return title
+}
+
 // getDefaultTitle returns a default title for a conversation based on parrot type.
 // This is used when a conversation has no content yet and user requests title generation.
+// Returns i18n key format that the frontend will translate for display.
 func getDefaultTitle(parrotID string) string {
-	// These are fallback English titles. The frontend localizes display titles
-	// using title keys (e.g., "chat.default.title").
+	// Return i18n keys for default titles; the frontend localizes display titles
+	// using these keys (e.g., "chat.default.memo" → "笔记对话").
 	titles := map[string]string{
-		"MEMO":      "Chat with Memo",
-		"SCHEDULE":  "Chat with Schedule",
-		"AMAZING":   "Chat with Amazing",
-		"GEEK":      "Geek Mode Chat",
-		"EVOLUTION": "Evolution Mode Chat",
-		"AUTO":      "AI Chat",
+		"MEMO":      "chat.default.memo",
+		"SCHEDULE":  "chat.default.schedule",
+		"AMAZING":   "chat.default.amazing",
+		"GEEK":      "chat.default.geek",
+		"EVOLUTION": "chat.default.evolution",
+		"AUTO":      "chat.default.auto",
 	}
 	if title, ok := titles[parrotID]; ok {
 		return title
 	}
-	return "AI Chat"
+	return "chat.default.auto"
 }
 
 // MaxBlockLimit is the maximum number of blocks to return in a single request.
@@ -104,11 +133,15 @@ func (s *AIService) CreateAIConversation(ctx context.Context, req *v1pb.CreateAI
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
 	}
 
+	// Normalize title: if it's an i18n key format or old-style default title, ensure it's normalized
+	// This ensures compatibility with both new i18n key format and old English default titles
+	title := normalizeConversationTitle(req.Title, req.ParrotId.String())
+
 	now := time.Now().Unix()
 	conversation, err := s.Store.CreateAIConversation(ctx, &store.AIConversation{
 		UID:         shortuuid.New(),
 		CreatorID:   user.ID,
-		Title:       req.Title,
+		Title:       title,
 		TitleSource: store.TitleSourceDefault, // Explicitly set default title source
 		ParrotID:    req.ParrotId.String(),
 		CreatedTs:   now,
@@ -146,6 +179,9 @@ func (s *AIService) UpdateAIConversation(ctx context.Context, req *v1pb.UpdateAI
 	}
 	if req.Title != nil {
 		update.Title = req.Title
+		// Mark as user-edited to prevent auto-title generation from overwriting
+		userSource := store.TitleSourceUser
+		update.TitleSource = &userSource
 	}
 
 	updated, err := s.Store.UpdateAIConversation(ctx, update)
@@ -434,13 +470,26 @@ func (s *AIService) ClearConversationMessages(ctx context.Context, req *v1pb.Cle
 		return nil, status.Errorf(codes.Internal, "failed to list blocks: %v", err)
 	}
 
+	// Track failed block deletions for better error reporting
+	var failedBlocks []int64
 	for _, block := range blocks {
 		if err := s.Store.DeleteAIBlock(ctx, block.ID); err != nil {
-			slog.Default().Warn("Failed to delete block",
+			slog.Error("Failed to delete block during clear operation",
 				"block_id", block.ID,
+				"conversation_id", req.ConversationId,
 				"error", err,
 			)
+			failedBlocks = append(failedBlocks, block.ID)
 		}
+	}
+
+	// If any blocks failed to delete, return an error
+	// This prevents the UI from showing "cleared" when some blocks still exist
+	if len(failedBlocks) > 0 {
+		return nil, status.Errorf(codes.Internal,
+			"failed to delete %d of %d blocks (failed IDs: %v)",
+			len(failedBlocks), len(blocks), failedBlocks,
+		)
 	}
 
 	// Update conversation timestamp

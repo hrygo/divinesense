@@ -10,7 +10,7 @@ import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
 // SessionBar 已移除 - PC 端 SessionStats 已整合到 ChatHeader
 // import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { useAIChat } from "@/contexts/AIChatContext";
+import { useAIChat, isDefaultTitle } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
 import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
@@ -360,7 +360,7 @@ const AIChat = () => {
             if (_conversationIdNum > 0 && !titledConversationsRef.current.has(convId)) {
               const conv = conversations.find((c) => c.id === convId);
               // Only generate if still has default title (user hasn't manually edited)
-              if (conv && conv.title?.startsWith("chat.")) {
+              if (conv && isDefaultTitle(conv.title)) {
                 // Mark as titled before API call to prevent duplicate calls
                 titledConversationsRef.current.add(convId);
                 generateConversationTitle(convId).catch((err) => {

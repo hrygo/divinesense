@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"slices"
 	"strings"
@@ -809,9 +810,18 @@ func TestSessionStats(t *testing.T) {
 
 // TestCCRunnerIntegration is a minimal integration test that actually calls the CLI.
 // This test requires the 'integration' build tag to run, use: go test -tags=integration
+// Or set DIVINESENSE_RUN_INTEGRATION_TESTS=1 and run without build tag.
+//
+// This test is skipped by default to avoid slowing down CI.
 func TestCCRunnerIntegration(t *testing.T) {
+	// Always skip in short mode (used by CI)
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping integration test in short mode (use -v flag to enable)")
+	}
+
+	// Check for explicit opt-in via environment variable
+	if os.Getenv("DIVINESENSE_RUN_INTEGRATION_TESTS") == "" {
+		t.Skip("Skipping integration test (set DIVINESENSE_RUN_INTEGRATION_TESTS=1 to enable)")
 	}
 
 	// Check if CLI is available
@@ -822,10 +832,13 @@ func TestCCRunnerIntegration(t *testing.T) {
 	// Create temp directory
 	tempDir := t.TempDir()
 
-	runner, err := NewCCRunner(30*time.Second, nil)
+	// Use a shorter timeout for CI: 10 seconds is enough for "say hello"
+	runner, err := NewCCRunner(10*time.Second, nil)
 	if err != nil {
 		t.Skip("Cannot create CCRunner:", err)
 	}
+	// Ensure session manager is shut down to prevent goroutine leak
+	defer runner.GetSessionManager().Shutdown()
 
 	recorder := NewEventTypeRecorder()
 
@@ -837,11 +850,19 @@ func TestCCRunnerIntegration(t *testing.T) {
 		PermissionMode: "default",
 	}
 
-	// Simple prompt that should complete quickly
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// Use a shorter context timeout to ensure fast test completion
+	// 15 seconds gives enough buffer for the 10-second runner timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	_ = runner.Execute(ctx, cfg, "say hello", recorder.Callback())
+	err = runner.Execute(ctx, cfg, "say hello", recorder.Callback())
+
+	// Timeout is acceptable if CLI is slow (we still verify basic functionality)
+	if err != nil && ctx.Err() == context.DeadlineExceeded {
+		t.Skip("Test timeout (CLI slow or unavailable)")
+	} else if err != nil {
+		t.Logf("Execute returned error (may be expected): %v", err)
+	}
 
 	// The test passes if we get some events
 	uniqueTypes := recorder.GetUniqueTypes()

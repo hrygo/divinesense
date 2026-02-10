@@ -30,15 +30,32 @@ const CONVERSATION_CREATE_TIMEOUT = 10000;
 const generateId = () => `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 // Helper function to get default conversation title based on parrot type.
-// Note: This returns a fallback English title. The actual display titles are
-// localized by the backend using title keys (e.g., "chat.default.title").
+// Returns i18n key format to enable backend detection and auto-title generation.
+// The frontend will translate these keys for display using t().
 function getDefaultTitle(parrotId: ParrotAgentType): string {
   const titles: Record<string, string> = {
-    [ParrotAgentType.MEMO]: "Chat with Memo",
-    [ParrotAgentType.SCHEDULE]: "Chat with Schedule",
-    [ParrotAgentType.AMAZING]: "Chat with Amazing",
+    [ParrotAgentType.MEMO]: "chat.default.memo",
+    [ParrotAgentType.SCHEDULE]: "chat.default.schedule",
+    [ParrotAgentType.AMAZING]: "chat.default.amazing",
+    [ParrotAgentType.GEEK]: "chat.default.geek",
+    [ParrotAgentType.EVOLUTION]: "chat.default.evolution",
   };
-  return titles[parrotId] || "AI Chat";
+  return titles[parrotId] || "chat.default.auto";
+}
+
+// Checks if a title is a default i18n key (should trigger auto-generation)
+export function isDefaultTitle(title: string): boolean {
+  return title.startsWith("chat.default.") ||
+         title === "chat.new" ||
+         title.startsWith("chat.");
+}
+
+// Translates a title: if it's an i18n key, translates it; otherwise returns as-is.
+export function translateTitle(title: string, t: (key: string) => string): string {
+  if (isDefaultTitle(title)) {
+    return t(title);
+  }
+  return title;
 }
 
 const DEFAULT_STATE: AIChatState = {

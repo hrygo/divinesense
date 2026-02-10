@@ -30,6 +30,7 @@ type ExecutionStrategy interface {
 	//   - tools: Available tools for this execution
 	//   - llm: LLM service for generating responses
 	//   - callback: Event callback for real-time UI updates
+	//   - timeContext: Structured time context for time-aware reasoning (may be nil)
 	//
 	// Returns:
 	//   - result: Final response string
@@ -42,6 +43,7 @@ type ExecutionStrategy interface {
 		tools []agent.ToolWithSchema,
 		llm ai.LLMService,
 		callback agent.EventCallback,
+		timeContext *TimeContext,
 	) (result string, stats *ExecutionStats, err error)
 
 	// StreamingSupported indicates if this strategy supports streaming responses.

@@ -88,6 +88,7 @@ func (e *DirectExecutor) Execute(
 	tools []agent.ToolWithSchema,
 	llm ai.LLMService,
 	callback agent.EventCallback,
+	timeContext *TimeContext,
 ) (string, *ExecutionStats, error) {
 	stats := &ExecutionStats{Strategy: "direct"}
 	startTime := time.Now()

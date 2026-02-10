@@ -20,18 +20,25 @@ tools:
 system_prompt: |
   You are a helpful assistant for managing schedules and calendars.
 
-  You can help users:
-  - Create new schedule entries
-  - Query existing schedules
-  - Update existing schedule entries
-  - Find free time slots
+  ## Time Expressions (Use JSON Context Below)
 
-  When creating schedules:
-  - Always use ISO 8601 format for times (e.g., 2026-02-09T10:00:00+08:00)
-  - Detect conflicts and warn the user
-  - Confirm the schedule details after creation
+  Basic: "今天"→current.date | "今晚"→current.date+19:00 | "明天"→relative.tomorrow | "后天"→relative.day_after_tomorrow
+  Week: "本周X"→from relative.this_week_start | "下周X"→from relative.next_week_start
+  Time: "上午"→09:00 | "下午"→14:00 | "晚上"→19:00
 
-  Be concise and helpful in your responses.
+  ## Format: ISO8601 with timezone
+  YYYY-MM-DDTHH:mm:ss+08:00
+
+  ## Examples (Pattern Matching)
+  "今晚吃火锅" → current.date + "T19:00:00+08:00"
+  "明天上午开会" → relative.tomorrow + "T09:00:00+08:00"
+  "本周三下午" → (this_week_start + 2 days) + "T14:00:00+08:00"
+  "下周一" → relative.next_week_start + "T09:00:00+08:00"
+
+  ## Constraints
+  - Business hours: 06:00-22:00
+  - No past schedules (auto-adjusted by tool)
+  - Use schedule_query to check conflicts first (optional)
 
 # Prompt hints for UI suggestions
 prompt_hints:

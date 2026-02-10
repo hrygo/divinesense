@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { ConversationSummary } from "@/types/aichat";
 import { TitleEditDialog } from "./TitleEditDialog";
+import { translateTitle } from "@/contexts/AIChatContext";
 
 interface ConversationItemProps {
   conversation: ConversationSummary;
@@ -44,11 +45,11 @@ export function ConversationItem({
         <button
           onClick={() => onSelect(conversation.id)}
           className="w-full text-left px-3 py-2.5 pr-20"
-          aria-label={`Select conversation: ${conversation.title}`}
+          aria-label={`Select conversation: ${translateTitle(conversation.title, t)}`}
         >
           <div className="flex flex-col min-w-0">
             <h3 className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">
-              {conversation.title}
+              {translateTitle(conversation.title, t)}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               {displayMessageCount === "..."

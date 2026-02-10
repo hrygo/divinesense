@@ -62,6 +62,7 @@ func (e *PlanningExecutor) Execute(
 	tools []agent.ToolWithSchema,
 	llm ai.LLMService,
 	callback agent.EventCallback,
+	timeContext *TimeContext,
 ) (string, *ExecutionStats, error) {
 	stats := &ExecutionStats{Strategy: "planning"}
 	startTime := time.Now()
@@ -88,7 +89,7 @@ func (e *PlanningExecutor) Execute(
 		},
 	})
 
-	plan, err := e.createPlan(ctx, input, history, llm, stats)
+	plan, err := e.createPlan(ctx, input, history, llm, stats, timeContext)
 	if err != nil {
 		return "", stats, fmt.Errorf("create plan: %w", err)
 	}
@@ -157,7 +158,7 @@ func (e *PlanningExecutor) Execute(
 		},
 	})
 
-	synthesisPrompt := e.buildSynthesisPrompt(input, results)
+	synthesisPrompt := e.buildSynthesisPrompt(input, results, timeContext)
 	messages := make([]ai.Message, 0, len(history)+1)
 	messages = append(messages, history...)
 	messages = append(messages, ai.Message{Role: "user", Content: synthesisPrompt})
@@ -199,9 +200,10 @@ func (e *PlanningExecutor) createPlan(
 	history []ai.Message,
 	llm ai.LLMService,
 	stats *ExecutionStats,
+	timeContext *TimeContext,
 ) (*retrievalPlan, error) {
-	// Build planning prompt
-	planningPrompt := e.buildPlanningPrompt(input)
+	// Build planning prompt with time context
+	planningPrompt := e.buildPlanningPrompt(input, timeContext)
 
 	messages := []ai.Message{
 		{Role: "system", Content: planningPrompt},
@@ -217,12 +219,25 @@ func (e *PlanningExecutor) createPlan(
 }
 
 // buildPlanningPrompt creates the prompt for planning phase.
-func (e *PlanningExecutor) buildPlanningPrompt(input string) string {
-	return fmt.Sprintf(`You are a planning assistant. Analyze the user's request and decide which tools to use.
+// Uses structured time context to improve planning accuracy.
+func (e *PlanningExecutor) buildPlanningPrompt(input string, timeContext *TimeContext) string {
+	var sb strings.Builder
 
-Current time: %s
+	sb.WriteString(`You are a planning assistant. Analyze the user's request and decide which tools to use.
 
-Available tools:
+`)
+
+	// Add structured time context if available
+	if timeContext != nil {
+		sb.WriteString("Time context:\n")
+		sb.WriteString(timeContext.FormatAsJSONBlock())
+		sb.WriteString("\n\n")
+	} else {
+		// Fallback to simple time string
+		sb.WriteString(fmt.Sprintf("Current time: %s\n\n", time.Now().Format("2006-01-02 15:04")))
+	}
+
+	sb.WriteString(`Available tools:
 - memo_search: Search notes
 - schedule_query: Query schedules
 - schedule_add: Create schedule
@@ -237,11 +252,11 @@ find_free_time: <date>
 schedule_update: <json>
 direct_answer
 
-User request: %s
+User request: `)
+	sb.WriteString(input)
+	sb.WriteString("\n\nOutput:")
 
-Output:`,
-		time.Now().Format("2006-01-02 15:04"),
-		input)
+	return sb.String()
 }
 
 // parsePlan parses the LLM's planning output.
@@ -429,12 +444,20 @@ func (e *PlanningExecutor) executeOneTool(
 }
 
 // buildSynthesisPrompt creates the prompt for synthesis phase.
-func (e *PlanningExecutor) buildSynthesisPrompt(input string, results map[string]string) string {
+// Uses structured time context to improve synthesis accuracy.
+func (e *PlanningExecutor) buildSynthesisPrompt(input string, results map[string]string, timeContext *TimeContext) string {
 	var sb strings.Builder
 
 	sb.WriteString("User request: ")
 	sb.WriteString(input)
 	sb.WriteString("\n\n")
+
+	// Add structured time context if available
+	if timeContext != nil {
+		sb.WriteString("Time context:\n")
+		sb.WriteString(timeContext.FormatAsJSONBlock())
+		sb.WriteString("\n\n")
+	}
 
 	sb.WriteString("Retrieval results:\n")
 

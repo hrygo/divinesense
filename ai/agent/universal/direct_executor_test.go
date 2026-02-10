@@ -74,7 +74,7 @@ func TestDirectExecutor_Execute_DirectAnswer(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	result, stats, err := exec.Execute(ctx, "hello", nil, nil, llm, callback)
+	result, stats, err := exec.Execute(ctx, "hello", nil, nil, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -136,7 +136,7 @@ func TestDirectExecutor_Execute_SingleToolCall(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	result, stats, err := exec.Execute(ctx, "search notes", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	result, stats, err := exec.Execute(ctx, "search notes", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -195,7 +195,7 @@ func TestDirectExecutor_Execute_MultiTurnToolCalls(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	result, _, err := exec.Execute(ctx, "multi-tool query", nil, tools, llm, callback)
+	result, _, err := exec.Execute(ctx, "multi-tool query", nil, tools, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -232,7 +232,7 @@ func TestDirectExecutor_Execute_ToolExecutionError(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	// Should still get a result (executor continues despite tool errors)
 	if result != "" {
@@ -254,7 +254,7 @@ func TestDirectExecutor_Execute_LLMError(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback)
+	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback, nil)
 
 	if err == nil {
 		t.Error("expected error when LLM fails")
@@ -279,7 +279,7 @@ func TestDirectExecutor_Execute_ContextCancellation(t *testing.T) {
 
 	callback := func(eventType string, data any) error { return nil }
 
-	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback)
+	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback, nil)
 
 	// May get context.Canceled or succeed quickly
 	if err != nil && !errors.Is(err, context.Canceled) {
@@ -309,7 +309,7 @@ func TestDirectExecutor_Execute_MaxIterationsExceeded(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	// Should hit max iterations limit
 	if err == nil {
@@ -351,7 +351,7 @@ func TestDirectExecutor_Execute_ToolMarshalError(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	_, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	_, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	if err == nil {
 		t.Error("expected error from circular reference marshaling")
@@ -374,7 +374,7 @@ func TestDirectExecutor_Execute_EmptyResponse(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback)
+	_, _, err := exec.Execute(ctx, "test", nil, nil, llm, callback, nil)
 
 	if err == nil {
 		t.Error("expected error for empty response")
@@ -403,7 +403,7 @@ func TestDirectExecutor_Execute_WithHistory(t *testing.T) {
 		{Role: "assistant", Content: "Hi there!"},
 	}
 
-	result, _, err := exec.Execute(ctx, "How are you?", history, nil, llm, callback)
+	result, _, err := exec.Execute(ctx, "How are you?", history, nil, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -439,7 +439,7 @@ func TestDirectExecutor_StatsAccumulation(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	_, stats, err := exec.Execute(ctx, "test", nil, nil, llm, callback)
+	_, stats, err := exec.Execute(ctx, "test", nil, nil, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -492,7 +492,7 @@ func TestDirectExecutor_Execute_ToolContent(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -525,7 +525,7 @@ func TestDirectExecutor_Execute_ToolNotFound(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	ctx := context.Background()
-	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback)
+	result, _, err := exec.Execute(ctx, "test", nil, []agent.ToolWithSchema{tool}, llm, callback, nil)
 
 	// Should handle gracefully (either error or continue)
 	if err != nil {
