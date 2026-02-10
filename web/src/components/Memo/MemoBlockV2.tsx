@@ -41,6 +41,7 @@ import {
   X,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -155,6 +156,8 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; right: number } | null>(null);
 
   // Persist collapse state
   useEffect(() => {
@@ -190,6 +193,20 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
     if (quickMenuOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [quickMenuOpen]);
+
+  // Calculate dropdown position when opened
+  useEffect(() => {
+    if (quickMenuOpen && dropdownButtonRef.current) {
+      const rect = dropdownButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        right: window.innerWidth - rect.right,
+      });
+    } else {
+      setDropdownPosition(null);
     }
   }, [quickMenuOpen]);
 
@@ -432,6 +449,8 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
             quickMenuOpen={quickMenuOpen}
             onQuickMenuToggle={() => setQuickMenuOpen((prev) => !prev)}
             dropdownRef={dropdownRef}
+            dropdownButtonRef={dropdownButtonRef}
+            dropdownPosition={dropdownPosition}
           />
         </div>
 
@@ -567,6 +586,8 @@ interface MemoCompactFooterProps {
   quickMenuOpen: boolean;
   onQuickMenuToggle: () => void;
   dropdownRef: React.RefObject<HTMLDivElement>;
+  dropdownButtonRef: React.RefObject<HTMLButtonElement>;
+  dropdownPosition: { top: number; left: number; right: number } | null;
 }
 
 function MemoCompactFooter({
@@ -582,6 +603,8 @@ function MemoCompactFooter({
   quickMenuOpen,
   onQuickMenuToggle,
   dropdownRef,
+  dropdownButtonRef,
+  dropdownPosition,
 }: MemoCompactFooterProps) {
   return (
     <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900/30">
@@ -621,64 +644,74 @@ function MemoCompactFooter({
         )}
 
         {/* More menu dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative">
           <ActionButton
             icon={Ellipsis}
             label="More actions"
             onClick={onQuickMenuToggle}
             isActive={quickMenuOpen}
             className={quickMenuOpen ? "bg-zinc-200 dark:bg-zinc-700" : undefined}
+            buttonRef={dropdownButtonRef}
           />
-
-          {/* Dropdown menu - positioned with better UX */}
-          {quickMenuOpen && (
-            <div
-              className={cn(
-                "absolute right-0 top-full mt-1.5 z-50",
-                "w-48 py-1.5 bg-white dark:bg-zinc-900",
-                "rounded-lg shadow-lg shadow-zinc-200/50 dark:shadow-black/50",
-                "border border-zinc-200 dark:border-zinc-800",
-                "animate-in fade-in slide-in-from-top-1 duration-150",
-              )}
-            >
-              {/* Header with close button */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Actions</span>
-                <button
-                  onClick={() => onQuickMenuToggle()}
-                  className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <X className="w-3.5 h-3.5 text-zinc-400" />
-                </button>
-              </div>
-
-              {/* Action items */}
-              <div className="py-1">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.key}
-                    onClick={() => {
-                      action.action();
-                      onQuickMenuToggle();
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-sm text-left",
-                      "transition-colors duration-100",
-                      "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                      "focus-visible:outline-none focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800",
-                      action.danger && "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30",
-                    )}
-                  >
-                    <action.icon className="w-4 h-4 shrink-0" />
-                    <span>{action.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Dropdown menu - rendered via Portal to avoid overflow clipping */}
+      {quickMenuOpen &&
+        dropdownPosition &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className={cn(
+              "fixed z-[100]",
+              "w-48 py-1.5 bg-white dark:bg-zinc-900",
+              "rounded-lg shadow-lg shadow-zinc-200/50 dark:shadow-black/50",
+              "border border-zinc-200 dark:border-zinc-800",
+              "animate-in fade-in slide-in-from-top-1 duration-150",
+            )}
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: "auto",
+              right: `${dropdownPosition.right}px`,
+            }}
+          >
+            {/* Header with close button */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Actions</span>
+              <button
+                onClick={() => onQuickMenuToggle()}
+                className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-3.5 h-3.5 text-zinc-400" />
+              </button>
+            </div>
+
+            {/* Action items */}
+            <div className="py-1">
+              {quickActions.map((action) => (
+                <button
+                  key={action.key}
+                  onClick={() => {
+                    action.action();
+                    onQuickMenuToggle();
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-sm text-left",
+                    "transition-colors duration-100",
+                    "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                    "focus-visible:outline-none focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800",
+                    action.danger && "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30",
+                  )}
+                >
+                  <action.icon className="w-4 h-4 shrink-0" />
+                  <span>{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -689,11 +722,13 @@ interface ActionButtonProps {
   onClick: () => void;
   className?: string;
   isActive?: boolean;
+  buttonRef?: React.RefObject<HTMLButtonElement>;
 }
 
-function ActionButton({ icon: Icon, label, onClick, className, isActive }: ActionButtonProps) {
+function ActionButton({ icon: Icon, label, onClick, className, isActive, buttonRef }: ActionButtonProps) {
   return (
     <button
+      ref={buttonRef}
       onClick={onClick}
       className={cn(
         "p-2 rounded-lg transition-all duration-150",
