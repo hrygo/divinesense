@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.94.0 (智能路由 + 性能优化)
+> **保鲜状态**: ✅ 已验证 (2026-02-07) | **最后检查**: v0.93.1 (路由优化 + 模型策略修正)
 
 ## 项目概述
 
@@ -28,97 +28,65 @@ DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 A
 ```
 divinesense/
 ├── cmd/divinesense/     # 主程序入口
-├── internal/             # 内部工具库
-│   ├── base/            # 基础组件
-│   ├── profile/         # 配置文件处理
-│   ├── util/            # 工具函数
-│   └── version/         # 版本信息
 ├── server/              # HTTP/gRPC 服务器 & 路由
-│   ├── auth/            # 认证授权
-│   ├── internal/        # 内部服务
-│   ├── middleware/      # 中间件
-│   ├── queryengine/     # 查询路由 & 意图检测
 │   ├── router/          # API 处理器（v1 实现）
+│   ├── queryengine/     # 查询路由 & 意图检测
 │   ├── runner/          # 后台任务运行器
 │   ├── scheduler/       # 日程管理
-│   ├── service/         # 业务逻辑层
-│   ├── stats/           # 统计服务
-│   └── timezone/        # 时区处理
+│   └── service/         # 业务逻辑层
 ├── ai/                  # 🔴 AI 核心模块（一级模块）
-│   ├── agent/           #   Parrot 代理系统
-│   │   ├── cc_runner/  #     CC Runner 异步架构（Geek Mode 核心）
-│   │   ├── tools/      #     代理工具实现
-│   │   ├── universal/  #     UniversalParrot 配置驱动系统
-│   │   ├── registry/   #     注册表系统（工具/提示词动态发现）
-│   │   ├── cache.go    #     会话缓存
-│   │   ├── chat_router.go #   聊天路由
-│   │   ├── context.go  #     上下文管理
-│   │   ├── evolution_parrot.go # 进化模式（代码实现）
-│   │   ├── geek_parrot.go     # 极客模式（代码实现）
-│   │   └── session_manager.go # 会话管理
-│   ├── aitime/         #   AI 时间解析
+│   ├── agent/           #   Parrot 代理（UniversalParrot 配置驱动系统 + GeekParrot、EvolutionParrot）
+│   ├── router/          #   三层意图路由
+│   ├── vector/          #   Embedding 服务
+│   ├── memory/          #   情景记忆
+│   ├── session/         #   对话持久化
 │   ├── cache/           #   LRU 缓存层
-│   ├── context/         #   上下文构建
+│   ├── metrics/         #   代理性能追踪
 │   ├── core/            #   AI 基础设施
-│   │   ├── embedding/  #     嵌入服务（从 server/ai/ 迁移）
-│   │   ├── retrieval/  #     检索系统（从 server/retrieval/ 迁移）
-│   │   ├── reranker/   #     重排服务
-│   │   └── llm/        #     LLM 客户端
+│   │   ├── embedding/   #     嵌入服务（从 server/ai/ 迁移）
+│   │   ├── retrieval/   #     检索系统（从 server/retrieval/ 迁移）
+│   │   ├── reranker/    #     重排服务
+│   │   └── llm/         #     LLM 客户端
+│   ├── rag/             #   RAG 高级功能
+│   ├── tags/            #   标签建议
 │   ├── duplicate/       #   重复检测
-│   ├── filter/         #   过滤器系统（敏感信息过滤，<1ms 响应）
-│   ├── genui/          #   生成式 UI
-│   ├── graph/          #   知识图谱
-│   ├── habit/          #   习惯学习
-│   ├── memory/         #   情景记忆
-│   ├── metrics/        #   代理性能追踪
-│   ├── prediction/     #   预测引擎
-│   ├── preload/        #   预加载系统（预测性缓存优化）
-│   ├── rag/            #   RAG 高级功能
-│   ├── reminder/       #   提醒系统
-│   ├── review/         #   审查服务
-│   ├── router/         #   四层意图路由（含智能路由反馈）
-│   ├── schedule/       #   日程 AI
-│   ├── session/        #   对话持久化
-│   ├── stats/          #   统计服务（告警持久化）
-│   ├── tags/           #   标签建议
-│   ├── timeout/        #   超时处理
-│   ├── tracing/        #   链路追踪（分布式追踪）
-│   └── config.go       #   AI 配置
+│   ├── habit/           #   习惯学习
+│   ├── genui/           #   生成式 UI
+│   ├── graph/           #   知识图谱
+│   ├── prediction/      #   预测引擎
+│   ├── reminder/        #   提醒系统
+│   ├── schedule/        #   日程 AI
+│   ├── aitime/          #   AI 时间解析
+│   ├── timeout/         #   超时处理
+│   ├── review/          #   审查服务
+│   ├── context/         #   上下文构建
+│   └── config.go        #   AI 配置
 ├── plugin/              # 其他可选插件（非 AI）
-│   ├── chat_apps/      # 聊天应用接入（Telegram/钉钉/WhatsApp）
-│   ├── cron/           # 定时任务
-│   ├── email/          # 邮件服务
-│   ├── filter/         # 过滤器
-│   ├── httpgetter/     # HTTP 获取器
-│   ├── idp/            # 身份提供商
-│   ├── markdown/       # Markdown 插件
-│   ├── ocr/            # OCR 插件
-│   ├── scheduler/      # 任务调度
-│   ├── storage/        # 存储适配器（S3、本地）
-│   ├── textextract/    # 文本提取
-│   ├── webhook/        # Webhook 插件
-│   └── ...
+│   ├── scheduler/       # 任务调度
+│   ├── storage/         # 存储适配器（S3、本地）
+│   ├── idp/             # 身份提供商
+│   ├── markdown/        # Markdown 插件
+│   ├── ocr/             # OCR 插件
+│   ├── webhook/         # Webhook 插件
+│   └── chat_apps/       # 聊天应用接入（Telegram/钉钉/WhatsApp）
 ├── store/               # 数据存储层
-│   ├── cache/          # 缓存存储
-│   ├── db/             # 数据库实现
-│   ├── migration/      # 数据库迁移
-│   └── seed/           # 种子数据
+│   ├── db/              # 数据库实现
+│   │   ├── postgres/    # PostgreSQL with pgvector
+│   │   └── sqlite/      # SQLite（仅开发环境，无 AI）
+│   └── [interfaces]     # 存储抽象
 ├── proto/               # Protobuf 定义（API 契约）
-│   ├── api/v1/         # API 服务定义
-│   ├── store/          # Store 服务定义
-│   └── third_party/    # 第三方依赖
+│   ├── api/v1/          # API 服务定义
+│   └── store/           # Store 服务定义
 ├── web/                 # React 前端应用
 │   ├── src/
-│   │   ├── pages/      # 页面组件
-│   │   ├── layouts/    # 布局组件
-│   │   ├── components/ # UI 组件（49+ AI 聊天组件）
-│   │   ├── locales/    # i18n 翻译（en、zh-Hans）
-│   │   └── hooks/      # React hooks
+│   │   ├── pages/       # 页面组件
+│   │   ├── layouts/     # 布局组件
+│   │   ├── components/  # UI 组件
+│   │   ├── locales/     # i18n 翻译（en、zh-Hans）
+│   │   └── hooks/       # React hooks
 │   └── package.json
 ├── docs/                # 文档
 ├── scripts/             # 开发和构建脚本
-├── config/              # 配置文件
-│   └── parrots/        # 鹦鹉代理配置（YAML）
 └── docker/              # Docker 配置
 ```
 
@@ -224,7 +192,8 @@ plugin/chat_apps/
 
 **详细文档**：
 - [用户指南](../user-guides/CHAT_APPS.md)
-- [技术规格](../archived/specs/20260207_archive/chat-apps-integration.md)
+- [开发者指南](../guides/CHAT_APPS.md)
+- [技术规格](../specs/chat-apps-integration.md)
 
 4. **后台运行器** (`server/runner/`):
    - 异步生成笔记 Embedding
@@ -251,9 +220,6 @@ plugin/chat_apps/
 | **ActivityService** | `activity_service.proto` | 用户活动记录 |
 | **AttachmentService** | `attachment_service.proto` | 附件管理 |
 | **AuthService** | `auth_service.proto` | 认证授权 |
-| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索 |
-| └── *Block Model* | `ai_block.proto` | Unified Block Model 支持 |
-| └── *Stats* | `ai_stats.proto` | AI 统计与告警 |
 | **ChatAppService** | `chat_app_service.proto` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
 | **IdpService** | `idp_service.proto` | 身份提供商集成 |
 | **InstanceService** | `instance_service.proto` | 实例配置 |
@@ -262,6 +228,7 @@ plugin/chat_apps/
 | **ShortcutService** | `shortcut_service.proto` | 快捷方式 |
 | **UserService** | `user_service.proto` | 用户管理 |
 | **Common** | `common.proto` | 通用类型定义 |
+| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索 |
 
 ---
 
@@ -345,7 +312,7 @@ git push --no-verify
 **说明**：
 - **鹦鹉共五只**：MEMO、SCHEDULE、AMAZING（配置驱动）、GEEK、EVOLUTION（代码实现）
 - **AUTO 不是鹦鹉**：它是前端发送给后端的特殊标记，表示"请后端路由系统决定使用哪只鹦鹉"
-- 当 `AgentType == AUTO` 时，后端触发五层路由（缓存 → 规则 → 历史 → 权重 → LLM）
+- 当 `AgentType == AUTO` 时，后端触发三层路由（规则匹配 → 历史感知 → LLM 降级）
 
 ### UniversalParrot 架构
 
@@ -370,7 +337,6 @@ git push --no-verify
 | **ParrotConfig** | `parrot_config.go` | 配置加载和验证 |
 | **ExecutionStrategy** | `*_executor.go` | 执行策略接口（Direct/ReAct/Planning） |
 | **ToolRegistry** | `registry/tool_registry.go` | 工具注册表（动态工具发现） |
-| **PromptRegistry** | `registry/prompt_registry.go` | 提示词注册表（版本管理） |
 
 **执行策略**：
 
@@ -384,7 +350,7 @@ git push --no-verify
 
 **位置**：`ai/agent/chat_router.go` + `ai/router/service.go`
 
-ChatRouter 实现**五层**意图分类系统（含智能路由反馈）：
+ChatRouter 实现**四层**意图分类系统：
 
 ```
 用户输入 → EvolutionMode? ─Yes→ EvolutionParrot（自我进化）
@@ -407,16 +373,10 @@ ChatRouter 实现**五层**意图分类系统（含智能路由反馈）：
     │  Layer 0: Cache (LRU, 0ms)          │  → Hit? 返回缓存结果
     │  Layer 1: RuleMatcher (0ms)        │  → Match? 返回
     │  Layer 2: HistoryMatcher (~10ms)   │  → Match? 返回
-    │  Layer 3: WeightMatcher (动态权重) │  → 个性化路由
-    │  Layer 4: LLM Classifier (~400ms)   │  → 返回 JSON {intent, confidence}
+    │  Layer 3: LLM Classifier (~400ms)   │  → 返回 JSON {intent, confidence}
     └─────────────────────────────────────┘
                   ↓
            路由结果（MEMO/SCHEDULE/AMAZING）
-                  ↓
-           ┌──────────────────┐
-           │ 反馈收集 (可选)   │ → router_feedback 表
-           │ 优化路由权重      │ → router_weight 表
-           └──────────────────┘
 ```
 
 **Layer 0: Cache (LRU)**
@@ -435,24 +395,12 @@ ChatRouter 实现**五层**意图分类系统（含智能路由反馈）：
 - 存储表：`conversation_context`
 - 延迟：~10ms
 
-**Layer 3: WeightMatcher（个性化路由）**
-- 基于用户历史路由反馈调整关键词权重
-- 存储表：`router_weight`
-- 延迟：~5ms
-- 支持用户自定义关键词优先级
-
-**Layer 4: LLM Classifier**
+**Layer 3: LLM Classifier**
 - Provider: SiliconFlow
 - Model: `Qwen/Qwen2.5-7B-Instruct`
 - Token: 50, Temperature: 0
 - 输出格式：JSON Schema `{intent, confidence}`
 - 延迟：~400ms
-
-**智能路由反馈（v0.94.0 新增）**：
-- 收集用户对路由结果的反馈
-- 存储表：`router_feedback`（predicted_intent, actual_intent, confidence）
-- 用于优化关键词权重和 LLM 分类器
-- 支持 A/B 测试不同路由策略
 
 **EvolutionMode 最高优先级路由**：
 - 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
@@ -557,7 +505,7 @@ LLMCallStats.CacheReadTokens
 
 ## CC Runner 异步架构 (Geek Mode 核心)
 
-**规格文档**：[CC Runner 异步架构说明书](../archived/specs/20260207_archive/cc_runner_async_arch.md) (v1.2)
+**规格文档**：[CC Runner 异步架构说明书](../specs/cc_runner_async_arch.md) (v1.2)
 
 **概述**：Geek Mode 从一次性执行（One-shot）升级为**全双工持久化**（Full-Duplex Persistent）架构。
 
@@ -665,24 +613,10 @@ Claude Code CLI Process
 | :------ | :--------- | :------------------------------ |
 | Memory  | `memory/`  | 情景记忆 & 用户偏好             |
 | Session | `session/` | 对话持久化（30 天保留）         |
-| Router  | `router/`  | 四层意图分类 & 智能路由反馈     |
+| Router  | `router/`  | 三层意图分类 & 路由             |
 | Cache   | `cache/`   | 带 TTL 的 LRU 缓存（查询结果）  |
 | Metrics | `metrics/` | 代理 & 工具性能追踪（A/B 测试） |
-| Stats   | `stats/`   | 统计服务（告警持久化）          |
 | Vector  | `vector/`  | 多提供商 Embedding 服务         |
-| Filter  | `filter/`  | 敏感信息过滤器（<1ms 响应）     |
-| Preload | `preload/` | 预测性缓存预加载                |
-| Tracing | `tracing/` | 分布式链路追踪                  |
-
-### 新增 AI 模块 (v0.94.0)
-
-| 模块 | 功能 | 性能指标 |
-|:-----|:-----|:---------|
-| **ai/filter/** | 敏感信息过滤（手机号、身份证、邮箱、银行卡、IP） | <1ms 响应时间 |
-| **ai/preload/** | 基于用户行为模式的智能预加载 | 命中率 >60% |
-| **ai/stats/** | 告警持久化、指标存储 | 实时聚合 |
-| **ai/tracing/** | 分布式追踪（OpenTelemetry 兼容） | <5% 开销 |
-| **ai/agent/registry/** | 动态工具发现、执行策略注册 | 热加载 |
 
 ### 会话服务 (`ai/session/`)
 
@@ -744,49 +678,29 @@ BAAI/bge-reranker-v2-m3 用于结果精炼（可通过策略配置）。
 
 | 路径           | 组件              | 布局           | 用途                     |
 | :------------- | :---------------- | :------------- | :----------------------- |
-| `/`            | 重定向到 `/chat`   | RootLayout     | 默认入口                 |
-| `/auth/*`      | 认证页面组        | RootLayout     | 登录/注册/OAuth 回调     |
-| `/home`        | `Home.tsx`        | MemoLayout     | 主时间线 + 笔记编辑器    |
-| `/explore`     | `Explore.tsx`     | MemoLayout     | 搜索和探索内容           |
-| `/archived`    | `Archived.tsx`    | MemoLayout     | 已归档笔记               |
+| `/`            | `Home.tsx`        | MainLayout     | 主时间线 + 笔记编辑器    |
+| `/explore`     | `Explore.tsx`     | MainLayout     | 搜索和探索内容           |
+| `/archived`    | `Archived.tsx`    | MainLayout     | 已归档笔记               |
 | `/chat`        | `AIChat.tsx`      | AIChatLayout   | AI 聊天界面 + 自动路由   |
 | `/schedule`    | `Schedule.tsx`    | ScheduleLayout | 日历视图（FullCalendar） |
-| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout | 知识图谱可视化          |
-| `/inbox`       | `Inboxes.tsx`     | GeneralLayout  | 收件箱                   |
-| `/attachments` | `Attachments.tsx` | GeneralLayout  | 附件管理                 |
-| `/review`      | `Review.tsx`      | MemoLayout     | 每日回顾                 |
-| `/setting`     | `Setting.tsx`     | GeneralLayout  | 用户设置                 |
-| `/u/:username` | `UserProfile.tsx` | MemoLayout     | 公开用户资料             |
-| `/memos/:uid`  | `MemoDetail.tsx`  | GeneralLayout  | 笔记详情页               |
+| `/review`      | `Review.tsx`      | MainLayout     | 每日回顾                 |
+| `/setting`     | `Setting.tsx`     | MainLayout     | 用户设置                 |
+| `/u/:username` | `UserProfile.tsx` | MainLayout     | 公开用户资料             |
 
 ### 布局层级
 
 ```
 RootLayout（全局导航 + 认证）
     │
-    ├── MemoLayout（可折叠侧边栏：MemoExplorer）
-    │   └── /home, /explore, /archived, /u/:username, /review
+    ├── MainLayout（可折叠侧边栏：MemoExplorer）
+    │   └── /, /explore, /archived, /u/:username
     │
-    ├── AIChatLayout（固定侧边栏：AIChatSidebar，多模式主题）
+    ├── AIChatLayout（固定侧边栏：AIChatSidebar）
     │   └── /chat
     │
-    ├── ScheduleLayout（固定侧边栏：ScheduleCalendar）
-    │   └── /schedule
-    │
-    └── GeneralLayout（无侧边栏，全宽内容）
-        └── /knowledge-graph, /inbox, /attachments, /setting, /memos/:uid
+    └── ScheduleLayout（固定侧边栏：ScheduleCalendar）
+        └── /schedule
 ```
-
-### 核心 Hooks
-
-| Hook | 大小 | 描述 |
-|:-----|:-----|:-----|
-| `useAIQueries` | 41KB | AI 查询管理 |
-| `useBlockQueries` | 21KB | Block 模型支持 |
-| `useScheduleQueries` | 20KB | 日程查询 |
-| `useParrotChat` | 8KB | 鹦鹉聊天 |
-| `useBranchTree` | 5KB | 分支树管理 |
-| `useIntentPrediction` | - | 意图预测 |
 
 ### 静态资源优化 (Static Asset Optimization)
 
@@ -958,29 +872,14 @@ pending ──▶ streaming ──▶ completed
 
 ### 核心表
 
-| 表名                   | 用途                                      | 版本    |
-| :--------------------- | :---------------------------------------- | :------ |
-| `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     | v0.93.0 |
-| `ai_conversation`     | AI 对话会话                              | v0.93.0 |
-| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           | v0.93.0 |
-| `conversation_context` | 会话持久化（多渠道支持）                  | v0.93.0 |
-| `episodic_memory`      | 长期用户记忆和学习                        | -       |
-| `user_preferences`     | 用户沟通偏好                              | -       |
-
-### 增强功能表
-
-| 表名                   | 用途                                      | 版本    |
-| :--------------------- | :---------------------------------------- | :------ |
-| `agent_session_stats`  | 会话统计（成本追踪）                       | v0.93.0 |
-| `user_cost_settings`   | 用户成本预算设置                          | v0.93.0 |
-| `agent_security_audit` | 安全审计（高风险操作记录）                 | v0.93.0 |
-
-### 智能路由表（v0.94.0 新增）
-
-| 表名                   | 用途                                      | 功能     |
-| :--------------------- | :---------------------------------------- | :------- |
-| `router_feedback`      | 路由反馈收集                              | 意图分类优化 |
-| `router_weight`        | 动态权重存储                              | 个性化路由 |
+| 表名                   | 用途                                      |
+| :--------------------- | :---------------------------------------- |
+| `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     |
+| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           |
+| `conversation_context` | 会话持久化（30 天保留）                   |
+| `episodic_memory`      | 长期用户记忆和学习                        |
+| `user_preferences`     | 用户沟通偏好                              |
+| `agent_metrics`        | A/B 测试指标（prompt 版本、延迟、成功率） |
 
 ---
 
