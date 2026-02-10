@@ -335,30 +335,22 @@ export const MemoBlockV2 = memo(function MemoBlockV2({ memo, isLatest = false, o
     }
   }, [memo.visibility]);
 
-  // Quick actions menu
+  // Quick actions menu - only show actions not visible in footer
   const quickActions = useMemo(() => {
     const actions: Array<{ key: QuickAction; icon: typeof Edit3; label: string; action: () => void; danger?: boolean }> = [];
 
+    // Archive/Restore (always in dropdown, not in footer)
     if (!isArchived) {
-      actions.push(
-        { key: "pin", icon: memo.pinned ? PinOff : Pin, label: memo.pinned ? "Unpin" : "Pin", action: handleTogglePin },
-        { key: "archive", icon: Archive, label: "Archive", action: handleToggleArchive },
-      );
+      actions.push({ key: "archive", icon: Archive, label: "Archive", action: handleToggleArchive });
     } else {
       actions.push({ key: "archive", icon: ArchiveRestore, label: "Restore", action: handleToggleArchive });
     }
 
-    if (!isArchived) {
-      actions.push(
-        { key: "copy", icon: Copy, label: "Copy", action: handleCopy },
-        { key: "share", icon: Share2, label: "Share", action: handleShare },
-      );
-    }
-
+    // Delete (always in dropdown, not in footer)
     actions.push({ key: "delete", icon: Trash2, label: "Delete", action: () => setDeleteDialogOpen(true), danger: true });
 
     return actions;
-  }, [isArchived, memo.pinned, handleTogglePin, handleToggleArchive, handleCopy, handleShare]);
+  }, [isArchived, handleToggleArchive]);
 
   return (
     <>
