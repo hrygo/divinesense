@@ -1,3 +1,16 @@
+-- ============================================================================
+-- SQLite Schema - LATEST
+-- ============================================================================
+-- ⚠️ AI SUPPORT POLICY:
+-- - PostgreSQL: Full AI support (AIBlock, episodic memory, etc.)
+-- - SQLite: Vector search ONLY (see #134 for roadmap)
+--
+-- 🚧 TODO (Future PRs):
+-- - PR #132: AIBlock/AIConversation SQLite support
+-- - PR #133: EpisodicMemory SQLite support
+-- - PR #134: UserPreferences SQLite support
+-- ============================================================================
+
 -- system_setting
 CREATE TABLE system_setting (
   name TEXT NOT NULL,
@@ -108,9 +121,13 @@ CREATE TABLE reaction (
 );
 
 -- memo_embedding (Vector storage for semantic search)
--- Note: This table supports vector storage for SQLite using sqlite-vec.
---       For full AI features including conversation persistence (AIBlock),
---       use PostgreSQL with pgvector extension.
+-- ⚠️ NOTE: SQLite ONLY supports vector search (semantic retrieval).
+--          Full AI features (AIBlock, episodic memory, etc.) require PostgreSQL.
+--          See: https://github.com/hrygo/divinesense/issues/134
+--
+-- Vectors are stored in dual format:
+-- - embedding (TEXT): JSON-encoded float32 array for fallback
+-- - embedding_vec (BLOB): vec0 format for sqlite-vec O(log n) search
 CREATE TABLE memo_embedding (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   memo_id INTEGER NOT NULL,
