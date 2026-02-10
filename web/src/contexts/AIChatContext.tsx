@@ -45,9 +45,7 @@ function getDefaultTitle(parrotId: ParrotAgentType): string {
 
 // Checks if a title is a default i18n key (should trigger auto-generation)
 export function isDefaultTitle(title: string): boolean {
-  return title.startsWith("chat.default.") ||
-         title === "chat.new" ||
-         title.startsWith("chat.");
+  return title.startsWith("chat.default.") || title === "chat.new" || title.startsWith("chat.");
 }
 
 // Translates a title: if it's an i18n key, translates it; otherwise returns as-is.

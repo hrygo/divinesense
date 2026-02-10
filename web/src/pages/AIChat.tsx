@@ -10,7 +10,7 @@ import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
 // SessionBar 已移除 - PC 端 SessionStats 已整合到 ChatHeader
 // import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { useAIChat, isDefaultTitle } from "@/contexts/AIChatContext";
+import { isDefaultTitle, useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
 import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";

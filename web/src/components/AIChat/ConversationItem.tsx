@@ -1,10 +1,10 @@
 import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { translateTitle } from "@/contexts/AIChatContext";
 import { cn } from "@/lib/utils";
 import type { ConversationSummary } from "@/types/aichat";
 import { TitleEditDialog } from "./TitleEditDialog";
-import { translateTitle } from "@/contexts/AIChatContext";
 
 interface ConversationItemProps {
   conversation: ConversationSummary;
