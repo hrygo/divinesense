@@ -10,6 +10,11 @@ import (
 	"github.com/hrygo/divinesense/ai/agent"
 )
 
+const (
+	// DefaultStreamChunkSize is the default chunk size for streaming answers (in runes).
+	DefaultStreamChunkSize = 80
+)
+
 // streamAnswer streams the final answer by chunks.
 // This simulates streaming by chunking the response.
 // Uses rune-aware chunking to avoid UTF-8 truncation.
@@ -21,7 +26,7 @@ func streamAnswer(answer string, callback agent.EventCallback) {
 	// Split into chunks for "streaming" effect
 	// Use rune count for safer UTF-8 handling
 	runes := []rune(answer)
-	chunkSize := 80 // runes, not bytes
+	chunkSize := DefaultStreamChunkSize // runes, not bytes
 	for i := 0; i < len(runes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(runes) {

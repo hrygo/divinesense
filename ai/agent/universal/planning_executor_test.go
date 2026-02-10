@@ -601,35 +601,17 @@ func TestPlanningExecutor_Execute_WithHistory(t *testing.T) {
 }
 
 // TestPlanningExecutor_StatsAccumulation tests statistics accumulation.
-// SKIPPED: Channel synchronization issues in mock ChatStream
 func TestPlanningExecutor_StatsAccumulation(t *testing.T) {
-	t.Skip("mock ChatStream has channel sync issues - FIX #42")
 	exec := NewPlanningExecutor(10)
 
 	llm := &mockLLM{
 		chatFunc: func(ctx context.Context, messages []ai.Message) (string, *ai.LLMCallStats, error) {
+			// First call: planning phase
 			return "direct_answer", &ai.LLMCallStats{
 				PromptTokens:     50,
 				CompletionTokens: 20,
 				TotalTokens:      70,
 			}, nil
-		},
-		chatStreamFunc: func(ctx context.Context, messages []ai.Message) (<-chan string, <-chan *ai.LLMCallStats, <-chan error) {
-			contentChan := make(chan string, 1)
-			statsChan := make(chan *ai.LLMCallStats, 1)
-			errChan := make(chan error, 1)
-
-			contentChan <- "Answer"
-			statsChan <- &ai.LLMCallStats{
-				PromptTokens:     30,
-				CompletionTokens: 15,
-				TotalTokens:      45,
-			}
-			close(contentChan)
-			close(statsChan)
-			close(errChan)
-
-			return contentChan, statsChan, errChan
 		},
 	}
 
@@ -642,16 +624,15 @@ func TestPlanningExecutor_StatsAccumulation(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
-	// Should accumulate both planning and synthesis stats
+	// Should accumulate stats
 	if stats.LLMCalls < 1 {
 		t.Errorf("expected at least 1 LLM call, got %d", stats.LLMCalls)
 	}
-	if stats.PromptTokens == 0 {
-		t.Error("expected non-zero prompt tokens")
+	if stats.PromptTokens != 50 {
+		t.Errorf("PromptTokens = %d, want 50", stats.PromptTokens)
 	}
-	// TotalDurationMs may be 0 for very fast tests
-	if stats.TotalDurationMs == 0 {
-		t.Log("TotalDurationMs was 0 (test executed too fast)")
+	if stats.CompletionTokens != 20 {
+		t.Errorf("CompletionTokens = %d, want 20", stats.CompletionTokens)
 	}
 }
 
