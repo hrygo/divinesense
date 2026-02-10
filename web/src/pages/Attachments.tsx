@@ -205,99 +205,97 @@ const Attachments = () => {
   }, []);
 
   return (
-    <section className="@container w-full min-h-full flex flex-col justify-start items-center">
-      <div className="w-full max-w-6xl">
-        {/* Header Card - Unified style */}
-        <div className="border border-border rounded-lg bg-card shadow-sm overflow-hidden">
-          {/* Desktop Header */}
-          {sm && (
-            <div className="relative w-full flex flex-row justify-between items-center px-4 py-3 border-b border-border/50">
-              <div className="flex items-center gap-2">
-                <PaperclipIcon className="w-5 h-5 text-muted-foreground" />
-                <h1 className="text-lg font-medium">{t("common.attachments")}</h1>
-              </div>
-              <div className="relative max-w-48">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input className="pl-9 h-9" placeholder={t("common.search")} value={searchQuery} onChange={handleSearchChange} />
-              </div>
+    <>
+      {/* Header Card - Unified style */}
+      <div className="border border-border rounded-lg bg-card shadow-sm overflow-hidden">
+        {/* Desktop Header */}
+        {sm && (
+          <div className="relative w-full flex flex-row justify-between items-center px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <PaperclipIcon className="w-5 h-5 text-muted-foreground" />
+              <h1 className="text-lg font-medium">{t("common.attachments")}</h1>
             </div>
-          )}
+            <div className="relative max-w-48">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input className="pl-9 h-9" placeholder={t("common.search")} value={searchQuery} onChange={handleSearchChange} />
+            </div>
+          </div>
+        )}
 
-          {/* Content */}
-          <div className="w-full flex flex-col justify-start items-start px-4 py-6">
-            {loadingState.isLoading ? (
-              <div className="w-full h-32 flex flex-col justify-center items-center">
-                <p className="w-full text-center text-base my-6">{t("resource.fetching-data")}</p>
-              </div>
-            ) : (
-              <>
-                {filteredAttachments.length === 0 ? (
-                  <div className="w-full mt-8 mb-8 flex flex-col justify-center items-center">
-                    <Empty />
-                    <p className="mt-4 text-muted-foreground">{t("message.no-data")}</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-full h-auto flex flex-col justify-start items-start gap-y-8">
-                      {Array.from(groupedAttachments.entries()).map(([monthStr, monthAttachments]) => (
-                        <div key={monthStr} className="w-full flex flex-row justify-start items-start">
-                          {/* Date Label */}
-                          <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start shrink-0">
-                            <span className="text-sm text-muted-foreground/60">{dayjs(monthStr).year()}</span>
-                            <span className="font-medium text-xl text-foreground">
-                              {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
-                            </span>
-                          </div>
-                          {/* Attachments Grid */}
-                          <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
-                            {monthAttachments.map((attachment) => (
-                              <AttachmentItem key={attachment.name} attachment={attachment} />
-                            ))}
-                          </div>
+        {/* Content */}
+        <div className="w-full flex flex-col justify-start items-start px-4 py-6">
+          {loadingState.isLoading ? (
+            <div className="w-full h-32 flex flex-col justify-center items-center">
+              <p className="w-full text-center text-base my-6">{t("resource.fetching-data")}</p>
+            </div>
+          ) : (
+            <>
+              {filteredAttachments.length === 0 ? (
+                <div className="w-full mt-8 mb-8 flex flex-col justify-center items-center">
+                  <Empty />
+                  <p className="mt-4 text-muted-foreground">{t("message.no-data")}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-full h-auto flex flex-col justify-start items-start gap-y-8">
+                    {Array.from(groupedAttachments.entries()).map(([monthStr, monthAttachments]) => (
+                      <div key={monthStr} className="w-full flex flex-row justify-start items-start">
+                        {/* Date Label */}
+                        <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start shrink-0">
+                          <span className="text-sm text-muted-foreground/60">{dayjs(monthStr).year()}</span>
+                          <span className="font-medium text-xl text-foreground">
+                            {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
+                          </span>
                         </div>
-                      ))}
+                        {/* Attachments Grid */}
+                        <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
+                          {monthAttachments.map((attachment) => (
+                            <AttachmentItem key={attachment.name} attachment={attachment} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
 
-                      {/* Unused Attachments Section */}
-                      {unusedAttachments.length > 0 && (
-                        <>
-                          <Separator />
-                          <div className="w-full flex flex-row justify-start items-start">
-                            <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start shrink-0"></div>
-                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-col gap-4">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                <div className="flex flex-row items-center gap-2">
-                                  <span className="text-muted-foreground">{t("resource.unused-resources")}</span>
-                                  <span className="text-muted-foreground/70">({unusedAttachments.length})</span>
-                                </div>
-                                <Button variant="destructive" size="sm" onClick={() => deleteUnusedAttachmentsDialog.open()}>
-                                  <Trash className="w-4 h-4 mr-1" />
-                                  {t("resource.delete-all-unused")}
-                                </Button>
+                    {/* Unused Attachments Section */}
+                    {unusedAttachments.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="w-full flex flex-row justify-start items-start">
+                          <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start shrink-0"></div>
+                          <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div className="flex flex-row items-center gap-2">
+                                <span className="text-muted-foreground">{t("resource.unused-resources")}</span>
+                                <span className="text-muted-foreground/70">({unusedAttachments.length})</span>
                               </div>
-                              <div className="flex flex-row justify-start items-start gap-4 flex-wrap">
-                                {unusedAttachments.map((attachment) => (
-                                  <AttachmentItem key={attachment.name} attachment={attachment} />
-                                ))}
-                              </div>
+                              <Button variant="destructive" size="sm" onClick={() => deleteUnusedAttachmentsDialog.open()}>
+                                <Trash className="w-4 h-4 mr-1" />
+                                {t("resource.delete-all-unused")}
+                              </Button>
+                            </div>
+                            <div className="flex flex-row justify-start items-start gap-4 flex-wrap">
+                              {unusedAttachments.map((attachment) => (
+                                <AttachmentItem key={attachment.name} attachment={attachment} />
+                              ))}
                             </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Load More Button */}
-                    {nextPageToken && (
-                      <div className="w-full flex flex-row justify-center items-center mt-4">
-                        <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoadingMore}>
-                          {isLoadingMore ? t("resource.fetching-data") : t("memo.load-more")}
-                        </Button>
-                      </div>
+                        </div>
+                      </>
                     )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
+                  </div>
+
+                  {/* Load More Button */}
+                  {nextPageToken && (
+                    <div className="w-full flex flex-row justify-center items-center mt-4">
+                      <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoadingMore}>
+                        {isLoadingMore ? t("resource.fetching-data") : t("memo.load-more")}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -311,7 +309,7 @@ const Attachments = () => {
         onConfirm={handleDeleteUnusedAttachments}
         confirmVariant="destructive"
       />
-    </section>
+    </>
   );
 };
 
