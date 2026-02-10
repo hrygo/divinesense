@@ -1,5 +1,5 @@
-//go:build !sqlite_vec
-// +build !sqlite_vec
+//go:build !sqlite_vec && cgo
+// +build !sqlite_vec,cgo
 
 package sqlite
 
