@@ -1,0 +1,235 @@
+name: Performance Tests
+
+# 阶段三：性能基准测试 (L3 测试)
+# - 运行性能基准测试和压力测试
+# - 手动触发或 nightly 定时运行
+# - 生成性能报告并对比历史数据
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai/**"
+      - "store/**"
+      - "server/queryengine/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ai/**"
+      - "store/**"
+      - "server/queryengine/**"
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Benchmark to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - router
+          - embedding
+          - retrieval
+          - agent
+      iterations:
+        description: "Benchmark iterations"
+        required: false
+        default: "10"
+        type: string
+  schedule:
+    # 每天北京时间 02:00 (UTC 18:00) 运行
+    - cron: '0 18 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # 性能测试不取消，保留历史数据
+
+env:
+  GO_VERSION: "1.25"
+
+jobs:
+  detect-performance-tests:
+    name: Detect Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has_router_benchmarks: ${{ steps.detect.outputs.router_benchmarks }}
+      has_embedding_benchmarks: ${{ steps.detect.outputs.embedding_benchmarks }}
+      has_retrieval_benchmarks: ${{ steps.detect.outputs.retrieval_benchmarks }}
+      has_agent_benchmarks: ${{ steps.detect.outputs.agent_benchmarks }}
+      run_all: ${{ steps.detect.outputs.run_all }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect benchmark files
+        id: detect
+        run: |
+          # 检查是否有基准测试变更
+          router_benchmarks=$(git diff --name-only origin/main...HEAD | grep -c "ai/router/.*_test.go" || echo "0")
+          embedding_benchmarks=$(git diff --name-only origin/main...HEAD | grep -c "ai/core/embedding/.*_test.go" || echo "0")
+          retrieval_benchmarks=$(git diff --name-only origin/main...HEAD | grep -c "ai/core/retrieval/.*_test.go" || echo "0")
+          agent_benchmarks=$(git diff --name-only origin/main...HEAD | grep -c "ai/agent/.*_test.go" || echo "0")
+
+          echo "router_benchmarks=$router_benchmarks" >> $GITHUB_OUTPUT
+          echo "embedding_benchmarks=$embedding_benchmarks" >> $GITHUB_OUTPUT
+          echo "retrieval_benchmarks=$retrieval_benchmarks" >> $GITHUB_OUTPUT
+          echo "agent_benchmarks=$agent_benchmarks" >> $GITHUB_OUTPUT
+
+          # 手动触发或 scheduled 运行所有
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+             [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "run_all=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_all=false" >> $GITHUB_OUTPUT
+          fi
+
+  router-benchmarks:
+    name: Router Benchmarks
+    runs-on: ubuntu-latest
+    needs: detect-performance-tests
+    if: |
+      needs.detect-performance-tests.outputs.run_all == 'true' ||
+      needs.detect-performance-tests.outputs.has_router_benchmarks == '1' ||
+      inputs.benchmark == 'all' ||
+      inputs.benchmark == 'router'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run router benchmarks
+        run: |
+          echo "Running router benchmarks..."
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/router/... | tee benchmark-router.txt
+
+      - name: Upload router benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-router-results
+          path: benchmark-router.txt
+          retention-days: 30
+
+  embedding-benchmarks:
+    name: Embedding Benchmarks
+    runs-on: ubuntu-latest
+    needs: detect-performance-tests
+    if: |
+      needs.detect-performance-tests.outputs.run_all == 'true' ||
+      needs.detect-performance-tests.outputs.has_embedding_benchmarks == '1' ||
+      inputs.benchmark == 'all' ||
+      inputs.benchmark == 'embedding'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run embedding benchmarks
+        run: |
+          echo "Running embedding benchmarks..."
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/core/embedding/... | tee benchmark-embedding.txt
+
+      - name: Upload embedding benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-embedding-results
+          path: benchmark-embedding.txt
+          retention-days: 30
+
+  retrieval-benchmarks:
+    name: Retrieval Benchmarks
+    runs-on: ubuntu-latest
+    needs: detect-performance-tests
+    if: |
+      needs.detect-performance-tests.outputs.run_all == 'true' ||
+      needs.detect-performance-tests.outputs.has_retrieval_benchmarks == '1' ||
+      inputs.benchmark == 'all' ||
+      inputs.benchmark == 'retrieval'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run retrieval benchmarks
+        run: |
+          echo "Running retrieval benchmarks..."
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/core/retrieval/... | tee benchmark-retrieval.txt
+
+      - name: Upload retrieval benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-retrieval-results
+          path: benchmark-retrieval.txt
+          retention-days: 30
+
+  agent-benchmarks:
+    name: Agent Benchmarks
+    runs-on: ubuntu-latest
+    needs: detect-performance-tests
+    if: |
+      needs.detect-performance-tests.outputs.run_all == 'true' ||
+      needs.detect-performance-tests.outputs.has_agent_benchmarks == '1' ||
+      inputs.benchmark == 'all' ||
+      inputs.benchmark == 'agent'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run agent benchmarks
+        run: |
+          echo "Running agent benchmarks..."
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/agent/... | tee benchmark-agent.txt
+
+      - name: Upload agent benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-agent-results
+          path: benchmark-agent.txt
+          retention-days: 30
+
+  query-router-benchmarks:
+    name: QueryRouter Benchmarks
+    runs-on: ubuntu-latest
+    needs: detect-performance-tests
+    if: |
+      needs.detect-performance-tests.outputs.run_all == 'true' ||
+      inputs.benchmark == 'all'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run QueryRouter benchmarks
+        run: |
+          echo "Running QueryRouter benchmarks..."
+          go test -bench=. -benchmem -run=^$ -tags=noui ./server/queryengine/... | tee benchmark-query-router.txt
+
+      - name: Upload QueryRouter benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-query-router-results
+          path: benchmark-query-router.txt
+          retention-days: 30
