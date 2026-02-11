@@ -144,7 +144,7 @@ func NewService(cfg *Config) (Service, error) {
 	case "anthropic":
 		baseURL := cfg.BaseURL
 		if baseURL == "" {
-			baseURL = "https://open.bigmodel.cn/api/anthropic"
+			baseURL = "https://api.anthropic.com"
 		}
 		clientConfig = openai.DefaultAnthropicConfig(cfg.APIKey, baseURL)
 		clientConfig.HTTPClient = httpClient

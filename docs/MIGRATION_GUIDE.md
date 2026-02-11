@@ -28,7 +28,7 @@ make start
 
 **适用场景**: 现有 Memos 用户，希望迁移到 DivineSense
 
-**兼容性策略**: DivineSense 保持对 `MEMOS_*` 环境变量的向后兼容，支持渐进式迁移。
+**⚠️ 重要变更**: DivineSense 已移除对 `MEMOS_*` 环境变量的向后兼容支持，迁移时必须更新所有环境变量。
 
 ---
 
@@ -57,7 +57,7 @@ copy "C:\ProgramData\memos\memos_prod.db" "C:\ProgramData\memos\backup_%DATE%.db
 ### 2. 记录当前配置
 
 ```bash
-# 导出当前环境变量
+# 导出当前环境变量（用于参考）
 env | grep MEMOS_ > memos_env_backup.txt
 ```
 
@@ -84,50 +84,6 @@ env | grep MEMOS_ > memos_env_backup.txt
 # 4. 验证迁移结果
 ```
 
-### 方案 B: 渐进式迁移
-
-**适用场景**: 生产环境，最小化停机时间
-
-**步骤**:
-
-1. **更新代码**
-   ```bash
-   git pull origin main
-   make build-all
-   ```
-
-2. **更新 Docker 配置** (如果使用)
-   ```bash
-   # 更新 .env.prod，添加新的环境变量
-   cp .env.prod .env.prod.backup
-
-   # 新旧变量可以共存，系统优先使用 DIVINESENSE_*
-   vi .env.prod
-   ```
-
-3. **重启服务**
-   ```bash
-   # Docker 部署
-   make docker-prod-down
-   make docker-prod-up
-
-   # 或使用部署脚本
-   cd deploy/aliyun
-   ./deploy.sh restart
-   ```
-
-4. **验证功能**
-   - 登录测试
-   - 创建笔记
-   - AI 对话测试
-
-**优势**:
-- 环境变量向后兼容，无需同时修改
-- 可以逐步替换配置
-- 出问题可快速回滚
-
----
-
 ### 方案 B: 一次性迁移
 
 **适用场景**: 新安装或开发环境
@@ -149,11 +105,14 @@ env | grep MEMOS_ > memos_env_backup.txt
 
 3. **更新环境变量**
    ```bash
+   # ⚠️ 必须更新所有环境变量前缀
    # 批量替换 .env 文件
    sed -i 's/MEMOS_/DIVINESENSE_/g' .env
    sed -i 's/memos:/divinesense:/g' .env
    sed -i 's@/memos@/divinesense@g' .env
    ```
+
+   **重要**: 由于 `MEMOS_*` 前缀不再被支持，必须将所有环境变量更新为 `DIVINESENSE_*`。
 
 4. **更新数据库连接**
 
@@ -180,26 +139,25 @@ env | grep MEMOS_ > memos_env_backup.txt
 ## 环境变量映射表
 
 | 旧变量 (MEMOS_*) | 新变量 (DIVINESENSE_*) | 状态 |
-|------------------|----------------------|------|
-| `MEMOS_DRIVER` | `DIVINESENSE_DRIVER` | 兼容 |
-| `MEMOS_DSN` | `DIVINESENSE_DSN` | 兼容 |
-| `MEMOS_MODE` | `DIVINESENSE_MODE` | 兼容 |
-| `MEMOS_PORT` | `DIVINESENSE_PORT` | 兼容 |
-| `MEMOS_DATA` | `DIVINESENSE_DATA` | 兼容 |
-| `MEMOS_AI_ENABLED` | `DIVINESENSE_AI_ENABLED` | 兼容 |
-| `MEMOS_AI_*_PROVIDER` | `DIVINESENSE_AI_*_PROVIDER` | 兼容 |
-| `MEMOS_AI_*_API_KEY` | `DIVINESENSE_AI_*_API_KEY` | 兼容 |
-| `MEMOS_OCR_ENABLED` | `DIVINESENSE_OCR_ENABLED` | 兼容 |
-| `MEMOS_CACHE_REDIS_*` | `DIVINESENSE_CACHE_REDIS_*` | 兼容 |
+|:------------------|:----------------------|:-----|
+| `MEMOS_DRIVER` | `DIVINESENSE_DRIVER` | **必须更新** |
+| `MEMOS_DSN` | `DIVINESENSE_DSN` | **必须更新** |
+| `MEMOS_MODE` | `DIVINESENSE_MODE` | **必须更新** |
+| `MEMOS_PORT` | - | 移除 (使用固定端口) |
+| `MEMOS_DATA` | - | 移除 (使用固定路径) |
+| `MEMOS_AI_ENABLED` | `DIVINESENSE_AI_ENABLED` | **必须更新** |
+| `MEMOS_AI_*_PROVIDER` | `DIVINESENSE_AI_*_PROVIDER` | **必须更新** |
+| `MEMOS_AI_*_API_KEY` | `DIVINESENSE_AI_*_API_KEY` | **必须更新** |
+| `MEMOS_OCR_ENABLED` | `DIVINESENSE_OCR_ENABLED` | **必须更新** |
 
-**优先级**: `DIVINESENSE_*` > `MEMOS_*` (新变量优先)
+⚠️ **重要**: DivineSense 不再支持 `MEMOS_*` 前缀的环境变量，必须在迁移时全部更新。
 
 ---
 
 ## 数据目录变更
 
 | 平台 | 旧路径 | 新路径 |
-|------|--------|--------|
+|:-----|:-------|:-------|
 | Linux | `/var/opt/memos` | `/var/opt/divinesense` |
 | Windows | `C:\ProgramData\memos` | `C:\ProgramData\divinesense` |
 | macOS | `/Library/Application Support/memos` | `/Library/Application Support/divinesense` |
@@ -218,7 +176,7 @@ robocopy "C:\ProgramData\memos" "C:\ProgramData\divinesense" /E /R:0 /W:0
 ## Docker 容器名称变更
 
 | 旧名称 | 新名称 |
-|--------|--------|
+|:-------|:-------|
 | `memos-postgres` | `divinesense-postgres` |
 | `memos-postgres-dev` | `divinesense-postgres-dev` |
 | `memos` | `divinesense` |
@@ -283,42 +241,18 @@ docker exec divinesense-postgres psql -U divinesense -d divinesense -c "SELECT 1
 
 ### Q: AI 功能不工作？
 
-**A**: 确认环境变量已正确设置：
+**A**: 确认环境变量已正确设置（必须使用 `DIVINESENSE_*` 前缀）：
 ```bash
 docker exec divinesense env | grep DIVINESENSE_AI
 ```
 
 ### Q: 旧环境变量还支持吗？
 
-**A**: 是的，所有 `MEMOS_*` 变量仍然有效，系统会优先使用 `DIVINESENSE_*`。
+**A**: ❌ 不再支持。从 v0.98.0 开始，`MEMOS_*` 前缀已被移除，必须使用 `DIVINESENSE_*` 前缀。
 
 ### Q: 需要重新训练 AI 模型吗？
 
 **A**: 不需要，AI 模型配置无需更改。
-
----
-
-## 技术细节
-
-### 向后兼容实现
-
-代码中使用回退机制：
-
-```go
-// 优先使用新变量，回退到旧变量
-getEnvWithFallback := func(newKey, legacyKey string) string {
-    if val := os.Getenv(newKey); val != "" {
-        return val
-    }
-    return os.Getenv(legacyKey)
-}
-```
-
-### 缓存键前缀
-
-- 旧: `memos:`
-- 新: `divinesense:`
-- 迁移后旧缓存会自动失效（这是预期行为）
 
 ---
 
@@ -332,4 +266,4 @@ getEnvWithFallback := func(newKey, legacyKey string) string {
 
 ---
 
-**最后更新**: 2026-01-28
+**最后更新**: 2026-02-11 (v0.98.0 - 移除 MEMOS_ 前缀支持)

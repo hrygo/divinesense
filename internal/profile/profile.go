@@ -63,56 +63,30 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 // FromEnv loads configuration from environment variables.
-// Supports both DIVINESENSE_* (new) and MEMOS_* (legacy) prefixes.
 func (p *Profile) FromEnv() {
-	// Helper to get env value with legacy fallback
-	// Skips empty values to allow defaults to take effect
-	getEnvWithFallback := func(newKey, legacyKey string) string {
-		if val := os.Getenv(newKey); val != "" {
-			return val
-		}
-		return os.Getenv(legacyKey)
-	}
-
-	// Helper to get env value with legacy fallback and default value
-	getEnvWithDefault := func(newKey, legacyKey, defaultValue string) string {
-		if val := os.Getenv(newKey); val != "" {
-			return val
-		}
-		if val := os.Getenv(legacyKey); val != "" {
-			return val
-		}
-		return defaultValue
-	}
-
-	// Helper to get bool env value with legacy fallback
-	getBoolEnvWithFallback := func(newKey, legacyKey string) bool {
-		return getEnvWithFallback(newKey, legacyKey) == "true"
-	}
-
-	p.AIEnabled = getBoolEnvWithFallback("DIVINESENSE_AI_ENABLED", "MEMOS_AI_ENABLED")
-	p.AIEmbeddingProvider = getEnvWithDefault("DIVINESENSE_AI_EMBEDDING_PROVIDER", "MEMOS_AI_EMBEDDING_PROVIDER", "siliconflow")
-	p.AILLMProvider = getEnvWithDefault("DIVINESENSE_AI_LLM_PROVIDER", "MEMOS_AI_LLM_PROVIDER", "deepseek")
-	p.AISiliconFlowAPIKey = getEnvWithFallback("DIVINESENSE_AI_SILICONFLOW_API_KEY", "MEMOS_AI_SILICONFLOW_API_KEY")
-	p.AISiliconFlowBaseURL = getEnvWithDefault("DIVINESENSE_AI_SILICONFLOW_BASE_URL", "MEMOS_AI_SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
-	p.AIDeepSeekAPIKey = getEnvWithFallback("DIVINESENSE_AI_DEEPSEEK_API_KEY", "MEMOS_AI_DEEPSEEK_API_KEY")
-	p.AIDeepSeekBaseURL = getEnvWithDefault("DIVINESENSE_AI_DEEPSEEK_BASE_URL", "MEMOS_AI_DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-	p.AIOpenAIAPIKey = getEnvWithFallback("DIVINESENSE_AI_OPENAI_API_KEY", "MEMOS_AI_OPENAI_API_KEY")
-	p.AIOpenAIBaseURL = getEnvWithDefault("DIVINESENSE_AI_OPENAI_BASE_URL", "MEMOS_AI_OPENAI_BASE_URL", "https://api.openai.com/v1")
-	p.AIOllamaBaseURL = getEnvWithDefault("DIVINESENSE_AI_OLLAMA_BASE_URL", "MEMOS_AI_OLLAMA_BASE_URL", "http://localhost:11434")
-	p.AIEmbeddingModel = getEnvWithDefault("DIVINESENSE_AI_EMBEDDING_MODEL", "MEMOS_AI_EMBEDDING_MODEL", "BAAI/bge-m3")
-	p.AIRerankModel = getEnvWithDefault("DIVINESENSE_AI_RERANK_MODEL", "MEMOS_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
-	p.AILLMModel = getEnvWithDefault("DIVINESENSE_AI_LLM_MODEL", "MEMOS_AI_LLM_MODEL", "deepseek-chat")
-	p.AIAnthropicAPIKey = getEnvWithFallback("DIVINESENSE_AI_ANTHROPIC_API_KEY", "MEMOS_AI_ANTHROPIC_API_KEY")
-	p.AIAnthropicBaseURL = getEnvWithDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "MEMOS_AI_ANTHROPIC_BASE_URL", "https://open.bigmodel.cn/api/anthropic")
+	p.AIEnabled = getEnvOrDefault("DIVINESENSE_AI_ENABLED", "false") == "true"
+	p.AIEmbeddingProvider = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_PROVIDER", "siliconflow")
+	p.AILLMProvider = getEnvOrDefault("DIVINESENSE_AI_LLM_PROVIDER", "deepseek")
+	p.AISiliconFlowAPIKey = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_API_KEY", "")
+	p.AISiliconFlowBaseURL = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
+	p.AIDeepSeekAPIKey = getEnvOrDefault("DIVINESENSE_AI_DEEPSEEK_API_KEY", "")
+	p.AIDeepSeekBaseURL = getEnvOrDefault("DIVINESENSE_AI_DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+	p.AIOpenAIAPIKey = getEnvOrDefault("DIVINESENSE_AI_OPENAI_API_KEY", "")
+	p.AIOpenAIBaseURL = getEnvOrDefault("DIVINESENSE_AI_OPENAI_BASE_URL", "https://api.openai.com/v1")
+	p.AIOllamaBaseURL = getEnvOrDefault("DIVINESENSE_AI_OLLAMA_BASE_URL", "http://localhost:11434")
+	p.AIEmbeddingModel = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_MODEL", "BAAI/bge-m3")
+	p.AIRerankModel = getEnvOrDefault("DIVINESENSE_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
+	p.AILLMModel = getEnvOrDefault("DIVINESENSE_AI_LLM_MODEL", "deepseek-chat")
+	p.AIAnthropicAPIKey = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_API_KEY", "")
+	p.AIAnthropicBaseURL = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 
 	// Attachment processing configuration
-	p.OCREnabled = getBoolEnvWithFallback("DIVINESENSE_OCR_ENABLED", "MEMOS_OCR_ENABLED")
-	p.TextExtractEnabled = getBoolEnvWithFallback("DIVINESENSE_TEXTEXTRACT_ENABLED", "MEMOS_TEXTEXTRACT_ENABLED")
-	p.TesseractPath = getEnvWithFallback("DIVINESENSE_OCR_TESSERACT_PATH", getEnvOrDefault("MEMOS_OCR_TESSERACT_PATH", "tesseract"))
-	p.TessdataPath = getEnvWithFallback("DIVINESENSE_OCR_TESSDATA_PATH", os.Getenv("MEMOS_OCR_TESSDATA_PATH"))
-	p.OCRLanguages = getEnvWithFallback("DIVINESENSE_OCR_LANGUAGES", getEnvOrDefault("MEMOS_OCR_LANGUAGES", "chi_sim+eng"))
-	p.TikaServerURL = getEnvWithFallback("DIVINESENSE_TEXTEXTRACT_TIKA_URL", getEnvOrDefault("MEMOS_TEXTEXTRACT_TIKA_URL", "http://localhost:9998"))
+	p.OCREnabled = getEnvOrDefault("DIVINESENSE_OCR_ENABLED", "false") == "true"
+	p.TextExtractEnabled = getEnvOrDefault("DIVINESENSE_TEXTEXTRACT_ENABLED", "false") == "true"
+	p.TesseractPath = getEnvOrDefault("DIVINESENSE_OCR_TESSERACT_PATH", "tesseract")
+	p.TessdataPath = getEnvOrDefault("DIVINESENSE_OCR_TESSDATA_PATH", "")
+	p.OCRLanguages = getEnvOrDefault("DIVINESENSE_OCR_LANGUAGES", "chi_sim+eng")
+	p.TikaServerURL = getEnvOrDefault("DIVINESENSE_TEXTEXTRACT_TIKA_URL", "http://localhost:9998")
 }
 
 func checkDataDir(dataDir string) (string, error) {
