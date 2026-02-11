@@ -6,7 +6,7 @@
 
 set -e
 
-VERSION="v0.1.7-alpha.2"
+VERSION="v0.1.6"
 BASE_URL="https://github.com/asg017/sqlite-vec/releases/download"
 LIB_DIR=".lib"
 
