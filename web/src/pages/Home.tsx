@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { HeroSection, MemoList } from "@/components/Memo";
 import { FixedEditor } from "@/components/Memo/FixedEditor";
-import { useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -13,19 +12,6 @@ const Home = () => {
   const { t } = useTranslation();
   const user = useCurrentUser();
   const navigate = useNavigate();
-  const { addFilter, removeFiltersByFactor } = useMemoFilterContext();
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Sync search query with MemoFilterContext
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      addFilter({ factor: "contentSearch", value: searchQuery.trim() });
-    } else {
-      removeFiltersByFactor("contentSearch");
-    }
-  }, [searchQuery, addFilter, removeFiltersByFactor]);
 
   // Build filter using unified hook
   const memoFilter = useMemoFilters({
@@ -50,11 +36,11 @@ const Home = () => {
   );
 
   return (
-    <div className="w-full min-h-full bg-background text-foreground">
+    <div className="w-full min-h-full text-foreground">
       {/* Unified width container for all sections - matches AIChat responsive width */}
       <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
-        {/* Hero Section with inline search */}
-        <HeroSection onSearchChange={setSearchQuery} />
+        {/* Hero Section with integrated intelligent search */}
+        <HeroSection />
 
         {/* Memo List - filtered by search query */}
         <MemoList orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />

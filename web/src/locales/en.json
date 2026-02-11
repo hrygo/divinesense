@@ -681,7 +681,27 @@
     "edit": "Edit",
     "email": "Email",
     "expand": "Expand",
-    "explore": "Explore",
+    "explore": {
+      "title": "Explore",
+      "hero": {
+        "title_prefix": "Discover",
+        "title_highlight": "Wonderful",
+        "subtitle": "Explore public notes and creative ideas"
+      },
+      "categories": {
+        "all": "All Notes",
+        "all_desc": "Browse all public content",
+        "users": "Discover Users",
+        "users_desc": "Find interesting creators",
+        "trending": "Trending",
+        "trending_desc": "See what's popular"
+      },
+      "stats": {
+        "memos": "Notes",
+        "users": "Users",
+        "growing": "Growing"
+      }
+    },
     "failed-to-sign-in": "Failed to sign in",
     "filter": "Filter",
     "inbox": "Inbox",
@@ -807,6 +827,8 @@
   "memo": {
     "click-to-show-nsfw-content": "Click to show NSFW content",
     "end_of_list": "You've reached the end",
+    "empty_title": "Start your journey",
+    "empty_subtitle": "Every thought deserves to be remembered",
     "hero": {
       "new_memo": "New Memo",
       "search": "Search",
@@ -1113,7 +1135,13 @@
     "no-results": "No relevant memos found",
     "score": "Relevance",
     "switch-to-ai": "Switch to AI search",
-    "switch-to-keyword": "Switch to keyword search"
+    "switch-to-keyword": "Switch to keyword search",
+    "empty_title": "No relevant memos found",
+    "empty_subtitle": "Try different keywords or use AI search to discover more"
+  },
+  "filter": {
+    "empty_title": "No memos match your criteria",
+    "empty_subtitle": "Try adjusting your filters"
   },
   "setting": {
     "access-token-section": {

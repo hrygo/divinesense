@@ -1,33 +1,36 @@
 /**
  * MemoList - Modern Grid Layout with MemoBlockV2
  *
+ * 设计哲学：「禅意智识」
+ * - 呼吸感：笔记如思绪般浮现
+ * - 留白：充足的间距让内容呼吸
+ * - 流动：渐进式展示，不打断心流
+ *
  * Features:
- * - Responsive 2-column grid (desktop) / 1-column (mobile)
+ * - Single column layout (mobile + desktop)
  * - MemoBlockV2 with Fluid Card design
  * - Infinite scroll with intersection observer
  * - Filter integration
- * - Loading and empty states
+ * - Zen-style loading and empty states
  * - Staggered reveal animations
  */
 
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import Empty from "@/components/Empty";
 import { MemoBlockV2 } from "@/components/Memo/MemoBlockV2";
-import Skeleton from "@/components/Skeleton";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { cn } from "@/lib/utils";
 import { State } from "@/types/proto/api/v1/common_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
+import { EmptyState, EndIndicator, LoadingSkeleton, PaginationSkeleton } from "./MemoListStates";
 
 export interface MemoListProps {
   state?: State;
   orderBy?: string;
   filter?: string;
   pageSize?: number;
-  showCreator?: boolean;
   onEdit?: (memo: Memo) => void;
+  showCreator?: boolean;
   className?: string;
 }
 
@@ -93,11 +96,12 @@ export const MemoList = memo(function MemoList({
   orderBy = "display_time desc",
   filter,
   pageSize = DEFAULT_LIST_MEMOS_PAGE_SIZE,
-  showCreator,
   onEdit,
   className,
 }: MemoListProps) {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
+  // 保留 t 以备将来国际化使用
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
   // Use React Query's infinite query for pagination
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteMemos({
@@ -141,18 +145,28 @@ export const MemoList = memo(function MemoList({
     [onEdit],
   );
 
-  // Animation delay for staggered reveal
+  // Animation delay for staggered reveal - 思绪浮现效果
   const getAnimationDelay = (index: number): number => {
-    return index < 5 ? index * 50 : 50 + (index - 5) * 30;
+    // 前几个快速浮现，后面的更慢，模拟思绪涌现
+    return index < 5 ? index * 40 : 200 + (index - 5) * 20;
+  };
+
+  // 判断空状态类型
+  const getEmptyType = (): "all" | "filtered" | "search" => {
+    if (filter && filter.includes("contentSearch")) {
+      return "search";
+    }
+    if (filter) {
+      return "filtered";
+    }
+    return "all";
   };
 
   return (
     <div className={cn("flex flex-col w-full", className)}>
-      {/* Show skeleton loader during initial load */}
+      {/* Initial loading - 初始加载骨架屏 */}
       {isLoading ? (
-        <div className="w-full">
-          <Skeleton showCreator={showCreator} count={4} />
-        </div>
+        <LoadingSkeleton count={4} />
       ) : (
         <>
           {/* Memo Grid - Single column layout */}
@@ -160,7 +174,7 @@ export const MemoList = memo(function MemoList({
             {memos.map((memo, index) => (
               <div
                 key={memo.name}
-                className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
                 style={{
                   animationDelay: `${getAnimationDelay(index)}ms`,
                   animationFillMode: "both",
@@ -171,27 +185,14 @@ export const MemoList = memo(function MemoList({
             ))}
           </div>
 
-          {/* Loading indicator for pagination */}
-          {isFetchingNextPage && (
-            <div className="flex flex-col gap-4 mt-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={`skeleton-${i}`} className="h-40 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          )}
+          {/* Pagination skeleton - 分页加载骨架屏 */}
+          {isFetchingNextPage && <PaginationSkeleton />}
 
-          {/* Empty state */}
-          {!isFetchingNextPage && memos.length === 0 && (
-            <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center">
-              <Empty />
-              <p className="mt-2 text-muted-foreground">{t("message.no-data")}</p>
-            </div>
-          )}
+          {/* Empty state - 空状态 */}
+          {!isFetchingNextPage && memos.length === 0 && <EmptyState type={getEmptyType()} />}
 
-          {/* End of list indicator */}
-          {!isFetchingNextPage && !hasNextPage && memos.length > 0 && (
-            <div className="w-full text-center py-8 text-muted-foreground text-sm">{t("memo.end_of_list") || "You've reached the end"}</div>
-          )}
+          {/* End of list indicator - 列表结束指示器 */}
+          {!isFetchingNextPage && !hasNextPage && memos.length > 0 && <EndIndicator />}
         </>
       )}
     </div>

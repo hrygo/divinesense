@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { useMutation } from "@tanstack/react-query";
 import { uniqBy } from "lodash-es";
 import { Minimize2Icon } from "lucide-react";
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { memoServiceClient } from "@/connect";
 import { handleError } from "@/lib/error";
@@ -31,14 +31,20 @@ interface FocusModeEditorProps {
 }
 
 /**
- * FocusModeEditor - 全屏无干扰编辑模式
+ * FocusModeEditor - 全屏无干扰编辑模式（带动画优化）
  *
  * Features:
+ * - 进入/退出动画状态管理
  * - Fullscreen overlay with backdrop blur
  * - Centered editor container
  * - Complete toolbar functionality
  * - ESC to exit
  * - Click outside to exit
+ *
+ * 优化:
+ * - 使用动画状态提升视觉体验
+ * - 保存/恢复滚动位置
+ * - 平滑的进入/退出过渡
  */
 export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeholder, className }: FocusModeEditorProps) {
   const t = useTranslate();
@@ -46,6 +52,28 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
   const [visibility, setVisibility] = useState(Visibility.PRIVATE);
   const [location, setLocation] = useState<Location | undefined>();
   const [relations, setRelations] = useState<MemoRelation[]>([]);
+
+  // 动画状态
+  const [isExiting, setIsExiting] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // 组件挂载时触发进入动画
+  useEffect(() => {
+    // 保存当前滚动位置
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+
+    // 短暂延迟后显示内容，触发进入动画
+    const showTimer = requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    return () => {
+      cancelAnimationFrame(showTimer);
+      // 退出时恢复滚动位置
+      window.scrollTo(scrollX, scrollY);
+    };
+  }, []);
 
   // Dialogs state
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -88,7 +116,8 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
       setLocation(undefined);
       setRelations([]);
       onSuccess?.(data.name);
-      onExit(); // Exit focus mode after save
+      // 保存成功后退出焦点模式
+      handleExit();
     },
     onError: (error) => {
       handleError(error, toast.error, {
@@ -101,7 +130,7 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
   const handleSave = useCallback(() => {
     if (!content.trim()) return;
     createMemo.mutate(content);
-  }, [content]);
+  }, [content, createMemo]);
 
   const handleInsertTags = useCallback((tags: string[]) => {
     if (tags.length > 0) {
@@ -122,19 +151,47 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
     }
   }, [locationHook, handleLocationChange]);
 
+  // 退出焦点模式（带动画）
+  const handleExit = useCallback(() => {
+    setIsExiting(true);
+    // 等待退出动画完成后调用 onExit
+    setTimeout(() => {
+      onExit();
+    }, 200);
+  }, [onExit]);
+
   const isValid = content.trim().length > 0;
   const isUploading = selectingFlag || createMemo.isPending;
 
+  // ESC 键退出
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isExiting) {
+        e.preventDefault();
+        handleExit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isExiting, handleExit]);
+
   return (
     <>
-      {/* Backdrop overlay */}
-      <FocusModeOverlayComponent isActive onToggle={onExit} />
+      {/* Backdrop overlay with exit animation */}
+      <FocusModeOverlayComponent isActive={!isExiting} isExiting={isExiting} onToggle={handleExit} />
 
-      {/* Main focus mode container */}
+      {/* Main focus mode container with animation */}
       <div
         className={cn(
           "fixed z-50 w-auto max-w-5xl mx-auto shadow-lg border-border bg-background rounded-lg overflow-hidden",
+          // 进入动画
+          isVisible && "animate-in fade-in-0 zoom-in-95 duration-300",
+          // 退出动画
+          isExiting && "animate-out fade-out-0 zoom-out-95 duration-200",
+          // 过渡动画
           "transition-all duration-300 ease-in-out",
+          // 定位
           "top-2 left-2 right-2 bottom-2 sm:top-4 sm:left-4 sm:right-4 sm:bottom-4",
           "md:top-8 md:left-8 md:right-8 md:bottom-8",
           className,
@@ -144,7 +201,7 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/50">
           <span className="text-sm font-medium text-muted-foreground">Focus Mode</span>
           <button
-            onClick={onExit}
+            onClick={handleExit}
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-accent"
           >
             <Minimize2Icon className="w-4 h-4" />
@@ -193,7 +250,7 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
               }
             }
           }}
-          onToggleFocusMode={onExit}
+          onToggleFocusMode={handleExit}
         />
       </div>
 

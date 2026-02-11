@@ -10,7 +10,7 @@ interface RelationCardProps {
 }
 
 const RelationCard = ({ memo, parentPage, className }: RelationCardProps) => {
-  const memoId = extractMemoIdFromName(memo.name);
+  const memoId = extractMemoIdFromName(String(memo.name));
 
   return (
     <Link
@@ -18,14 +18,14 @@ const RelationCard = ({ memo, parentPage, className }: RelationCardProps) => {
         "flex items-center gap-1 px-1 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-accent/20 transition-colors group",
         className,
       )}
-      to={`/${memo.name}`}
+      to={`/${String(memo.name)}`}
       viewTransition
       state={{ from: parentPage }}
     >
       <span className="text-[8px] font-mono px-1 py-0.5 rounded border border-border bg-muted/40 group-hover:bg-accent/30 transition-colors shrink-0">
-        {memoId.slice(0, 6)}
+        {String(memoId).slice(0, 6)}
       </span>
-      <span className="truncate">{memo.snippet}</span>
+      <span className="truncate">{String(memo.snippet || "")}</span>
     </Link>
   );
 };

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZenToolbar - Design Preview</title>
+  <style>
+    :root {
+      --background: #ffffff;
+      --foreground: #0a0a0a;
+      --muted: #f4f4f5;
+      --muted-foreground: #71717a;
+      --border: #e4e4e7;
+      --primary: #2563eb;
+      --primary-foreground: #ffffff;
+      --radius-xl: 12px;
+      --radius-lg: 8px;
+    }
+
+    .dark {
+      --background: #0a0a0a;
+      --foreground: #fafafa;
+      --muted: #27272a;
+      --muted-foreground: #a1a1aa;
+      --border: #27272a;
+      --primary: #3b82f6;
+      --primary-foreground: #ffffff;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      padding: 40px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .preview-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .preview-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      transition: all 0.3s ease-out;
+    }
+
+    .dark .toolbar {
+      background: rgba(10, 10, 10, 0.8);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-button {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-xl);
+      border: none;
+      background: transparent;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      transition: all 0.3s ease-out;
+    }
+
+    .tool-button:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+
+    .tool-button:active {
+      transform: scale(0.95);
+    }
+
+    .tool-button.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .tool-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .save-button {
+      padding: 0 16px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: var(--radius-xl);
+      border: none;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .save-button:hover {
+      opacity: 0.9;
+    }
+
+    .save-button:disabled {
+      background: var(--muted);
+      color: var(--muted-foreground);
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .cancel-button {
+      padding: 0 12px;
+      height: 36px;
+      border-radius: var(--radius-xl);
+      border: none;
+      background: transparent;
+      color: var(--muted-foreground);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .cancel-button:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+
+    .ai-button {
+      position: relative;
+    }
+
+    .ai-panel {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      margin-bottom: 8px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px;
+      min-width: 200px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .ai-button:hover .ai-panel {
+      display: flex;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    .ai-panel-label {
+      width: 100%;
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-bottom: 8px;
+    }
+
+    .tag-button {
+      padding: 4px 10px;
+      border-radius: var(--radius-lg);
+      border: none;
+      background: var(--muted);
+      color: var(--muted-foreground);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .tag-button:hover {
+      background: var(--muted-foreground);
+      color: var(--foreground);
+    }
+
+    .visibility-selector {
+      position: relative;
+    }
+
+    .visibility-panel {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+      display: none;
+      gap: 4px;
+      padding: 4px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .visibility-selector:hover .visibility-panel {
+      display: flex;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    .visibility-option {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+      border: none;
+      background: transparent;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .visibility-option:hover {
+      background: var(--muted);
+    }
+
+    .visibility-option.selected {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--background);
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .theme-toggle:hover {
+      background: var(--muted);
+    }
+
+    /* 移动端预览 */
+    .mobile-preview {
+      max-width: 390px;
+    }
+
+    .mobile-toolbar {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mobile-toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .mobile-toolbar-row .toolbar-group {
+      gap: 4px;
+    }
+
+    .mobile-toolbar-row .tool-button {
+      width: 40px;
+      height: 40px;
+    }
+
+    .mobile-save-button {
+      padding: 0 16px;
+      height: 40px;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 呼吸动画 */
+    @keyframes breathe {
+      0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.08);
+      }
+    }
+
+    .breathing {
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--foreground) 0%, var(--muted-foreground) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: var(--muted-foreground);
+      max-width: 500px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .design-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 900px;
+      padding: 24px;
+      background: var(--muted);
+      border-radius: var(--radius-xl);
+    }
+
+    .design-info-item h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-foreground);
+      margin-bottom: 8px;
+    }
+
+    .design-info-item p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .kbd {
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--muted);
+      font-size: 10px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+  <div style="text-align: center;">
+    <h1 class="title breathing">ZenToolbar</h1>
+    <p class="subtitle">禅意工具栏 — 不折叠的直观设计</p>
+  </div>
+
+  <div class="design-info">
+    <div class="design-info-item">
+      <h3>设计哲学</h3>
+      <p>呼吸感 · 留白 · 不折叠 · 微妙</p>
+    </div>
+    <div class="design-info-item">
+      <h3>按钮尺寸</h3>
+      <p>桌面: 36×36px | 移动: 40×40px</p>
+    </div>
+    <div class="design-info-item">
+      <h3>呼吸周期</h3>
+      <p>3000ms — 与 logo 同步</p>
+    </div>
+    <div class="design-info-item">
+      <h3>圆角规范</h3>
+      <p>统一 12px (rounded-xl)</p>
+    </div>
+  </div>
+
+  <!-- PC 端工具栏 -->
+  <div class="preview-section">
+    <span class="preview-label">桌面端 (Desktop)</span>
+    <div class="toolbar">
+      <!-- 左侧：插入功能 -->
+      <div class="toolbar-group">
+        <button class="tool-button" aria-label="上传文件" title="上传文件">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="tool-button" aria-label="关联笔记" title="关联笔记">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <button class="tool-button active" aria-label="添加位置" title="添加位置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
+        <button class="tool-button" aria-label="专注模式" title="专注模式">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+        </button>
+      </div>
+
+      <!-- 中间：AI 辅助 -->
+      <div class="ai-button toolbar-group">
+        <button class="tool-button" aria-label="AI 标签" title="AI 标签">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        </button>
+        <div class="ai-panel">
+          <span class="ai-panel-label">点击添加标签</span>
+          <button class="tag-button">#想法</button>
+          <button class="tag-button">#待办</button>
+          <button class="tag-button">#笔记</button>
+          <button class="tag-button">#灵感</button>
+          <button class="tag-button">#研究</button>
+          <button class="tag-button">#项目</button>
+        </div>
+      </div>
+
+      <!-- 右侧：可见性 + 操作 -->
+      <div class="toolbar-group">
+        <div class="visibility-selector">
+          <button class="tool-button" aria-label="可见性" title="可见性">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a11.64 11.64 0 0 1 5.94-2.06M1 1l22 22"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a11.64 11.64 0 0 1-5.94 2.06"/></svg>
+          </button>
+          <div class="visibility-panel">
+            <button class="visibility-option selected" aria-label="私有">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </button>
+            <button class="visibility-option" aria-label="工作区">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </button>
+            <button class="visibility-option" aria-label="公开">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="cancel-button">取消</button>
+        <button class="save-button">
+          保存
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 11 22"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 移动端工具栏 -->
+  <div class="preview-section mobile-preview">
+    <span class="preview-label">移动端 (Mobile)</span>
+    <div class="toolbar mobile-toolbar">
+      <!-- 第一行：插入功能 + AI -->
+      <div class="mobile-toolbar-row">
+        <div class="toolbar-group">
+          <button class="tool-button" aria-label="上传文件">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <button class="tool-button" aria-label="关联笔记">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </button>
+          <button class="tool-button" aria-label="添加位置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </button>
+          <button class="tool-button" aria-label="专注模式">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+          </button>
+        </div>
+        <div class="ai-button">
+          <button class="tool-button" aria-label="AI 标签">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 第二行：可见性 + 操作 -->
+      <div class="mobile-toolbar-row">
+        <div class="visibility-selector">
+          <button class="tool-button" aria-label="可见性">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a11.64 11.64 0 0 1 5.94-2.06M1 1l22 22"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a11.64 11.64 0 0 1-5.94 2.06"/></svg>
+          </button>
+        </div>
+        <div class="toolbar-group" style="margin-left: auto;">
+          <button class="cancel-button">取消</button>
+          <button class="save-button mobile-save-button">
+            保存
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 11 22"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    let isDark = false;
+
+    themeToggle.addEventListener('click', () => {
+      isDark = !isDark;
+      document.body.classList.toggle('dark', isDark);
+    });
+  </script>
+</body>
+</html>

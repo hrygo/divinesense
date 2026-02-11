@@ -2,6 +2,8 @@
  * Memo Component Exports
  */
 
+export type { ExploreHeroSectionProps } from "./ExploreHeroSection";
+export { ExploreHeroSection } from "./ExploreHeroSection";
 export type { FixedEditorProps } from "./FixedEditor";
 export { FixedEditor } from "./FixedEditor";
 export type { HeroSectionProps } from "./HeroSection";

@@ -30,3 +30,7 @@
 - 位置：`plugin/ai/agent/chat_router.go`
 - 规则匹配 (0ms) → LLM 降级 (~400ms)
 - 路由到：MEMO / SCHEDULE / AMAZING 代理
+
+---
+
+> **文件编辑**：连续 3 次 Edit 失败时，改用 `Read 完整文件 → Write 整体重写`。详见 @.claude/rules/file-editing.md

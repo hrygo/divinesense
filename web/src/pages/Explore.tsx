@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MemoList } from "@/components/Memo";
+import { ExploreHeroSection } from "@/components/Memo/ExploreHeroSection";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -39,9 +40,13 @@ const Explore = () => {
   );
 
   return (
-    <div className="w-full min-h-full bg-background text-foreground">
-      {/* Unified width container - matches AIChat responsive width */}
+    <div className="w-full min-h-full text-foreground">
+      {/* Unified width container - matches Home page */}
       <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
+        {/* Hero Section - 探索页首屏 */}
+        <ExploreHeroSection totalMemos={0} totalUsers={0} />
+
+        {/* Memo List - filtered by visibility */}
         <MemoList state={State.NORMAL} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
       </div>
     </div>
