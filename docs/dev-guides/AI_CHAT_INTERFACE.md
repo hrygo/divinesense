@@ -463,7 +463,7 @@ Block #3 成本计算:
 | 特性      | Normal Mode         | Geek Mode       | Evolution Mode  |
 | :-------- | :------------------ | :-------------- | :-------------- |
 | **Agent** | AUTO → 路由选择     | GeekParrot      | EvolutionParrot |
-| **LLM**   | Anthropic Claude    | Claude Code CLI | Claude Code CLI |
+| **LLM**   | 可配置提供商        | Claude Code CLI | Claude Code CLI |
 | **用途**  | 日常对话/搜索       | 代码执行        | 系统进化        |
 | **成本**  | 按 Token 计费       | 零 LLM 成本     | 零 LLM 成本     |
 | **产出**  | 对话回复            | 代码产物        | GitHub PR       |

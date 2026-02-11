@@ -17,7 +17,7 @@ DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 A
 | 后端   | Go 1.25, Echo, Connect RPC, pgvector                                                                 |
 | 前端   | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query                               |
 | 数据库 | PostgreSQL 16+（生产），SQLite（开发，**无 AI**）[#9](https://github.com/hrygo/divinesense/issues/9) |
-| AI     | **Anthropic Claude**（对话 LLM，智谱 Z.AI 提供），**SiliconFlow**（Embedding、意图分类、Reranker）                              |
+| AI     | **LLM 对话** + **向量 Embedding** + **意图分类** + **重排 Rerank**                              |
 
 ---
 
@@ -98,10 +98,10 @@ divinesense/
    - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **AI 核心模块** (`ai/`)：
-   - **对话 LLM**：Anthropic Claude（智谱 Z.AI 提供，默认 `opus` / `claude-opus-7-20250219`）
-   - **Embedding**：SiliconFlow (`BAAI/bge-m3`, 1024 维)
-   - **意图分类**：SiliconFlow (`Qwen/Qwen2.5-7B-Instruct`)
-   - **Reranker**：SiliconFlow (`BAAI/bge-reranker-v2-m3`)
+   - **对话 LLM**：支持多提供商（Anthropic Claude、DeepSeek、OpenAI、Ollama）
+   - **Embedding**：向量嵌入服务（1024 维，支持多模型）
+   - **意图分类**：轻量级分类器（快速路由）
+   - **Reranker**：结果精炼重排
    - 所有 AI 功能可选（由 `DIVINESENSE_AI_ENABLED` 控制）
    - 包含从 `server/ai/` 和 `server/retrieval/` 迁移的嵌入和检索功能
 
@@ -394,8 +394,8 @@ ChatRouter 实现**四层**意图分类系统：
 - 延迟：~10ms
 
 **Layer 3: LLM Classifier**
-- Provider: SiliconFlow
-- Model: `Qwen/Qwen2.5-7B-Instruct`
+- Provider: 轻量级 LLM（可配置）
+- Model: 7B 参数级模型（如 Qwen2.5-7B-Instruct）
 - Token: 50, Temperature: 0
 - 输出格式：JSON Schema `{intent, confidence}`
 - 延迟：~400ms
@@ -423,27 +423,28 @@ ChatRouter 实现**四层**意图分类系统：
 
 ### AI 模型策略总览
 
-| 功能 | 提供商 | 模型 | 用途 |
-|:-----|:-------|:-----|:-----|
-| **对话 LLM** | Anthropic (智谱 Z.AI) | `claude-opus-7-20250219` | 主对话生成 |
-| **向量 Embedding** | SiliconFlow | `BAAI/bge-m3` | 语义搜索（1024维） |
-| **意图分类** | SiliconFlow | `Qwen/Qwen2.5-7B-Instruct` | 路由意图分类 |
-| **重排 Rerank** | SiliconFlow | `BAAI/bge-reranker-v2-m3` | 检索结果精炼 |
+| 功能 | 支持提供商 | 用途 |
+|:-----|:----------|:-----|
+| **对话 LLM** | Anthropic, DeepSeek, OpenAI, SiliconFlow, Ollama | 主对话生成 |
+| **向量 Embedding** | SiliconFlow, OpenAI, Ollama | 语义搜索（1024维） |
+| **意图分类** | SiliconFlow | 路由意图分类 |
+| **重排 Rerank** | SiliconFlow | 检索结果精炼 |
 
 **策略说明**：
-- **对话 LLM**：使用 Anthropic Claude，通过智谱 Z.AI (https://open.bigmodel.cn/api/anthropic) 提供服务
-  - 支持简化别名：`opus`、`sonnet`、`haiku`（智谱内部自动解析）
-  - 默认模型：`claude-opus-7-20250219`（最高能力）
-  - BASE_URL：`https://open.bigmodel.cn/api/anthropic`
-- **意图分类独立模型**：使用轻量级 Qwen2.5-7B-Instruct（而非主对话 LLM），实现快速、低成本的分类
+- **对话 LLM**：支持多提供商切换，通过环境变量配置
+  - Anthropic Claude：支持简化别名 `opus`、`sonnet`、`haiku`
+  - DeepSeek：`deepseek-chat` (V3.2)
+  - OpenAI：`gpt-4o` 系列
+  - Ollama：本地模型（如 `llama3.1`）
+- **意图分类独立模型**：使用轻量级模型（而非主对话 LLM），实现快速、低成本的分类
 - **成本优化**：意图分类 Token 限制为 50，Temperature 0（确定性输出）
 - **输出格式**：JSON Schema `{intent, confidence}` 确保结构化响应
 
-### Anthropic Claude 上下文缓存
+### LLM 上下文缓存
 
 > **保鲜状态**: ✅ 已验证 (2026-02-11)
 
-Anthropic Claude API 提供上下文缓存（Prompt Caching），降低多轮对话成本。
+主流 LLM 提供商（Anthropic Claude、DeepSeek 等）均支持上下文缓存（Prompt Caching），降低多轮对话成本。
 
 **缓存机制**：
 - **缓存粒度**：基于系统提示词和工具定义的自动缓存
@@ -452,7 +453,7 @@ Anthropic Claude API 提供上下文缓存（Prompt Caching），降低多轮对
 
 **数据流**：
 ```
-Anthropic API Response
+LLM API Response
     ↓ usage.cache_read_tokens
 ai/llm 客户端映射
     ↓ CacheReadTokens
