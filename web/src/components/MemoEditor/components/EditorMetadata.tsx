@@ -17,11 +17,13 @@ export const EditorMetadata: FC<EditorMetadataProps> = ({ memoName }) => {
         onRemoveLocalFile={(previewUrl) => dispatch(actions.removeLocalFile(previewUrl))}
       />
 
-      <RelationList
-        relations={state.metadata.relations}
-        onRelationsChange={(relations) => dispatch(actions.setMetadata({ relations }))}
-        memoName={memoName}
-      />
+      {state.metadata.relations.length > 0 && (
+        <RelationList
+          relations={state.metadata.relations}
+          onRelationsChange={(relations) => dispatch(actions.setMetadata({ relations }))}
+          memoName={memoName}
+        />
+      )}
 
       {state.metadata.location && (
         <LocationDisplay location={state.metadata.location} onRemove={() => dispatch(actions.setMetadata({ location: undefined }))} />

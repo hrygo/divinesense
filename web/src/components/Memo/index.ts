@@ -4,8 +4,6 @@
 
 export type { ExploreHeroSectionProps } from "./ExploreHeroSection";
 export { ExploreHeroSection } from "./ExploreHeroSection";
-export type { FixedEditorProps } from "./FixedEditor";
-export { FixedEditor } from "./FixedEditor";
 export type { HeroSectionProps } from "./HeroSection";
 export { HeroSection } from "./HeroSection";
 // MemoBlockV2 exports

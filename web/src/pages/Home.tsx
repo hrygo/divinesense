@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { HeroSection, MemoList } from "@/components/Memo";
-import { FixedEditor } from "@/components/Memo/FixedEditor";
+import MemoEditor from "@/components/MemoEditor";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -36,18 +36,26 @@ const Home = () => {
   );
 
   return (
-    <div className="w-full min-h-full text-foreground">
-      {/* Unified width container for all sections - matches AIChat responsive width */}
-      <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
-        {/* Hero Section with integrated intelligent search */}
-        <HeroSection />
+    <div className="w-full h-full flex flex-col bg-background">
+      {/* Content Area - grows to fill space */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Unified width container for all sections - matches AIChat responsive width */}
+        <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
+          {/* Hero Section with integrated intelligent search */}
+          <HeroSection />
 
-        {/* Memo List - filtered by search query */}
-        <MemoList orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />
+          {/* Memo List - filtered by search query */}
+          <MemoList orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />
+        </div>
       </div>
 
-      {/* Fixed Editor - outside container to handle its own width */}
-      <FixedEditor placeholder={t("editor.any-thoughts") || t("editor.placeholder")} />
+      {/* MemoEditor - at bottom, full-featured editor */}
+      <MemoEditor
+        placeholder={t("editor.any-thoughts") || t("editor.placeholder")}
+        onConfirm={() => {
+          window.dispatchEvent(new Event("memo-created"));
+        }}
+      />
     </div>
   );
 };

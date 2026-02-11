@@ -1,6 +1,7 @@
 // MemoEditor type exports
 
 export type {
+  CompactEditorProps,
   EditorContentProps,
   EditorMetadataProps,
   EditorProps,
@@ -11,6 +12,7 @@ export type {
   LinkMemoDialogProps,
   LocationDialogProps,
   MemoEditorProps,
+  MobileToolsSheetProps,
   SlashCommandsProps,
   TagSuggestionsProps,
   VisibilitySelectorProps,

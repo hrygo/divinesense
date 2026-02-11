@@ -19,9 +19,13 @@ export interface EditorContentProps {
 }
 
 export interface EditorToolbarProps {
-  onSave: () => void;
   onCancel?: () => void;
-  memoName?: string;
+  onUploadAttachment?: () => void;
+  onLinkMemo?: () => void;
+  onToggleFocusMode?: () => void;
+  onVisibilityChange?: (visibility: import("@/types/proto/api/v1/memo_service_pb").Visibility) => void;
+  onOpenMobileTools?: () => void;
+  currentVisibility?: import("@/types/proto/api/v1/memo_service_pb").Visibility;
 }
 
 export interface EditorMetadataProps {
@@ -80,6 +84,13 @@ export interface SlashCommandsProps {
   commands: unknown[];
 }
 
+export interface CompactEditorProps {
+  placeholder?: string;
+  onSave?: () => void;
+  onExpand?: () => void;
+  keyboardHeight?: number;
+}
+
 export interface EditorProps {
   className: string;
   initialContent: string;
@@ -99,4 +110,14 @@ export interface VisibilitySelectorProps {
   value: Visibility;
   onChange: (visibility: Visibility) => void;
   onOpenChange?: (open: boolean) => void;
+}
+
+export interface MobileToolsSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUploadFile: () => void;
+  onLinkMemo: () => void;
+  onAddLocation: () => void;
+  onVisibilityChange: (visibility: Visibility) => void;
+  keyboardHeight?: number;
 }
