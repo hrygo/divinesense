@@ -35,12 +35,12 @@ const RootLayout = () => {
   }, [prevPathname, pathname, searchParams, removeFilter]);
 
   return (
-    <div className="w-full h-full flex flex-row justify-start items-stretch sm:pl-16 overflow-hidden">
+    <div className="w-full h-full flex flex-row justify-start items-stretch sm:pl-16 overflow-hidden bg-background">
       <KeyboardShortcutsHelp />
       {sm && (
         <div
           className={cn(
-            "group flex flex-col justify-start items-start fixed top-0 left-0 select-none h-full bg-sidebar",
+            "group flex flex-col justify-start items-start fixed top-0 left-0 select-none h-full bg-sidebar z-20",
             "w-16 px-2",
             "border-r border-border",
           )}

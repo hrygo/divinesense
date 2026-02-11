@@ -67,7 +67,9 @@
 | 查找具体文件   | `Glob`          |
 | 搜索代码内容   | `Grep`          |
 | 读取文件       | `Read`          |
-| 编辑文件       | `Edit`          |
+| 编辑文件       | `Edit` / `Write` |
+
+> **文件编辑**：连续 3 次 Edit 失败时，改用 `Read 完整文件 → Write 整体重写`。详见 @.claude/rules/file-editing.md
 
 ---
 

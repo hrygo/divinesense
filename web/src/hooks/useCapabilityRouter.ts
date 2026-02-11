@@ -47,31 +47,31 @@ export function useCapabilityRouter() {
     switch (capability) {
       case CapabilityType.MEMO:
         return {
-          name: t("ai.capability.memo.name") || "笔记",
+          name: t("ai.capability.memo.name"),
           nameAlt: "Memo",
-          description: t("ai.capability.memo.description") || "搜索与问答",
+          description: t("ai.capability.memo.description"),
           icon: "🦜",
         };
       case CapabilityType.SCHEDULE:
         return {
-          name: t("ai.capability.schedule.name") || "日程",
+          name: t("ai.capability.schedule.name"),
           nameAlt: "Schedule",
-          description: t("ai.capability.schedule.description") || "规划与管理",
+          description: t("ai.capability.schedule.description"),
           icon: "⏰",
         };
       case CapabilityType.AMAZING:
         return {
-          name: t("ai.capability.amazing.name") || "综合",
+          name: t("ai.capability.amazing.name"),
           nameAlt: "Amazing",
-          description: t("ai.capability.amazing.description") || "笔记 + 日程",
+          description: t("ai.capability.amazing.description"),
           icon: "🌟",
         };
       case CapabilityType.AUTO:
       default:
         return {
-          name: t("ai.capability.auto.name") || "自动",
+          name: t("ai.capability.auto.name"),
           nameAlt: "Auto",
-          description: t("ai.capability.auto.description") || "智能识别",
+          description: t("ai.capability.auto.description"),
           icon: "🤖",
         };
     }

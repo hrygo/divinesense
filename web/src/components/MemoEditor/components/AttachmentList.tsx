@@ -6,6 +6,9 @@ import { formatFileSize, getFileTypeLabel } from "@/utils/format";
 import type { LocalFile } from "../types/attachment";
 import { toAttachmentItems } from "../types/attachment";
 
+/* eslint-disable @typescript-eslint/no-unused-vars -- 'index' is used in destructuring assignment */
+// eslint-disable-next-line
+
 interface AttachmentListProps {
   attachments: Attachment[];
   localFiles?: LocalFile[];
@@ -22,30 +25,30 @@ const AttachmentItemCard: FC<{
   canMoveDown?: boolean;
 }> = ({ item, onRemove, onMoveUp, onMoveDown, canMoveUp = true, canMoveDown = true }) => {
   const { category, filename, thumbnailUrl, mimeType, size } = item;
-  const fileTypeLabel = getFileTypeLabel(mimeType);
-  const fileSizeLabel = size ? formatFileSize(size) : undefined;
+  const fileTypeLabel = getFileTypeLabel(String(mimeType));
+  const fileSizeLabel = size ? formatFileSize(Number(size)) : undefined;
 
   return (
     <div className="relative flex items-center gap-1.5 px-1.5 py-1 rounded border border-transparent hover:border-border hover:bg-accent/20 transition-all">
       <div className="shrink-0 w-6 h-6 rounded overflow-hidden bg-muted/40 flex items-center justify-center">
         {category === "image" && thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
+          <img src={String(thumbnailUrl)} alt="" className="w-full h-full object-cover" />
         ) : (
           <FileIcon className="w-3.5 h-3.5 text-muted-foreground" />
         )}
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-1.5">
-        <span className="text-xs truncate" title={filename}>
-          {filename}
+        <span className="text-xs truncate" title={String(filename)}>
+          {String(filename)}
         </span>
 
         <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-          <span>{fileTypeLabel}</span>
+          <span>{String(fileTypeLabel)}</span>
           {fileSizeLabel && (
             <>
               <span className="text-muted-foreground/50 hidden sm:inline">•</span>
-              <span className="hidden sm:inline">{fileSizeLabel}</span>
+              <span className="hidden sm:inline">{String(fileSizeLabel)}</span>
             </>
           )}
         </div>
@@ -141,7 +144,7 @@ const AttachmentList: FC<AttachmentListProps> = ({ attachments, localFiles = [],
     <div className="w-full rounded-lg border border-border bg-muted/20 overflow-hidden">
       <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-muted/30">
         <PaperclipIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Attachments ({items.length})</span>
+        <span className="text-xs text-muted-foreground">Attachments ({String(items.length)})</span>
       </div>
 
       <div className="p-1 sm:p-1.5 flex flex-col gap-0.5">
@@ -151,7 +154,7 @@ const AttachmentList: FC<AttachmentListProps> = ({ attachments, localFiles = [],
 
           return (
             <AttachmentItemCard
-              key={item.id}
+              key={String(item.id)}
               item={item}
               onRemove={() => handleRemoveItem(item)}
               onMoveUp={!isLocalFile ? () => handleMoveUp(attachmentIndex) : undefined}

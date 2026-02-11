@@ -1,4 +1,19 @@
-import { CheckIcon, LoaderIcon, SparklesIcon } from "lucide-react";
+/**
+ * AITagSuggestPopover - AI 标签建议弹窗
+ *
+ * 设计哲学：「禅意智识」
+ * - 微妙：触发器不干扰心流
+ * - 智识：AI 建议以轻柔方式呈现
+ * - 互动：标签选择有清晰的视觉反馈
+ *
+ * ## 功能保留
+ * - AI 根据内容建议标签
+ * - 过滤已存在的标签
+ * - 多选支持
+ * - 一键插入
+ */
+
+import { Check, Loader2, Sparkles } from "lucide-react";
 import { type FC, useCallback, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
@@ -93,20 +108,20 @@ export const AITagSuggestPopover: FC<AITagSuggestPopoverProps> = ({ content, onI
         <Button
           variant="ghost"
           size="icon"
-          className="w-8 h-8 text-muted-foreground hover:text-blue-500"
+          className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
           disabled={disabled || isContentTooShort}
           title={isContentTooShort ? t("editor.content-too-short") : t("editor.ai-suggest-tags")}
         >
-          <SparklesIcon className="w-4 h-4" />
+          <Sparkles className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-3">
+      <PopoverContent align="end" className="w-64 p-4">
         <div className="space-y-3">
           <h4 className="text-sm font-medium">{t("editor.ai-suggest-tags-title")}</h4>
 
           {isPending ? (
             <div className="flex items-center justify-center py-4">
-              <LoaderIcon className="w-5 h-5 animate-spin text-muted-foreground" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : suggestedTags.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">{t("editor.ai-suggest-tags-empty")}</p>
@@ -121,7 +136,7 @@ export const AITagSuggestPopover: FC<AITagSuggestPopoverProps> = ({ content, onI
                       role="button"
                       tabIndex={0}
                       variant={isSelected ? "default" : "outline"}
-                      className={cn("cursor-pointer select-none", isSelected && "pr-1")}
+                      className={cn("cursor-pointer select-none transition-all", "hover:scale-105 active:scale-95", isSelected && "pr-1")}
                       onClick={() => toggleTag(tag)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -131,7 +146,7 @@ export const AITagSuggestPopover: FC<AITagSuggestPopoverProps> = ({ content, onI
                       }}
                     >
                       #{tag}
-                      {isSelected && <CheckIcon className="w-3 h-3 ml-1" />}
+                      {isSelected && <Check className="h-3 w-3 ml-0.5" />}
                     </Badge>
                   );
                 })}

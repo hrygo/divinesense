@@ -1,5 +1,22 @@
+/**
+ * InsertMenu - 禅意插入菜单
+ *
+ * 设计哲学：「禅意智识」
+ * - 微妙的触发器：+ 号如呼吸般存在
+ * - 流动：菜单项自然排列，有呼吸的韵律
+ * - 渐进：高级功能隐于"更多"中
+ * - 意图：每个图标都有清晰的含义
+ *
+ * ## 功能保留
+ * - 上传文件
+ * - 关联笔记
+ * - 添加位置
+ * - 专注模式
+ * - Slash Commands 提示
+ */
+
 import { uniqBy } from "lodash-es";
-import { FileIcon, LinkIcon, LoaderIcon, MapPinIcon, Maximize2Icon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { File, Link, Loader2, MapPin, Maximize2, MoreHorizontal, Plus } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useDebounce } from "react-use";
 import { useReverseGeocoding } from "@/components/map";
@@ -8,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -110,43 +128,57 @@ const InsertMenu = (props: InsertMenuProps) => {
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="shadow-none" disabled={isUploading}>
-            {isUploading ? <LoaderIcon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            disabled={isUploading}
+          >
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={handleUploadClick}>
-            <FileIcon className="w-4 h-4" />
-            {t("common.upload")}
+        <DropdownMenuContent align="start" className="w-48">
+          {/* 主要功能 */}
+          <DropdownMenuItem onClick={handleUploadClick} className="cursor-pointer">
+            <File className="h-4 w-4 text-muted-foreground" />
+            <span className="ml-2">{t("common.upload")}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setLinkDialogOpen(true)}>
-            <LinkIcon className="w-4 h-4" />
-            {t("tooltip.link-memo")}
+
+          <DropdownMenuItem onClick={() => setLinkDialogOpen(true)} className="cursor-pointer">
+            <Link className="h-4 w-4 text-muted-foreground" />
+            <span className="ml-2">{t("tooltip.link-memo")}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLocationClick}>
-            <MapPinIcon className="w-4 h-4" />
-            {t("tooltip.select-location")}
+
+          <DropdownMenuItem onClick={handleLocationClick} className="cursor-pointer">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span className="ml-2">{t("tooltip.select-location")}</span>
           </DropdownMenuItem>
-          {/* View submenu with Focus Mode */}
+
+          <DropdownMenuSeparator />
+
+          {/* 更多功能子菜单 */}
           <DropdownMenuSub open={moreSubmenuOpen} onOpenChange={setMoreSubmenuOpen}>
-            <DropdownMenuSubTrigger onPointerEnter={handleTriggerEnter} onPointerLeave={handleTriggerLeave}>
-              <MoreHorizontalIcon className="w-4 h-4" />
-              {t("common.more")}
+            <DropdownMenuSubTrigger onPointerEnter={handleTriggerEnter} onPointerLeave={handleTriggerLeave} className="cursor-pointer">
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="ml-2 flex-1">{t("common.more")}</span>
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent onPointerEnter={handleContentEnter} onPointerLeave={handleContentLeave}>
+            <DropdownMenuSubContent onPointerEnter={handleContentEnter} onPointerLeave={handleContentLeave} className="w-40">
               <DropdownMenuItem
+                className="cursor-pointer"
                 onClick={() => {
                   props.onToggleFocusMode?.();
                   setMoreSubmenuOpen(false);
                 }}
               >
-                <Maximize2Icon className="w-4 h-4" />
-                {t("editor.focus-mode")}
-                <span className="ml-auto text-xs text-muted-foreground opacity-60">⌘⇧F</span>
+                <Maximize2 className="h-4 w-4 text-muted-foreground" />
+                <span className="ml-2 flex-1">{t("editor.focus-mode")}</span>
+                <span className="text-xs text-muted-foreground/50">⌘⇧F</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <div className="px-2 py-1 text-xs text-muted-foreground opacity-80">{t("editor.slash-commands")}</div>
+
+          {/* 底部提示 */}
+          <div className="px-2 py-1.5 text-xs text-muted-foreground/50 text-center">/ {t("editor.slash-commands")}</div>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -157,7 +189,7 @@ const InsertMenu = (props: InsertMenuProps) => {
         disabled={isUploading}
         onChange={handleFileInputChange}
         type="file"
-        multiple={true}
+        multiple
         accept="*"
       />
 

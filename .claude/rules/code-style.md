@@ -20,5 +20,10 @@
 | `max-w-lg` | `max-w-[32rem]` (512px) |
 
 ## AI 路由
-- 三层路由：规则 → 历史 → LLM
-- 位置：`ai/agents/chat_router.go`
+- 后端 `ChatRouter` 处理意图分类
+- 位置：`plugin/ai/agent/chat_router.go`
+- 规则匹配 (0ms) → LLM 降级 (~400ms)
+- 路由到：MEMO / SCHEDULE / AMAZING 代理
+
+> **文件编辑**：连续 3 次 Edit 失败时，改用 `Read 完整文件 → Write 整体重写`。详见 @.claude/rules/file-editing.md
+>>>>>>> bccf079 (perf(memo-editor): optimize UX and performance with mobile responsive fixes)

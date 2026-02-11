@@ -22,6 +22,40 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.98.0] - 2026-02-10
+
+### Added
+- **Memo Editor Redesign (#124)**: Complete UI overhaul with bottom-positioned input
+  - New `FixedEditor` component with responsive PC/Mobile layouts
+  - `MemoBlockV2` with Fluid Card design and swipe gestures
+  - `HeroSection` with inline search and progressive disclosure
+  - `MemoList` with modern grid layout and infinite scroll
+  - Desktop: All action buttons visible in footer
+  - Mobile: Compact layout with dropdown menu for secondary actions
+- **Agent Engineering**: Comprehensive research and best practices documentation
+  - ReflexionExecutor for self-improving agents
+  - TimeContext for temporal reasoning
+  - Agent architecture patterns and prompt engineering guides
+- **UI Components**: New `ServiceUnavailable` component and `alert-dialog` primitive
+- **Documentation**: Extensive design docs for memo block, layout, and UI system
+
+### Changed
+- Optimize chat list sync message count display
+- Apply agent engineering research findings to parrot configs
+- Update AI chat components for better UX
+- Refactor layouts for consistent responsive width tokens
+
+### Fixed
+- Fix memo edit navigation (use UID instead of full name)
+- Address remaining PR #143 review issues
+- Fix various AI chat component issues
+
+### Removed
+- Remove unused divinesense-code-reviewer agent
+- Remove `AdminSignIn` page (no longer needed)
+
+---
+
 ## [v0.97.0] - 2026-02-10
 
 ### Added

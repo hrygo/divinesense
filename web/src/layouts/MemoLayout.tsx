@@ -1,12 +1,12 @@
-import { MenuIcon } from "lucide-react";
+import { Maximize2, MenuIcon, Minimize2 } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { matchPath, Outlet, useLocation } from "react-router-dom";
 import { MemoExplorer, type MemoExplorerContext } from "@/components/MemoExplorer";
 import NavigationDrawer from "@/components/NavigationDrawer";
 import RouteHeaderImage from "@/components/RouteHeaderImage";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-
 import { userServiceClient } from "@/connect";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useFilteredMemoStats } from "@/hooks/useFilteredMemoStats";
@@ -38,6 +38,7 @@ export const useMemoLayout = () => {
 };
 
 const MemoLayout = () => {
+  const { t } = useTranslation();
   const lg = useMediaQuery("lg");
   const location = useLocation();
   const currentUser = useCurrentUser();
@@ -222,18 +223,39 @@ const MemoLayout = () => {
         <div
           className={cn(
             // Fixed positioning
-            "fixed top-0 left-16 shrink-0 h-svh border-r border-border backdrop-blur-sm w-80 overflow-hidden transition-colors bg-background transition-all duration-300",
+            "fixed top-0 left-16 shrink-0 h-svh border-r border-border w-80 overflow-y-auto overflow-x-hidden transition-all duration-300 z-30",
             // Visibility: hide on mobile or in immersive mode, always keep DOM for layout stability
             !lg || immersiveMode ? "hidden" : "",
+            // Background and blur - only when visible
+            lg && !immersiveMode && "bg-background backdrop-blur-sm",
           )}
         >
-          <MemoExplorer className="h-full px-4 pt-4" context={context} statisticsData={statistics} tagCount={tags} />
+          <MemoExplorer className="px-4 pt-4 pb-4" context={context} statisticsData={statistics} tagCount={tags} />
         </div>
 
         {/* Main Content */}
         <div
-          className={cn("flex-1 min-h-0 overflow-y-auto flex flex-col transition-all duration-300", lg && !immersiveMode ? "pl-80" : "")}
+          className={cn(
+            "flex-1 min-h-0 overflow-y-auto flex flex-col transition-all duration-300 bg-muted/50 dark:bg-muted/10 relative",
+            lg && !immersiveMode ? "pl-80" : "",
+          )}
         >
+          {/* Immersive Mode Toggle Button - Fixed at top-right of main content area, only on Home */}
+          {lg && location.pathname === Routes.HOME && (
+            <div className="fixed top-4 right-4 z-50">
+              <button
+                onClick={() => toggleImmersiveMode(!immersiveMode)}
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-md transition-all",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  immersiveMode && "text-primary bg-primary/10",
+                )}
+                title={immersiveMode ? t("ai.exit-immersive") || "Exit immersive" : t("ai.enter-immersive") || "Enter immersive"}
+              >
+                {immersiveMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
           {/* Unified spacing container */}
           <div className="w-full min-h-full pt-4 sm:pt-6">
             {/* Page Content */}

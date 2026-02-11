@@ -676,7 +676,27 @@
     "edit": "编辑",
     "email": "邮箱",
     "expand": "展开",
-    "explore": "探索发现",
+    "explore": {
+      "title": "探索发现",
+      "hero": {
+        "title_prefix": "发现",
+        "title_highlight": "精彩",
+        "subtitle": "探索公开笔记和创意想法"
+      },
+      "categories": {
+        "all": "全部笔记",
+        "all_desc": "浏览所有公开内容",
+        "users": "发现用户",
+        "users_desc": "探索有趣的创作者",
+        "trending": "热门内容",
+        "trending_desc": "查看大家都在看"
+      },
+      "stats": {
+        "memos": "笔记",
+        "users": "用户",
+        "growing": "增长中"
+      }
+    },
     "failed-to-sign-in": "登录失败",
     "filter": "过滤器",
     "inbox": "消息通知",
@@ -802,6 +822,8 @@
   "memo": {
     "click-to-show-nsfw-content": "点击显示 NSFW 内容",
     "end_of_list": "已到达末尾",
+    "empty_title": "开始你的记录之旅",
+    "empty_subtitle": "每一个想法都值得被记住",
     "hero": {
       "new_memo": "新建笔记",
       "search": "搜索",
@@ -1108,7 +1130,13 @@
     "no-results": "未找到相关笔记",
     "score": "相关度",
     "switch-to-ai": "切换到 AI 搜索",
-    "switch-to-keyword": "切换到关键词搜索"
+    "switch-to-keyword": "切换到关键词搜索",
+    "empty_title": "没有找到相关笔记",
+    "empty_subtitle": "试试其他关键词，或用智能搜索发现更多"
+  },
+  "filter": {
+    "empty_title": "没有符合条件的笔记",
+    "empty_subtitle": "试试调整筛选条件"
   },
   "setting": {
     "access-token-section": {

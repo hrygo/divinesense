@@ -59,7 +59,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
 function Main() {
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full bg-background">
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <InstanceProvider>
