@@ -48,8 +48,8 @@ export function MobileToolbarSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {trigger && (
-        <SheetTrigger asChild className={triggerClassName}>
-          {trigger}
+        <SheetTrigger asChild>
+          <span className={triggerClassName}>{trigger}</span>
         </SheetTrigger>
       )}
       <SheetContent side="bottom" className="h-[50vh] rounded-t-2xl border-t border-border/50 bg-background/95 backdrop-blur-sm p-0">

@@ -649,6 +649,27 @@
     "similarity": "相似度",
     "untitled": "无标题"
   },
+  "explore": {
+    "title": "探索发现",
+    "hero": {
+      "title_prefix": "发现",
+      "title_highlight": "精彩",
+      "subtitle": "探索公开笔记和创意想法"
+    },
+    "categories": {
+      "all": "全部笔记",
+      "all_desc": "浏览所有公开内容",
+      "users": "发现用户",
+      "users_desc": "探索有趣的创作者",
+      "trending": "热门内容",
+      "trending_desc": "查看大家都在看"
+    },
+    "stats": {
+      "memos": "笔记",
+      "users": "用户",
+      "growing": "增长中"
+    }
+  },
   "common": {
     "add": "增加",
     "got-it": "知道了",
@@ -676,27 +697,6 @@
     "edit": "编辑",
     "email": "邮箱",
     "expand": "展开",
-    "explore": {
-      "title": "探索发现",
-      "hero": {
-        "title_prefix": "发现",
-        "title_highlight": "精彩",
-        "subtitle": "探索公开笔记和创意想法"
-      },
-      "categories": {
-        "all": "全部笔记",
-        "all_desc": "浏览所有公开内容",
-        "users": "发现用户",
-        "users_desc": "探索有趣的创作者",
-        "trending": "热门内容",
-        "trending_desc": "查看大家都在看"
-      },
-      "stats": {
-        "memos": "笔记",
-        "users": "用户",
-        "growing": "增长中"
-      }
-    },
     "failed-to-sign-in": "登录失败",
     "filter": "过滤器",
     "inbox": "消息通知",

@@ -208,7 +208,10 @@ export function StandardToolbar({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onVisibilityChange(visibility === Visibility.PRIVATE ? Visibility.PUBLIC : Visibility.PRIVATE)}
+                  onClick={() => {
+                    const newVisibility = visibility === Visibility.PRIVATE ? Visibility.PUBLIC : Visibility.PRIVATE;
+                    onVisibilityChange(newVisibility);
+                  }}
                   disabled={isLoading}
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                   title={visibility === Visibility.PUBLIC ? t("visibility.public") : t("visibility.private")}
