@@ -69,4 +69,45 @@ UniversalParrot (配置驱动)
 
 ---
 
+## 项目目录结构
+
+### 根目录
+```
+divinesense/
+├── ai/                  # AI 代理、工具、路由（Go 一级模块）
+├── server/              # HTTP/gRPC 服务器
+├── store/               # 数据访问层
+├── proto/               # Protobuf 定义
+├── web/                 # React 前端（**前端根目录**）
+├── docs/                # 项目文档
+├── docker/              # Docker 配置
+├── deploy/              # 部署脚本
+└── scripts/             # 工具脚本
+```
+
+### 后端关键路径
+
+| 功能模块     | 路径                       |
+| :----------- | :------------------------- |
+| AI 代理      | `ai/agent/`                |
+| AI 核心      | `ai/core/`                 |
+| 工具系统     | `ai/agent/tools/`          |
+| 意图路由     | `ai/agent/chat_router.go`  |
+| 笔记服务     | `server/service/memo/`     |
+| 日程服务     | `server/service/schedule/` |
+| 数据迁移     | `store/migration/postgres/` |
+
+### 前端关键路径
+
+| 功能模块     | 路径                           |
+| :----------- | :----------------------------- |
+| 布局组件     | `web/src/layouts/`             |
+| 聊天界面     | `web/src/pages/chat/`          |
+| 笔记编辑器   | `web/src/components/memo/`     |
+| 日历组件     | `web/src/components/calendar/` |
+| AI Hooks     | `web/src/hooks/ai/`            |
+| API 调用     | `web/src/hooks/grpc/`          |
+
+---
+
 *文档路径：docs/dev-guides/ARCHITECTURE_SUMMARY.md*

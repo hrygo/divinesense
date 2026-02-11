@@ -2,7 +2,7 @@
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 >
-> **保鲜状态**: ✅ 2026-02-10 v0.97.0 | **架构**: Go + React 单二进制 | **AI**: 五位鹦鹉代理
+> **保鲜状态**: ✅ 2026-02-11 v0.97.0 | **架构**: Go + React 单二进制 | **AI**: 五位鹦鹉代理
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## 🔑 Critical Context（必读）
 
-**详细内容**：@docs/essentials/CRITICAL_CONTEXT.md
+**详细内容**：`@docs/essentials/CRITICAL_CONTEXT.md`
 
 ### 目录速览
 | 目录      | 说明                                    |
@@ -50,7 +50,7 @@
 
 ## 🧠 Agent 工作范式
 
-**工作协议**：@docs/dev-guides/AGENT_WORKFLOW.md
+**工作协议**：`@docs/dev-guides/AGENT_WORKFLOW.md`
 
 ### 思考协议
 ```
@@ -75,7 +75,7 @@
 
 ## 🏗️ 架构速览
 
-**架构详情**：@docs/dev-guides/ARCHITECTURE_SUMMARY.md
+**架构详情**：`@docs/dev-guides/ARCHITECTURE_SUMMARY.md`
 
 ### 五位鹦鹉
 | 代理 | 角色 |
@@ -100,7 +100,7 @@
 
 ## 🔄 工作流
 
-**工作规范**：@docs/dev-guides/WORKFLOW.md
+**工作规范**：`@docs/dev-guides/WORKFLOW.md`
 
 ### 开发命令
 | 阶段   | 命令                          |
@@ -114,13 +114,13 @@
 ```
 make check-all → feat/fix 分支 → PR → 合并
 ```
-详细规范：@.claude/rules/git-workflow.md
+详细规范：`@.claude/rules/git-workflow.md`
 
 ---
 
 ## 📐 编码规范
 
-**代码风格**：@.claude/rules/code-style.md
+**代码风格**：`@.claude/rules/code-style.md`
 
 ### 核心原则
 > **减法 > 加法**：删除重复代码、合并相似功能
@@ -138,12 +138,12 @@ make check-all → feat/fix 分支 → PR → 合并
 
 | 任务       | 文档                                  |
 | :--------- | :------------------------------------ |
-| 理解架构   | @docs/dev-guides/ARCHITECTURE.md      |
-| 后端开发   | @docs/dev-guides/BACKEND_DB.md        |
-| 前端开发   | @docs/dev-guides/FRONTEND.md          |
-| 部署       | @docs/deployment/BINARY_DEPLOYMENT.md |
-| 调试问题   | @docs/research/DEBUG_LESSONS.md       |
-| 数据库迁移 | @store/migration/postgres/CLAUDE.md   |
+| 理解架构   | `@docs/dev-guides/ARCHITECTURE.md`      |
+| 后端开发   | `@docs/dev-guides/BACKEND_DB.md`        |
+| 前端开发   | `@docs/dev-guides/FRONTEND.md`          |
+| 部署       | `@docs/deployment/BINARY_DEPLOYMENT.md` |
+| 调试问题   | `@docs/research/DEBUG_LESSONS.md`       |
+| 数据库迁移 | `@store/migration/postgres/CLAUDE.md`   |
 
 ---
 

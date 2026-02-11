@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 # 配置日志
 logging.basicConfig(
@@ -58,8 +58,8 @@ class CapabilityScanner:
     """DivineSense 能力矩阵扫描器"""
 
     # 路径常量
-    AGENT_DIR = "plugin/ai/agent"
-    TOOLS_DIR = "plugin/ai/agent/tools"
+    AGENT_DIR = "ai/agents"
+    TOOLS_DIR = "ai/agents/tools"
     PAGES_DIR = "web/src/pages"
     MIGRATION_DIR = "store/migration/postgres"
 
@@ -90,9 +90,9 @@ class CapabilityScanner:
                 f"({project_root / 'go.mod'} 不存在)"
             )
 
-        if not (project_root / "plugin" / "ai").exists():
+        if not (project_root / "ai" / "agents").exists():
             raise FileNotFoundError(
-                f"错误: plugin/ai 目录不存在，请确认在 DivineSense 项目中"
+                f"错误: ai/agents 目录不存在，请确认在 DivineSense 项目中"
             )
 
         return project_root.resolve()
