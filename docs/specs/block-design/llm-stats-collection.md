@@ -103,7 +103,7 @@ type NormalSessionStats struct {
 
 | LLM Provider | Input (¥/1M tokens) | Output (¥/1M tokens) |
 |:-------------|:-------------------|:--------------------|
-| DeepSeek | 1.0 | 2.0 |
+| Z.AI GLM | 1.0 | 2.0 |
 | SiliconFlow (Embedding) | 0.1 | - |
 | SiliconFlow (Reranker) | 0.1 | - |
 
