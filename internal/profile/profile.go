@@ -104,7 +104,7 @@ func (p *Profile) FromEnv() {
 	p.AIRerankModel = getEnvWithDefault("DIVINESENSE_AI_RERANK_MODEL", "MEMOS_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
 	p.AILLMModel = getEnvWithDefault("DIVINESENSE_AI_LLM_MODEL", "MEMOS_AI_LLM_MODEL", "deepseek-chat")
 	p.AIAnthropicAPIKey = getEnvWithFallback("DIVINESENSE_AI_ANTHROPIC_API_KEY", "MEMOS_AI_ANTHROPIC_API_KEY")
-	p.AIAnthropicBaseURL = getEnvWithDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "MEMOS_AI_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+	p.AIAnthropicBaseURL = getEnvWithDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "MEMOS_AI_ANTHROPIC_BASE_URL", "https://open.bigmodel.cn/api/anthropic")
 
 	// Attachment processing configuration
 	p.OCREnabled = getBoolEnvWithFallback("DIVINESENSE_OCR_ENABLED", "MEMOS_OCR_ENABLED")
