@@ -1,6 +1,6 @@
 # AI Chat 界面架构
 
-> **保鲜状态**: ✅ 已验证 (2026-02-10) | **最后检查**: v0.97.0 (Unified Block Model + UI 改进)
+> **保鲜状态**: ✅ 已验证 (2026-02-11) | **最后检查**: v0.97.0 (Anthropic 默认 LLM)
 > **关联规格**: [Unified Block Model](../specs/block-design/unified-block-model.md) | [P1-A006](../specs/block-design/P1-A006-llm-stats-collection.md)
 
 ## 概述
@@ -419,14 +419,16 @@ branch_path 格式: "0/1/2"
 
 ## 成本计算
 
-### 计价规则 (DeepSeek V3)
+### 计价规则 (Anthropic Claude Opus 4.6)
 
 | Token 类型  | 单价           | milli-cents/token |
 | :---------- | :------------- | :---------------- |
-| Input       | ¥0.14/M tokens | 0.14              |
-| Output      | ¥0.28/M tokens | 0.28              |
-| Cache Read  | 90% off        | 0.014             |
-| Cache Write | 正常计费       | 0.14              |
+| Input       | ¥15.0/M tokens | 15.0              |
+| Output      | ¥75.0/M tokens | 75.0              |
+| Cache Read  | 90% off        | 1.5               |
+| Cache Write | 正常计费       | 15.0              |
+
+**说明**：智谱 Z.AI 提供的 Claude 服务定价可能与官方不同，请参考 https://open.bigmodel.cn/pricing 获取最新价格。
 
 ### 计算示例
 
@@ -458,14 +460,14 @@ Block #3 成本计算:
 
 ## 模式对比
 
-| 特性      | Normal Mode     | Geek Mode       | Evolution Mode  |
-| :-------- | :-------------- | :-------------- | :-------------- |
-| **Agent** | AUTO → 路由选择 | GeekParrot      | EvolutionParrot |
-| **LLM**   | DeepSeek V3     | Claude Code CLI | Claude Code CLI |
-| **用途**  | 日常对话/搜索   | 代码执行        | 系统进化        |
-| **成本**  | 按 Token 计费   | 零 LLM 成本     | 零 LLM 成本     |
-| **产出**  | 对话回复        | 代码产物        | GitHub PR       |
-| **权限**  | 所有用户        | 所有用户        | 仅管理员        |
+| 特性      | Normal Mode         | Geek Mode       | Evolution Mode  |
+| :-------- | :------------------ | :-------------- | :-------------- |
+| **Agent** | AUTO → 路由选择     | GeekParrot      | EvolutionParrot |
+| **LLM**   | Anthropic Claude    | Claude Code CLI | Claude Code CLI |
+| **用途**  | 日常对话/搜索       | 代码执行        | 系统进化        |
+| **成本**  | 按 Token 计费       | 零 LLM 成本     | 零 LLM 成本     |
+| **产出**  | 对话回复            | 代码产物        | GitHub PR       |
+| **权限**  | 所有用户            | 所有用户        | 仅管理员        |
 
 ---
 

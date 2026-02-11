@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.97.0 (智能路由 + 成本管理)
+> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Anthropic 默认 LLM)
 
 ## 数据库支持策略
 
@@ -197,17 +197,17 @@ DIVINESENSE_DRIVER=postgres
 DIVINESENSE_DSN=postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable
 ```
 
-**AI（推荐 SiliconFlow/DeepSeek）**：
+**AI（推荐 SiliconFlow + 智谱 Z.AI Claude）**：
 ```bash
 DIVINESENSE_AI_ENABLED=true
 DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
 DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
 DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
-DIVINESENSE_AI_LLM_PROVIDER=deepseek
-DIVINESENSE_AI_LLM_MODEL=deepseek-chat
-DIVINESENSE_AI_DEEPSEEK_API_KEY=your_key
+DIVINESENSE_AI_LLM_PROVIDER=anthropic
+DIVINESENSE_AI_LLM_MODEL=opus
+DIVINESENSE_AI_ANTHROPIC_API_KEY=your_key
+DIVINESENSE_AI_ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
 DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 ```
 
 **Geek Mode（可选 —— Claude Code CLI 集成）**：

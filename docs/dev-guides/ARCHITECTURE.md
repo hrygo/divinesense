@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已更新 (2026-02-10) | **最后检查**: v0.97.0 (智能路由 + 性能优化)
+> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Anthropic 默认 LLM)
 
 ## 项目概述
 
@@ -17,7 +17,7 @@ DivineSense (神识) 是一款隐私优先、轻量级的笔记服务，通过 A
 | 后端   | Go 1.25, Echo, Connect RPC, pgvector                                                                 |
 | 前端   | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query                               |
 | 数据库 | PostgreSQL 16+（生产），SQLite（开发，**无 AI**）[#9](https://github.com/hrygo/divinesense/issues/9) |
-| AI     | **DeepSeek**（对话 LLM），**SiliconFlow**（Embedding、意图分类、Reranker）                              |
+| AI     | **Anthropic Claude**（对话 LLM，智谱 Z.AI 提供），**SiliconFlow**（Embedding、意图分类、Reranker）                              |
 
 ---
 
@@ -98,7 +98,7 @@ divinesense/
    - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **AI 核心模块** (`ai/`)：
-   - **对话 LLM**：DeepSeek (`deepseek-chat`)
+   - **对话 LLM**：Anthropic Claude（智谱 Z.AI 提供，默认 `opus` / `claude-opus-7-20250219`）
    - **Embedding**：SiliconFlow (`BAAI/bge-m3`, 1024 维)
    - **意图分类**：SiliconFlow (`Qwen/Qwen2.5-7B-Instruct`)
    - **Reranker**：SiliconFlow (`BAAI/bge-reranker-v2-m3`)
@@ -425,35 +425,37 @@ ChatRouter 实现**四层**意图分类系统：
 
 | 功能 | 提供商 | 模型 | 用途 |
 |:-----|:-------|:-----|:-----|
-| **对话 LLM** | DeepSeek | `deepseek-chat` | 主对话生成 |
+| **对话 LLM** | Anthropic (智谱 Z.AI) | `claude-opus-7-20250219` | 主对话生成 |
 | **向量 Embedding** | SiliconFlow | `BAAI/bge-m3` | 语义搜索（1024维） |
 | **意图分类** | SiliconFlow | `Qwen/Qwen2.5-7B-Instruct` | 路由意图分类 |
 | **重排 Rerank** | SiliconFlow | `BAAI/bge-reranker-v2-m3` | 检索结果精炼 |
 
 **策略说明**：
+- **对话 LLM**：使用 Anthropic Claude，通过智谱 Z.AI (https://open.bigmodel.cn/api/anthropic) 提供服务
+  - 支持简化别名：`opus`、`sonnet`、`haiku`（智谱内部自动解析）
+  - 默认模型：`claude-opus-7-20250219`（最高能力）
+  - BASE_URL：`https://open.bigmodel.cn/api/anthropic`
 - **意图分类独立模型**：使用轻量级 Qwen2.5-7B-Instruct（而非主对话 LLM），实现快速、低成本的分类
 - **成本优化**：意图分类 Token 限制为 50，Temperature 0（确定性输出）
 - **输出格式**：JSON Schema `{intent, confidence}` 确保结构化响应
 
-### DeepSeek 上下文缓存
+### Anthropic Claude 上下文缓存
 
-> **保鲜状态**: ✅ 已验证 (2026-02-07)
+> **保鲜状态**: ✅ 已验证 (2026-02-11)
 
-DeepSeek API 提供自动上下文缓存（Prompt Caching），降低多轮对话成本。
+Anthropic Claude API 提供上下文缓存（Prompt Caching），降低多轮对话成本。
 
 **缓存机制**：
-- **缓存粒度**：64 token 块
+- **缓存粒度**：基于系统提示词和工具定义的自动缓存
 - **工作原理**：相同会话前缀的后续请求自动命中缓存
-- **命中识别**：API 响应返回 `prompt_cache_hit_tokens` 字段
+- **命中识别**：API 响应返回 `usage.cache_read_tokens` 字段
 
 **数据流**：
 ```
-DeepSeek API Response
-    ↓ prompt_cache_hit_tokens
-go-openai 库映射
-    ↓ PromptTokensDetails.CachedTokens
-ai/llm.go:206
-    ↓ CacheReadTokens: resp.Usage.PromptTokensDetails.CachedTokens
+Anthropic API Response
+    ↓ usage.cache_read_tokens
+ai/llm 客户端映射
+    ↓ CacheReadTokens
 LLMCallStats.CacheReadTokens
     ↓ SessionStats.CacheReadTokens
 数据库 ai_block.token_usage.cache_read_tokens
@@ -933,23 +935,20 @@ DIVINESENSE_DSN=postgres://divinesense:divinesense@localhost:25432/divinesense?s
 # AI 开关
 DIVINESENSE_AI_ENABLED=true
 
-# 对话 LLM (DeepSeek)
-DIVINESENSE_AI_LLM_PROVIDER=deepseek
-DIVINESENSE_AI_LLM_MODEL=deepseek-chat
-DIVINESENSE_AI_DEEPSEEK_API_KEY=your_key
+# 对话 LLM (Anthropic Claude，智谱 Z.AI 提供)
+DIVINESENSE_AI_LLM_PROVIDER=anthropic
+DIVINESENSE_AI_LLM_MODEL=opus
+DIVINESENSE_AI_ANTHROPIC_API_KEY=your_key
+DIVINESENSE_AI_ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
 
 # 向量 Embedding (SiliconFlow)
 DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
 DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
 DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 
 # 意图分类 (SiliconFlow + Qwen)
 DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 
 # 重排 Reranker (SiliconFlow)
 DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
-DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 ```
