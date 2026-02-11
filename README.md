@@ -146,7 +146,7 @@ make deps-all && make start
 **技术栈**：Go 1.25 + React 18 + Vite 7 + PostgreSQL (pgvector) + Tailwind CSS 4
 
 **AI 模型**：
-- **对话 LLM**：DeepSeek (`deepseek-chat`)
+- **对话 LLM**：Z.AI GLM (`glm-4.7`)
 - **向量 Embedding**：SiliconFlow (`BAAI/bge-m3`, 1024维)
 - **意图分类**：SiliconFlow (`Qwen/Qwen2.5-7B-Instruct`)
 - **重排 Rerank**：SiliconFlow (`BAAI/bge-reranker-v2-m3`)
