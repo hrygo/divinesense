@@ -1,300 +1,155 @@
-import { create } from "@bufbuild/protobuf";
-import { useMutation } from "@tanstack/react-query";
-import { uniqBy } from "lodash-es";
-import { Minimize2 } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { toast } from "react-hot-toast";
-import { memoServiceClient } from "@/connect";
+import { MEMO_EDITOR_CARD } from "@/components/ui/card/constants";
+import { useAuth } from "@/contexts/AuthContext";
+import useCurrentUser from "@/hooks/useCurrentUser";
+import { memoKeys } from "@/hooks/useMemoQueries";
+import { userKeys } from "@/hooks/useUserQueries";
 import { handleError } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import { Location, MemoRelation, MemoSchema, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
-import { LinkMemoDialog } from "./components";
-import { FocusModeOverlay as FocusModeOverlayComponent } from "./components/FocusModeOverlay";
-import Editor from "./Editor";
-import { useFileUpload, useLinkMemo, useLocation } from "./hooks";
-import { StandardToolbar } from "./StandardToolbar";
-
-const LocationDialogLazy = lazy(() => import("./components/LocationDialog").then((module) => ({ default: module.LocationDialog })));
-
-interface FocusModeEditorProps {
-  /** Callback when exited */
-  onExit: () => void;
-  /** Optional initial content for editing */
-  initialContent?: string;
-  /** Callback when memo is successfully created/updated */
-  onSuccess?: (memoName: string) => void;
-  /** Custom placeholder text */
-  placeholder?: string;
-  /** Additional CSS classes */
-  className?: string;
-}
+import { convertVisibilityFromString } from "@/utils/memo";
+import { EditorContent, EditorMetadata, FocusModeExitButton, FocusModeOverlay } from "./components";
+import { FOCUS_MODE_STYLES } from "./constants";
+import { useAutoSave, useFocusMode, useKeyboard, useMemoInit, useVirtualKeyboard } from "./hooks";
+import { cacheService, errorService, memoService, validationService } from "./services";
+import { useEditorContext } from "./state";
+import type { EditorRefActions } from "./types/editor";
+import type { MemoEditorProps } from "./types/memo-editor";
 
 /**
- * FocusModeEditor - 全屏无干扰编辑模式（带动画优化）
+ * FocusModeEditor - 专注模式编辑器
  *
- * Features:
- * - 进入/退出动画状态管理
- * - Fullscreen overlay with backdrop blur
- * - Centered editor container
- * - Complete toolbar functionality
- * - ESC to exit
- * - Click outside to exit
- *
- * 优化:
- * - 使用动画状态提升视觉体验
- * - 保存/恢复滚动位置
- * - 平滑的进入/退出过渡
+ * 这是一个专注于写作体验的编辑器组件，支持：
+ * - 自动保存到 localStorage
+ * - 虚拟键盘高度适配（移动端）
+ * - 专注模式切换
+ * - 快捷键支持
  */
-export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeholder, className }: FocusModeEditorProps) {
+const FocusModeEditor: React.FC<MemoEditorProps> = ({
+  className,
+  cacheKey,
+  memoName,
+  parentMemoName,
+  autoFocus,
+  placeholder,
+  onConfirm,
+  onCancel,
+}) => {
   const t = useTranslate();
-  const [content, setContent] = useState(initialContent);
-  const [visibility, setVisibility] = useState(Visibility.PRIVATE);
-  const [location, setLocation] = useState<Location | undefined>();
-  const [relations, setRelations] = useState<MemoRelation[]>([]);
+  const queryClient = useQueryClient();
+  const currentUser = useCurrentUser();
+  const editorRef = useRef<EditorRefActions>(null);
+  const { state, actions, dispatch } = useEditorContext();
+  const { userGeneralSetting } = useAuth();
 
-  // 动画状态
-  const [isExiting, setIsExiting] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  // Get default visibility from user settings
+  const defaultVisibility = userGeneralSetting?.memoVisibility ? convertVisibilityFromString(userGeneralSetting.memoVisibility) : undefined;
 
-  // 组件挂载时触发进入动画
-  useEffect(() => {
-    // 保存当前滚动位置
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
+  useMemoInit(editorRef, memoName, cacheKey, currentUser?.name ?? "", autoFocus, defaultVisibility);
 
-    // 短暂延迟后显示内容，触发进入动画
-    const showTimer = requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
+  // Auto-save content to localStorage
+  useAutoSave(state.content, currentUser?.name ?? "", cacheKey);
 
-    return () => {
-      cancelAnimationFrame(showTimer);
-      // 退出时恢复滚动位置
-      window.scrollTo(scrollX, scrollY);
-    };
-  }, []);
+  // Track virtual keyboard height for mobile
+  const keyboardHeight = useVirtualKeyboard();
 
-  // Dialogs state
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  // Focus mode management with body scroll lock
+  useFocusMode(state.ui.isFocusMode);
 
-  // Location hook
-  const locationHook = useLocation(location);
+  const handleToggleFocusMode = () => {
+    dispatch(actions.toggleFocusMode());
+  };
 
-  // File upload hook
-  const { fileInputRef, selectingFlag, handleFileInputChange, handleUploadClick } = useFileUpload(() => {
-    console.log("[FocusModeEditor] Files selected");
-  });
+  useKeyboard(editorRef, { onSave: handleSave });
 
-  // Link memo hook
-  const linkMemo = useLinkMemo({
-    isOpen: linkDialogOpen,
-    currentMemoName: undefined,
-    existingRelations: relations,
-    onAddRelation: (relation: MemoRelation) => {
-      setRelations((prev) => uniqBy([...prev, relation], (r) => r.relatedMemo?.name));
-      setLinkDialogOpen(false);
-    },
-  });
-
-  // Memo creation mutation
-  const createMemo = useMutation({
-    mutationFn: async (contentParam: string) => {
-      const memo = create(MemoSchema, {
-        content: contentParam,
-        visibility,
-        location: locationHook.getLocation(),
-        relations,
-      });
-
-      const response = await memoServiceClient.createMemo({ memo });
-      return response;
-    },
-    onSuccess: (data) => {
-      setContent("");
-      setLocation(undefined);
-      setRelations([]);
-      onSuccess?.(data.name);
-      // 保存成功后退出焦点模式
-      handleExit();
-    },
-    onError: (error) => {
-      handleError(error, toast.error, {
-        context: "Failed to create memo",
-        fallbackMessage: "创建笔记失败，请重试",
-      });
-    },
-  });
-
-  const handleSave = useCallback(() => {
-    if (!content.trim()) return;
-    createMemo.mutate(content);
-  }, [content, createMemo]);
-
-  const handleInsertTags = useCallback((tags: string[]) => {
-    if (tags.length > 0) {
-      const newTags = tags.map((tag) => `#${tag}`).join(" ");
-      setContent((prev) => prev + (prev.endsWith("\n") ? "" : "\n") + newTags);
+  async function handleSave() {
+    // Validate before saving
+    const { valid, reason } = validationService.canSave(state);
+    if (!valid) {
+      toast.error(reason || "Cannot save");
+      return;
     }
-  }, []);
 
-  const handleLocationChange = useCallback((newLocation: Location) => {
-    setLocation(newLocation);
-  }, []);
+    dispatch(actions.setLoading("saving", true));
 
-  const handleLocationConfirm = useCallback(() => {
-    const newLocation = locationHook.getLocation();
-    if (newLocation) {
-      handleLocationChange(newLocation);
-      setLocationDialogOpen(false);
-    }
-  }, [locationHook, handleLocationChange]);
+    try {
+      const result = await memoService.save(state, { memoName, parentMemoName });
 
-  // 退出焦点模式（带动画）
-  const handleExit = useCallback(() => {
-    setIsExiting(true);
-    // 等待退出动画完成后调用 onExit
-    setTimeout(() => {
-      onExit();
-    }, 200);
-  }, [onExit]);
-
-  const isValid = content.trim().length > 0;
-  const isUploading = selectingFlag || createMemo.isPending;
-
-  // ESC 键退出
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isExiting) {
-        e.preventDefault();
-        handleExit();
+      if (!result.hasChanges) {
+        toast.error(t("editor.no-changes-detected"));
+        onCancel?.();
+        return;
       }
-    };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isExiting, handleExit]);
+      // Clear localStorage cache on successful save
+      cacheService.clear(cacheService.key(currentUser?.name ?? "", cacheKey));
+
+      // Invalidate React Query cache to refresh memo lists across app
+      const invalidationPromises = [
+        queryClient.invalidateQueries({ queryKey: memoKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: userKeys.stats() }),
+      ];
+
+      // If this was a comment, also invalidate comments query for parent memo
+      if (parentMemoName) {
+        invalidationPromises.push(queryClient.invalidateQueries({ queryKey: memoKeys.comments(parentMemoName) }));
+      }
+
+      await Promise.all(invalidationPromises);
+
+      // Reset editor state to initial values
+      dispatch(actions.reset());
+
+      // Notify parent component of successful save
+      onConfirm?.(result.memoName);
+    } catch (error) {
+      handleError(error, toast.error, {
+        context: "Failed to save memo",
+        fallbackMessage: errorService.getErrorMessage(error),
+      });
+    } finally {
+      dispatch(actions.setLoading("saving", false));
+    }
+  }
 
   return (
     <>
-      {/* Backdrop overlay with exit animation */}
-      <FocusModeOverlayComponent isActive={!isExiting} isExiting={isExiting} onToggle={handleExit} />
+      <FocusModeOverlay isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} />
 
-      {/* Main focus mode container with animation */}
+      {/*
+        Layout structure:
+        - Uses justify-between to push content to top and bottom
+        - In focus mode: becomes fixed with specific spacing, editor grows to fill space
+        - In normal mode: stays relative with max-height constraint
+      */}
       <div
         className={cn(
-          "fixed z-50 w-auto max-w-5xl mx-auto shadow-lg border-border bg-background rounded-lg overflow-hidden",
-          // 进入动画
-          isVisible && "animate-in fade-in-0 zoom-in-95 duration-300",
-          // 退出动画
-          isExiting && "animate-out fade-out-0 zoom-out-95 duration-200",
-          // 过渡动画
-          "transition-all duration-300 ease-in-out",
-          // 定位
-          "top-2 left-2 right-2 bottom-2 sm:top-4 sm:left-4 sm:right-4 sm:bottom-4",
-          "md:top-8 md:left-8 md:right-8 md:bottom-8",
+          MEMO_EDITOR_CARD,
+          FOCUS_MODE_STYLES.transition,
+          state.ui.isFocusMode && cn(FOCUS_MODE_STYLES.container.base, FOCUS_MODE_STYLES.container.spacing),
           className,
         )}
+        style={{
+          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined,
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 bg-muted/30">
-          <span className="text-sm font-medium text-muted-foreground/80">{t("editor.focus-mode")}</span>
-          <button
-            onClick={handleExit}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-accent/50 font-medium"
-          >
-            <Minimize2 className="w-4 h-4" />
-            {t("editor.exit-focus-mode")} (ESC)
-          </button>
-        </div>
+        {/* Exit button is absolutely positioned in top-right corner when active */}
+        <FocusModeExitButton isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} title={t("editor.exit-focus-mode")} />
 
-        {/* Editor Content */}
-        <div className="flex-1 min-h-[300px] max-h-[60vh] overflow-y-auto px-6 py-4">
-          <Editor
-            className="min-h-[300px]"
-            initialContent={content}
-            placeholder={placeholder || t("editor.focus-mode-placeholder")}
-            onContentChange={setContent}
-            onPaste={() => {}}
-            isFocusMode={true}
-          />
-        </div>
+        {/* Editor content grows to fill available space in focus mode */}
+        <EditorContent ref={editorRef} placeholder={placeholder} autoFocus={autoFocus} />
 
-        {/* Toolbar */}
-        <StandardToolbar
-          content={content}
-          isLoading={isUploading}
-          isValid={isValid}
-          visibility={visibility}
-          onVisibilityChange={setVisibility}
-          onInsertTags={handleInsertTags}
-          onSave={handleSave}
-          onUploadFile={handleUploadClick}
-          onLinkMemo={() => setLinkDialogOpen(true)}
-          onAddLocation={() => {
-            setLocationDialogOpen(true);
-            if (!location && !locationHook.locationInitialized) {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (position) => {
-                    locationHook.handlePositionChange({
-                      lat: position.coords.latitude,
-                      lng: position.coords.longitude,
-                    });
-                  },
-                  (error) => {
-                    console.error("Geolocation error:", error);
-                  },
-                );
-              }
-            }
-          }}
-          onToggleFocusMode={handleExit}
-        />
+        {/* Metadata and toolbar grouped together at bottom */}
+        <div className="w-full flex flex-col gap-2">
+          <EditorMetadata memoName={memoName} />
+        </div>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        className="hidden"
-        ref={fileInputRef}
-        disabled={isUploading}
-        onChange={handleFileInputChange}
-        type="file"
-        multiple
-        accept="*"
-      />
-
-      {/* Link Memo Dialog */}
-      <LinkMemoDialog
-        open={linkDialogOpen}
-        onOpenChange={setLinkDialogOpen}
-        searchText={linkMemo.searchText}
-        onSearchChange={linkMemo.setSearchText}
-        filteredMemos={linkMemo.filteredMemos}
-        isFetching={linkMemo.isFetching}
-        onSelectMemo={linkMemo.addMemoRelation}
-      />
-
-      {/* Location Dialog */}
-      {locationDialogOpen && (
-        <Suspense fallback={null}>
-          <LocationDialogLazy
-            open={locationDialogOpen}
-            onOpenChange={setLocationDialogOpen}
-            state={locationHook.state}
-            locationInitialized={locationHook.locationInitialized}
-            onPositionChange={locationHook.handlePositionChange}
-            onUpdateCoordinate={locationHook.updateCoordinate}
-            onPlaceholderChange={locationHook.setPlaceholder}
-            onCancel={() => {
-              locationHook.reset();
-              setLocationDialogOpen(false);
-            }}
-            onConfirm={handleLocationConfirm}
-          />
-        </Suspense>
-      )}
     </>
   );
-}
+};
+
+FocusModeEditor.displayName = "FocusModeEditor";
+
+export default FocusModeEditor;

@@ -1,6 +1,6 @@
 # 架构文档
 
-> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Anthropic 默认 LLM)
+> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Z.AI 默认 LLM)
 
 ## 项目概述
 
@@ -98,7 +98,7 @@ divinesense/
    - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **AI 核心模块** (`ai/`)：
-   - **对话 LLM**：支持多提供商（Anthropic Claude、DeepSeek、OpenAI、Ollama）
+   - **对话 LLM**：支持多提供商（Z.AI GLM、DeepSeek、OpenAI、Ollama）
    - **Embedding**：向量嵌入服务（1024 维，支持多模型）
    - **意图分类**：轻量级分类器（快速路由）
    - **Reranker**：结果精炼重排
@@ -170,7 +170,7 @@ plugin/chat_apps/
 **安全机制**：
 - Token 加密：AES-256-GCM，32 字节密钥
 - 输入验证：平台白名单 + 长度限制
-- Webhook 签名：HMAC-SHA256 + 时间戳（5分钟窗口，防重放）
+- Webhook 签名：HMAC-SHA256 + 时间戳（5分钟窗口，防重放攻击）
 - 并发安全：单一 Mutex 防止 Token 缓存竞态
 
 **数据库表**：`chat_app_credential`
@@ -225,7 +225,6 @@ plugin/chat_apps/
 | **ShortcutService** | `shortcut_service.proto` | 快捷方式 |
 | **UserService** | `user_service.proto` | 用户管理 |
 | **Common** | `common.proto` | 通用类型定义 |
-| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索 |
 
 ---
 
@@ -405,6 +404,7 @@ ChatRouter 实现**四层**意图分类系统：
 - 存储表：`router_feedback`（predicted_intent, actual_intent, confidence）
 - 用于优化关键词权重和 LLM 分类器
 - 支持 A/B 测试不同路由策略
+
 **EvolutionMode 最高优先级路由**：
 - 当 `EvolutionMode=true` 时，**绕过所有路由**，直接创建 EvolutionParrot
 - **工作目录**: DivineSense 源代码根目录
@@ -425,54 +425,20 @@ ChatRouter 实现**四层**意图分类系统：
 
 | 功能 | 支持提供商 | 用途 |
 |:-----|:----------|:-----|
-| **对话 LLM** | Anthropic, DeepSeek, OpenAI, SiliconFlow, Ollama | 主对话生成 |
+| **对话 LLM** | Z.AI, DeepSeek, OpenAI, SiliconFlow, Ollama | 主对话生成 |
 | **向量 Embedding** | SiliconFlow, OpenAI, Ollama | 语义搜索（1024维） |
 | **意图分类** | SiliconFlow | 路由意图分类 |
 | **重排 Rerank** | SiliconFlow | 检索结果精炼 |
 
 **策略说明**：
 - **对话 LLM**：支持多提供商切换，通过环境变量配置
-  - Anthropic Claude：支持简化别名 `opus`、`sonnet`、`haiku`
+  - Z.AI GLM：glm-4.7 (Opus)、glm-4.5 (Sonnet)、glm-4-flash、glm-4-air、glm-4-plus
   - DeepSeek：`deepseek-chat` (V3.2)
   - OpenAI：`gpt-4o` 系列
   - Ollama：本地模型（如 `llama3.1`）
 - **意图分类独立模型**：使用轻量级模型（而非主对话 LLM），实现快速、低成本的分类
 - **成本优化**：意图分类 Token 限制为 50，Temperature 0（确定性输出）
 - **输出格式**：JSON Schema `{intent, confidence}` 确保结构化响应
-
-### LLM 上下文缓存
-
-> **保鲜状态**: ✅ 已验证 (2026-02-11)
-
-主流 LLM 提供商（Anthropic Claude、DeepSeek 等）均支持上下文缓存（Prompt Caching），降低多轮对话成本。
-
-**缓存机制**：
-- **缓存粒度**：基于系统提示词和工具定义的自动缓存
-- **工作原理**：相同会话前缀的后续请求自动命中缓存
-- **命中识别**：API 响应返回 `usage.cache_read_tokens` 字段
-
-**数据流**：
-```
-LLM API Response
-    ↓ usage.cache_read_tokens
-ai/llm 客户端映射
-    ↓ CacheReadTokens
-LLMCallStats.CacheReadTokens
-    ↓ SessionStats.CacheReadTokens
-数据库 ai_block.token_usage.cache_read_tokens
-```
-
-**成本优化效果**：
-| 轮次 | Prompt Tokens | Cache Hit | 缓存率 |
-|:-----|:--------------|:---------|:-------|
-| 第1轮 | ~5000 | 0 | 0% (冷启动) |
-| 第2轮 | ~6000 | ~5000 | ~83% |
-| 第3轮 | ~8000 | ~5760 | ~72% |
-
-**最佳实践**：
-- 保持系统提示词稳定，提升缓存命中率
-- 避免频繁修改会话前缀
-- 监控 `cache_write_tokens` 与 `cache_read_tokens` 比例
 
 ### 代理工具
 
@@ -695,20 +661,27 @@ BAAI/bge-reranker-v2-m3 用于结果精炼（可通过策略配置）。
 
 ### 页面组件
 
+> **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.97.0
+
 | 路径           | 组件              | 布局           | 用途                     |
 | :------------- | :---------------- | :------------- | :----------------------- |
-| `/`            | `Home.tsx`        | MainLayout     | 主时间线 + 笔记编辑器    |
-| `/explore`     | `Explore.tsx`     | MainLayout     | 搜索和探索内容           |
-| `/archived`    | `Archived.tsx`    | MainLayout     | 已归档笔记               |
-| `/chat`        | `AIChat.tsx`      | AIChatLayout   | AI 聊天界面 + 自动路由   |
-| `/schedule`    | `Schedule.tsx`    | ScheduleLayout | 日历视图（FullCalendar） |
-| `/review`      | `Review.tsx`      | GeneralLayout  | 每日回顾                 |
-| `/setting`     | `Setting.tsx`     | GeneralLayout  | 用户设置                 |
-| `/u/:username` | `UserProfile.tsx` | MemoLayout     | 公开用户资料             |
-| `/memos/:uid`  | `MemoDetail.tsx`  | GeneralLayout  | 笔记详情页               |
-| `/m/:uid`      | `MemoDetailRedirect` | GeneralLayout | 笔记详情重定向           |
-| `/403`         | `PermissionDenied.tsx` | GeneralLayout | 权限拒绝                 |
-| `/404`         | `NotFound.tsx`    | GeneralLayout  | 404 页面                 |
+| `/`            | 重定向到 `/chat` | RootLayout | 默认入口                 |
+| `/auth/*`      | 认证页面组      | RootLayout | 登录/注册/OAuth 回调      |
+| `/home`        | `Home.tsx`        | MemoLayout     | 主时间线 + 笔记编辑器    |
+| `/explore`      | `Explore.tsx`      | MemoLayout     | 搜索和探索内容           |
+| `/archived`     | `Archived.tsx`      | MemoLayout     | 已归档笔记               |
+| `/chat`         | `AIChat.tsx`       | AIChatLayout   | AI 聊天界面（多模式）     |
+| `/schedule`     | `Schedule.tsx`      | ScheduleLayout | 日历视图                   |
+| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout  | 知识图谱可视化           |
+| `/inbox`        | `Inboxes.tsx`      | GeneralLayout  | 收件箱                     |
+| `/attachments`   | `Attachments.tsx`  | GeneralLayout  | 附件管理                   |
+| `/review`       | `Review.tsx`       | GeneralLayout  | 每日回顾                  |
+| `/setting`      | `Setting.tsx`      | GeneralLayout  | 用户设置                   |
+| `/u/:username`  | `UserProfile.tsx`    | MemoLayout     | 公开用户资料               |
+| `/memos/:uid`   | `MemoDetail.tsx`    | GeneralLayout  | 笔记详情页                |
+| `/m/:uid`       | `MemoDetailRedirect` | GeneralLayout  | 笔记详情重定向            |
+| `/403`          | `PermissionDenied.tsx` | GeneralLayout  | 权限拒绝                  |
+| `/404`          | `NotFound.tsx`      | GeneralLayout  | 404 页面                   |
 
 ### 布局层级
 
@@ -735,7 +708,7 @@ RootLayout（全局导航 + 认证）
 | 策略                 | 实现细节                                 | 目标                                      |
 | :------------------- | :--------------------------------------- | :---------------------------------------- |
 | **Gzip 压缩**        | `middleware.Gzip(Level: 5)`              | 减少二进制嵌入产物的传输大小（约 70%）    |
-| **强缓存 (Vite)**    | `/assets/*` 匹配 `immutable, max-age=1y` | 针对 Vite 哈希资源实现“零请求”重复访问    |
+| **强缓存 (Vite)**    | `/assets/*` 匹配 `immutable, max-age=1y` | 针对 Vite 哈希资源实现"零请求"重复访问    |
 | **入口防缓存**       | `index.html` 强制 `no-cache, no-store`   | 确保版本迭代后用户立刻获取最新 JS 引用    |
 | **Geek 工作区 Host** | `/file/geek/:userID/*` 实时 Host         | 极客模式产生的网页/产物可在浏览器实时预览 |
 | **安全加固**         | `X-Content-Type-Options: nosniff`        | 增强针对嵌入式静态资源的安全防御          |
@@ -900,20 +873,20 @@ pending ──▶ streaming ──▶ completed
 
 | 表名                   | 用途                                      | 版本    |
 | :--------------------- | :---------------------------------------- | :------ |
-| `ai_block`            | **统一块模型**：AI 聊天对话持久化 (#71)     | v0.97.0 |
 | `ai_conversation`     | AI 对话会话                              | v0.97.0 |
+| `ai_block`            | **统一块模型**：对话持久化 (#71)     | v0.97.0 |
 | `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           | v0.97.0 |
 | `conversation_context` | 会话持久化（多渠道支持）                  | v0.97.0 |
 | `episodic_memory`      | 长期用户记忆和学习                        | -       |
-| `user_preferences`     | 用户沟通偏好                              | -       |
 
 ### 增强功能表
 
 | 表名                   | 用途                                      | 版本    |
 | :--------------------- | :---------------------------------------- | :------ |
+| `user_preferences`     | 用户沟通偏好                              | -       |
 | `agent_session_stats`  | 会话统计（成本追踪）                       | v0.97.0 |
 | `user_cost_settings`   | 用户成本预算设置                          | v0.97.0 |
-| `agent_security_audit` | 安全审计（高风险操作记录）                 | v0.97.0 |
+| `agent_security_audit` | 安全审计日志（高风险操作记录）                 | v0.97.0 |
 
 ### 智能路由表（v0.97.0 新增）
 
@@ -936,11 +909,11 @@ DIVINESENSE_DSN=postgres://divinesense:divinesense@localhost:25432/divinesense?s
 # AI 开关
 DIVINESENSE_AI_ENABLED=true
 
-# 对话 LLM (Anthropic Claude，智谱 Z.AI 提供)
-DIVINESENSE_AI_LLM_PROVIDER=anthropic
-DIVINESENSE_AI_LLM_MODEL=opus
-DIVINESENSE_AI_ANTHROPIC_API_KEY=your_key
-DIVINESENSE_AI_ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
+# 对话 LLM (Z.AI GLM)
+DIVINESENSE_AI_LLM_PROVIDER=zai
+DIVINESENSE_AI_LLM_MODEL=glm-4.7
+DIVINESENSE_AI_ZAI_API_KEY=your_key
+DIVINESENSE_AI_ZAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 
 # 向量 Embedding (SiliconFlow)
 DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow

@@ -1,21 +1,19 @@
 import { forwardRef } from "react";
-import Editor, { type EditorRefActions } from "../Editor";
-import { useBlobUrls, useDragAndDrop } from "../hooks";
-import { useEditorContext } from "../state";
+import { useDragAndDrop } from "../hooks";
+import { useEditorContext } from "../state/context";
+import { Editor } from "../state/Editor";
 import type { EditorContentProps } from "../types";
-import type { LocalFile } from "../types/attachment";
+import type { EditorRefActions } from "../types/editor";
 
 export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({ placeholder }, ref) => {
   const { state, actions, dispatch } = useEditorContext();
-  const { createBlobUrl } = useBlobUrls();
 
-  const { dragHandlers } = useDragAndDrop((files: FileList) => {
-    const localFiles: LocalFile[] = Array.from(files).map((file) => ({
-      file,
-      previewUrl: createBlobUrl(file),
-    }));
-    localFiles.forEach((localFile) => dispatch(actions.addLocalFile(localFile)));
-  });
+  // Handle file drops (no-op for now, can be implemented later)
+  const handleDrop = (_files: FileList) => {
+    // TODO: implement file drop handling
+  };
+
+  const dragHandlers = useDragAndDrop(handleDrop);
 
   const handleCompositionStart = () => {
     dispatch(actions.setComposing(true));
@@ -30,18 +28,16 @@ export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({
   };
 
   const handlePaste = () => {
-    // Paste handling is managed by the Editor component internally
+    // Paste handling is managed by Editor component internally
   };
 
   return (
-    <div className="w-full flex flex-col flex-1" {...dragHandlers}>
+    <div className="w-full flex flex-col flex-1" {...dragHandlers.dragHandlers}>
       <Editor
         ref={ref}
         className="memo-editor-content"
         initialContent={state.content}
         placeholder={placeholder || ""}
-        isFocusMode={state.ui.isFocusMode}
-        isInIME={state.ui.isComposing}
         onContentChange={handleContentChange}
         onPaste={handlePaste}
         onCompositionStart={handleCompositionStart}
