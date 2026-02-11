@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { useMutation } from "@tanstack/react-query";
 import { uniqBy } from "lodash-es";
-import { Minimize2Icon } from "lucide-react";
+import { Minimize2 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { memoServiceClient } from "@/connect";
@@ -198,14 +198,14 @@ export function FocusModeEditor({ onExit, initialContent = "", onSuccess, placeh
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/50">
-          <span className="text-sm font-medium text-muted-foreground">Focus Mode</span>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 bg-muted/30">
+          <span className="text-sm font-medium text-muted-foreground/80">{t("editor.focus-mode")}</span>
           <button
             onClick={handleExit}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-accent"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-accent/50 font-medium"
           >
-            <Minimize2Icon className="w-4 h-4" />
-            Exit (ESC)
+            <Minimize2 className="w-4 h-4" />
+            {t("editor.exit-focus-mode")} (ESC)
           </button>
         </div>
 
