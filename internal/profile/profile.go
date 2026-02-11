@@ -35,6 +35,8 @@ type Profile struct {
 	AISiliconFlowAPIKey  string
 	AIRerankModel        string
 	AILLMModel           string
+	AIAnthropicAPIKey    string
+	AIAnthropicBaseURL   string
 	TesseractPath        string
 	AISiliconFlowBaseURL string
 	Port                 int
@@ -49,7 +51,7 @@ func (p *Profile) IsDev() bool {
 
 // IsAIEnabled returns true if AI is enabled and at least one API key or base URL is configured.
 func (p *Profile) IsAIEnabled() bool {
-	return p.AIEnabled && (p.AISiliconFlowAPIKey != "" || p.AIOpenAIAPIKey != "" || p.AIOllamaBaseURL != "" || p.AIDeepSeekAPIKey != "")
+	return p.AIEnabled && (p.AISiliconFlowAPIKey != "" || p.AIOpenAIAPIKey != "" || p.AIOllamaBaseURL != "" || p.AIDeepSeekAPIKey != "" || p.AIAnthropicAPIKey != "")
 }
 
 // getEnvOrDefault returns the environment variable value or the default value.
@@ -101,6 +103,8 @@ func (p *Profile) FromEnv() {
 	p.AIEmbeddingModel = getEnvWithDefault("DIVINESENSE_AI_EMBEDDING_MODEL", "MEMOS_AI_EMBEDDING_MODEL", "BAAI/bge-m3")
 	p.AIRerankModel = getEnvWithDefault("DIVINESENSE_AI_RERANK_MODEL", "MEMOS_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
 	p.AILLMModel = getEnvWithDefault("DIVINESENSE_AI_LLM_MODEL", "MEMOS_AI_LLM_MODEL", "deepseek-chat")
+	p.AIAnthropicAPIKey = getEnvWithFallback("DIVINESENSE_AI_ANTHROPIC_API_KEY", "MEMOS_AI_ANTHROPIC_API_KEY")
+	p.AIAnthropicBaseURL = getEnvWithDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "MEMOS_AI_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 
 	// Attachment processing configuration
 	p.OCREnabled = getBoolEnvWithFallback("DIVINESENSE_OCR_ENABLED", "MEMOS_OCR_ENABLED")

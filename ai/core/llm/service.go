@@ -93,8 +93,8 @@ type FunctionCall struct {
 
 // Config represents LLM service configuration.
 type Config struct {
-	Provider    string // deepseek, openai, ollama
-	Model       string // deepseek-chat
+	Provider    string // deepseek, openai, ollama, anthropic
+	Model       string // deepseek-chat, claude-3-5-sonnet-20241022
 	APIKey      string
 	BaseURL     string
 	MaxTokens   int     // default: 2048
@@ -139,6 +139,14 @@ func NewService(cfg *Config) (Service, error) {
 		}
 		clientConfig = openai.DefaultConfig(cfg.APIKey)
 		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
+
+	case "anthropic":
+		baseURL := cfg.BaseURL
+		if baseURL == "" {
+			baseURL = "https://api.anthropic.com"
+		}
+		clientConfig = openai.DefaultAnthropicConfig(cfg.APIKey, baseURL)
 		clientConfig.HTTPClient = httpClient
 
 	default:
@@ -498,6 +506,8 @@ func (s *service) provider() string {
 		return "openai"
 	case strings.Contains(modelLower, "qwen"):
 		return "siliconflow"
+	case strings.Contains(modelLower, "claude") || strings.Contains(modelLower, "anthropic"):
+		return "anthropic"
 	default:
 		return "llm"
 	}

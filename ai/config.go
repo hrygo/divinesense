@@ -36,8 +36,8 @@ type RerankerConfig struct {
 
 // LLMConfig represents LLM configuration.
 type LLMConfig struct {
-	Provider    string // deepseek, openai, ollama
-	Model       string // deepseek-chat
+	Provider    string // deepseek, openai, ollama, anthropic
+	Model       string // deepseek-chat, claude-3-5-sonnet-20241022
 	APIKey      string
 	BaseURL     string
 	MaxTokens   int     // default: 2048
@@ -98,6 +98,12 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	}
 
 	// LLM configuration
+	// Note: Model alias resolution is handled by the user setting the full model name
+	// in DIVINESENSE_AI_LLM_MODEL environment variable.
+	// Common Anthropic models:
+	// - claude-3-5-sonnet-20241022 (default, recommended)
+	// - claude-3-5-opus-20241022 (high complexity)
+	// - claude-3-5-haiku-20241022 (fast, low cost)
 	cfg.LLM = LLMConfig{
 		Provider:    p.AILLMProvider,
 		Model:       p.AILLMModel,
@@ -112,6 +118,9 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	case "openai":
 		cfg.LLM.APIKey = p.AIOpenAIAPIKey
 		cfg.LLM.BaseURL = p.AIOpenAIBaseURL
+	case "anthropic":
+		cfg.LLM.APIKey = p.AIAnthropicAPIKey
+		cfg.LLM.BaseURL = p.AIAnthropicBaseURL
 	case "ollama":
 		cfg.LLM.BaseURL = p.AIOllamaBaseURL
 	}
