@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Anthropic 默认 LLM)
+> **保鲜状态**: ✅ 已更新 (2026-02-11) | **最后检查**: v0.97.0 (Z.AI 默认 LLM)
 
 ## 数据库支持策略
 
@@ -197,23 +197,24 @@ DIVINESENSE_DRIVER=postgres
 DIVINESENSE_DSN=postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable
 ```
 
-**AI（推荐 SiliconFlow + 智谱 Z.AI Claude）**：
+**AI（推荐 SiliconFlow + Z.AI GLM）**：
 ```bash
 DIVINESENSE_AI_ENABLED=true
+
+# LLM 对话 (Z.AI GLM 系列)
+DIVINESENSE_AI_LLM_PROVIDER=zai
+DIVINESENSE_AI_LLM_MODEL=glm-4.7
+DIVINESENSE_AI_ZAI_API_KEY=your_zai_key
+DIVINESENSE_AI_ZAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+
+# 向量 Embedding (SiliconFlow)
 DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
 DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
-DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
-DIVINESENSE_AI_LLM_PROVIDER=anthropic
-DIVINESENSE_AI_LLM_MODEL=opus
-DIVINESENSE_AI_ANTHROPIC_API_KEY=your_key
-DIVINESENSE_AI_ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
-DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-```
+DIVINESENSE_AI_SILICONFLOW_API_KEY=your_siliconflow_key
+DIVINESENSE_AI_SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
 
-**Geek Mode（可选 —— Claude Code CLI 集成）**：
-```bash
-# 为代码相关任务启用 Geek Mode
-DIVINESENSE_CLAUDE_CODE_ENABLED=true
+# 重排 Reranker (SiliconFlow)
+DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
 ```
 
 **配置优先级**：
@@ -227,7 +228,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 
 ### AI 代理系统
 
-所有 AI 聊天逻辑通过 `ai/agent/` 中的 `ChatRouter` 路由：
+所有 AI 聊天逻辑通过 `ai/agents/` 中的 `ChatRouter` 路由：
 
 | 代理 | 配置文件 | 用途 | 工具 |
 |:-----|:---------|:-----|:-----|
@@ -235,7 +236,7 @@ DIVINESENSE_CLAUDE_CODE_ENABLED=true
 | **ScheduleParrot** | `config/parrots/schedule.yaml` | 日程管理 | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
 | **AmazingParrot** | `config/parrots/amazing.yaml` | 组合笔记 + 日程 | 所有工具 + 并发执行 |
 
-> **实现**: 所有三种代理由 `ai/agent/universal/` 中的 **UniversalParrot** 配置驱动系统实现。
+> **实现**: 所有三种代理由 `ai/agents/universal/` 中的 **UniversalParrot** 配置驱动系统实现。
 
 **聊天路由流程**（`chat_router.go`）：
 ```
@@ -530,8 +531,8 @@ CREATE UNIQUE INDEX idx_chat_app_credential_unique ON chat_app_credential(creato
 | `server/service/` | 业务逻辑层 |
 | `ai/core/retrieval/` | 混合搜索（BM25 + 向量） |
 | `server/queryengine/` | 查询分析和路由 |
-| `ai/agent/` | AI 代理（MemoParrot、ScheduleParrot、AmazingParrot） |
-| `ai/router/` | 三层意图路由 |
+| `ai/agents/` | AI 代理（MemoParrot、ScheduleParrot、AmazingParrot） |
+| `ai/routing/` | 三层意图路由 |
 | `ai/vector/` | Embedding 服务 |
 | `plugin/chat_apps/` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
 | `store/` | 数据访问层接口 |

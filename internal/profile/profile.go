@@ -35,8 +35,8 @@ type Profile struct {
 	AISiliconFlowAPIKey  string
 	AIRerankModel        string
 	AILLMModel           string
-	AIAnthropicAPIKey    string
-	AIAnthropicBaseURL   string
+	AIZAI_APIKey         string // Z.AI (智谱) API key
+	AIZAIBaseURL         string // Z.AI base URL
 	TesseractPath        string
 	AISiliconFlowBaseURL string
 	Port                 int
@@ -51,7 +51,7 @@ func (p *Profile) IsDev() bool {
 
 // IsAIEnabled returns true if AI is enabled and at least one API key or base URL is configured.
 func (p *Profile) IsAIEnabled() bool {
-	return p.AIEnabled && (p.AISiliconFlowAPIKey != "" || p.AIOpenAIAPIKey != "" || p.AIOllamaBaseURL != "" || p.AIDeepSeekAPIKey != "" || p.AIAnthropicAPIKey != "")
+	return p.AIEnabled && (p.AISiliconFlowAPIKey != "" || p.AIOpenAIAPIKey != "" || p.AIOllamaBaseURL != "" || p.AIDeepSeekAPIKey != "" || p.AIZAI_APIKey != "")
 }
 
 // getEnvOrDefault returns the environment variable value or the default value.
@@ -66,7 +66,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 func (p *Profile) FromEnv() {
 	p.AIEnabled = getEnvOrDefault("DIVINESENSE_AI_ENABLED", "false") == "true"
 	p.AIEmbeddingProvider = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_PROVIDER", "siliconflow")
-	p.AILLMProvider = getEnvOrDefault("DIVINESENSE_AI_LLM_PROVIDER", "anthropic")
+	p.AILLMProvider = getEnvOrDefault("DIVINESENSE_AI_LLM_PROVIDER", "zai")
 	p.AISiliconFlowAPIKey = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_API_KEY", "")
 	p.AISiliconFlowBaseURL = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
 	p.AIDeepSeekAPIKey = getEnvOrDefault("DIVINESENSE_AI_DEEPSEEK_API_KEY", "")
@@ -74,11 +74,11 @@ func (p *Profile) FromEnv() {
 	p.AIOpenAIAPIKey = getEnvOrDefault("DIVINESENSE_AI_OPENAI_API_KEY", "")
 	p.AIOpenAIBaseURL = getEnvOrDefault("DIVINESENSE_AI_OPENAI_BASE_URL", "https://api.openai.com/v1")
 	p.AIOllamaBaseURL = getEnvOrDefault("DIVINESENSE_AI_OLLAMA_BASE_URL", "http://localhost:11434")
+	p.AIZAI_APIKey = getEnvOrDefault("DIVINESENSE_AI_ZAI_API_KEY", "")
+	p.AIZAIBaseURL = getEnvOrDefault("DIVINESENSE_AI_ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 	p.AIEmbeddingModel = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_MODEL", "BAAI/bge-m3")
 	p.AIRerankModel = getEnvOrDefault("DIVINESENSE_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
-	p.AILLMModel = getEnvOrDefault("DIVINESENSE_AI_LLM_MODEL", "claude-opus-7-20250219")
-	p.AIAnthropicAPIKey = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_API_KEY", "")
-	p.AIAnthropicBaseURL = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+	p.AILLMModel = getEnvOrDefault("DIVINESENSE_AI_LLM_MODEL", "glm-4.7")
 
 	// Attachment processing configuration
 	p.OCREnabled = getEnvOrDefault("DIVINESENSE_OCR_ENABLED", "false") == "true"

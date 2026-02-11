@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { EditorRefActions } from "../Editor";
+import type { EditorRefActions } from "../types/editor";
 
 interface UseKeyboardOptions {
   onSave: () => void;

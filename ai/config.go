@@ -36,8 +36,8 @@ type RerankerConfig struct {
 
 // LLMConfig represents LLM configuration.
 type LLMConfig struct {
-	Provider    string // deepseek, openai, ollama, anthropic
-	Model       string // deepseek-chat, claude-3-5-sonnet-20241022
+	Provider    string // deepseek, openai, siliconflow, ollama, zai
+	Model       string // deepseek-chat, gpt-4o, claude-opus-7-20250219
 	APIKey      string
 	BaseURL     string
 	MaxTokens   int     // default: 2048
@@ -118,9 +118,9 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	case "openai":
 		cfg.LLM.APIKey = p.AIOpenAIAPIKey
 		cfg.LLM.BaseURL = p.AIOpenAIBaseURL
-	case "anthropic":
-		cfg.LLM.APIKey = p.AIAnthropicAPIKey
-		cfg.LLM.BaseURL = p.AIAnthropicBaseURL
+	case "zai":
+		cfg.LLM.APIKey = p.AIZAI_APIKey
+		cfg.LLM.BaseURL = p.AIZAIBaseURL
 	case "ollama":
 		cfg.LLM.BaseURL = p.AIOllamaBaseURL
 	}

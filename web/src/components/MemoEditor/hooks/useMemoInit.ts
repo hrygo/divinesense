@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { memoKeys } from "@/hooks/useMemoQueries";
 import type { Visibility } from "@/types/proto/api/v1/memo_service_pb";
-import type { EditorRefActions } from "../Editor";
 import { cacheService, memoService } from "../services";
 import { useEditorContext } from "../state";
+import type { EditorRefActions } from "../types/editor";
 
 export const useMemoInit = (
   editorRef: React.RefObject<EditorRefActions | null>,

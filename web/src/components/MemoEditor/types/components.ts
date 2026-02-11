@@ -1,6 +1,5 @@
 import type { Location, Memo, Visibility } from "@/types/proto/api/v1/memo_service_pb";
-import type { EditorRefActions } from "../Editor";
-import type { Command } from "../Editor/commands";
+import type { EditorRefActions } from "./editor";
 import type { LocationState } from "./insert-menu";
 
 export interface MemoEditorProps {
@@ -78,7 +77,7 @@ export interface TagSuggestionsProps {
 export interface SlashCommandsProps {
   editorRef: React.RefObject<HTMLTextAreaElement>;
   editorActions: React.ForwardedRef<EditorRefActions>;
-  commands: Command[];
+  commands: unknown[];
 }
 
 export interface EditorProps {

@@ -10,13 +10,13 @@ import { handleError } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString } from "@/utils/memo";
-import { EditorContent, EditorMetadata, EditorToolbar, FocusModeExitButton, FocusModeOverlay } from "./components";
+import { EditorContent, EditorMetadata, FocusModeExitButton, FocusModeOverlay } from "./components";
 import { FOCUS_MODE_STYLES } from "./constants";
-import type { EditorRefActions } from "./Editor";
 import { useAutoSave, useFocusMode, useKeyboard, useMemoInit, useVirtualKeyboard } from "./hooks";
 import { cacheService, errorService, memoService, validationService } from "./services";
 import { EditorProvider, useEditorContext } from "./state";
 import type { MemoEditorProps } from "./types";
+import type { EditorRefActions } from "./types/editor";
 
 const MemoEditor = (props: MemoEditorProps) => {
   const { className, cacheKey, memoName, parentMemoName, autoFocus, placeholder, onConfirm, onCancel } = props;
@@ -154,7 +154,6 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
         {/* Metadata and toolbar grouped together at bottom */}
         <div className="w-full flex flex-col gap-2">
           <EditorMetadata memoName={memoName} />
-          <EditorToolbar onSave={handleSave} onCancel={onCancel} memoName={memoName} />
         </div>
       </div>
     </>
@@ -163,15 +162,8 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
 
 export default MemoEditor;
 
-export { FocusModeEditor } from "./FocusModeEditor";
+export { default as FocusModeEditor } from "./FocusModeEditor";
 export type { EditorMode } from "./hooks/useEditorMode";
 export { useEditorMode } from "./hooks/useEditorMode";
-// Re-export new components
-export { MemoEditorContainer } from "./MemoEditorContainer";
-export {
-  MobileToolbarSheet,
-  MobileToolbarTrigger,
-} from "./MobileToolbarSheet";
-export { QuickInput } from "./QuickInput";
-export { StandardEditor } from "./StandardEditor";
-export { StandardToolbar } from "./StandardToolbar";
+export type { EditorRefActions } from "./types/editor";
+export type { MemoEditorProps } from "./types/memo-editor";

@@ -93,8 +93,8 @@ type FunctionCall struct {
 
 // Config represents LLM service configuration.
 type Config struct {
-	Provider    string // deepseek, openai, ollama, anthropic
-	Model       string // deepseek-chat, claude-3-5-sonnet-20241022
+	Provider    string // deepseek, openai, siliconflow, ollama, zai (deprecated: anthropic)
+	Model       string // deepseek-chat, gpt-4o, claude-opus-7-20250219
 	APIKey      string
 	BaseURL     string
 	MaxTokens   int     // default: 2048
@@ -141,12 +141,23 @@ func NewService(cfg *Config) (Service, error) {
 		clientConfig.BaseURL = baseURL
 		clientConfig.HTTPClient = httpClient
 
-	case "anthropic":
+	case "zai":
+		// Z.AI (智谱) OpenAI-compatible API: https://open.bigmodel.cn/api/paas/v4
 		baseURL := cfg.BaseURL
 		if baseURL == "" {
-			baseURL = "https://api.anthropic.com"
+			baseURL = "https://open.bigmodel.cn/api/paas/v4"
 		}
-		clientConfig = openai.DefaultAnthropicConfig(cfg.APIKey, baseURL)
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
+
+	case "ollama":
+		baseURL := cfg.BaseURL
+		if baseURL == "" {
+			baseURL = "http://localhost:11434"
+		}
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		clientConfig.BaseURL = baseURL
 		clientConfig.HTTPClient = httpClient
 
 	default:
@@ -457,7 +468,7 @@ func (s *service) Warmup(ctx context.Context) {
 	warmupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	slog.Debug("LLM: starting connection warmup",
+	slog.Info("LLM: starting connection warmup",
 		"provider", s.provider(),
 		"model", s.model,
 	)
