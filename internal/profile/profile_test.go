@@ -21,14 +21,14 @@ func TestAIProfileDefaults(t *testing.T) {
 	}{
 		{"AIEnabled should be false by default", "AIEnabled", "false", boolToString(profile.AIEnabled)},
 		{"AIEmbeddingProvider default", "AIEmbeddingProvider", "siliconflow", profile.AIEmbeddingProvider},
-		{"AILLMProvider default", "AILLMProvider", "deepseek", profile.AILLMProvider},
+		{"AILLMProvider default", "AILLMProvider", "anthropic", profile.AILLMProvider},
 		{"AISiliconFlowBaseURL default", "AISiliconFlowBaseURL", "https://api.siliconflow.cn/v1", profile.AISiliconFlowBaseURL},
 		{"AIDeepSeekBaseURL default", "AIDeepSeekBaseURL", "https://api.deepseek.com", profile.AIDeepSeekBaseURL},
 		{"AIOpenAIBaseURL default", "AIOpenAIBaseURL", "https://api.openai.com/v1", profile.AIOpenAIBaseURL},
 		{"AIOllamaBaseURL default", "AIOllamaBaseURL", "http://localhost:11434", profile.AIOllamaBaseURL},
 		{"AIEmbeddingModel default", "AIEmbeddingModel", "BAAI/bge-m3", profile.AIEmbeddingModel},
 		{"AIRerankModel default", "AIRerankModel", "BAAI/bge-reranker-v2-m3", profile.AIRerankModel},
-		{"AILLMModel default", "AILLMModel", "deepseek-chat", profile.AILLMModel},
+		{"AILLMModel default", "AILLMModel", "claude-opus-7-20250219", profile.AILLMModel},
 	}
 
 	for _, tt := range tests {

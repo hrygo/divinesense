@@ -66,7 +66,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 func (p *Profile) FromEnv() {
 	p.AIEnabled = getEnvOrDefault("DIVINESENSE_AI_ENABLED", "false") == "true"
 	p.AIEmbeddingProvider = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_PROVIDER", "siliconflow")
-	p.AILLMProvider = getEnvOrDefault("DIVINESENSE_AI_LLM_PROVIDER", "deepseek")
+	p.AILLMProvider = getEnvOrDefault("DIVINESENSE_AI_LLM_PROVIDER", "anthropic")
 	p.AISiliconFlowAPIKey = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_API_KEY", "")
 	p.AISiliconFlowBaseURL = getEnvOrDefault("DIVINESENSE_AI_SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
 	p.AIDeepSeekAPIKey = getEnvOrDefault("DIVINESENSE_AI_DEEPSEEK_API_KEY", "")
@@ -76,7 +76,7 @@ func (p *Profile) FromEnv() {
 	p.AIOllamaBaseURL = getEnvOrDefault("DIVINESENSE_AI_OLLAMA_BASE_URL", "http://localhost:11434")
 	p.AIEmbeddingModel = getEnvOrDefault("DIVINESENSE_AI_EMBEDDING_MODEL", "BAAI/bge-m3")
 	p.AIRerankModel = getEnvOrDefault("DIVINESENSE_AI_RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
-	p.AILLMModel = getEnvOrDefault("DIVINESENSE_AI_LLM_MODEL", "deepseek-chat")
+	p.AILLMModel = getEnvOrDefault("DIVINESENSE_AI_LLM_MODEL", "claude-opus-7-20250219")
 	p.AIAnthropicAPIKey = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_API_KEY", "")
 	p.AIAnthropicBaseURL = getEnvOrDefault("DIVINESENSE_AI_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 
