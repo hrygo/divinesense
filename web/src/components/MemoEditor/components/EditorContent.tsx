@@ -27,8 +27,12 @@ export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({
     dispatch(actions.updateContent(content));
   };
 
-  const handlePaste = () => {
+  const handlePaste = (_e: React.ClipboardEvent) => {
     // Paste handling is managed by Editor component internally
+  };
+
+  const handleKeyDown = (_e: React.KeyboardEvent) => {
+    // Keyboard handling is managed externally
   };
 
   return (
@@ -37,9 +41,10 @@ export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({
         ref={ref}
         className="memo-editor-content"
         initialContent={state.content}
-        placeholder={placeholder || ""}
+        placeholder={placeholder ?? ""}
         onContentChange={handleContentChange}
         onPaste={handlePaste}
+        onKeyDown={handleKeyDown}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
       />

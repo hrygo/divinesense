@@ -85,11 +85,14 @@ export interface EditorProps {
   initialContent: string;
   placeholder: string;
   onContentChange: (content: string) => void;
-  onPaste: (event: React.ClipboardEvent) => void;
-  isFocusMode?: boolean;
-  isInIME?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: Event types from textarea
+  onPaste: (event: any) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: KeyboardEvent from textarea
+  onKeyDown?: (e: any) => void;
   onCompositionStart?: () => void;
   onCompositionEnd?: () => void;
+  // biome-ignore lint/suspicious/noExplicitAny: Ref types vary
+  ref?: React.RefObject<any>;
 }
 
 export interface VisibilitySelectorProps {
