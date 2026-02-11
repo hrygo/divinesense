@@ -654,6 +654,27 @@
     "similarity": "Similarity",
     "untitled": "Untitled"
   },
+  "explore": {
+    "title": "Explore",
+    "hero": {
+      "title_prefix": "Discover",
+      "title_highlight": "Wonderful",
+      "subtitle": "Explore public notes and creative ideas"
+    },
+    "categories": {
+      "all": "All Notes",
+      "all_desc": "Browse all public content",
+      "users": "Discover Users",
+      "users_desc": "Find interesting creators",
+      "trending": "Trending",
+      "trending_desc": "See what's popular"
+    },
+    "stats": {
+      "memos": "Notes",
+      "users": "Users",
+      "growing": "Growing"
+    }
+  },
   "common": {
     "add": "Add",
     "got-it": "Got it",
@@ -681,27 +702,6 @@
     "edit": "Edit",
     "email": "Email",
     "expand": "Expand",
-    "explore": {
-      "title": "Explore",
-      "hero": {
-        "title_prefix": "Discover",
-        "title_highlight": "Wonderful",
-        "subtitle": "Explore public notes and creative ideas"
-      },
-      "categories": {
-        "all": "All Notes",
-        "all_desc": "Browse all public content",
-        "users": "Discover Users",
-        "users_desc": "Find interesting creators",
-        "trending": "Trending",
-        "trending_desc": "See what's popular"
-      },
-      "stats": {
-        "memos": "Notes",
-        "users": "Users",
-        "growing": "Growing"
-      }
-    },
     "failed-to-sign-in": "Failed to sign in",
     "filter": "Filter",
     "inbox": "Inbox",

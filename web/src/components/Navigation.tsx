@@ -37,7 +37,7 @@ const Navigation = (props: Props) => {
   const exploreNavLink: NavLinkItem = {
     id: "header-explore",
     path: Routes.EXPLORE,
-    title: t("common.explore"),
+    title: t("explore.title"),
     icon: <EarthIcon className="w-6 h-auto shrink-0" />,
   };
   const attachmentsNavLink: NavLinkItem = {
