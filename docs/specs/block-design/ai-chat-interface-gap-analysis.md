@@ -1287,9 +1287,9 @@ func calculateCostEstimate(stats *SessionStats) int64 {
         return 0
     }
 
-    // DeepSeek V3 定价
-    // Input: ¥0.14/M tokens = 0.14 milli-cents/token
-    // Output: ¥0.28/M tokens = 0.28 milli-cents/token
+    // Z.AI GLM 定价
+    // Input: ¥0.50/M tokens (500 tokens / ¥1M) = 0.05 milli-cents/token
+    // Output: ¥0.50/M tokens (500 tokens / ¥1M) = 0.05 milli-cents/token
     inputCost := stats.InputTokens * 0.14
     outputCost := stats.OutputTokens * 0.28
 
