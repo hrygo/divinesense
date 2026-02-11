@@ -14,6 +14,7 @@ const EditorComponent = (
     ref,
     () => ({
       focus: () => textareaRef.current?.focus(),
+
       insertText: (text: string) => {
         const el = textareaRef.current;
         if (!el) return;
@@ -26,14 +27,17 @@ const EditorComponent = (
           const newEl = textareaRef.current;
           if (newEl) {
             newEl.selectionStart = newEl.selectionEnd = start + text.length;
+            newEl.focus();
           }
         }, 0);
       },
+
       getSelection: () => {
         const el = textareaRef.current;
         if (!el) return null;
         return { start: el.selectionStart, end: el.selectionEnd };
       },
+
       setSelection: (start: number, end: number) => {
         const el = textareaRef.current;
         if (!el) return;
@@ -41,6 +45,7 @@ const EditorComponent = (
         el.selectionEnd = end;
         el.focus();
       },
+
       getContent: () => content,
       setContent: setContent,
     }),
@@ -57,29 +62,8 @@ const EditorComponent = (
     onContentChange(newContent);
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    onPaste?.(e);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Allow tab to insert 2 spaces instead of changing focus
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const el = textareaRef.current;
-      if (!el) return;
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
-      const before = content.slice(0, start);
-      const after = content.slice(end);
-      setContent(before + "  " + after);
-      setTimeout(() => {
-        const newEl = textareaRef.current;
-        if (newEl) {
-          newEl.selectionStart = newEl.selectionEnd = start + 2;
-          newEl.focus();
-        }
-      }, 0);
-    }
+  const handlePaste = (_e: React.ClipboardEvent) => {
+    onPaste?.(_e);
   };
 
   return (
@@ -88,7 +72,6 @@ const EditorComponent = (
       value={content}
       onChange={handleChange}
       onPaste={handlePaste}
-      onKeyDown={handleKeyDown}
       onCompositionStart={onCompositionStart}
       onCompositionEnd={onCompositionEnd}
       placeholder={placeholder}
