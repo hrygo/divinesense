@@ -15,7 +15,11 @@ All notable changes to this project will be documented in this file.
 - （待添加）
 
 ### Changed
-- （待添加）
+- **AI 模型文档更新**：统一采用供应商无关的通用描述
+  - README: 将对话 LLM 从 DeepSeek 更新为 Z.AI GLM
+  - 架构文档：对话 LLM 使用通用描述"支持多提供商切换，通过环境变量配置"
+  - 规格文档：成本计算、会话定位等文档同步更新
+  - 向量 Embedding、意图分类、重排 Rerank 保持通用描述
 
 ### Fixed
 - （待添加）
