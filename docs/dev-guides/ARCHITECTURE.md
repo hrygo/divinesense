@@ -98,7 +98,7 @@ divinesense/
    - 静态资源服务支持 Gzip 压缩、SPA 路由回退及强缓存优化。
 
 2. **AI 核心模块** (`ai/`)：
-   - **对话 LLM**：支持多提供商（Z.AI GLM、DeepSeek、OpenAI、Ollama）
+   - **对话 LLM**：支持多提供商切换，通过环境变量配置
    - **Embedding**：向量嵌入服务（1024 维，支持多模型）
    - **意图分类**：轻量级分类器（快速路由）
    - **Reranker**：结果精炼重排
@@ -425,10 +425,11 @@ ChatRouter 实现**四层**意图分类系统：
 
 | 功能 | 支持提供商 | 用途 |
 |:-----|:----------|:-----|
-| **对话 LLM** | Z.AI, DeepSeek, OpenAI, SiliconFlow, Ollama | 主对话生成 |
-| **向量 Embedding** | SiliconFlow, OpenAI, Ollama | 语义搜索（1024维） |
-| **意图分类** | SiliconFlow | 路由意图分类 |
-| **重排 Rerank** | SiliconFlow | 检索结果精炼 |
+| **对话 LLM** | 支持多提供商切换，通过环境变量配置 | 主对话生成 |
+| **向量 Embedding** | 向量嵌入服务，用于语义搜索（1024维） |
+| **意图分类** | 轻量级分类器，用于快速路由 |
+| **重排 Rerank** | 检索结果精炼，提升准确率 |
+
 
 **策略说明**：
 - **对话 LLM**：支持多提供商切换，通过环境变量配置
