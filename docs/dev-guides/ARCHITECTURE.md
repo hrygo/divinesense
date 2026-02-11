@@ -35,8 +35,8 @@ divinesense/
 │   ├── scheduler/       # 日程管理
 │   └── service/         # 业务逻辑层
 ├── ai/                  # 🔴 AI 核心模块（一级模块）
-│   ├── agent/           #   Parrot 代理（UniversalParrot 配置驱动系统 + GeekParrot、EvolutionParrot）
-│   ├── router/          #   三层意图路由
+│   ├── agents/          #   Parrot 代理（UniversalParrot 配置驱动系统 + GeekParrot、EvolutionParrot）
+│   ├── routing/         #   三层意图路由
 │   ├── vector/          #   Embedding 服务
 │   ├── memory/          #   情景记忆
 │   ├── session/         #   对话持久化
@@ -296,7 +296,7 @@ git push --no-verify
 
 ## Parrot 代理架构
 
-### 代理类型 (`ai/agent/`)
+### 代理类型 (`ai/agents/`)
 
 |  AgentType  | 鹦鹉名称 | 配置/文件              | 中文名 | 描述                             |
 | :---------: | :------- | :--------------------- | :----- | :------------------------------- |
@@ -314,7 +314,7 @@ git push --no-verify
 
 ### UniversalParrot 架构
 
-> **实现状态**: ✅ 完成 (v0.97.0) | **位置**: `ai/agent/universal/`
+> **实现状态**: ✅ 完成 (v0.97.0) | **位置**: `ai/agents/universal/`
 
 **概述**：UniversalParrot 是配置驱动的通用代理系统，三只核心鹦鹉（MEMO、SCHEDULE、AMAZING）通过 YAML 配置文件定义，无需编写代码。
 
@@ -346,7 +346,7 @@ git push --no-verify
 
 ### 代理路由器
 
-**位置**：`ai/agent/chat_router.go` + `ai/router/service.go`
+**位置**：`ai/agents/chat_router.go` + `ai/routing/service.go`
 
 ChatRouter 实现**四层**意图分类系统：
 
@@ -473,7 +473,7 @@ LLMCallStats.CacheReadTokens
 
 ### 代理工具
 
-**位置**：`ai/agent/tools/`
+**位置**：`ai/agents/tools/`
 
 | 工具              | 文件             | 描述                    |
 | :---------------- | :--------------- | :---------------------- |
@@ -546,7 +546,7 @@ LLMCallStats.CacheReadTokens
 
 ### 核心组件
 
-**位置**：`ai/agent/cc_runner/`
+**位置**：`ai/agents/cc_runner/`
 
 | 组件 | 文件 | 描述 |
 |:-----|:-----|:-----|
@@ -632,7 +632,7 @@ Claude Code CLI Process
 | **ai/preload/** | 基于用户行为模式的智能预加载 | 命中率 >60% |
 | **ai/stats/** | 告警持久化、指标存储 | 实时聚合 |
 | **ai/tracing/** | 分布式追踪（OpenTelemetry 兼容） | <5% 开销 |
-| **ai/agent/registry/** | 动态工具发现、执行策略注册 | 热加载 |
+| **ai/agents/registry/** | 动态工具发现、执行策略注册 | 热加载 |
 
 ### 会话服务 (`ai/session/`)
 

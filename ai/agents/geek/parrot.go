@@ -121,7 +121,9 @@ func (p *GeekParrot) ExecuteWithCallback(
 // sendError 通过回调发送错误事件。
 func (p *GeekParrot) sendError(callback agentpkg.EventCallback, message string) {
 	if callback != nil {
-		_ = callback(agentpkg.EventTypeError, message) //nolint:errcheck // error notification
+		if err := callback(agentpkg.EventTypeError, message); err != nil {
+			slog.Warn("Failed to send error notification to client", "error", err)
+		}
 	}
 }
 

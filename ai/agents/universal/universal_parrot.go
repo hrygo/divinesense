@@ -119,8 +119,9 @@ func (p *UniversalParrot) ExecuteWithCallback(
 		if cached, found := p.cache.Get(cacheKey); found {
 			slog.Info("UniversalParrot cache hit", "parrot", p.config.Name)
 			if callback != nil {
-				// nolint:errcheck // cache hit callback is best-effort
-				callback(agent.EventTypeAnswer, cached)
+				if err := callback(agent.EventTypeAnswer, cached); err != nil {
+					slog.Warn("cache hit callback failed", "error", err)
+				}
 			}
 			return nil
 		}

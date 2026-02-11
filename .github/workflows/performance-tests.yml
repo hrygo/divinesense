@@ -57,7 +57,7 @@ jobs:
       - name: Run router benchmarks
         run: |
           echo "Running router benchmarks..."
-          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/router/... | tee benchmark-router.txt
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/routing/... | tee benchmark-router.txt
 
       - name: Upload router benchmark results
         uses: actions/upload-artifact@v4
@@ -132,7 +132,7 @@ jobs:
       - name: Run agent benchmarks
         run: |
           echo "Running agent benchmarks..."
-          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/agent/... | tee benchmark-agent.txt
+          go test -bench=. -benchmem -run=^$ -tags=noui ./ai/agents/... | tee benchmark-agent.txt
 
       - name: Upload agent benchmark results
         uses: actions/upload-artifact@v4
