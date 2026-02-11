@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hrygo/divinesense/ai/memory"
+	"github.com/hrygo/divinesense/ai/services/memory"
 )
 
 // ScheduleInput represents input for schedule creation.

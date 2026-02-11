@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/hrygo/divinesense/ai"
-	agentpkg "github.com/hrygo/divinesense/ai/agent"
-	"github.com/hrygo/divinesense/ai/agent/tools"
-	"github.com/hrygo/divinesense/ai/agent/universal"
+	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/agents/tools"
+	"github.com/hrygo/divinesense/ai/agents/universal"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/service/schedule"

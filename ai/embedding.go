@@ -27,6 +27,10 @@ type embeddingService struct {
 }
 
 // NewEmbeddingService creates a new EmbeddingService.
+//
+// Phase 1 Note: This is a bridge compatibility layer that maintains the original API.
+// The actual embedding functionality has been moved to ai/core/embedding/provider.go.
+// Future refactoring will deprecate this file in favor of the core package.
 func NewEmbeddingService(cfg *EmbeddingConfig) (EmbeddingService, error) {
 	var clientConfig openai.ClientConfig
 

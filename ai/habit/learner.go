@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hrygo/divinesense/ai/memory"
+	"github.com/hrygo/divinesense/ai/services/memory"
 )
 
 // HabitLearner runs periodic habit analysis for all users.

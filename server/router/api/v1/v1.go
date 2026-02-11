@@ -15,7 +15,7 @@ import (
 
 	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
-	aistats "github.com/hrygo/divinesense/ai/stats"
+	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	"github.com/hrygo/divinesense/internal/profile"
 	"github.com/hrygo/divinesense/plugin/chat_apps/channels"
 	chatstore "github.com/hrygo/divinesense/plugin/chat_apps/store"

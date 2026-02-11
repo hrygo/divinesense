@@ -31,7 +31,7 @@ func TestRerankerService_Disabled(t *testing.T) {
 		Enabled: false,
 	}
 
-	service := NewRerankerService(cfg).(*rerankerService)
+	service := NewRerankerService(cfg)
 
 	documents := []string{"doc1", "doc2", "doc3"}
 	results, err := service.Rerank(context.Background(), "test query", documents, 2)

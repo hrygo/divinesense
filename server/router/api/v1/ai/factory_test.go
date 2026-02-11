@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/hrygo/divinesense/ai"
-	"github.com/hrygo/divinesense/ai/agent"
-	"github.com/hrygo/divinesense/ai/agent/universal"
+	"github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/agents/universal"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 )
 
@@ -36,6 +36,11 @@ func (m *mockLLM) ChatWithTools(ctx context.Context, messages []ai.Message, tool
 	return &ai.ChatResponse{
 		Content: "mock response",
 	}, &ai.LLMCallStats{PromptTokens: 10, CompletionTokens: 5}, nil
+}
+
+// Warmup is a no-op for the mock.
+func (m *mockLLM) Warmup(ctx context.Context) {
+	// No-op for mock
 }
 
 // TestBuildToolFactories verifies that buildToolFactories creates valid tool factories.

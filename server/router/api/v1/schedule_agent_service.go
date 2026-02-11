@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/hrygo/divinesense/ai"
-	"github.com/hrygo/divinesense/ai/agent"
+	"github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/internal/profile"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"

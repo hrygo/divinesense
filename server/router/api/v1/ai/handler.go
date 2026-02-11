@@ -15,9 +15,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/hrygo/divinesense/ai"
-	agentpkg "github.com/hrygo/divinesense/ai/agent"
-	"github.com/hrygo/divinesense/ai/router"
-	aistats "github.com/hrygo/divinesense/ai/stats"
+	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/agents/geek"
+	"github.com/hrygo/divinesense/ai/routing"
+	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/internal/errors"
 	"github.com/hrygo/divinesense/server/internal/observability"
@@ -188,7 +189,7 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 	if agentType == AgentTypeAuto && h.chatRouter != nil {
 		// Add user ID to context for history matching.
 		// Note: req.UserID is already authenticated by the gRPC interceptor middleware.
-		ctx = router.WithUserID(ctx, req.UserID)
+		ctx = routing.WithUserID(ctx, req.UserID)
 
 		// PROGRESS EVENT: Send routing_start event before intent routing
 		// 进度事件：发送 routing_start 事件表示开始理解意图
@@ -310,7 +311,7 @@ func (h *ParrotHandler) handleGeekMode(
 
 	// Create GeekParrot directly (no factory needed, no LLM dependency)
 	// 直接创建 GeekParrot（无需工厂，无 LLM 依赖）
-	geekParrot, err := agentpkg.NewGeekParrot(
+	geekParrot, err := geek.NewGeekParrot(
 		h.getWorkDirForUser(req.UserID),
 		req.UserID,
 		sessionID,
@@ -387,7 +388,7 @@ func (h *ParrotHandler) handleEvolutionMode(
 	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationID))).String()
 
 	// Create EvolutionParrot (pass store for admin verification)
-	evoParrot, err := agentpkg.NewEvolutionParrot(sourceDir, req.UserID, sessionID, h.factory.store)
+	evoParrot, err := geek.NewEvolutionParrot(sourceDir, req.UserID, sessionID, h.factory.store)
 	if err != nil {
 		logger.Error("Failed to create EvolutionParrot", err)
 		return status.Error(codes.Internal, fmt.Sprintf("failed to create EvolutionParrot: %v", err))
@@ -1070,7 +1071,7 @@ func HandleError(err error) error {
 
 // NewChatRouter creates a new chat router for auto-routing based on intent classification.
 // routerSvc is required and provides three-layer routing (cache → rule → history → LLM).
-func NewChatRouter(routerSvc *router.Service) *agentpkg.ChatRouter {
+func NewChatRouter(routerSvc *routing.Service) *agentpkg.ChatRouter {
 	return agentpkg.NewChatRouter(routerSvc)
 }
 

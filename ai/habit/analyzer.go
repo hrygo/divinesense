@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hrygo/divinesense/ai/memory"
+	"github.com/hrygo/divinesense/ai/services/memory"
 )
 
 // HabitAnalyzer analyzes user interaction history to learn habits.

@@ -10,9 +10,9 @@ import (
 
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
-	"github.com/hrygo/divinesense/ai/memory"
-	"github.com/hrygo/divinesense/ai/router"
-	aistats "github.com/hrygo/divinesense/ai/stats"
+	"github.com/hrygo/divinesense/ai/routing"
+	"github.com/hrygo/divinesense/ai/services/memory"
+	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/middleware"
@@ -45,7 +45,7 @@ type AIService struct {
 	IntentClassifierConfig   *pluginai.IntentClassifierConfig
 	UniversalParrotConfig    *pluginai.UniversalParrotConfig // Phase 2: Config-driven parrots
 	agentFactory             *aichat.AgentFactory            // Cached agent factory
-	routerService            *router.Service
+	routerService            *routing.Service
 	chatEventBus             *aichat.EventBus
 	Store                    *store.Store
 	contextBuilder           *aichat.ContextBuilder
@@ -97,7 +97,7 @@ func (s *AIService) IsLLMEnabled() bool {
 // Returns nil if Store is not available, which is safe as callers check for nil.
 // Thread-safe: uses RWMutex for lazy initialization with support for re-initialization
 // when Store becomes available after initial nil check.
-func (s *AIService) getRouterService() *router.Service {
+func (s *AIService) getRouterService() *routing.Service {
 	// Fast path: read lock
 	s.routerServiceMu.RLock()
 	if s.routerService != nil {
@@ -126,7 +126,7 @@ func (s *AIService) getRouterService() *router.Service {
 
 	// Create LLM client wrapper for router
 	// Use dedicated intent classifier LLM service when available (per recommended strategy)
-	var llmClient router.LLMClient
+	var llmClient routing.LLMClient
 	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {
 		// Use dedicated SiliconFlow + Qwen2.5-7B-Instruct for intent classification
 		llmClient = &routerIntentLLMClient{
@@ -139,7 +139,7 @@ func (s *AIService) getRouterService() *router.Service {
 		llmClient = &routerLLMClient{llm: s.LLMService}
 	}
 
-	s.routerService = router.NewService(router.Config{
+	s.routerService = routing.NewService(routing.Config{
 		MemoryService: memService,
 		LLMClient:     llmClient,
 	})
@@ -190,13 +190,13 @@ func (s *AIService) getAgentFactory() *aichat.AgentFactory {
 	return s.agentFactory
 }
 
-// routerLLMClient adapts LLMService to router.LLMClient interface.
+// routerLLMClient adapts LLMService to routing.LLMClient interface.
 // Used as fallback when intent classifier is not configured.
 type routerLLMClient struct {
 	llm pluginai.LLMService
 }
 
-func (c *routerLLMClient) Complete(ctx context.Context, prompt string, config router.ModelConfig) (string, error) {
+func (c *routerLLMClient) Complete(ctx context.Context, prompt string, config routing.ModelConfig) (string, error) {
 	messages := []pluginai.Message{
 		{Role: "system", Content: "You are an intent classifier. Respond only with the intent type."},
 		{Role: "user", Content: prompt},
@@ -213,7 +213,7 @@ type routerIntentLLMClient struct {
 	model   string
 }
 
-func (c *routerIntentLLMClient) Complete(ctx context.Context, prompt string, config router.ModelConfig) (string, error) {
+func (c *routerIntentLLMClient) Complete(ctx context.Context, prompt string, config routing.ModelConfig) (string, error) {
 	// Build classification prompt with JSON schema
 	systemPrompt := `You are an intent classifier. Analyze the user input and return a JSON response:
 {

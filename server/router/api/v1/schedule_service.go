@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/hrygo/divinesense/ai"
-	aischedule "github.com/hrygo/divinesense/ai/schedule"
+	aischedule "github.com/hrygo/divinesense/ai/services/schedule"
 	"github.com/hrygo/divinesense/internal/util"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"

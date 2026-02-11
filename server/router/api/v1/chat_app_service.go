@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	agentpkg "github.com/hrygo/divinesense/ai/agent"
+	agentpkg "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/plugin/chat_apps"
 	"github.com/hrygo/divinesense/plugin/chat_apps/channels"
 	"github.com/hrygo/divinesense/plugin/chat_apps/metrics"
