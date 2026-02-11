@@ -47,18 +47,14 @@ divinesense/
 │   │   ├── retrieval/   #     检索系统（从 server/retrieval/ 迁移）
 │   │   ├── reranker/    #     重排服务
 │   │   └── llm/         #     LLM 客户端
-│   ├── rag/             #   RAG 高级功能
 │   ├── tags/            #   标签建议
 │   ├── duplicate/       #   重复检测
-│   ├── habit/           #   习惯学习
-│   ├── genui/           #   生成式 UI
+│   ├── habit/           #   习惯学习（日程增强）
 │   ├── graph/           #   知识图谱
-│   ├── prediction/      #   预测引擎
-│   ├── reminder/        #   提醒系统
 │   ├── schedule/        #   日程 AI
 │   ├── aitime/          #   AI 时间解析
 │   ├── timeout/         #   超时处理
-│   ├── review/          #   审查服务
+│   ├── review/          #   审查服务（间隔重复）
 │   ├── context/         #   上下文构建
 │   └── config.go        #   AI 配置
 ├── plugin/              # 其他可选插件（非 AI）
