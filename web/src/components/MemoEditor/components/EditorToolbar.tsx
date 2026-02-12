@@ -114,7 +114,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
   memoName,
 }) => {
   const t = useTranslate();
-  const md = useMediaQuery("md");
+  const lg = useMediaQuery("lg");
   const { state, actions, dispatch } = useEditorContext();
 
   const hasCancel = !!onCancel;
@@ -247,24 +247,24 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
           {(onInsertTags || onFormatContent) && <div className="w-px h-5 bg-border/50 mx-1" />}
 
           {/* AI Tag button - both desktop and mobile */}
-          {onInsertTags && <AITagButton content={state.content} onInsertTags={onInsertTags} compact={!md} />}
+          {onInsertTags && <AITagButton content={state.content} onInsertTags={onInsertTags} compact={!lg} />}
 
           {/* AI Format button - both desktop and mobile */}
-          {onFormatContent && <AIFormatButton content={state.content} onFormat={onFormatContent} compact={!md} />}
+          {onFormatContent && <AIFormatButton content={state.content} onFormat={onFormatContent} compact={!lg} />}
         </div>
 
         {/* Right: Settings and action buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Visibility: PC = button group, Mobile = cycle button */}
           {onVisibilityChange &&
-            (md ? (
+            (lg ? (
               <VisibilityToggleGroup value={state.metadata.visibility} onChange={onVisibilityChange} />
             ) : (
               <VisibilityCycleButton value={state.metadata.visibility} onChange={onVisibilityChange} />
             ))}
 
           {/* Focus mode button - Desktop only */}
-          {md && onToggleFocusMode && (
+          {lg && onToggleFocusMode && (
             <ToolbarButton
               icon={Maximize2}
               ariaLabel={t("editor.focus-mode")}

@@ -72,7 +72,7 @@ export const VisibilityToggleGroup: FC<VisibilityToggleGroupProps> = memo(functi
             aria-pressed={isActive}
           >
             <Icon className="w-4 h-4" />
-            {!compact && <span className="text-xs hidden sm:inline">{option.label}</span>}
+            {!compact && <span className="text-xs hidden lg:inline">{option.label}</span>}
           </button>
         );
 

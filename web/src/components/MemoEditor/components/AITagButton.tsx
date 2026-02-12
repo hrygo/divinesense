@@ -148,12 +148,12 @@ export const AITagButton: FC<AITagButtonProps> = ({ content, onInsertTags, disab
           {isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
-              <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-tag.extracting")}</span>
+              <span className="text-sm font-medium text-violet-500 hidden lg:inline">{t("editor.ai-tag.extracting")}</span>
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4 text-violet-500" />
-              <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-tag.button")}</span>
+              <span className="text-sm font-medium text-violet-500 hidden lg:inline">{t("editor.ai-tag.button")}</span>
             </>
           )}
         </button>

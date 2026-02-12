@@ -94,12 +94,12 @@ export const AIFormatButton: FC<AIFormatButtonProps> = ({ content, onFormat, dis
       {isPending ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
-          <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-format.formatting")}</span>
+          <span className="text-sm font-medium text-violet-500 hidden lg:inline">{t("editor.ai-format.formatting")}</span>
         </>
       ) : (
         <>
           <Wand2 className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-format.button")}</span>
+          <span className="text-sm font-medium text-violet-500 hidden lg:inline">{t("editor.ai-format.button")}</span>
         </>
       )}
     </button>
