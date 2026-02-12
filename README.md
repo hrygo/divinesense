@@ -1,12 +1,12 @@
 # DivineSense (神识)
 
 <p align="center">
-  <strong>AI 驱动的个人第二大脑</strong> — 通过五位智能代理自动化任务、过滤高价值信息、以技术杠杆提升生产力
+  <strong>AI 驱动的个人第二大脑</strong> — Orchestrator-Workers 多代理架构，动态任务分解与智能协作
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="https://github.com/hrygo/divinesense/releases"><img src="https://img.shields.io/badge/version-v0.97.0-green.svg" alt="Version"></a>
+  <a href="https://github.com/hrygo/divinesense/releases"><img src="https://img.shields.io/badge/version-v0.99.0-green.svg" alt="Version"></a>
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.25+-00ADD8.svg" alt="Go"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-61DAFB.svg" alt="React"></a>
 </p>
@@ -15,7 +15,7 @@
 
 ## 为什么选择 DivineSense？
 
-- **AI 原生架构**：内置五位智能代理（Memo/Schedule/Amazing/Geek/Evolution），深度协同工作
+- **Orchestrator-Workers 架构**：LLM 动态分解任务、并行执行 Expert Agents、智能聚合结果
 - **数据完全私有**：100% 自托管，无遥测，所有数据存储在您自己的服务器
 - **极简单文件部署**：Go 语言编译的单二进制文件，零依赖，极低资源占用
 - **Chat Apps 无缝集成**：原生支持 Telegram 和 钉钉，双向对话，随时随地记录与交互
@@ -26,15 +26,34 @@
 
 ## 核心功能
 
-### AI 代理系统 — 五位「鹦鹉」协同工作
+### Orchestrator-Workers 多代理架构
 
-| 代理                | 名称 | 执行策略     | 核心能力                        |
-| :------------------ | :--- | :----------- | :------------------------------ |
-| **MemoParrot**      | 灰灰 | ReAct 循环   | 语义搜索笔记，智能标签建议      |
-| **ScheduleParrot**  | 时巧 | 原生工具调用 | 自然语言创建日程，冲突检测      |
-| **AmazingParrot**   | 折衷 | 两阶段规划   | 综合助理，多工具并发执行        |
-| **GeekParrot**      | 极客 | Playground   | Claude Code CLI 集成，AI 试验场 |
-| **EvolutionParrot** | 进化 | 自我进化     | AI 修改源代码，提交 GitHub PR   |
+采用 Anthropic 推荐的 Orchestrator-Workers 模式，LLM 动态分解任务、并行执行、智能聚合：
+
+```
+用户输入 → Orchestrator → 任务分解 → Expert Agents 并行执行 → 结果聚合
+```
+
+| 组件 | 职责 |
+| :--- | :--- |
+| **Orchestrator** | LLM 驱动的任务编排入口 |
+| **Decomposer** | 智能分解复杂请求，支持 DAG 依赖 |
+| **Executor** | 并行执行独立任务，降低延迟 |
+| **Aggregator** | 合并多代理结果，统一输出格式 |
+
+### 专家代理 (Expert Agents)
+
+| 代理 | 名称 | 核心能力 |
+| :--- | :--- | :--- |
+| **MemoParrot** | 灰灰 | 语义搜索笔记，智能标签建议 |
+| **ScheduleParrot** | 时巧 | 自然语言创建日程，冲突检测 |
+
+### 外部执行器 (External Executors)
+
+| 代理 | 名称 | 核心能力 |
+| :--- | :--- | :--- |
+| **GeekParrot** | 极客 | Claude Code CLI 集成，代码执行沙箱 |
+| **EvolutionParrot** | 进化 | 自我进化，AI 修改源代码提交 PR |
 
 **智能路由**：四层意图分类（Cache → Rule → History → LLM），响应延迟 0-400ms
 
@@ -152,6 +171,7 @@ make deps-all && make start
 - **重排 Rerank**：SiliconFlow (`BAAI/bge-reranker-v2-m3`)
 
 **架构亮点**：
+- **Orchestrator-Workers**：LLM 驱动的任务分解、并行执行、结果聚合
 - **CC Runner**：深度集成 Claude Code，通过 PTY 实现全双工交互与会话持久化
 - **单二进制分发**：Go embed 打包前端静态资源，零依赖部署
 - **Connect RPC**：gRPC-HTTP 转码，类型安全的 API
