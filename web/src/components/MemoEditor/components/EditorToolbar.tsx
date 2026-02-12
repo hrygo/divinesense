@@ -1,6 +1,6 @@
 import { Globe, Link2, Lock, type LucideIcon, MapPin, Maximize2, MoreHorizontal, Paperclip, Plus, Shield, Sparkles } from "lucide-react";
 import type { FC } from "react";
-import { memo, useState } from "react";
+import { forwardRef, memo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -239,11 +239,12 @@ interface ToolbarButtonProps {
   className?: string;
 }
 
-const ToolbarButton: FC<ToolbarButtonProps> = ({ icon: Icon, ariaLabel, tooltip, onClick, className }) => {
+const ToolbarButton = forwardRef<HTMLButtonElement, ToolbarButtonProps>(({ icon: Icon, ariaLabel, tooltip, onClick, className }, ref) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const button = (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
@@ -283,6 +284,8 @@ const ToolbarButton: FC<ToolbarButtonProps> = ({ icon: Icon, ariaLabel, tooltip,
   }
 
   return button;
-};
+});
+
+ToolbarButton.displayName = "ToolbarButton";
 
 EditorToolbar.displayName = "EditorToolbar";
