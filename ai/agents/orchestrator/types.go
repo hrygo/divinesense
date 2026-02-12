@@ -1,0 +1,118 @@
+// Package orchestrator implements the Orchestrator-Workers pattern for multi-agent coordination.
+// It uses LLM to dynamically decompose tasks, dispatch to expert agents, and aggregate results.
+package orchestrator
+
+import "context"
+
+// Task represents a single task to be executed by an expert agent.
+type Task struct {
+	// Agent is the name of the expert agent to handle this task (e.g., "memo", "schedule")
+	Agent string `json:"agent"`
+
+	// Input is the specific input for this task
+	Input string `json:"input"`
+
+	// Purpose describes why this task is needed (for transparency)
+	Purpose string `json:"purpose"`
+
+	// Result contains the execution result (populated after execution)
+	Result string `json:"result,omitempty"`
+
+	// Error contains any error that occurred during execution
+	Error string `json:"error,omitempty"`
+
+	// Status indicates the current status of the task
+	Status TaskStatus `json:"status"`
+}
+
+// TaskStatus represents the status of a task.
+type TaskStatus string
+
+const (
+	TaskStatusPending   TaskStatus = "pending"
+	TaskStatusRunning   TaskStatus = "running"
+	TaskStatusCompleted TaskStatus = "completed"
+	TaskStatusFailed    TaskStatus = "failed"
+)
+
+// TaskPlan represents the overall plan for handling a user request.
+type TaskPlan struct {
+	// Analysis is the LLM's analysis of the user request
+	Analysis string `json:"analysis"`
+
+	// Tasks are the decomposed tasks to execute
+	Tasks []*Task `json:"tasks"`
+
+	// Parallel indicates whether tasks can be executed in parallel
+	Parallel bool `json:"parallel"`
+
+	// Aggregate indicates whether results need to be aggregated
+	Aggregate bool `json:"aggregate"`
+}
+
+// ExecutionResult represents the result of executing a task plan.
+type ExecutionResult struct {
+	// Plan is the original task plan
+	Plan *TaskPlan `json:"plan"`
+
+	// FinalResponse is the aggregated response (if aggregate=true)
+	FinalResponse string `json:"final_response"`
+
+	// IsAggregated indicates whether the response was aggregated from multiple results
+	IsAggregated bool `json:"is_aggregated"`
+
+	// TokenUsage tracks token consumption
+	TokenUsage TokenUsage `json:"token_usage"`
+
+	// Errors contains any errors that occurred during execution
+	Errors []string `json:"errors,omitempty"`
+}
+
+// TokenUsage tracks token consumption for the orchestration.
+type TokenUsage struct {
+	InputTokens      int32 `json:"input_tokens"`
+	OutputTokens     int32 `json:"output_tokens"`
+	CacheWriteTokens int32 `json:"cache_write_tokens"`
+	CacheReadTokens  int32 `json:"cache_read_tokens"`
+}
+
+// OrchestratorConfig contains configuration for the orchestrator.
+type OrchestratorConfig struct {
+	// MaxParallelTasks is the maximum number of tasks to execute in parallel
+	MaxParallelTasks int `json:"max_parallel_tasks"`
+
+	// EnableAggregation determines whether to aggregate multi-agent results
+	EnableAggregation bool `json:"enable_aggregation"`
+
+	// DecompositionModel is the model to use for task decomposition
+	DecompositionModel string `json:"decomposition_model"`
+
+	// AggregationModel is the model to use for result aggregation
+	AggregationModel string `json:"aggregation_model"`
+}
+
+// DefaultOrchestratorConfig returns the default configuration.
+func DefaultOrchestratorConfig() *OrchestratorConfig {
+	return &OrchestratorConfig{
+		MaxParallelTasks:   3,
+		EnableAggregation:  true,
+		DecompositionModel: "default",
+		AggregationModel:   "default",
+	}
+}
+
+// ExpertRegistry defines the interface for accessing expert agents.
+// It allows the orchestrator to discover and invoke expert agents dynamically.
+type ExpertRegistry interface {
+	// GetAvailableExperts returns the list of available expert agent names
+	GetAvailableExperts() []string
+
+	// GetExpertDescription returns a description of what an expert agent can do
+	GetExpertDescription(name string) string
+
+	// ExecuteExpert executes a task with the specified expert agent
+	ExecuteExpert(ctx context.Context, expertName string, input string, callback EventCallback) error
+}
+
+// EventCallback is the callback function for streaming events to the frontend.
+type EventCallback func(eventType string, eventData string)

@@ -451,6 +451,10 @@ export enum ParrotEventType {
   // Progressive progress events (Issue #97)
   PHASE_CHANGE = "phase_change",
   PROGRESS = "progress",
+  // Orchestrator events (Issue #169)
+  PLAN = "plan",
+  TASK_START = "task_start",
+  TASK_END = "task_end",
 }
 
 /**
@@ -477,6 +481,57 @@ export interface PhaseChangeEvent {
 export interface ProgressEvent {
   percent: number; // 0-100
   estimated_time_seconds: number;
+}
+
+/**
+ * Orchestrator task status
+ * Orchestrator 任务状态
+ */
+export type TaskStatus = "pending" | "running" | "completed" | "failed";
+
+/**
+ * Orchestrator task definition
+ * Orchestrator 任务定义
+ */
+export interface OrchestratorTask {
+  agent: string;
+  input: string;
+  purpose: string;
+  result?: string;
+  error?: string;
+  status: TaskStatus;
+}
+
+/**
+ * Orchestrator plan event data
+ * Orchestrator 规划事件数据
+ */
+export interface OrchestratorPlanEvent {
+  analysis: string;
+  tasks: OrchestratorTask[];
+  parallel: boolean;
+}
+
+/**
+ * Orchestrator task start event data
+ * Orchestrator 任务开始事件数据
+ */
+export interface OrchestratorTaskStartEvent {
+  index: number;
+  agent: string;
+  purpose: string;
+  status: TaskStatus;
+}
+
+/**
+ * Orchestrator task end event data
+ * Orchestrator 任务结束事件数据
+ */
+export interface OrchestratorTaskEndEvent {
+  index: number;
+  agent: string;
+  status: TaskStatus;
+  error?: string;
 }
 
 /**

@@ -104,19 +104,31 @@
       "agents": {
         "amazing": {
           "description": "综合助手，结合笔记和日程功能。",
-          "examples": ["总结今天的笔记和日程", "帮我规划下周工作", "查询最近的项目相关内容"],
+          "examples": [
+            "总结今天的笔记和日程",
+            "帮我规划下周工作",
+            "查询最近的项目相关内容"
+          ],
           "name": "折衷",
           "nameAlt": "Echo"
         },
         "memo": {
           "description": "笔记助手，专注于检索、总结和管理笔记。",
-          "examples": ["搜索关于编程的笔记", "总结最近的工作备忘", "查找包含项目管理的笔记"],
+          "examples": [
+            "搜索关于编程的笔记",
+            "总结最近的工作备忘",
+            "查找包含项目管理的笔记"
+          ],
           "name": "灰灰",
           "nameAlt": "Grey"
         },
         "schedule": {
           "description": "日程助手，帮助创建、查询和管理日程。",
-          "examples": ["今天有什么安排", "明天下午有空吗", "帮我创建下周会议提醒"],
+          "examples": [
+            "今天有什么安排",
+            "明天下午有空吗",
+            "帮我创建下周会议提醒"
+          ],
           "name": "时巧",
           "nameAlt": "Tick"
         }
@@ -159,8 +171,18 @@
       "close": "关闭",
       "cognition": {
         "amazing": {
-          "behaviors": ["在数据树丛中穿梭", "多维飞行", "综合视野", "在笔记和日程间跳跃"],
-          "catchphrases": ["看看这个...", "综合来看", "发现规律了", "多维飞行中"],
+          "behaviors": [
+            "在数据树丛中穿梭",
+            "多维飞行",
+            "综合视野",
+            "在笔记和日程间跳跃"
+          ],
+          "catchphrases": [
+            "看看这个...",
+            "综合来看",
+            "发现规律了",
+            "多维飞行中"
+          ],
           "sound_effects": {
             "analyzing": "看看这个...",
             "done": "噢！综合完成",
@@ -183,8 +205,16 @@
           "thoughtful": "沉思"
         },
         "memo": {
-          "behaviors": ["用翅膀翻找笔记", "在记忆森林中飞翔", "用喙精准啄取信息"],
-          "catchphrases": ["让我想想...", "笔记里说...", "在记忆里找找..."],
+          "behaviors": [
+            "用翅膀翻找笔记",
+            "在记忆森林中飞翔",
+            "用喙精准啄取信息"
+          ],
+          "catchphrases": [
+            "让我想想...",
+            "笔记里说...",
+            "在记忆里找找..."
+          ],
           "sound_effects": {
             "done": "扑棱！",
             "found": "嗯嗯~",
@@ -194,8 +224,17 @@
           }
         },
         "schedule": {
-          "behaviors": ["用喙整理时间", "精准啄食安排", "展开羽翼规划"],
-          "catchphrases": ["安排好啦", "时间搞定", "妥妥的", "确认一下时间"],
+          "behaviors": [
+            "用喙整理时间",
+            "精准啄食安排",
+            "展开羽翼规划"
+          ],
+          "catchphrases": [
+            "安排好啦",
+            "时间搞定",
+            "妥妥的",
+            "确认一下时间"
+          ],
           "sound_effects": {
             "checking": "滴答滴答",
             "confirmed": "咔嚓！",
@@ -583,6 +622,10 @@
         "synthesizing": "综合"
       },
       "timeRemaining": "剩余 {{time}}"
+    },
+    "pending_queue": {
+      "title": "{{count}} 条待发送消息",
+      "clear_all": "取消全部"
     }
   },
   "auth": {
@@ -989,6 +1032,16 @@
       "tool-completed": "完成",
       "updating-schedule": "正在更新日程...",
       "using-tool": "使用工具"
+    },
+    "orchestrator": {
+      "analysis": "任务分析",
+      "parallelExecution": "并行执行中",
+      "sequentialExecution": "顺序执行中",
+      "completed": "完成",
+      "taskPending": "等待中",
+      "taskRunning": "执行中",
+      "taskCompleted": "已完成",
+      "taskFailed": "失败"
     },
     "batch": {
       "confirm-create": "确认创建",

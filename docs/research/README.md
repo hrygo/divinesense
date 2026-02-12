@@ -14,3 +14,4 @@
 | Pre-push 性能优化  | ✅ Issue Created | [pre-push-optimization-research.md](./pre-push-optimization-research.md)         |
 | 笔记编辑器底部重构 | ✅ Issue Created | [memo-editor-bottom-redesign.md](./memo-editor-bottom-redesign.md)                 |
 | AIChat 普通模式优化 | ✅ Issue Created | [aichat-normal-mode-optimization.md](./aichat-normal-mode-optimization.md)         |
+| Orchestrator-Workers 多 Agent 架构 | ✅ Issue Created | [orchestrator-workers-research.md](./orchestrator-workers-research.md)         |

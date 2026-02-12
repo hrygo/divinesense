@@ -2,7 +2,7 @@
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 >
-> **保鲜状态**: ✅ 2026-02-11 v0.97.0 | **架构**: Go + React 单二进制 | **AI**: 五位鹦鹉代理
+> **保鲜状态**: ✅ 2026-02-12 v0.98.0 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
 
 ---
 
@@ -12,7 +12,7 @@
 
 ```
 技术栈：Go 后端 + React 前端（单二进制分发）
-核心架构：五位「鹦鹉」AI 代理 + Unified Block Model
+核心架构：Orchestrator-Workers 多代理 + Unified Block Model
 ```
 
 ---
@@ -77,24 +77,53 @@
 
 **架构详情**：`@docs/dev-guides/ARCHITECTURE_SUMMARY.md`
 
-### 五位鹦鹉
+### Orchestrator-Workers 架构
+```
+用户输入
+    ↓
+┌─────────────────┐
+│  Orchestrator   │ ← LLM 驱动任务分解
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ↓         ↓
+┌───────┐ ┌───────┐
+│ Memo  │ │ Sched │  ← Expert Agents (config/ 配置化)
+└───────┘ └───────┘
+    │         │
+    └────┬────┘
+         ↓
+┌─────────────────┐
+│  Aggregator     │ ← 结果聚合（如需要）
+└─────────────────┘
+```
+
+### 专家代理 (Expert Agents)
 | 代理 | 角色 |
 |:-----|:-----|
 | MemoParrot (灰灰) | 笔记搜索 |
 | ScheduleParrot (时巧) | 日程管理 |
-| AmazingParrot (折衷) | 综合助理 |
+
+### 外部执行器 (External Executors)
+| 代理 | 角色 |
+|:-----|:-----|
 | GeekParrot (极客) | Claude Code CLI |
 | EvolutionParrot (进化) | 自我进化 |
 
-### 路由四层
+> **注意**: AmazingParrot 已被 Orchestrator 替代，其职责由 Orchestrator 动态协调 Expert Agents 完成。
+
+### 路由与编排
 ```
-用户输入 → Cache → Rule → History → LLM (~400ms)
+用户输入 → Orchestrator → Task Decomposition → Expert Agents → Aggregation
+                ↓
+         Cache → Rule → History → LLM (~400ms)
 ```
 
 ### 核心概念
-- **Block**：用户-AI 交互轮次
-- **Agent**：AI 代理处理器
-- **Router**：意图路由系统
+- **Orchestrator**: LLM 驱动的任务分解与协调器
+- **Expert Agent**: 领域专家代理（Memo, Schedule）
+- **Block**: 用户-AI 交互轮次
+- **Task Plan**: 结构化任务计划，支持透明性展示
 
 ---
 
@@ -139,6 +168,7 @@ make check-all → feat/fix 分支 → PR → 合并
 | 任务       | 文档                                  |
 | :--------- | :------------------------------------ |
 | 理解架构   | `@docs/dev-guides/ARCHITECTURE.md`      |
+| Orchestrator 设计 | `@docs/research/orchestrator-workers-research.md` |
 | 后端开发   | `@docs/dev-guides/BACKEND_DB.md`        |
 | 前端开发   | `@docs/dev-guides/FRONTEND.md`          |
 | 部署       | `@docs/deployment/BINARY_DEPLOYMENT.md` |
