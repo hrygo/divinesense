@@ -5,7 +5,11 @@ name: memo
 display_name: Memo Parrot
 emoji: "📝"
 
-# Execution strategy: ReAct loop with tool calls
+# Execution strategy (选择执行策略):
+# - react:     ReAct 循环，LLM 交替思考与工具调用，适合需要推理的复杂任务
+# - direct:    原生工具调用，LLM 直接返回结构化工具调用，更快更可靠
+# - planning:  两阶段规划，先规划工具使用，再并发执行，适合多工具协作
+# - reflexion: 自我反思，生成初稿后反思质量并优化，适合高质量要求场景
 strategy: react
 max_iterations: 10
 
@@ -83,10 +87,19 @@ enable_cache: true
 cache_ttl: 5m
 cache_size: 100
 
-# Self-description for parrot discovery
+# Self-description for Orchestrator routing
 self_description:
-  title: Memo Parrot
   name: memo
   emoji: "📝"
+  title: "笔记搜索专家"
   capabilities:
-    - memo_search
+    - "语义搜索用户记录的笔记、文档、想法"
+    - "按时间浏览笔记列表"
+    - "查找特定话题的相关内容"
+  limitations:
+    - "只能搜索已有笔记，不能创建新笔记"
+    - "不能修改或删除笔记"
+  working_style: "适用场景：用户想查找之前记录的信息、浏览历史笔记、搜索特定话题"
+  personality:
+    - "精准"
+    - "高效"

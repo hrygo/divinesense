@@ -3,7 +3,9 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	agents "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/universal"
 )
 
@@ -27,11 +29,11 @@ func NewParrotExpertRegistry(factory *universal.ParrotFactory, userID int32) *Pa
 func (r *ParrotExpertRegistry) GetAvailableExperts() []string {
 	configs := r.factory.ListConfigs()
 
-	// Filter out special agents
+	// Filter out special agents (external executors)
 	var experts []string
 	for _, name := range configs {
-		// Skip external executors (geek, evolution) and amazing (will be removed)
-		if name == "geek" || name == "evolution" || name == "amazing" {
+		// Skip external executors that run outside Orchestrator
+		if name == "geek" || name == "evolution" {
 			continue
 		}
 		experts = append(experts, name)
@@ -46,26 +48,58 @@ func (r *ParrotExpertRegistry) GetAvailableExperts() []string {
 }
 
 // GetExpertDescription returns a description of what an expert agent can do.
+// It prioritizes SelfDescription from config, falls back to default descriptions.
 func (r *ParrotExpertRegistry) GetExpertDescription(name string) string {
 	config, ok := r.factory.GetConfig(name)
 	if !ok {
 		// Return default descriptions for known experts
 		switch name {
 		case "memo":
-			return "搜索和检索笔记内容。适用于查找用户记录的信息、文档、想法等。"
+			return "笔记搜索专家。搜索用户记录的笔记、文档、想法。适用：查找之前记录的信息。"
 		case "schedule":
-			return "创建、查询、更新日程安排。适用于时间管理、会议安排、查找空闲时间等。"
+			return "日程管理专家。创建、查询、更新日程。适用：时间管理、会议安排、查找空闲时间。"
 		default:
 			return fmt.Sprintf("专家代理: %s", name)
 		}
 	}
 
-	// Build description from config
+	// Use SelfDescription if available (preferred for Orchestrator routing)
+	if config.SelfDescription != nil {
+		return buildDescriptionFromSelfCognition(config.SelfDescription)
+	}
+
+	// Fallback: build description from config fields
 	desc := fmt.Sprintf("%s (%s)", config.DisplayName, config.Emoji)
 	if len(config.Tools) > 0 {
 		desc += fmt.Sprintf(" - 工具: %v", config.Tools)
 	}
 	return desc
+}
+
+// buildDescriptionFromSelfCognition creates a concise description for Orchestrator routing.
+func buildDescriptionFromSelfCognition(cog *agents.ParrotSelfCognition) string {
+	var parts []string
+
+	// Title as main description
+	if cog.Title != "" {
+		parts = append(parts, cog.Title)
+	}
+
+	// Capabilities
+	if len(cog.Capabilities) > 0 {
+		parts = append(parts, fmt.Sprintf("能力: %s", strings.Join(cog.Capabilities, "、")))
+	}
+
+	// Working style
+	if cog.WorkingStyle != "" {
+		parts = append(parts, fmt.Sprintf("风格: %s", cog.WorkingStyle))
+	}
+
+	if len(parts) == 0 {
+		return fmt.Sprintf("%s (%s)", cog.Name, cog.Emoji)
+	}
+
+	return strings.Join(parts, "。")
 }
 
 // ExecuteExpert executes a task with the specified expert agent.

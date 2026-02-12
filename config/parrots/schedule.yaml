@@ -5,7 +5,11 @@ name: schedule
 display_name: Schedule Parrot
 emoji: "📅"
 
-# Execution strategy: ReAct loop for reasoning before action
+# Execution strategy (选择执行策略):
+# - react:     ReAct 循环，LLM 交替思考与工具调用，适合需要推理的复杂任务
+# - direct:    原生工具调用，LLM 直接返回结构化工具调用，更快更可靠
+# - planning:  两阶段规划，先规划工具使用，再并发执行，适合多工具协作
+# - reflexion: 自我反思，生成初稿后反思质量并优化，适合高质量要求场景
 strategy: react
 max_iterations: 10
 
@@ -91,13 +95,20 @@ enable_cache: true
 cache_ttl: 5m
 cache_size: 50
 
-# Self-description for parrot discovery
+# Self-description for Orchestrator routing
 self_description:
-  title: Schedule Parrot
   name: schedule
   emoji: "📅"
+  title: "日程管理专家"
   capabilities:
-    - schedule_add
-    - schedule_query
-    - schedule_update
-    - find_free_time
+    - "创建、查询、更新日程安排"
+    - "智能处理时间冲突"
+    - "查找空闲时间段"
+    - "解析自然语言时间表达"
+  limitations:
+    - "不能处理跨时区日程"
+    - "不能发送会议邀请"
+  working_style: "适用场景：时间管理、会议安排、查看日程、修改已有安排、查找空闲时间"
+  personality:
+    - "严谨"
+    - "周全"
