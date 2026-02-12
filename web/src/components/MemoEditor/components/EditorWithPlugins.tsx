@@ -132,6 +132,14 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
     return ["", 0, null];
   }, []);
 
+  // Use refs to avoid effect re-running when these values change
+  const suggestionsRef = useRef(suggestions);
+  suggestionsRef.current = suggestions;
+  const sortedTagsRef = useRef(sortedTags);
+  sortedTagsRef.current = sortedTags;
+  const tagCountRef = useRef(tagCount);
+  tagCountRef.current = tagCount;
+
   // Update suggestions based on current state
   useEffect(() => {
     const [word, _startIndex, triggerChar] = getCurrentWord();
@@ -155,12 +163,14 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
             cursor: cursorPosition,
             selection: editorRef.current?.getSelection?.() || null,
             suggestions: {
-              isOpen: suggestions.isOpen,
-              trigger: suggestions.trigger,
-              query: suggestions.query,
-              items: suggestions.items,
-              selectedIndex: suggestions.selectedIndex,
-              position: suggestions.cursorPosition ? { top: suggestions.cursorPosition.top, left: suggestions.cursorPosition.left } : null,
+              isOpen: suggestionsRef.current.isOpen,
+              trigger: suggestionsRef.current.trigger,
+              query: suggestionsRef.current.query,
+              items: suggestionsRef.current.items,
+              selectedIndex: suggestionsRef.current.selectedIndex,
+              position: suggestionsRef.current.cursorPosition
+                ? { top: suggestionsRef.current.cursorPosition.top, left: suggestionsRef.current.cursorPosition.left }
+                : null,
             },
             dispatch: pluginDispatch,
           },
@@ -187,12 +197,14 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
         }
       }
     } else if (triggerChar === TriggerType.HASH) {
-      // Filter tags
-      const filteredTags = sortedTags.filter((tag) => tag.toLowerCase().includes(query));
+      // Filter tags - use ref to avoid dependency issues
+      const currentSortedTags = sortedTagsRef.current;
+      const currentTagCount = tagCountRef.current;
+      const filteredTags = currentSortedTags.filter((tag) => tag.toLowerCase().includes(query));
       const items: SuggestionItem[] = filteredTags.slice(0, 10).map((tag) => ({
         id: `tag-${tag}`,
         label: tag,
-        description: `${tagCount[tag] || 0} ${t("editor.chars")}`,
+        description: `${currentTagCount[tag] || 0} ${t("editor.chars")}`,
         icon: undefined,
         keywords: undefined,
         action: (editor: EnhancedEditorRefActions): void => {
@@ -227,13 +239,13 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
                 cursor: cursorPosition,
                 selection: editorRef.current?.getSelection?.() || null,
                 suggestions: {
-                  isOpen: suggestions.isOpen,
-                  trigger: suggestions.trigger,
-                  query: suggestions.query,
-                  items: suggestions.items,
-                  selectedIndex: suggestions.selectedIndex,
-                  position: suggestions.cursorPosition
-                    ? { top: suggestions.cursorPosition.top, left: suggestions.cursorPosition.left }
+                  isOpen: suggestionsRef.current.isOpen,
+                  trigger: suggestionsRef.current.trigger,
+                  query: suggestionsRef.current.query,
+                  items: suggestionsRef.current.items,
+                  selectedIndex: suggestionsRef.current.selectedIndex,
+                  position: suggestionsRef.current.cursorPosition
+                    ? { top: suggestionsRef.current.cursorPosition.top, left: suggestionsRef.current.cursorPosition.left }
                     : null,
                 },
                 dispatch: pluginDispatch,
@@ -265,8 +277,7 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
 
       setSuggestions((prev) => ({ ...prev, isOpen: false, trigger: null, cursorPosition: null }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.content, sortedTags, getCurrentWord, tagCount]);
+  }, [state.content, getCurrentWord, pluginDispatch, plugins, t]);
 
   // Handle content change
   const handleContentChange = useCallback(

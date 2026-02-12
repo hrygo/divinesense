@@ -1,10 +1,10 @@
 export const LOCALSTORAGE_DEBOUNCE_DELAY = 500;
 
 export const FOCUS_MODE_STYLES = {
-  backdrop: "fixed inset-0 bg-black/20 backdrop-blur-sm z-40",
+  backdrop: "fixed inset-0 bg-black/20 backdrop-blur-sm z-[60]",
   container: {
-    base: "fixed z-50 left-16 right-0 top-0 bottom-0 shadow-lg border-border h-auto overflow-y-auto",
-    spacing: "",
+    base: "fixed z-[70] inset-0 shadow-lg border-border h-screen overflow-y-auto",
+    spacing: "p-4 sm:p-6 md:p-8",
   },
   transition: "transition-all duration-300 ease-in-out",
   exitButton: "absolute top-2 right-2 z-10 opacity-60 hover:opacity-100",

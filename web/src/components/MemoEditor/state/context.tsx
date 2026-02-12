@@ -35,7 +35,7 @@ export const EditorProvider: FC<EditorProviderProps> = ({ children, initialEdito
       dispatch,
       actions: editorActions,
     }),
-    [state, editorActions],
+    [state],
   );
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;

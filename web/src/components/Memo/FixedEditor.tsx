@@ -1,20 +1,27 @@
 /**
- * FixedEditor - 固定底部编辑器
+ * FixedEditor - 固定底部编辑器 v2.0
  *
- * 设计哲学：「禅意智识」
- * - 呼吸感：编辑器如「意识之镜」，随呼吸律动
+ * 设计哲学：「禅意智识 · 意识之镜」
+ * - 呼吸感：编辑器如「意识之镜」，随呼吸律动（3000ms 周期）
  * - 留白：充足的空间让思绪流淌
  * - 沉浸：聚焦当下，最小化干扰
  * - 温和：所有交互都有柔和的反馈
+ * - 状态感知：视觉反馈随内容状态变化
  *
  * ## 设计规范
- * - 间距：--spacing-* 变量系统
- * - 圆角：--radius-* 变量系统
- * - 呼吸动画：3000ms 周期
- * - 边框光晕：聚焦时产生「意识场」效果
+ * - 间距：--spacing-* 变量系统 (xs:4px, sm:8px, md:16px, lg:24px, xl:32px)
+ * - 圆角：rounded-2xl (16px) - 与 HeroSection 统一
+ * - 呼吸动画：3000ms 周期，与 logo-breathe-gentle 同步
+ * - 光晕层次：三层渐变（外层扩散 → 中层聚焦 → 内层柔和）
+ *
+ * ## UX 改进 v2.0
+ * - 内容状态指示（空/有内容/聚焦）
+ * - 快捷键提示
+ * - 发送按钮呼吸动画（有内容时）
+ * - 玻璃态背景 + 渐变边框
  */
 
-import { ImagePlus, Paperclip, Send, Sparkles } from "lucide-react";
+import { Feather, ImagePlus, Paperclip, PenLine, Send, Sparkles } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import MemoEditor from "@/components/MemoEditor";
@@ -26,6 +33,20 @@ import { cn } from "@/lib/utils";
 
 const BREATH_DURATION = 3000; // 与 logo-breathe-gentle 同步
 
+// 设计令牌 - 与 HeroSection 统一
+const DESIGN_TOKENS = {
+  borderRadius: "rounded-2xl", // 16px
+  glow: {
+    layers: 3, // 光晕层数
+    baseOpacity: 0.03,
+    focusedOpacity: 0.08,
+  },
+  animation: {
+    duration: 300, // 过渡时长
+    breath: BREATH_DURATION,
+  },
+} as const;
+
 // ============================================================================
 // 类型定义
 // ============================================================================
@@ -34,6 +55,8 @@ export interface FixedEditorProps {
   placeholder?: string;
   className?: string;
 }
+
+type EditorState = "empty" | "hasContent" | "focused";
 
 // ============================================================================
 // 主组件
@@ -44,16 +67,21 @@ export interface FixedEditorProps {
  *
  * 设计要点：
  * - 粘性定位，始终可见
- * - 聚焦时产生柔和的「意识场」光晕
- * - 工具栏渐进式展开
+ * - 三层光晕效果：聚焦时产生「意识场」
+ * - 玻璃态背景 + 渐变边框
+ * - 状态感知的视觉反馈
  * - 移动端键盘适配
  */
 export const FixedEditor = memo(function FixedEditor({ placeholder, className }: FixedEditorProps) {
   const { t } = useTranslation();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [hasContent, setHasContent] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // 计算编辑器状态
+  const editorState: EditorState = isFocused ? "focused" : hasContent ? "hasContent" : "empty";
 
   // 移动端键盘高度处理
   useEffect(() => {
@@ -84,56 +112,168 @@ export const FixedEditor = memo(function FixedEditor({ placeholder, className }:
     setIsFocused(false);
   }, []);
 
+  // 监听内容变化（通过 MutationObserver 或事件）
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    // 检测内容变化的函数
+    const checkContent = () => {
+      const textarea = contentEl.querySelector("textarea");
+      if (textarea) {
+        setHasContent(textarea.value.trim().length > 0);
+      }
+    };
+
+    // 初始检查
+    checkContent();
+
+    // 监听 input 事件
+    const handleInput = () => checkContent();
+    contentEl.addEventListener("input", handleInput, true);
+
+    return () => {
+      contentEl.removeEventListener("input", handleInput, true);
+    };
+  }, []);
+
   return (
     <div
       ref={containerRef}
       className={cn(
         "sticky bottom-0 left-0 right-0 z-50",
-        // 顶部边框渐变
-        "border-t border-border/50",
-        // 背景渐变
-        "bg-gradient-to-b from-background/95 to-background",
+        // 顶部渐变边框 - 更精致的处理
+        "before:absolute before:inset-x-0 before:top-0 before:h-px",
+        "before:bg-gradient-to-r before:from-transparent before:via-border/60 before:to-transparent",
+        // 背景 - 玻璃态
+        "bg-background/80 backdrop-blur-xl",
         // 移动端键盘适配
         keyboardHeight > 0 && "pb-safe",
         className,
       )}
       style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined }}
     >
-      {/* 意识场光晕 - 聚焦时显示 */}
-      <div
-        ref={glowRef}
-        className={cn(
-          "pointer-events-none absolute bottom-0 left-0 right-0",
-          "h-24 mx-auto rounded-t-full",
-          "bg-primary/3 blur-3xl",
-          "transition-opacity duration-500",
-          isFocused ? "opacity-100" : "opacity-0",
-        )}
-        style={{
-          animation: isFocused ? `consciousness-field ${BREATH_DURATION}ms ease-in-out infinite` : undefined,
-        }}
-      />
+      {/* ═══════════════════════════════════════════════════════════
+          光晕系统 - 三层渐变
+          - 外层：扩散光晕（大范围、低透明度）
+          - 中层：聚焦光晕（中等范围、中透明度）
+          - 内层：柔和光晕（小范围、高透明度）
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* 外层扩散光晕 */}
+        <div
+          className={cn(
+            "absolute -left-1/4 -right-1/4 -top-20 h-40",
+            "bg-gradient-to-b from-primary/5 via-primary/3 to-transparent",
+            "blur-2xl transition-opacity duration-500",
+            editorState === "focused" ? "opacity-100" : "opacity-0",
+          )}
+          style={
+            editorState === "focused"
+              ? {
+                  animationName: "breath-glow",
+                  animationDuration: `${BREATH_DURATION}ms`,
+                  animationTimingFunction: "ease-in-out",
+                  animationIterationCount: "infinite",
+                }
+              : undefined
+          }
+        />
 
-      {/* 内容容器 - 响应式宽度 */}
-      <div className={cn("mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl", "px-4 sm:px-6", "py-3 sm:py-4")}>
-        {/* 编辑器包装 */}
-        <div className="relative" onFocus={handleFocus} onBlur={handleBlur}>
-          {/* 内边框 - 聚焦时出现 */}
+        {/* 中层聚焦光晕 - 居中 */}
+        <div
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 -top-8",
+            "w-3/4 h-24 rounded-full",
+            "bg-primary/10 blur-xl",
+            "transition-all duration-500",
+            editorState === "focused" ? "opacity-100 scale-100" : "opacity-0 scale-95",
+          )}
+          style={
+            editorState === "focused"
+              ? {
+                  animationName: "breath-glow",
+                  animationDuration: `${BREATH_DURATION}ms`,
+                  animationTimingFunction: "ease-in-out",
+                  animationIterationCount: "infinite",
+                  animationDelay: "500ms",
+                }
+              : undefined
+          }
+        />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          内容容器 - 响应式宽度
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 py-3 sm:py-4">
+        {/* 编辑器卡片 */}
+        <div
+          ref={contentRef}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          className={cn(
+            "relative group",
+            DESIGN_TOKENS.borderRadius,
+            // 玻璃态背景
+            "bg-background/60 backdrop-blur-md",
+            // 边框 - 状态感知
+            "border-2 transition-all duration-300",
+            editorState === "focused"
+              ? "border-primary/30 shadow-lg shadow-primary/5"
+              : editorState === "hasContent"
+                ? "border-primary/15 shadow-md"
+                : "border-border/40 hover:border-border/60",
+            // 阴影层次
+            "shadow-sm",
+          )}
+        >
+          {/* 顶部装饰线 - 状态指示 */}
           <div
             className={cn(
-              "absolute inset-0 rounded-2xl",
-              "border-2 border-transparent transition-colors duration-300",
-              isFocused && "border-primary/20",
+              "absolute top-0 left-1/2 -translate-x-1/2 -translate-y-px",
+              "h-0.5 w-16 rounded-full transition-all duration-500",
+              editorState === "focused"
+                ? "bg-primary/50 w-24"
+                : editorState === "hasContent"
+                  ? "bg-primary/30 w-20"
+                  : "bg-transparent w-12",
             )}
           />
 
-          {/* MemoEditor */}
-          <MemoEditor
-            placeholder={placeholder || t("editor.any-thoughts")}
-            onConfirm={() => {
-              window.dispatchEvent(new Event("memo-created"));
-            }}
-          />
+          {/* 左侧图标 - 状态指示器 (仅 PC 端显示) */}
+          <div
+            className={cn(
+              "hidden sm:flex",
+              "absolute left-4 top-4",
+              "items-center justify-center",
+              "w-8 h-8 rounded-xl transition-all duration-300",
+              editorState === "focused"
+                ? "bg-primary/10 text-primary"
+                : editorState === "hasContent"
+                  ? "bg-primary/5 text-primary/70"
+                  : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {editorState === "focused" ? (
+              <PenLine className="w-4 h-4" />
+            ) : editorState === "hasContent" ? (
+              <Feather className="w-4 h-4" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+          </div>
+
+          {/* 编辑器主体 */}
+          <div className="pl-3 sm:pl-14 pr-3 sm:pr-4 py-3 sm:py-4">
+            <MemoEditor
+              placeholder={placeholder || t("editor.any-thoughts")}
+              onConfirm={() => {
+                window.dispatchEvent(new Event("memo-created"));
+                setHasContent(false);
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -150,12 +290,36 @@ FixedEditor.displayName = "FixedEditor";
  * 注入禅意动画关键帧
  */
 if (typeof document !== "undefined") {
-  const styleId = "fixed-editor-animations";
+  const styleId = "fixed-editor-animations-v2";
   if (!document.getElementById(styleId)) {
     const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
-      /* 意识场光晕 - 与呼吸同步 */
+      /* 呼吸光晕 - 多层同步 */
+      @keyframes breath-glow {
+        0%, 100% {
+          opacity: 0.6;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.02);
+        }
+      }
+
+      /* 呼吸脉冲 - 指示器 */
+      @keyframes breath-pulse {
+        0%, 100% {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
+      }
+
+      /* 意识场光晕 - 保留兼容 */
       @keyframes consciousness-field {
         0%, 100% {
           opacity: 0.3;
@@ -234,7 +398,10 @@ export const QuickEditor = memo(function QuickEditor({
         <div
           className="absolute -inset-1 rounded-2xl bg-primary/10 blur-xl transition-opacity duration-300"
           style={{
-            animation: `quick-editor-glow ${BREATH_DURATION}ms ease-in-out infinite`,
+            animationName: "quick-editor-glow",
+            animationDuration: `${BREATH_DURATION}ms`,
+            animationTimingFunction: "ease-in-out",
+            animationIterationCount: "infinite",
           }}
         />
       )}

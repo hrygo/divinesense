@@ -26,6 +26,8 @@ export interface EditorToolbarProps {
   onToggleFocusMode?: () => void;
   onVisibilityChange?: (visibility: import("@/types/proto/api/v1/memo_service_pb").Visibility) => void;
   onOpenMobileTools?: () => void;
+  onInsertTags?: (tags: string[]) => void;
+  onFormatContent?: (formattedContent: string) => void;
   currentVisibility?: import("@/types/proto/api/v1/memo_service_pb").Visibility;
   memoName?: string;
 }
