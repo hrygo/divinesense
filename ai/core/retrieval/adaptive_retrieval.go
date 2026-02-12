@@ -331,13 +331,13 @@ func (r *AdaptiveRetriever) memoBM25Only(ctx context.Context, opts *RetrievalOpt
 	}
 
 	// 执行 BM25 搜索
-	// Note: PostgreSQL ts_rank scores are typically low (0.01-0.1 range)
-	// MinScore 0.01 allows most relevant results to pass through
+	// Note: MinScore=0 means no filtering - rely on DB's ORDER BY score DESC + LIMIT
+	// This is best practice since DB already returns most relevant results
 	bm25Results, err := r.store.BM25Search(ctx, &store.BM25SearchOptions{
-		UserID:   opts.UserID,
-		Query:    opts.Query,
-		Limit:    limit,
-		MinScore: 0.01,
+		UserID: opts.UserID,
+		Query:  opts.Query,
+		Limit:  limit,
+		// MinScore: 0 (default) - no post-filter needed
 	})
 	if err != nil {
 		opts.Logger.ErrorContext(ctx, "BM25 search failed",

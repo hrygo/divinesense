@@ -266,11 +266,12 @@ func (d *DB) BM25Search(ctx context.Context, opts *store.BM25SearchOptions) ([]*
 
 	// Use PostgreSQL's full-text search with ts_rank for BM25-like ranking
 	// The 'simple' configuration works well for Chinese and English mixed content
+	// Note: ts_rank with normalization (32) divides by document length for fairer scoring
 	query := `
 		SELECT
 			m.id, m.uid, m.creator_id, m.created_ts, m.updated_ts, m.row_status,
 			m.visibility, m.pinned, m.content, m.payload,
-			ts_rank(to_tsvector('simple', COALESCE(m.content, '')), plainto_tsquery('simple', ` + placeholder(1) + `)) AS score
+			ts_rank(to_tsvector('simple', COALESCE(m.content, '')), plainto_tsquery('simple', ` + placeholder(1) + `), 32) AS score
 		FROM memo m
 		WHERE m.creator_id = ` + placeholder(2) + `
 			AND m.row_status = 'NORMAL'
@@ -318,8 +319,10 @@ func (d *DB) BM25Search(ctx context.Context, opts *store.BM25SearchOptions) ([]*
 
 		result.Memo = &memo
 
-		// Apply minimum score filter
-		if result.Score >= opts.MinScore {
+		// Best practice: Don't apply MinScore filter after DB has already sorted and limited
+		// The database query already ensures we get the most relevant results
+		// Only filter if MinScore is explicitly set to a meaningful value (> 0)
+		if opts.MinScore <= 0 || result.Score >= opts.MinScore {
 			results = append(results, &result)
 		}
 	}
