@@ -104,6 +104,7 @@ type Config struct {
 type service struct {
 	client      *openai.Client
 	model       string
+	provider    string
 	maxTokens   int
 	temperature float32
 }
@@ -197,6 +198,7 @@ func NewService(cfg *Config) (Service, error) {
 	return &service{
 		client:      client,
 		model:       cfg.Model,
+		provider:    cfg.Provider,
 		maxTokens:   cfg.MaxTokens,
 		temperature: cfg.Temperature,
 	}, nil
@@ -497,7 +499,7 @@ func (s *service) Warmup(ctx context.Context) {
 	defer cancel()
 
 	slog.Info("LLM: starting connection warmup",
-		"provider", s.provider(),
+		"provider", s.provider,
 		"model", s.model,
 	)
 
@@ -518,7 +520,7 @@ func (s *service) Warmup(ctx context.Context) {
 
 	if err != nil {
 		slog.Warn("LLM: warmup ping failed (service will still work, first request may be slower)",
-			"provider", s.provider(),
+			"provider", s.provider,
 			"model", s.model,
 			"error", err,
 			"duration_ms", duration.Milliseconds(),
@@ -527,29 +529,10 @@ func (s *service) Warmup(ctx context.Context) {
 	}
 
 	slog.Info("LLM: connection warmed up successfully",
-		"provider", s.provider(),
+		"provider", s.provider,
 		"model", s.model,
 		"duration_ms", duration.Milliseconds(),
 	)
-}
-
-func (s *service) provider() string {
-	if s.model == "" {
-		return "unknown"
-	}
-	modelLower := strings.ToLower(s.model)
-	switch {
-	case strings.Contains(modelLower, "deepseek"):
-		return "deepseek"
-	case strings.Contains(modelLower, "gpt"):
-		return "openai"
-	case strings.Contains(modelLower, "qwen"):
-		return "siliconflow"
-	case strings.Contains(modelLower, "glm"):
-		return "zai"
-	default:
-		return "llm"
-	}
 }
 
 func convertMessages(messages []Message) []openai.ChatCompletionMessage {
