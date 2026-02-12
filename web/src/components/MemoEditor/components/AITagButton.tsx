@@ -97,11 +97,11 @@ export const AITagButton: FC<AITagButtonProps> = ({ content, onInsertTags, disab
             type="button"
             disabled={disabled || isContentTooShort}
             className={cn(
-              "h-8 w-8 rounded-xl flex items-center justify-center",
+              "h-9 w-9 rounded-xl flex items-center justify-center",
               "transition-all duration-200",
-              "bg-gradient-to-r from-primary/10 to-primary/5",
-              "border border-primary/20",
-              "hover:from-primary/15 hover:to-primary/10",
+              "bg-gradient-to-r from-violet-500/10 to-purple-500/10",
+              "border border-violet-500/20",
+              "hover:from-violet-500/15 hover:to-purple-500/15",
               "active:scale-95",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
@@ -111,7 +111,7 @@ export const AITagButton: FC<AITagButtonProps> = ({ content, onInsertTags, disab
             aria-haspopup="dialog"
             aria-expanded={open}
           >
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin text-violet-500" /> : <Sparkles className="w-4 h-4 text-violet-500" />}
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-64 p-4">
@@ -137,9 +137,9 @@ export const AITagButton: FC<AITagButtonProps> = ({ content, onInsertTags, disab
           className={cn(
             "h-9 px-3 rounded-xl flex items-center gap-1.5",
             "transition-all duration-200",
-            "bg-gradient-to-r from-primary/10 to-primary/5",
-            "border border-primary/20",
-            "hover:from-primary/15 hover:to-primary/10",
+            "bg-gradient-to-r from-violet-500/10 to-purple-500/10",
+            "border border-violet-500/20",
+            "hover:from-violet-500/15 hover:to-purple-500/15",
             "active:scale-95",
             "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
@@ -147,13 +147,13 @@ export const AITagButton: FC<AITagButtonProps> = ({ content, onInsertTags, disab
         >
           {isPending ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span className="text-sm font-medium text-primary hidden sm:inline">{t("editor.ai-tag.extracting")}</span>
+              <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+              <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-tag.extracting")}</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary hidden sm:inline">{t("editor.ai-tag.button")}</span>
+              <Sparkles className="w-4 h-4 text-violet-500" />
+              <span className="text-sm font-medium text-violet-500 hidden sm:inline">{t("editor.ai-tag.button")}</span>
             </>
           )}
         </button>

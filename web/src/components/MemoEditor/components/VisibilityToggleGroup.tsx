@@ -58,12 +58,12 @@ export const VisibilityToggleGroup: FC<VisibilityToggleGroupProps> = memo(functi
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               compact
                 ? cn(
-                    "h-7 w-7 px-0 justify-center rounded-lg",
+                    "h-9 w-9 px-0 justify-center rounded-xl",
                     isActive && "bg-primary/15 text-primary",
                     !isActive && "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   )
                 : cn(
-                    "h-8 px-2 rounded-lg",
+                    "h-9 px-2 rounded-xl",
                     isActive && "bg-primary/15 text-primary",
                     !isActive && "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   ),
@@ -71,7 +71,7 @@ export const VisibilityToggleGroup: FC<VisibilityToggleGroupProps> = memo(functi
             aria-label={option.label}
             aria-pressed={isActive}
           >
-            <Icon className={cn(compact ? "w-3.5 h-3.5" : "w-3.5 h-3.5")} />
+            <Icon className="w-4 h-4" />
             {!compact && <span className="text-xs hidden sm:inline">{option.label}</span>}
           </button>
         );
