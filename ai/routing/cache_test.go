@@ -171,8 +171,8 @@ func TestRouterCache_Capacity(t *testing.T) {
 
 	// Fill cache to capacity
 	cache.Set("key1", IntentMemoSearch, 0.9, "rule")
-	cache.Set("key2", IntentScheduleCreate, 0.8, "llm")
-	cache.Set("key3", IntentAmazing, 0.7, "history")
+	cache.Set("key2", IntentScheduleCreate, 0.8, "rule")
+	cache.Set("key3", IntentMemoCreate, 0.7, "rule")
 
 	// Add one more - should evict oldest
 	cache.Set("key4", IntentMemoSearch, 0.6, "rule")
@@ -194,7 +194,7 @@ func TestRouterCache_CleanupExpired(t *testing.T) {
 	// Add entries
 	cache.Set("expired1", IntentMemoSearch, 0.9, "rule")
 	cache.Set("expired2", IntentScheduleCreate, 0.8, "rule")
-	cache.Set("valid", IntentAmazing, 0.7, "llm")
+	cache.Set("valid", IntentMemoCreate, 0.7, "llm")
 
 	// Wait for rule entries to expire
 	time.Sleep(60 * time.Millisecond)
@@ -215,7 +215,7 @@ func TestRouterCache_CleanupExpired(t *testing.T) {
 	if !found {
 		t.Error("expected valid entry to still exist")
 	}
-	if intent != IntentAmazing {
-		t.Errorf("expected IntentAmazing, got %s", intent)
+	if intent != IntentMemoCreate {
+		t.Errorf("expected IntentMemoCreate, got %s", intent)
 	}
 }

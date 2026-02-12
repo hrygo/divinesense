@@ -215,7 +215,7 @@ func TestAgentTypeFromProto(t *testing.T) {
 	}{
 		{"MEMO", v1pb.AgentType_AGENT_TYPE_MEMO, AgentTypeMemo},
 		{"SCHEDULE", v1pb.AgentType_AGENT_TYPE_SCHEDULE, AgentTypeSchedule},
-		{"AMAZING", v1pb.AgentType_AGENT_TYPE_AMAZING, AgentTypeAmazing},
+		{"AMAZING", v1pb.AgentType_AGENT_TYPE_AMAZING, AgentTypeAuto}, // AMAZING now triggers auto-routing
 		{"DEFAULT", v1pb.AgentType_AGENT_TYPE_DEFAULT, AgentTypeAuto},
 	}
 
@@ -239,7 +239,6 @@ func TestAgentTypeToProto(t *testing.T) {
 		{"MEMO", AgentTypeMemo, v1pb.AgentType_AGENT_TYPE_MEMO},
 		{"SCHEDULE", AgentTypeSchedule, v1pb.AgentType_AGENT_TYPE_SCHEDULE},
 		{"AUTO", AgentTypeAuto, v1pb.AgentType_AGENT_TYPE_DEFAULT},
-		{"AMAZING", AgentTypeAmazing, v1pb.AgentType_AGENT_TYPE_AMAZING},
 	}
 
 	for _, tt := range tests {

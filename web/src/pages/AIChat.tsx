@@ -7,6 +7,7 @@ import { ChatHeader } from "@/components/AIChat/ChatHeader";
 import { ChatInput } from "@/components/AIChat/ChatInput";
 import { ChatMessages } from "@/components/AIChat/ChatMessages";
 import { PartnerGreeting } from "@/components/AIChat/PartnerGreeting";
+import { PendingQueueBar } from "@/components/AIChat/PendingQueueBar";
 // SessionBar 已移除 - PC 端 SessionStats 已整合到 ChatHeader
 // import { SessionBar } from "@/components/AIChat/SessionBar";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -14,6 +15,7 @@ import { isDefaultTitle, useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
 import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
+import { usePendingQueue } from "@/hooks/usePendingQueue";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import type { Block as AIBlock } from "@/types/block";
@@ -161,6 +163,9 @@ function UnifiedChatView({
         )}
       </ChatMessages>
 
+      {/* Pending Queue Bar (Issue #121) */}
+      <PendingQueueBar className="flex-shrink-0" />
+
       {/* Input Area */}
       <ChatInput
         value={input}
@@ -238,6 +243,8 @@ const AIChat = () => {
     incrementMessageCount,
     // Title management
     generateConversationTitle,
+    // Phase 5: Pending Queue
+    addToPendingQueue,
   } = aiChat;
 
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
@@ -396,10 +403,20 @@ const AIChat = () => {
       const userMessage = (messageContent || input).trim();
       if (!userMessage) return;
 
-      // Phase 4: Check if there's a Block in streaming state
-      // If so, append user input to that Block instead of creating a new message
+      // Phase 4 & 5: Check if there's a Block in streaming state
+      // - Geek/Evolution Mode: Append user input to that Block (Interactive CLI style)
+      // - Normal Mode: Queue message to PendingQueue (Issue #121)
       const streamingBlock = blocks?.find((b) => isActiveStatus(b.status));
       if (streamingBlock) {
+        // Issue #121: In Normal Mode, queue messages instead of appending
+        // This prevents interruption of the assistant's flow
+        if (currentMode === "normal") {
+          addToPendingQueue(userMessage);
+          setInput("");
+          return;
+        }
+
+        // Geek/Evolution Mode: Append input to running block
         const blockId = Number(streamingBlock.id);
         const convId = Number(streamingBlock.conversationId);
         // Validate conversationId matches current conversation to prevent unauthorized access
@@ -512,6 +529,9 @@ const AIChat = () => {
       // Phase 4: Block append dependencies
       blocks,
       appendUserInput,
+      // Phase 5: Pending queue
+      addToPendingQueue,
+      currentMode,
     ],
   );
 
@@ -544,6 +564,11 @@ const AIChat = () => {
     },
     [currentConversation, addContextSeparator, t],
   );
+
+  // Phase 5: Pending Queue Hook (Issue #121)
+  // Automatically flush pending queue when active block finishes
+  // Note: We pass handleSend directly. The hook handles the logic of when to call it.
+  usePendingQueue(blocks, handleSend);
 
   // Handle custom event for sending messages (from suggested prompts)
   useEffect(() => {

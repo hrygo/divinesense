@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai"
-	"github.com/hrygo/divinesense/ai/services/memory"
 )
 
 // HistoryMatcher implements Layer 2 history-based intent matching.
@@ -18,11 +17,9 @@ import (
 // Layer 2b: Semantic similarity (~50ms) - Embedding cosine similarity (optional)
 // Target: Handle 30%+ of requests that pass Layer 1.
 type HistoryMatcher struct {
-	memoryService       memory.MemoryService
 	embeddingService    ai.EmbeddingService // Optional: for semantic similarity
 	similarityThreshold float32
 	semanticThreshold   float32 // Threshold for semantic similarity fallback
-	maxHistoryLookup    int
 
 	// Performance optimization: cache bigrams for recent inputs
 	bigramCache   map[string]map[string]bool
@@ -36,12 +33,10 @@ func (m *HistoryMatcher) SetEmbeddingService(es ai.EmbeddingService) {
 }
 
 // NewHistoryMatcher creates a new history matcher.
-func NewHistoryMatcher(ms memory.MemoryService) *HistoryMatcher {
+func NewHistoryMatcher(_ any) *HistoryMatcher {
 	return &HistoryMatcher{
-		memoryService:       ms,
 		similarityThreshold: 0.8,
 		semanticThreshold:   0.75, // Lower threshold for semantic matching
-		maxHistoryLookup:    10,
 		bigramCache:         make(map[string]map[string]bool),
 		maxCacheSize:        100, // Cache last 100 unique inputs
 	}
@@ -56,65 +51,9 @@ type HistoryMatchResult struct {
 }
 
 // Match attempts to classify intent by finding similar historical patterns.
-// Layer 2a: Lexical matching (~1ms) - high precision
-// Layer 2b: Semantic matching (~50ms) - triggered when lexical is ambiguous
-// Returns matched=true if a similar pattern was found with confidence >= threshold.
-func (m *HistoryMatcher) Match(ctx context.Context, userID int32, input string) (*HistoryMatchResult, error) {
-	if m.memoryService == nil {
-		return &HistoryMatchResult{Matched: false}, nil
-	}
-
-	// Search for similar episodes
-	episodes, err := m.memoryService.SearchEpisodes(ctx, userID, input, m.maxHistoryLookup)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(episodes) == 0 {
-		return &HistoryMatchResult{Matched: false}, nil
-	}
-
-	// Layer 2a: Find best lexical match
-	var bestMatch *memory.EpisodicMemory
-	var bestLexicalSim float32
-
-	for i := range episodes {
-		ep := &episodes[i]
-		similarity := m.calculateLexicalSimilarity(input, ep.UserInput)
-
-		// Only consider successful outcomes
-		if ep.Outcome == "success" && similarity > bestLexicalSim {
-			bestLexicalSim = similarity
-			bestMatch = ep
-		}
-	}
-
-	// Layer 2a Result: Check if lexical similarity meets threshold
-	if bestMatch != nil && bestLexicalSim >= m.similarityThreshold {
-		intent := m.agentTypeToIntent(bestMatch.AgentType, input)
-		return &HistoryMatchResult{
-			Intent:     intent,
-			Confidence: bestLexicalSim,
-			SourceID:   bestMatch.ID,
-			Matched:    true,
-		}, nil
-	}
-
-	// Layer 2b: Semantic similarity fallback
-	// Triggered when lexical is moderately close but below threshold
-	// This catches cases like "帮我找笔记" vs "搜索备忘"
-	if m.embeddingService != nil && bestLexicalSim >= 0.4 && bestLexicalSim < m.similarityThreshold {
-		semanticResult := m.matchBySemanticSimilarity(ctx, input, episodes)
-		if semanticResult.Matched {
-			slog.Debug("history matched by semantic similarity",
-				"input", truncate(input, 50),
-				"intent", semanticResult.Intent,
-				"confidence", semanticResult.Confidence,
-				"lexical_score", bestLexicalSim)
-			return semanticResult, nil
-		}
-	}
-
+// Currently disabled - returns no match.
+// TODO: Implement history matching using alternative storage.
+func (m *HistoryMatcher) Match(_ context.Context, _ int32, _ string) (*HistoryMatchResult, error) {
 	return &HistoryMatchResult{Matched: false}, nil
 }
 
@@ -334,7 +273,8 @@ func (m *HistoryMatcher) agentTypeToIntent(agentType, input string) Intent {
 		}
 		return IntentMemoCreate
 	case "amazing":
-		return IntentAmazing
+		// Amazing intent removed - Orchestrator handles complex requests
+		return IntentUnknown
 	default:
 		return IntentUnknown
 	}
@@ -371,8 +311,6 @@ func (m *HistoryMatcher) intentToAgentType(intent Intent) string {
 		return "schedule"
 	case IntentMemoSearch, IntentMemoCreate:
 		return "memo"
-	case IntentAmazing:
-		return "amazing"
 	default:
 		return "unknown"
 	}

@@ -23,10 +23,11 @@ func NewMockRouterService() *MockRouterService {
 }
 
 // ClassifyIntent classifies user intent using rule-based matching.
-func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (Intent, float32, error) {
+// Returns: intent, confidence, needsOrchestration, error
+func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (Intent, float32, bool, error) {
 	// Check for overrides first
 	if intent, ok := m.IntentOverrides[input]; ok {
-		return intent, 1.0, nil
+		return intent, 1.0, false, nil
 	}
 
 	// Simple rule-based classification
@@ -36,7 +37,7 @@ func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (I
 	searchPatterns := []string{"查找", "搜索", "找", "有什么", "哪些", "search", "find"}
 	for _, p := range searchPatterns {
 		if strings.Contains(inputLower, p) && containsAny(inputLower, []string{"笔记", "memo", "记录"}) {
-			return IntentMemoSearch, 0.9, nil
+			return IntentMemoSearch, 0.9, false, nil
 		}
 	}
 
@@ -44,7 +45,7 @@ func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (I
 	createPatterns := []string{"记录", "记一下", "写", "保存", "create", "write", "save"}
 	for _, p := range createPatterns {
 		if strings.Contains(inputLower, p) {
-			return IntentMemoCreate, 0.85, nil
+			return IntentMemoCreate, 0.85, false, nil
 		}
 	}
 
@@ -52,7 +53,7 @@ func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (I
 	scheduleQueryPatterns := []string{"日程", "安排", "计划", "什么时候", "schedule", "appointment"}
 	for _, p := range scheduleQueryPatterns {
 		if strings.Contains(inputLower, p) && containsAny(inputLower, []string{"查", "看", "有", "什么", "query", "show"}) {
-			return IntentScheduleQuery, 0.85, nil
+			return IntentScheduleQuery, 0.85, false, nil
 		}
 	}
 
@@ -61,9 +62,9 @@ func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (I
 	for _, p := range scheduleCreatePatterns {
 		if strings.Contains(inputLower, p) {
 			if containsAny(inputLower, []string{"批量", "多个", "batch", "multiple"}) {
-				return IntentBatchSchedule, 0.8, nil
+				return IntentBatchSchedule, 0.8, false, nil
 			}
-			return IntentScheduleCreate, 0.85, nil
+			return IntentScheduleCreate, 0.85, false, nil
 		}
 	}
 
@@ -71,17 +72,17 @@ func (m *MockRouterService) ClassifyIntent(ctx context.Context, input string) (I
 	scheduleUpdatePatterns := []string{"修改", "更新", "取消", "改", "update", "cancel", "modify"}
 	for _, p := range scheduleUpdatePatterns {
 		if strings.Contains(inputLower, p) && containsAny(inputLower, []string{"日程", "提醒", "schedule", "reminder"}) {
-			return IntentScheduleUpdate, 0.85, nil
+			return IntentScheduleUpdate, 0.85, false, nil
 		}
 	}
 
-	// Amazing (general assistant) - fallback for questions
+	// General questions - needs orchestration
 	if strings.Contains(inputLower, "?") || strings.Contains(inputLower, "？") ||
 		containsAny(inputLower, []string{"什么", "怎么", "为什么", "how", "what", "why"}) {
-		return IntentAmazing, 0.7, nil
+		return IntentUnknown, 0.3, true, nil
 	}
 
-	return IntentUnknown, 0.3, nil
+	return IntentUnknown, 0.3, true, nil
 }
 
 // SelectModel selects an appropriate model based on task type.

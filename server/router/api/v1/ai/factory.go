@@ -22,7 +22,6 @@ type AgentType string
 const (
 	AgentTypeMemo     AgentType = "MEMO"
 	AgentTypeSchedule AgentType = "SCHEDULE"
-	AgentTypeAmazing  AgentType = "AMAZING"
 	AgentTypeAuto     AgentType = "AUTO" // Auto-route based on intent
 )
 
@@ -39,10 +38,8 @@ func AgentTypeFromProto(protoType v1pb.AgentType) AgentType {
 		return AgentTypeMemo
 	case v1pb.AgentType_AGENT_TYPE_SCHEDULE:
 		return AgentTypeSchedule
-	case v1pb.AgentType_AGENT_TYPE_AMAZING:
-		return AgentTypeAmazing
 	default:
-		// DEFAULT and unknown types trigger auto-routing
+		// DEFAULT, AMAZING, and unknown types trigger auto-routing
 		return AgentTypeAuto
 	}
 }
@@ -55,10 +52,8 @@ func (t AgentType) ToProto() v1pb.AgentType {
 		return v1pb.AgentType_AGENT_TYPE_MEMO
 	case AgentTypeSchedule:
 		return v1pb.AgentType_AGENT_TYPE_SCHEDULE
-	case AgentTypeAuto:
-		return v1pb.AgentType_AGENT_TYPE_DEFAULT
 	default:
-		return v1pb.AgentType_AGENT_TYPE_AMAZING
+		return v1pb.AgentType_AGENT_TYPE_DEFAULT
 	}
 }
 
@@ -267,10 +262,9 @@ func (f *AgentFactory) Create(ctx context.Context, cfg *CreateConfig) (agentpkg.
 		return f.createMemoParrot(cfg)
 	case AgentTypeSchedule:
 		return f.createScheduleParrot(ctx, cfg)
-	case AgentTypeAmazing:
-		return f.createAmazingParrot(ctx, cfg)
 	default:
-		return f.createAmazingParrot(ctx, cfg)
+		// Auto-route: default to MemoParrot
+		return f.createMemoParrot(cfg)
 	}
 }
 
@@ -289,16 +283,4 @@ func (f *AgentFactory) createScheduleParrot(_ context.Context, cfg *CreateConfig
 	}
 	scheduleSvc := schedule.NewService(f.store)
 	return f.parrotFactory.CreateScheduleParrot(cfg.UserID, scheduleSvc)
-}
-
-// createAmazingParrot creates a UniversalParrot configured as amazing agent.
-func (f *AgentFactory) createAmazingParrot(_ context.Context, cfg *CreateConfig) (agentpkg.ParrotAgent, error) {
-	if f.retriever == nil {
-		return nil, fmt.Errorf("retriever is required for amazing parrot")
-	}
-	if f.store == nil {
-		return nil, fmt.Errorf("store is required for amazing parrot")
-	}
-	scheduleSvc := schedule.NewService(f.store)
-	return f.parrotFactory.CreateAmazingParrot(cfg.UserID, f.retriever, scheduleSvc)
 }

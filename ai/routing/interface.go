@@ -10,9 +10,10 @@ import (
 // Consumers: Team B (Assistant+Schedule), Team C (Memo Enhancement).
 type RouterService interface {
 	// ClassifyIntent classifies user intent from input text.
-	// Returns: intent type, confidence (0-1), error
-	// Implementation: rule-based first (0ms) -> LLM fallback (~400ms)
-	ClassifyIntent(ctx context.Context, input string) (Intent, float32, error)
+	// Returns: intent type, confidence (0-1), needsOrchestration, error
+	// Implementation: FastRouter (cache -> rule), high confidence routes directly,
+	// low confidence/complex requests need orchestration
+	ClassifyIntent(ctx context.Context, input string) (Intent, float32, bool, error)
 
 	// SelectModel selects an appropriate model based on task type.
 	// Returns: model configuration (local/cloud)
@@ -32,8 +33,8 @@ type AgentType string
 const (
 	AgentTypeMemo     AgentType = "memo"
 	AgentTypeSchedule AgentType = "schedule"
-	AgentTypeAmazing  AgentType = "amazing"
 	AgentTypeUnknown  AgentType = "unknown"
+	// Note: AgentTypeAmazing removed - Orchestrator handles complex/ambiguous requests
 )
 
 // IntentToAgentType converts Intent to AgentType.
@@ -44,8 +45,6 @@ func IntentToAgentType(intent Intent) AgentType {
 		return AgentTypeMemo
 	case IntentScheduleQuery, IntentScheduleCreate, IntentScheduleUpdate, IntentBatchSchedule:
 		return AgentTypeSchedule
-	case IntentAmazing:
-		return AgentTypeAmazing
 	default:
 		return AgentTypeUnknown
 	}
@@ -59,8 +58,6 @@ func AgentTypeToIntent(agentType AgentType) Intent {
 		return IntentMemoCreate
 	case AgentTypeSchedule:
 		return IntentScheduleCreate
-	case AgentTypeAmazing:
-		return IntentAmazing
 	default:
 		return IntentUnknown
 	}
@@ -76,8 +73,8 @@ const (
 	IntentScheduleCreate Intent = "schedule_create"
 	IntentScheduleUpdate Intent = "schedule_update"
 	IntentBatchSchedule  Intent = "batch_schedule"
-	IntentAmazing        Intent = "amazing"
-	IntentUnknown        Intent = "unknown"
+	// Note: IntentAmazing removed - Orchestrator handles complex/ambiguous requests
+	IntentUnknown Intent = "unknown"
 )
 
 // TaskType represents the type of task for model selection.

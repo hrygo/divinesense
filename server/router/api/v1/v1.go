@@ -38,16 +38,16 @@ type APIV1Service struct {
 	v1pb.UnimplementedInstanceServiceServer
 	v1pb.UnimplementedMemoServiceServer
 	v1pb.UnimplementedChatAppServiceServer
-	MarkdownService      markdown.Service
-	Profile              *profile.Profile
-	Store                *store.Store
-	AIService            *AIService
-	ScheduleService      *ScheduleService
-	ScheduleAgentService *ScheduleAgentService
-	thumbnailSemaphore   *semaphore.Weighted
-	Secret               string
-	chatChannelRouter    *channels.ChannelRouter
-	chatAppStore         *chatstore.ChatAppStore
+	MarkdownService markdown.Service
+	Profile         *profile.Profile
+	Store           *store.Store
+	AIService       *AIService
+	ScheduleService *ScheduleService
+
+	thumbnailSemaphore *semaphore.Weighted
+	Secret             string
+	chatChannelRouter  *channels.ChannelRouter
+	chatAppStore       *chatstore.ChatAppStore
 }
 
 func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store) *APIV1Service {
@@ -136,8 +136,6 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					LLMService: llmService,
 				}
 
-				// Initialize ScheduleAgentService
-				service.ScheduleAgentService = NewScheduleAgentService(store, llmService, profile)
 			} else {
 				slog.Warn("Failed to initialize embedding service", "error", err)
 			}
@@ -241,12 +239,7 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	if err := v1pb.RegisterScheduleServiceHandlerServer(ctx, gwMux, s.ScheduleService); err != nil {
 		return err
 	}
-	// Register ScheduleAgent service if available
-	if s.ScheduleAgentService != nil {
-		if err := v1pb.RegisterScheduleAgentServiceHandlerServer(ctx, gwMux, s.ScheduleAgentService); err != nil {
-			return err
-		}
-	}
+
 	// Register ChatAppService
 	if err := v1pb.RegisterChatAppServiceHandlerServer(ctx, gwMux, s); err != nil {
 		return err

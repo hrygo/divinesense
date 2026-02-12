@@ -123,35 +123,6 @@ func TestRuleMatcher_BatchSchedule(t *testing.T) {
 	}
 }
 
-// TestRuleMatcher_Amazing tests amazing intent matching.
-func TestRuleMatcher_Amazing(t *testing.T) {
-	matcher := NewRuleMatcher()
-
-	testCases := []struct {
-		input         string
-		expected      Intent
-		minConfidence float32
-	}{
-		{"总结本周工作", IntentAmazing, 0.6},
-		{"综合分析一下", IntentAmazing, 0.6},
-		{"帮我分析总结", IntentAmazing, 0.5},
-	}
-
-	for _, tc := range testCases {
-		intent, confidence, matched := matcher.Match(tc.input)
-		if !matched {
-			t.Errorf("input %q: expected match, got no match", tc.input)
-			continue
-		}
-		if intent != tc.expected {
-			t.Errorf("input %q: expected %s, got %s", tc.input, tc.expected, intent)
-		}
-		if confidence < tc.minConfidence {
-			t.Errorf("input %q: confidence %f below minimum %f", tc.input, confidence, tc.minConfidence)
-		}
-	}
-}
-
 // TestRuleMatcher_NormalizeInput tests input normalization.
 func TestRuleMatcher_NormalizeInput(t *testing.T) {
 	matcher := NewRuleMatcher()

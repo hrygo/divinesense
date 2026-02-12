@@ -205,9 +205,6 @@ func (ic *LLMIntentClassifier) mapIntent(s string) TaskIntent {
 		return IntentMemoSearch
 	case "memo_create":
 		return IntentMemoCreate
-	// Amazing intent
-	case "amazing", "multi_query", "multi":
-		return IntentAmazing
 	default:
 		slog.Warn("Unknown intent from LLM, defaulting to schedule_create",
 			"raw_intent", s)
@@ -217,12 +214,7 @@ func (ic *LLMIntentClassifier) mapIntent(s string) TaskIntent {
 
 // ShouldUsePlanExecute returns true if the intent should use Plan-Execute mode.
 func (ic *LLMIntentClassifier) ShouldUsePlanExecute(intent TaskIntent) bool {
-	switch intent {
-	case IntentBatchCreate, IntentAmazing:
-		return true
-	default:
-		return false
-	}
+	return intent == IntentBatchCreate
 }
 
 // ClassifyAndRoute is a convenience method that classifies and returns the execution mode.
@@ -258,14 +250,10 @@ const intentSystemPromptStrict = `AI 助手意图分类器。判断用户意图�
 - memo_search: 搜索笔记 (关键词)
 - memo_create: 创建笔记 (记录内容)
 
-## 综合 Agent (amazing)
-- amazing: 综合分析、总结、跨域查询
-
 ## 分类规则
 1. 含"笔记/记录/搜索" → memo_search
 2. 含"今天/明天/会议" → schedule_create 或 schedule_query
-3. 综合性问题 (多领域) → amazing
-4. 默认: schedule_create`
+3. 默认: schedule_create`
 
 // intentJSONSchema defines the strict output schema for intent classification.
 // Using enum to constrain intent values and prevent hallucination.
@@ -282,7 +270,6 @@ var intentJSONSchema = &jsonSchema{
 				"schedule_conflict",
 				"memo_search",
 				"memo_create",
-				"amazing",
 			},
 			Description: "The classified intent type",
 		},

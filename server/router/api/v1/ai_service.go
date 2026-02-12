@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -11,22 +10,13 @@ import (
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/routing"
-	"github.com/hrygo/divinesense/ai/services/memory"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/middleware"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
-	"github.com/sashabaranov/go-openai"
 )
-
-// jsonMap is a map[string]any that implements json.Marshaler for OpenAI compatibility.
-type jsonMap map[string]any
-
-func (m jsonMap) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any(m))
-}
 
 // Global AI rate limiter.
 var globalAILimiter = middleware.NewRateLimiter()
@@ -121,27 +111,10 @@ func (s *AIService) getRouterService() *routing.Service {
 		return nil
 	}
 
-	// Create memory service for router
-	memService := memory.NewService(s.Store, DefaultHistoryRetention)
-
-	// Create LLM client wrapper for router
-	// Use dedicated intent classifier LLM service when available (per recommended strategy)
-	var llmClient routing.LLMClient
-	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {
-		// Use dedicated SiliconFlow + Qwen2.5-7B-Instruct for intent classification
-		llmClient = &routerIntentLLMClient{
-			apiKey:  s.IntentClassifierConfig.APIKey,
-			baseURL: s.IntentClassifierConfig.BaseURL,
-			model:   s.IntentClassifierConfig.Model,
-		}
-	} else if s.LLMService != nil {
-		// Fallback to main LLM service
-		llmClient = &routerLLMClient{llm: s.LLMService}
-	}
-
+	// FastRouter: cache -> rule (no LLM layer)
+	// Complex/low-confidence requests are handled by Orchestrator
 	s.routerService = routing.NewService(routing.Config{
-		MemoryService: memService,
-		LLMClient:     llmClient,
+		EnableCache: true,
 	})
 
 	return s.routerService
@@ -188,116 +161,6 @@ func (s *AIService) getAgentFactory() *aichat.AgentFactory {
 
 	s.agentFactory = factory
 	return s.agentFactory
-}
-
-// routerLLMClient adapts LLMService to routing.LLMClient interface.
-// Used as fallback when intent classifier is not configured.
-type routerLLMClient struct {
-	llm pluginai.LLMService
-}
-
-func (c *routerLLMClient) Complete(ctx context.Context, prompt string, config routing.ModelConfig) (string, error) {
-	messages := []pluginai.Message{
-		{Role: "system", Content: "You are an intent classifier. Respond only with the intent type."},
-		{Role: "user", Content: prompt},
-	}
-	result, _, err := c.llm.Chat(ctx, messages)
-	return result, err
-}
-
-// routerIntentLLMClient is a dedicated LLM client for intent classification.
-// Uses SiliconFlow + Qwen2.5-7B-Instruct (per recommended strategy).
-type routerIntentLLMClient struct {
-	apiKey  string
-	baseURL string
-	model   string
-}
-
-func (c *routerIntentLLMClient) Complete(ctx context.Context, prompt string, config routing.ModelConfig) (string, error) {
-	// Build classification prompt with JSON schema
-	systemPrompt := `You are an intent classifier. Analyze the user input and return a JSON response:
-{
-  "intent": "memo_search|memo_create|schedule_query|schedule_create|schedule_update|batch_schedule|amazing|unknown",
-  "confidence": 0.0-1.0
-}
-
-Intent types:
-- memo_search: search or find notes
-- memo_create: create or record new note
-- schedule_query: query or check schedules
-- schedule_create: create new schedule
-- schedule_update: modify or cancel schedule
-- batch_schedule: batch create schedules
-- amazing: comprehensive assistance
-- unknown: cannot determine`
-
-	messages := []openai.ChatCompletionMessage{
-		{
-			Role:    openai.ChatMessageRoleSystem,
-			Content: systemPrompt,
-		},
-		{
-			Role:    openai.ChatMessageRoleUser,
-			Content: prompt,
-		},
-	}
-
-	// Create OpenAI client
-	clientConfig := openai.DefaultConfig(c.apiKey)
-	clientConfig.BaseURL = c.baseURL
-	client := openai.NewClientWithConfig(clientConfig)
-
-	// Use model from config if provided, otherwise fall back to struct field
-	model := config.Model
-	if model == "" {
-		model = c.model
-	}
-	if model == "" {
-		model = "Qwen/Qwen2.5-7B-Instruct"
-	}
-
-	// Build JSON schema for structured response
-	jsonSchema := jsonMap{
-		"type": "object",
-		"properties": map[string]any{
-			"intent": map[string]any{
-				"type": "string",
-				"enum": []any{"memo_search", "memo_create", "schedule_query", "schedule_create", "schedule_update", "batch_schedule", "amazing", "unknown"},
-			},
-			"confidence": map[string]any{
-				"type": "number",
-			},
-		},
-		"required":             []string{"intent", "confidence"},
-		"additionalProperties": false,
-	}
-
-	// Call LLM with JSON schema
-	req := openai.ChatCompletionRequest{
-		Model:       model,
-		Messages:    messages,
-		MaxTokens:   50,
-		Temperature: 0,
-		ResponseFormat: &openai.ChatCompletionResponseFormat{
-			Type: openai.ChatCompletionResponseFormatTypeJSONSchema,
-			JSONSchema: &openai.ChatCompletionResponseFormatJSONSchema{
-				Name:   "intent_classification",
-				Strict: true,
-				Schema: jsonSchema,
-			},
-		},
-	}
-
-	resp, err := client.CreateChatCompletion(ctx, req)
-	if err != nil {
-		return "", err
-	}
-
-	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("empty response from intent classifier")
-	}
-
-	return resp.Choices[0].Message.Content, nil
 }
 
 // getCurrentUser gets the authenticated user from context.

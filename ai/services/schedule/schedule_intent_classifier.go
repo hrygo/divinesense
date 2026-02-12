@@ -146,7 +146,7 @@ func (c *ScheduleIntentClassifier) Classify(ctx context.Context, input string) C
 	}
 
 	// Step 5: Keyword-based fallback
-	if result := c.keywordFallback(input, normalizedInput); result.Intent != IntentUnknown {
+	if result := c.keywordFallback(input); result.Intent != IntentUnknown {
 		return result
 	}
 
@@ -220,7 +220,7 @@ func (c *ScheduleIntentClassifier) hasTimeAndAction(input, normalizedInput strin
 }
 
 // keywordFallback uses keyword counting for uncertain cases.
-func (c *ScheduleIntentClassifier) keywordFallback(input, normalizedInput string) ClassifyResult {
+func (c *ScheduleIntentClassifier) keywordFallback(input string) ClassifyResult {
 	scores := map[ScheduleIntent]int{
 		IntentSimpleCreate: 0,
 		IntentSimpleQuery:  0,
@@ -290,7 +290,7 @@ func (c *ScheduleIntentClassifier) keywordFallback(input, normalizedInput string
 
 // routerFallback uses RouterService for classification.
 func (c *ScheduleIntentClassifier) routerFallback(ctx context.Context, input string) ClassifyResult {
-	intent, confidence, err := c.routerService.ClassifyIntent(ctx, input)
+	intent, confidence, _, err := c.routerService.ClassifyIntent(ctx, input)
 	if err != nil {
 		return ClassifyResult{Intent: IntentUnknown, Confidence: 0, UsedLLM: true}
 	}

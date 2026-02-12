@@ -107,42 +107,6 @@ func TestRuleMatcher_MemoIntent(t *testing.T) {
 	}
 }
 
-func TestRuleMatcher_AmazingIntent(t *testing.T) {
-	matcher := NewRuleMatcher()
-
-	tests := []struct {
-		name        string
-		input       string
-		shouldMatch bool
-	}{
-		{
-			name:        "Analysis with context",
-			input:       "帮我分析总结一下工作",
-			shouldMatch: true,
-		},
-		{
-			name:        "Weekly report",
-			input:       "帮我生成周报",
-			shouldMatch: true,
-		},
-		{
-			name:        "Comprehensive summary",
-			input:       "综合总结一下项目情况",
-			shouldMatch: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			intent, _, matched := matcher.Match(tt.input)
-			assert.Equal(t, tt.shouldMatch, matched, "match status")
-			if matched {
-				assert.Equal(t, IntentAmazing, intent, "intent should be amazing")
-			}
-		})
-	}
-}
-
 func TestRuleMatcher_NoMatch(t *testing.T) {
 	matcher := NewRuleMatcher()
 
@@ -189,7 +153,7 @@ func TestService_ClassifyIntent_Layer1Only(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			intent, _, err := svc.ClassifyIntent(ctx, tt.input)
+			intent, _, _, err := svc.ClassifyIntent(ctx, tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedIntent, intent)
 		})

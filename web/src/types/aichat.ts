@@ -142,6 +142,8 @@ export interface AIChatState {
   // Phase 4: Block data (Unified Block Model support)
   // Maps conversationId to its blocks array
   blocksByConversation: Record<string, Block[]>;
+  // Phase 5: Pending Queue (Issue #121)
+  pendingQueue: PendingQueueState;
 }
 
 /**
@@ -206,6 +208,11 @@ export interface AIChatContextValue {
   saveToStorage: () => void;
   loadFromStorage: () => void;
   clearStorage: () => void;
+
+  // Phase 5: Pending Queue Actions (Issue #121)
+  addToPendingQueue: (content: string) => void;
+  removeFromPendingQueue: (id: string) => void;
+  clearPendingQueue: () => void;
 }
 
 /**
@@ -270,4 +277,21 @@ export interface CcStreamEvent {
   content: string;
   meta?: CcEventMeta;
   timestamp: number;
+}
+
+/**
+ * Pending message in queue
+ */
+export interface PendingMessage {
+  id: string;
+  content: string;
+  timestamp: number;
+}
+
+/**
+ * Pending queue state
+ */
+export interface PendingQueueState {
+  messages: PendingMessage[];
+  maxSize: number;
 }

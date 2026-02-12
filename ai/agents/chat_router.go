@@ -20,9 +20,7 @@ const (
 	// Implemented by UniversalParrot with schedule.yaml configuration.
 	RouteTypeSchedule ChatRouteType = "schedule"
 
-	// RouteTypeAmazing routes to Amazing Parrot (折衷) for comprehensive assistance.
-	// Implemented by UniversalParrot with amazing.yaml configuration.
-	RouteTypeAmazing ChatRouteType = "amazing"
+	// Note: RouteTypeAmazing removed - Orchestrator handles complex/ambiguous requests
 )
 
 // shortConfirmations contains common short confirmation words that should
@@ -46,9 +44,10 @@ func isShortConfirmation(input string) bool {
 
 // ChatRouteResult represents the routing classification result.
 type ChatRouteResult struct {
-	Route      ChatRouteType `json:"route"`
-	Method     string        `json:"method"`
-	Confidence float64       `json:"confidence"`
+	Route              ChatRouteType `json:"route"`
+	Method             string        `json:"method"`
+	Confidence         float64       `json:"confidence"`
+	NeedsOrchestration bool          `json:"needs_orchestration"`
 }
 
 // ChatRouter routes user input to the appropriate Parrot agent.
@@ -86,34 +85,37 @@ func (r *ChatRouter) RouteWithContext(ctx context.Context, input string, session
 				"route", lastRoute,
 				"method", "session_sticky")
 			return &ChatRouteResult{
-				Route:      lastRoute,
-				Confidence: 0.95,
-				Method:     "session_sticky",
+				Route:              lastRoute,
+				Confidence:         0.95,
+				Method:             "session_sticky",
+				NeedsOrchestration: false,
 			}, nil
 		}
 	}
 
-	// Standard three-layer routing
-	intent, confidence, err := r.routerService.ClassifyIntent(ctx, input)
+	// FastRouter: cache -> rule
+	intent, confidence, needsOrch, err := r.routerService.ClassifyIntent(ctx, input)
 	if err != nil {
-		slog.Warn("router service failed, defaulting to amazing",
+		slog.Warn("router service failed, needs orchestration",
 			"error", err,
 			"input", TruncateString(input, 30))
 		return &ChatRouteResult{
-			Route:      RouteTypeAmazing,
-			Confidence: 0.5,
-			Method:     "fallback",
+			Route:              "", // Empty route indicates orchestration needed
+			Confidence:         0.5,
+			Method:             "fallback",
+			NeedsOrchestration: true,
 		}, nil
 	}
 
 	result := &ChatRouteResult{
-		Route:      mapIntentToRouteType(intent),
-		Confidence: float64(confidence),
-		Method:     "router",
+		Route:              mapIntentToRouteType(intent),
+		Confidence:         float64(confidence),
+		Method:             "router",
+		NeedsOrchestration: needsOrch,
 	}
 
-	// Store the route for future stickiness
-	if sessionCtx != nil && result.Route != "" {
+	// Store the route for future stickiness (only if confident)
+	if sessionCtx != nil && result.Route != "" && !needsOrch {
 		sessionCtx.SetLastRoute(result.Route)
 	}
 
@@ -128,9 +130,7 @@ func mapIntentToRouteType(intent routerpkg.Intent) ChatRouteType {
 		return RouteTypeMemo
 	case routerpkg.AgentTypeSchedule:
 		return RouteTypeSchedule
-	case routerpkg.AgentTypeAmazing:
-		return RouteTypeAmazing
 	default:
-		return RouteTypeAmazing
+		return "" // Empty indicates unknown - needs orchestration
 	}
 }

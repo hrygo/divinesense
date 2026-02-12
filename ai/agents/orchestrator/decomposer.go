@@ -142,9 +142,9 @@ func (d *Decomposer) fallbackPlan(userInput string, availableExperts []string) *
 	if expert == "" {
 		slog.Warn("decomposer: no experts available for fallback")
 		return &TaskPlan{
-			Analysis: "No expert agents available",
-			Tasks:    []*Task{},
-			Parallel: false,
+			Analysis:  "No expert agents available",
+			Tasks:     []*Task{},
+			Parallel:  false,
 			Aggregate: false,
 		}
 	}

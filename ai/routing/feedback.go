@@ -449,8 +449,6 @@ func (fc *FeedbackCollector) intentToCategory(intent Intent) string {
 		return "schedule"
 	case IntentMemoSearch, IntentMemoCreate:
 		return "memo"
-	case IntentAmazing:
-		return "amazing"
 	default:
 		return "unknown"
 	}

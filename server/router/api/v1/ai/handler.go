@@ -17,6 +17,7 @@ import (
 	"github.com/hrygo/divinesense/ai"
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/geek"
+	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	"github.com/hrygo/divinesense/ai/routing"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
@@ -36,9 +37,10 @@ type ParrotHandler struct {
 	factory        *AgentFactory
 	llm            ai.LLMService
 	chatRouter     *agentpkg.ChatRouter
-	persister      *aistats.Persister // session stats persister
-	blockManager   *BlockManager      // Phase 5: Unified Block Model support
-	titleGenerator *ai.TitleGenerator // Title generator for auto-naming conversations
+	orchestrator   *orchestrator.Orchestrator // Orchestrator for complex/multi-intent requests
+	persister      *aistats.Persister         // session stats persister
+	blockManager   *BlockManager              // Phase 5: Unified Block Model support
+	titleGenerator *ai.TitleGenerator         // Title generator for auto-naming conversations
 }
 
 // NewParrotHandler creates a new parrot handler.
@@ -55,6 +57,11 @@ func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aista
 // SetChatRouter configures the intelligent chat router for auto-routing.
 func (h *ParrotHandler) SetChatRouter(router *agentpkg.ChatRouter) {
 	h.chatRouter = router
+}
+
+// SetOrchestrator configures the orchestrator for complex/multi-intent requests.
+func (h *ParrotHandler) SetOrchestrator(orch *orchestrator.Orchestrator) {
+	h.orchestrator = orch
 }
 
 // maybeGenerateConversationTitle auto-generates a conversation title after the first block.
@@ -186,6 +193,8 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 
 	// Auto-route if AgentType is AUTO
 	agentType := req.AgentType
+	var needsOrchestration bool
+
 	if agentType == AgentTypeAuto && h.chatRouter != nil {
 		// Add user ID to context for history matching.
 		// Note: req.UserID is already authenticated by the gRPC interceptor middleware.
@@ -196,20 +205,24 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 		startTime := time.Now()
 		if err := stream.Send(&v1pb.ChatResponse{
 			EventType: "routing_start",
-			EventData: `{"layer":"cache"}`,
+			EventData: `{"layer":"fastrouter"}`,
 		}); err != nil {
 			slog.Warn("failed to send routing_start event", "error", err)
 		}
 
-		// Execute routing
+		// Execute FastRouter: cache -> rule
 		routeResult, err := h.chatRouter.Route(ctx, req.Message)
 		duration := time.Since(startTime)
+
 		if err != nil {
-			slog.Warn("chat router failed, defaulting to amazing",
+			// Router error → Orchestrator
+			needsOrchestration = true
+			slog.Warn("chat router failed, using orchestrator",
 				"error", err,
 				"message", req.Message[:min(len(req.Message), 30)])
-			agentType = AgentTypeAmazing
 		} else {
+			needsOrchestration = routeResult.NeedsOrchestration
+
 			// Map ChatRouteType to AgentType
 			switch routeResult.Route {
 			case agentpkg.RouteTypeMemo:
@@ -217,15 +230,16 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 			case agentpkg.RouteTypeSchedule:
 				agentType = AgentTypeSchedule
 			default:
-				agentType = AgentTypeAmazing
+				// Empty route indicates unknown intent
+				agentType = "" // Will trigger orchestration
 			}
 
 			// PROGRESS EVENT: Send routing_end event with agent info
 			// 进度事件：发送 routing_end 事件，告知用户路由结果
 			if err := stream.Send(&v1pb.ChatResponse{
 				EventType: "routing_end",
-				EventData: fmt.Sprintf(`{"agent":"%s","duration_ms":%d}`,
-					agentType.String(), duration.Milliseconds()),
+				EventData: fmt.Sprintf(`{"agent":"%s","needs_orchestration":%v,"duration_ms":%d}`,
+					agentType.String(), needsOrchestration, duration.Milliseconds()),
 			}); err != nil {
 				slog.Warn("failed to send routing_end event", "error", err)
 			}
@@ -233,11 +247,21 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 			slog.Info("chat auto-routed",
 				"route", routeResult.Route,
 				"method", routeResult.Method,
-				"confidence", routeResult.Confidence)
+				"confidence", routeResult.Confidence,
+				"needs_orchestration", needsOrchestration)
 		}
 	} else if agentType == AgentTypeAuto {
-		// No router configured, fallback to amazing
-		agentType = AgentTypeAmazing
+		// No router configured, use orchestrator
+		needsOrchestration = true
+	}
+
+	// Core branch: direct to Expert vs Orchestrator
+	if needsOrchestration && h.orchestrator != nil {
+		// Use Orchestrator for complex/multi-intent requests
+		return h.executeWithOrchestrator(ctx, req, stream)
+	} else if needsOrchestration {
+		// No orchestrator available, fallback to Memo agent
+		agentType = AgentTypeMemo
 	}
 
 	// Create logger for this request
@@ -411,6 +435,59 @@ func (h *ParrotHandler) handleEvolutionMode(
 
 	logger.Info("ai.chat.completed",
 		slog.String("mode", "evolution"),
+		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
+	)
+
+	return nil
+}
+
+// executeWithOrchestrator uses Orchestrator for complex/multi-intent requests.
+// executeWithOrchestrator 使用 Orchestrator 处理复杂/多意图请求。
+func (h *ParrotHandler) executeWithOrchestrator(
+	ctx context.Context,
+	req *ChatRequest,
+	stream ChatStream,
+) error {
+	// Create logger for this request
+	logger := observability.NewRequestContext(slog.Default(), "orchestrator", req.UserID)
+	logger.Info("ai.chat.started",
+		slog.String("mode", "orchestrator"),
+		slog.String("user_input", req.Message),
+		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
+		slog.Int("history_count", len(req.History)),
+	)
+
+	// Create callback adapter for streaming events
+	callback := func(eventType string, eventData string) {
+		if err := stream.Send(&v1pb.ChatResponse{
+			EventType: eventType,
+			EventData: eventData,
+		}); err != nil {
+			slog.Warn("failed to send orchestrator event", "error", err, "event_type", eventType)
+		}
+	}
+
+	// Execute Orchestrator
+	result, err := h.orchestrator.Process(ctx, req.Message, callback)
+	if err != nil {
+		logger.Error("Orchestrator execution failed", err)
+		return status.Error(codes.Internal, fmt.Sprintf("orchestrator failed: %v", err))
+	}
+
+	// Send completion event
+	stream.Send(&v1pb.ChatResponse{
+		Done: true,
+		BlockSummary: &v1pb.BlockSummary{
+			TotalDurationMs:       int64(result.TokenUsage.InputTokens + result.TokenUsage.OutputTokens),
+			TotalInputTokens:      result.TokenUsage.InputTokens,
+			TotalOutputTokens:     result.TokenUsage.OutputTokens,
+			TotalCacheWriteTokens: result.TokenUsage.CacheWriteTokens,
+			TotalCacheReadTokens:  result.TokenUsage.CacheReadTokens,
+		},
+	})
+
+	logger.Info("ai.chat.completed",
+		slog.String("mode", "orchestrator"),
 		slog.Int64(observability.LogFieldDuration, logger.DurationMs()),
 	)
 

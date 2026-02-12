@@ -10,14 +10,14 @@ import (
 
 // mockRouterService implements routerpkg.RouterService for testing.
 type mockRouterService struct {
-	classifyFunc func(ctx context.Context, input string) (routerpkg.Intent, float32, error)
+	classifyFunc func(ctx context.Context, input string) (routerpkg.Intent, float32, bool, error)
 }
 
-func (m *mockRouterService) ClassifyIntent(ctx context.Context, input string) (routerpkg.Intent, float32, error) {
+func (m *mockRouterService) ClassifyIntent(ctx context.Context, input string) (routerpkg.Intent, float32, bool, error) {
 	if m.classifyFunc != nil {
 		return m.classifyFunc(ctx, input)
 	}
-	return routerpkg.IntentUnknown, 0, nil
+	return routerpkg.IntentUnknown, 0, false, nil
 }
 
 func (m *mockRouterService) SelectModel(ctx context.Context, task routerpkg.TaskType) (routerpkg.ModelConfig, error) {
@@ -169,8 +169,8 @@ func TestScheduleIntentClassifier_NoLLMForRuleMatch(t *testing.T) {
 
 func TestScheduleIntentClassifier_LLMFallback(t *testing.T) {
 	mockRouter := &mockRouterService{
-		classifyFunc: func(ctx context.Context, input string) (routerpkg.Intent, float32, error) {
-			return routerpkg.IntentScheduleCreate, 0.8, nil
+		classifyFunc: func(ctx context.Context, input string) (routerpkg.Intent, float32, bool, error) {
+			return routerpkg.IntentScheduleCreate, 0.8, false, nil
 		},
 	}
 	c := NewScheduleIntentClassifier(mockRouter)

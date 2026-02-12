@@ -9,30 +9,6 @@ import (
 	"github.com/hrygo/divinesense/ai/services/memory"
 )
 
-// mockLLMClient is a mock implementation of LLMClient for testing.
-type mockLLMClient struct {
-	responses map[string]string
-}
-
-func newMockLLMClient() *mockLLMClient {
-	return &mockLLMClient{
-		responses: make(map[string]string),
-	}
-}
-
-func (m *mockLLMClient) SetResponse(input, response string) {
-	m.responses[input] = response
-}
-
-func (m *mockLLMClient) Complete(ctx context.Context, prompt string, config ModelConfig) (string, error) {
-	// Check for predefined response
-	if resp, ok := m.responses[prompt]; ok {
-		return resp, nil
-	}
-	// Default JSON response for intent classification
-	return `{"intent": "memo_search", "confidence": 0.9}`, nil
-}
-
 // mockMemoryService is a mock implementation of memory.MemoryService.
 type mockMemoryServiceForRouter struct {
 	episodes []memory.EpisodicMemory
@@ -155,7 +131,7 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		})
 
 		// Clear rule-based match
-		intent, confidence, err := svc.ClassifyIntent(ctx, "明天下午3点开会")
+		intent, confidence, needsOrch, err := svc.ClassifyIntent(ctx, "明天下午3点开会")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -164,6 +140,9 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		}
 		if confidence < 0.5 {
 			t.Errorf("expected confidence >= 0.5, got %f", confidence)
+		}
+		if needsOrch {
+			t.Errorf("expected needsOrchestration=false for clear schedule intent")
 		}
 	})
 
@@ -175,13 +154,13 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		input := "搜索关于人工智能的笔记"
 
 		// First call - should use rule matcher
-		intent1, conf1, err1 := svc.ClassifyIntent(ctx, input)
+		intent1, conf1, needsOrch1, err1 := svc.ClassifyIntent(ctx, input)
 		if err1 != nil {
 			t.Fatalf("first call failed: %v", err1)
 		}
 
 		// Second call - should hit cache
-		intent2, conf2, err2 := svc.ClassifyIntent(ctx, input)
+		intent2, conf2, needsOrch2, err2 := svc.ClassifyIntent(ctx, input)
 		if err2 != nil {
 			t.Fatalf("second call failed: %v", err2)
 		}
@@ -192,28 +171,27 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		if conf1 != conf2 {
 			t.Errorf("cache returned different confidence: %f vs %f", conf1, conf2)
 		}
+		if needsOrch1 != needsOrch2 {
+			t.Errorf("cache returned different needsOrchestration: %v vs %v", needsOrch1, needsOrch2)
+		}
 	})
 
-	t.Run("LLM fallback when rule fails", func(t *testing.T) {
-		llmClient := newMockLLMClient()
-		llmClient.SetResponse("用户输入: 这是一个复杂的问题",
-			`{"intent": "amazing", "confidence": 0.85}`)
-
+	t.Run("needs orchestration for unknown intent", func(t *testing.T) {
 		svc := NewService(Config{
-			LLMClient:   llmClient,
 			EnableCache: false,
 		})
 
-		intent, confidence, err := svc.ClassifyIntent(ctx, "这是一个复杂的问题")
+		intent, confidence, needsOrch, err := svc.ClassifyIntent(ctx, "这是一个复杂的问题")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if intent != IntentAmazing {
-			t.Errorf("expected IntentAmazing, got %s", intent)
+		if intent != IntentUnknown {
+			t.Errorf("expected IntentUnknown, got %s", intent)
 		}
-		if confidence < 0.8 {
-			t.Errorf("expected confidence >= 0.8, got %f", confidence)
+		if !needsOrch {
+			t.Errorf("expected needsOrchestration=true for unknown intent")
 		}
+		_ = confidence // Don't check confidence for unknown
 	})
 }
 
@@ -235,7 +213,7 @@ func TestService_Integration_WithHistory(t *testing.T) {
 	t.Run("history match for similar input", func(t *testing.T) {
 		ctxWithUser := WithUserID(ctx, userID)
 
-		intent, confidence, err := svc.ClassifyIntent(ctxWithUser, "搜索Go语言笔记")
+		intent, confidence, needsOrch, err := svc.ClassifyIntent(ctxWithUser, "搜索Go语言笔记")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -247,53 +225,8 @@ func TestService_Integration_WithHistory(t *testing.T) {
 		if confidence < 0.8 {
 			t.Errorf("expected high confidence from history match, got %f", confidence)
 		}
+		_ = needsOrch // Don't check needsOrchestration for this test
 	})
-}
-
-// TestService_Integration_CacheStats tests cache statistics.
-func TestService_Integration_CacheStats(t *testing.T) {
-	ctx := context.Background()
-	svc := NewService(Config{
-		EnableCache: true,
-	})
-
-	// Initially empty
-	stats := svc.GetCacheStats()
-	if stats == nil {
-		t.Fatal("expected stats to be non-nil")
-	}
-
-	// Generate some activity
-	svc.ClassifyIntent(ctx, "搜索笔记")
-	svc.ClassifyIntent(ctx, "搜索笔记") // Cache hit
-
-	stats = svc.GetCacheStats()
-	if stats.Hits == 0 {
-		t.Error("expected at least one cache hit")
-	}
-	if stats.Misses == 0 {
-		t.Error("expected at least one cache miss")
-	}
-}
-
-// TestService_Integration_ClearCache tests cache clearing.
-func TestService_Integration_ClearCache(t *testing.T) {
-	ctx := context.Background()
-	svc := NewService(Config{
-		EnableCache: true,
-	})
-
-	// Add something to cache
-	svc.ClassifyIntent(ctx, "搜索笔记")
-
-	// Clear cache
-	svc.ClearCache()
-
-	// Stats should be reset
-	stats := svc.GetCacheStats()
-	if stats.Hits != 0 || stats.Misses != 0 {
-		t.Error("expected stats to be reset after ClearCache")
-	}
 }
 
 // TestService_Integration_UserContext tests user context handling.
@@ -308,7 +241,7 @@ func TestService_Integration_UserContext(t *testing.T) {
 	ctxWithUser := WithUserID(ctx, userID)
 
 	// Should not panic with user context
-	_, _, err := svc.ClassifyIntent(ctxWithUser, "搜索笔记")
+	_, _, _, err := svc.ClassifyIntent(ctxWithUser, "搜索笔记")
 	if err != nil {
 		t.Fatalf("expected no error with user context, got %v", err)
 	}

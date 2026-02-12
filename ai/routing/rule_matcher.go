@@ -89,7 +89,7 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 	// Calculate scores for each intent category
 	scheduleScore := m.calculateScore(lower, m.scheduleKeywords)
 	memoScore := m.calculateScore(lower, m.memoKeywords)
-	amazingScore := m.calculateScore(lower, m.amazingKeywords)
+	// Note: amazingScore removed - Orchestrator handles complex/ambiguous requests
 
 	// Time pattern adds score to schedule only if it has core schedule keywords
 	hasTimePattern := m.hasTimePattern(input)
@@ -112,11 +112,8 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 		return intent, confidence, true
 	}
 
-	// Amazing needs high score AND core amazing keyword (not just "帮我")
-	if amazingScore >= 3 && m.hasCoreKeyword(lower, "amazing") {
-		confidence := m.normalizeConfidence(amazingScore, 5)
-		return IntentAmazing, confidence, true
-	}
+	// Amazing keywords removed - Orchestrator handles complex/ambiguous requests
+	// If no clear match, return false for higher layer processing
 
 	// No match - needs higher layer processing
 	return IntentUnknown, 0, false
@@ -325,12 +322,11 @@ func (m *RuleMatcher) MatchWithUser(input string, userID int32) (Intent, float32
 	lower := m.normalizeInput(input)
 
 	// Get custom weights if available
-	var customSchedule, customMemo, customAmazing map[string]int
+	var customSchedule, customMemo map[string]int
 	m.customWeightsMu.RLock()
 	if custom, ok := m.customWeights[userID]; ok {
 		customSchedule = custom["schedule"]
 		customMemo = custom["memo"]
-		customAmazing = custom["amazing"]
 	}
 	m.customWeightsMu.RUnlock()
 
@@ -342,7 +338,7 @@ func (m *RuleMatcher) MatchWithUser(input string, userID int32) (Intent, float32
 	// Calculate scores using custom or default weights
 	scheduleScore := m.calculateScoreWithWeights(lower, m.scheduleKeywords, customSchedule)
 	memoScore := m.calculateScoreWithWeights(lower, m.memoKeywords, customMemo)
-	amazingScore := m.calculateScoreWithWeights(lower, m.amazingKeywords, customAmazing)
+	// Note: amazingScore removed - Orchestrator handles complex/ambiguous requests
 
 	// Time pattern adds score to schedule only if it has core schedule keywords
 	hasTimePattern := m.hasTimePattern(input)
@@ -365,11 +361,8 @@ func (m *RuleMatcher) MatchWithUser(input string, userID int32) (Intent, float32
 		return intent, confidence, true
 	}
 
-	// Amazing needs high score AND core amazing keyword
-	if amazingScore >= 3 && m.hasCoreKeyword(lower, "amazing") {
-		confidence := m.normalizeConfidence(amazingScore, 5)
-		return IntentAmazing, confidence, true
-	}
+	// Amazing keywords removed - Orchestrator handles complex/ambiguous requests
+	// If no clear match, return false for higher layer processing
 
 	// No match - needs higher layer processing
 	return IntentUnknown, 0, false

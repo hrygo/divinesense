@@ -289,29 +289,3 @@ func (f *ParrotFactory) CreateScheduleParrot(userID int32, scheduleService any) 
 
 	return parrot, nil
 }
-
-// CreateAmazingParrot creates a UniversalParrot configured as amazing parrot.
-func (f *ParrotFactory) CreateAmazingParrot(userID int32, retriever any, scheduleService any) (agent.ParrotAgent, error) {
-	config, ok := f.GetConfig("amazing")
-	if !ok {
-		// Fallback to default config
-		config = DefaultAmazingParrotConfig()
-	}
-
-	parrot, err := f.CreateParrotFromConfig(config, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Type assert to UniversalParrot to set dependencies
-	if up, ok := parrot.(*UniversalParrot); ok {
-		if retriever != nil {
-			up.SetRetriever(retriever)
-		}
-		if scheduleService != nil {
-			up.SetScheduleService(scheduleService)
-		}
-	}
-
-	return parrot, nil
-}

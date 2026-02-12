@@ -129,11 +129,11 @@
 
 **职责**：基于规则和缓存的快速意图识别
 
-| 组件 | 功能 | 延迟 |
-|------|------|------|
-| Cache Layer | 缓存路由决策 | ~0ms |
-| Rule Matcher | 规则匹配 + 历史分析 | ~0ms |
-| Confidence Evaluator | 置信度评估 (阈值: 0.8) | - |
+| 组件                 | 功能                   | 延迟 |
+| -------------------- | ---------------------- | ---- |
+| Cache Layer          | 缓存路由决策           | ~0ms |
+| Rule Matcher         | 规则匹配 + 历史分析    | ~0ms |
+| Confidence Evaluator | 置信度评估 (阈值: 0.8) | -    |
 
 **触发 Orchestrator 的条件**：
 - 置信度 < 0.8
@@ -192,10 +192,10 @@ Events:
 
 ### 3. Expert Agents (专家代理)
 
-| 专家 | 符号 | 工具 | 策略 |
-|------|------|------|------|
-| MemoParrot | 📝 | memo_search | ReAct |
-| ScheduleParrot | 📅 | schedule_add/query/update, find_free_time | ReAct |
+| 专家           | 符号 | 工具                                      | 策略  |
+| -------------- | ---- | ----------------------------------------- | ----- |
+| MemoParrot     | 📝    | memo_search                               | ReAct |
+| ScheduleParrot | 📅    | schedule_add/query/update, find_free_time | ReAct |
 
 ---
 
@@ -293,10 +293,10 @@ config/
 
 ### 1. 两级路由策略
 
-| 层级 | 组件 | 延迟 | 触发条件 |
-|------|------|------|----------|
-| L1 | FastRouter | ~0ms | 简单意图、高置信度 |
-| L2 | Orchestrator | ~400ms | 复杂意图、多意图 |
+| 层级 | 组件         | 延迟   | 触发条件           |
+| ---- | ------------ | ------ | ------------------ |
+| L1   | FastRouter   | ~0ms   | 简单意图、高置信度 |
+| L2   | Orchestrator | ~400ms | 复杂意图、多意图   |
 
 ### 2. 任务并行化
 
@@ -311,20 +311,12 @@ Strategy: sequential loop with context check
 
 ### 3. 降级机制
 
-| 场景 | 降级策略 |
-|------|----------|
-| LLM 分解失败 | Fallback Plan (单专家) |
-| LLM 聚合失败 | 简单拼接 |
-| 专家不可用 | 返回空计划 |
-| Orchestrator 不可用 | FastRouter 直接路由 |
-
----
-
-## 参考资料
-
-- [Orchestrating AI Agents in Production](https://hatchworks.com/blog/agentic-orchestration/) - Hatchworks
-- [The Orchestrator's Era: 2026 State of AI Agents](https://medium.com/ai-agents-2026) - Medium
-- [Guardrails and Best Practices for Agentic Orchestration](https://camunda.com/blog/ai-agents/) - Camunda
+| 场景                | 降级策略               |
+| ------------------- | ---------------------- |
+| LLM 分解失败        | Fallback Plan (单专家) |
+| LLM 聚合失败        | 简单拼接               |
+| 专家不可用          | 返回空计划             |
+| Orchestrator 不可用 | FastRouter 直接路由    |
 
 ---
 

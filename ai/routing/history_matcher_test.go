@@ -262,7 +262,7 @@ func TestHistoryMatcher_AgentTypeToIntent(t *testing.T) {
 		{"schedule", "创建日程", IntentScheduleCreate},
 		{"memo", "搜索笔记", IntentMemoSearch},
 		{"memo", "记录内容", IntentMemoCreate},
-		{"amazing", "帮我分析", IntentAmazing},
+		{"amazing", "帮我分析", IntentUnknown}, // Amazing removed - Orchestrator handles
 		{"unknown", "随便说", IntentUnknown},
 	}
 
@@ -290,7 +290,6 @@ func TestHistoryMatcher_IntentToAgentType(t *testing.T) {
 		{IntentScheduleCreate, "schedule"},
 		{IntentScheduleUpdate, "schedule"},
 		{IntentBatchSchedule, "schedule"},
-		{IntentAmazing, "amazing"},
 		{IntentUnknown, "unknown"},
 	}
 

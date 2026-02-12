@@ -21,15 +21,11 @@ const (
 	IntentMemoSearch TaskIntent = "memo_search" // 搜索笔记
 	IntentMemoCreate TaskIntent = "memo_create" // 创建笔记
 
-	// Amazing agent intent.
-	IntentAmazing TaskIntent = "amazing" // 综合分析
-
 	// Legacy aliases for backward compatibility.
 	IntentScheduleQuery  TaskIntent = "schedule_query"
 	IntentScheduleCreate TaskIntent = "schedule_create"
 	IntentScheduleUpdate TaskIntent = "schedule_update"
 	IntentBatchSchedule  TaskIntent = "schedule_batch"
-	IntentMultiQuery     TaskIntent = "amazing" // Alias to amazing
 )
 
 // - Batch tasks (IntentBatchCreate) → Plan-Execute mode.
@@ -255,12 +251,7 @@ func (ic *IntentClassifier) isMemoSearchIntent(input, lowerInput string) bool {
 
 // ShouldUsePlanExecute returns true if the intent should use Plan-Execute mode.
 func (ic *IntentClassifier) ShouldUsePlanExecute(intent TaskIntent) bool {
-	switch intent {
-	case IntentBatchCreate, IntentAmazing:
-		return true
-	default:
-		return false
-	}
+	return intent == IntentBatchCreate
 }
 
 // ClassifyAndRoute is a convenience method that classifies and returns the execution mode.

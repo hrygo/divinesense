@@ -11,7 +11,7 @@ func TestRouterServiceContract(t *testing.T) {
 	svc := NewMockRouterService()
 
 	t.Run("ClassifyIntent_MemoSearch", func(t *testing.T) {
-		intent, confidence, err := svc.ClassifyIntent(ctx, "帮我查找上周的笔记")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "帮我查找上周的笔记")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -24,7 +24,7 @@ func TestRouterServiceContract(t *testing.T) {
 	})
 
 	t.Run("ClassifyIntent_MemoCreate", func(t *testing.T) {
-		intent, confidence, err := svc.ClassifyIntent(ctx, "记录一下今天的会议内容")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "记录一下今天的会议内容")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -37,7 +37,7 @@ func TestRouterServiceContract(t *testing.T) {
 	})
 
 	t.Run("ClassifyIntent_ScheduleCreate", func(t *testing.T) {
-		intent, confidence, err := svc.ClassifyIntent(ctx, "提醒我明天下午3点开会")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "提醒我明天下午3点开会")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -50,7 +50,7 @@ func TestRouterServiceContract(t *testing.T) {
 	})
 
 	t.Run("ClassifyIntent_ScheduleUpdate", func(t *testing.T) {
-		intent, confidence, err := svc.ClassifyIntent(ctx, "取消明天的日程")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "取消明天的日程")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -63,7 +63,7 @@ func TestRouterServiceContract(t *testing.T) {
 	})
 
 	t.Run("ClassifyIntent_BatchSchedule", func(t *testing.T) {
-		intent, _, err := svc.ClassifyIntent(ctx, "批量设置下周的会议提醒")
+		intent, _, _, err := svc.ClassifyIntent(ctx, "批量设置下周的会议提醒")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -72,18 +72,8 @@ func TestRouterServiceContract(t *testing.T) {
 		}
 	})
 
-	t.Run("ClassifyIntent_Amazing", func(t *testing.T) {
-		intent, _, err := svc.ClassifyIntent(ctx, "今天天气怎么样？")
-		if err != nil {
-			t.Fatalf("ClassifyIntent failed: %v", err)
-		}
-		if intent != IntentAmazing {
-			t.Errorf("expected IntentAmazing, got %s", intent)
-		}
-	})
-
 	t.Run("ClassifyIntent_Unknown", func(t *testing.T) {
-		intent, confidence, err := svc.ClassifyIntent(ctx, "随便说点什么")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "随便说点什么")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
@@ -94,7 +84,7 @@ func TestRouterServiceContract(t *testing.T) {
 
 	t.Run("ClassifyIntent_Override", func(t *testing.T) {
 		svc.IntentOverrides["test input"] = IntentScheduleQuery
-		intent, confidence, err := svc.ClassifyIntent(ctx, "test input")
+		intent, confidence, _, err := svc.ClassifyIntent(ctx, "test input")
 		if err != nil {
 			t.Fatalf("ClassifyIntent failed: %v", err)
 		}
