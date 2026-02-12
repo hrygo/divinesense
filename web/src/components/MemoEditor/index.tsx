@@ -112,12 +112,6 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
     setLinkMemoDialogOpen(true);
   };
 
-  // Handle upload attachment (TODO: implement file upload)
-  const handleUploadAttachment = () => {
-    // TODO: Implement file upload
-    console.log("Upload attachment");
-  };
-
   useKeyboard(editorRef, { onSave: handleSave });
 
   async function handleSave() {
@@ -210,7 +204,6 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
             onVisibilityChange={handleVisibilityChange}
             onToggleFocusMode={handleToggleFocusMode}
             onLinkMemo={handleLinkMemo}
-            onUploadAttachment={handleUploadAttachment}
           />
         </div>
       </div>

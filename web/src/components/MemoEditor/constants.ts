@@ -3,7 +3,8 @@ export const LOCALSTORAGE_DEBOUNCE_DELAY = 500;
 export const FOCUS_MODE_STYLES = {
   backdrop: "fixed inset-0 bg-black/20 backdrop-blur-sm z-[60]",
   container: {
-    base: "fixed z-[70] inset-0 shadow-lg border-border h-screen overflow-y-auto",
+    // Fixed at bottom, expand upward to full screen
+    base: "fixed z-[70] bottom-0 left-0 right-0 shadow-lg border-border h-screen overflow-y-auto animate-in slide-in-from-bottom duration-300",
     spacing: "p-4 sm:p-6 md:p-8",
   },
   transition: "transition-all duration-300 ease-in-out",
