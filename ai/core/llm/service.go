@@ -539,8 +539,6 @@ func (s *service) provider() string {
 	}
 	modelLower := strings.ToLower(s.model)
 	switch {
-	case strings.Contains(modelLower, "claude"):
-		return "anthropic"
 	case strings.Contains(modelLower, "deepseek"):
 		return "deepseek"
 	case strings.Contains(modelLower, "gpt"):
