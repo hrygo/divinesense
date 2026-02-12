@@ -90,9 +90,12 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
   });
 
   // Create plugins with i18n
-  const plugins = useMemo(() => {
-    return [createSlashCommandPlugin(t), createListAutocompletePlugin(t)];
-  }, [t]);
+  // Use ref to store plugins to avoid recreation on every render
+  const pluginsRef = useRef<[ReturnType<typeof createSlashCommandPlugin>, ReturnType<typeof createListAutocompletePlugin>] | null>(null);
+  if (!pluginsRef.current) {
+    pluginsRef.current = [createSlashCommandPlugin(t), createListAutocompletePlugin(t)];
+  }
+  const plugins = pluginsRef.current;
 
   // Dispatch function for plugins
   const pluginDispatch = useCallback((action: { type: string; payload?: unknown }) => {
@@ -262,7 +265,8 @@ export const EditorWithPlugins = forwardRef<EnhancedEditorRefActions, EditorWith
 
       setSuggestions((prev) => ({ ...prev, isOpen: false, trigger: null, cursorPosition: null }));
     }
-  }, [state.content, sortedTags, plugins, getCurrentWord, pluginDispatch, tagCount, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.content, sortedTags, getCurrentWord, tagCount]);
 
   // Handle content change
   const handleContentChange = useCallback(
