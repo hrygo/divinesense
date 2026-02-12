@@ -32,7 +32,10 @@ cat >> .env << 'EOF'
 DIVINESENSE_AI_ENABLED=true
 DIVINESENSE_AI_LLM_PROVIDER=deepseek
 DIVINESENSE_AI_LLM_MODEL=deepseek-chat
-DIVINESENSE_AI_DEEPSEEK_API_KEY=your_key_here
+DIVINESENSE_AI_LLM_API_KEY=your_key_here
+# Embedding (Required for RAG/Memory)
+DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
+DIVINESENSE_AI_EMBEDDING_API_KEY=your_embedding_key
 EOF
 
 # 3. 运行测试程序
@@ -150,7 +153,7 @@ make stop && make start
 cat .env | grep AI
 
 # 确保 API key 正确
-echo $DIVINESENSE_AI_DEEPSEEK_API_KEY
+echo $DIVINESENSE_AI_LLM_API_KEY
 ```
 
 ### ❌ "Database connection failed"

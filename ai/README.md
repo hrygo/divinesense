@@ -89,13 +89,13 @@ type RerankerService interface {
 
 DivineSense uses a "parrot" metaphor for its AI agents:
 
-| Parrot | ID | Description | Config |
-|:-------|:---|:------------|:-------|
-| MemoParrot | MEMO | Note search and retrieval | `config/parrots/memo.yaml` |
-| ScheduleParrot | SCHEDULE | Schedule management | `config/parrots/schedule.yaml` |
-| AmazingParrot | AMAZING | Comprehensive assistant | `config/parrots/amazing.yaml` |
-| GeekParrot | GEEK | Claude Code CLI integration | Code implementation |
-| EvolutionParrot | EVOLUTION | Self-evolution | Code implementation |
+| Parrot          | ID        | Description                 | Config                         |
+| :-------------- | :-------- | :-------------------------- | :----------------------------- |
+| MemoParrot      | MEMO      | Note search and retrieval   | `config/parrots/memo.yaml`     |
+| ScheduleParrot  | SCHEDULE  | Schedule management         | `config/parrots/schedule.yaml` |
+| AmazingParrot   | AMAZING   | Comprehensive assistant     | `config/parrots/amazing.yaml`  |
+| GeekParrot      | GEEK      | Claude Code CLI integration | Code implementation            |
+| EvolutionParrot | EVOLUTION | Self-evolution              | Code implementation            |
 
 ### Using Agents
 
@@ -145,23 +145,33 @@ AI configuration is loaded from environment variables:
 # Enable AI
 DIVINESENSE_AI_ENABLED=true
 
-# Embedding (SiliconFlow)
+# Unified LLM Configuration (Main Chat)
+# Supports: zai, deepseek, openai, siliconflow, dashscope, openrouter, ollama
+DIVINESENSE_AI_LLM_PROVIDER=zai
+DIVINESENSE_AI_LLM_API_KEY=your_unified_key
+DIVINESENSE_AI_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+DIVINESENSE_AI_LLM_MODEL=glm-4.7
+
+# Embedding Service
 DIVINESENSE_AI_EMBEDDING_PROVIDER=siliconflow
+DIVINESENSE_AI_EMBEDDING_API_KEY=your_embedding_key
+DIVINESENSE_AI_EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
 DIVINESENSE_AI_EMBEDDING_MODEL=BAAI/bge-m3
-DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
 
-# LLM (DeepSeek)
-DIVINESENSE_AI_LLM_PROVIDER=deepseek
-DIVINESENSE_AI_LLM_MODEL=deepseek-chat
-DIVINESENSE_AI_DEEPSEEK_API_KEY=your_key
-
-# Intent Classification (SiliconFlow + Qwen)
-DIVINESENSE_AI_OPENAI_BASE_URL=https://api.siliconflow.cn/v1
-DIVINESENSE_AI_SILICONFLOW_API_KEY=your_key
-
-# Reranker
+# Reranker Service
+DIVINESENSE_AI_RERANK_PROVIDER=siliconflow
+DIVINESENSE_AI_RERANK_API_KEY=your_rerank_key
+DIVINESENSE_AI_RERANK_BASE_URL=https://api.siliconflow.cn/v1
 DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
+
+# Intent Classification
+DIVINESENSE_AI_INTENT_PROVIDER=siliconflow
+DIVINESENSE_AI_INTENT_API_KEY=your_intent_key
+DIVINESENSE_AI_INTENT_BASE_URL=https://api.siliconflow.cn/v1
+DIVINESENSE_AI_INTENT_MODEL=Qwen/Qwen2.5-7B-Instruct
 ```
+
+
 
 ## Testing
 
@@ -184,16 +194,16 @@ go test ./ai/... -cover
 
 Agents emit structured events during execution:
 
-| Event | Description | Data Type |
-|:------|:------------|:----------|
-| `thinking` | Agent is thinking | string |
-| `tool_use` | Tool invocation | ToolCallData |
-| `tool_result` | Tool result | ToolResultData |
-| `answer` | Final answer | string |
-| `error` | Error occurred | error |
-| `phase_change` | Processing phase changed | PhaseChangeEvent |
-| `progress` | Progress update | ProgressEvent |
-| `session_stats` | Session statistics | SessionStatsData |
+| Event           | Description              | Data Type        |
+| :-------------- | :----------------------- | :--------------- |
+| `thinking`      | Agent is thinking        | string           |
+| `tool_use`      | Tool invocation          | ToolCallData     |
+| `tool_result`   | Tool result              | ToolResultData   |
+| `answer`        | Final answer             | string           |
+| `error`         | Error occurred           | error            |
+| `phase_change`  | Processing phase changed | PhaseChangeEvent |
+| `progress`      | Progress update          | ProgressEvent    |
+| `session_stats` | Session statistics       | SessionStatsData |
 
 ## See Also
 

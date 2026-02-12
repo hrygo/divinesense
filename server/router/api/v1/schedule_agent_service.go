@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/hrygo/divinesense/ai"
-	"github.com/hrygo/divinesense/ai/agents"
+	agent "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/internal/profile"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
@@ -52,12 +52,12 @@ func NewScheduleAgentService(store *store.Store, llm ai.LLMService, profile *pro
 		ContextStore: agent.NewContextStore(),
 	}
 
-	// Initialize LLM Intent Classifier if SiliconFlow API key is available
-	if profile.AISiliconFlowAPIKey != "" {
+	// Initialize LLM Intent Classifier if Intent API key is available
+	if profile.AIIntentAPIKey != "" {
 		svc.IntentClassifier = agent.NewLLMIntentClassifier(agent.LLMIntentConfig{
-			APIKey:  profile.AISiliconFlowAPIKey,
-			BaseURL: profile.AISiliconFlowBaseURL,
-			Model:   "Qwen/Qwen2.5-7B-Instruct", // Fast, cost-effective model
+			APIKey:  profile.AIIntentAPIKey,
+			BaseURL: profile.AIIntentBaseURL,
+			Model:   profile.AIIntentModel,
 		})
 		slog.Info("LLM Intent Classifier initialized for ScheduleAgentService")
 	}

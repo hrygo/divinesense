@@ -36,8 +36,8 @@ type RerankerConfig struct {
 
 // LLMConfig represents LLM configuration.
 type LLMConfig struct {
-	Provider    string // deepseek, openai, siliconflow, ollama, zai
-	Model       string // deepseek-chat, gpt-4o, claude-opus-7-20250219
+	Provider    string // Provider identifier for logging/future extension: zai, deepseek, openai, ollama
+	Model       string // Model name: glm-4.7, deepseek-chat, gpt-4o, etc.
 	APIKey      string
 	BaseURL     string
 	MaxTokens   int     // default: 2048
@@ -74,69 +74,40 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	cfg.Embedding = EmbeddingConfig{
 		Provider:   p.AIEmbeddingProvider,
 		Model:      p.AIEmbeddingModel,
+		APIKey:     p.AIEmbeddingAPIKey,
+		BaseURL:    p.AIEmbeddingBaseURL,
 		Dimensions: 1024,
-	}
-
-	switch p.AIEmbeddingProvider {
-	case "siliconflow":
-		cfg.Embedding.APIKey = p.AISiliconFlowAPIKey
-		cfg.Embedding.BaseURL = p.AISiliconFlowBaseURL
-	case "openai":
-		cfg.Embedding.APIKey = p.AIOpenAIAPIKey
-		cfg.Embedding.BaseURL = p.AIOpenAIBaseURL
-	case "ollama":
-		cfg.Embedding.BaseURL = p.AIOllamaBaseURL
 	}
 
 	// Reranker configuration
 	cfg.Reranker = RerankerConfig{
-		Enabled:  p.AISiliconFlowAPIKey != "",
-		Provider: "siliconflow",
+		Enabled:  p.AIRerankAPIKey != "",
+		Provider: p.AIRerankProvider,
 		Model:    p.AIRerankModel,
-		APIKey:   p.AISiliconFlowAPIKey,
-		BaseURL:  p.AISiliconFlowBaseURL,
+		APIKey:   p.AIRerankAPIKey,
+		BaseURL:  p.AIRerankBaseURL,
 	}
 
-	// LLM configuration
-	// Note: Model alias resolution is handled by the user setting the full model name
-	// in DIVINESENSE_AI_LLM_MODEL environment variable.
-	// Common Anthropic models:
-	// - claude-3-5-sonnet-20241022 (default, recommended)
-	// - claude-3-5-opus-20241022 (high complexity)
-	// - claude-3-5-haiku-20241022 (fast, low cost)
+	// LLM configuration - use unified config from profile
 	cfg.LLM = LLMConfig{
-		Provider:    p.AILLMProvider,
-		Model:       p.AILLMModel,
+		Provider:    p.ALLMProvider,
+		Model:       p.ALLMModel,
+		APIKey:      p.ALLMAPIKey,
+		BaseURL:     p.ALLMBaseURL,
 		MaxTokens:   2048,
 		Temperature: 0.7,
 	}
 
-	switch p.AILLMProvider {
-	case "deepseek":
-		cfg.LLM.APIKey = p.AIDeepSeekAPIKey
-		cfg.LLM.BaseURL = p.AIDeepSeekBaseURL
-	case "openai":
-		cfg.LLM.APIKey = p.AIOpenAIAPIKey
-		cfg.LLM.BaseURL = p.AIOpenAIBaseURL
-	case "zai":
-		cfg.LLM.APIKey = p.AIZAI_APIKey
-		cfg.LLM.BaseURL = p.AIZAIBaseURL
-	case "ollama":
-		cfg.LLM.BaseURL = p.AIOllamaBaseURL
-	}
-
 	// Intent Classifier configuration
-	// Uses SiliconFlow with Qwen2.5-7B-Instruct for fast, cost-effective classification
-	// This config is used by routerIntentLLMClient in ai_service.go
+	// Default uses SiliconFlow with Qwen2.5-7B-Instruct for fast, cost-effective classification
 	cfg.IntentClassifier = IntentClassifierConfig{
-		Enabled: p.AISiliconFlowAPIKey != "",
-		Model:   "Qwen/Qwen2.5-7B-Instruct",
-		APIKey:  p.AISiliconFlowAPIKey,
-		BaseURL: p.AISiliconFlowBaseURL,
+		Enabled: p.AIIntentAPIKey != "",
+		Model:   p.AIIntentModel,
+		APIKey:  p.AIIntentAPIKey,
+		BaseURL: p.AIIntentBaseURL,
 	}
 
 	// UniversalParrot configuration
-	// Enable configuration-driven parrot system by default when AI is enabled
 	cfg.UniversalParrot = UniversalParrotConfig{
 		Enabled:      true,
 		ConfigDir:    "./config/parrots",

@@ -116,6 +116,7 @@ func NewService(cfg *Config) (Service, error) {
 	httpClient := newHTTPClient()
 
 	switch cfg.Provider {
+	// --- Domestic Providers (China) ---
 	case "deepseek":
 		baseURL := cfg.BaseURL
 		if baseURL == "" {
@@ -123,13 +124,6 @@ func NewService(cfg *Config) (Service, error) {
 		}
 		clientConfig = openai.DefaultConfig(cfg.APIKey)
 		clientConfig.BaseURL = baseURL
-		clientConfig.HTTPClient = httpClient
-
-	case "openai":
-		clientConfig = openai.DefaultConfig(cfg.APIKey)
-		if cfg.BaseURL != "" {
-			clientConfig.BaseURL = cfg.BaseURL
-		}
 		clientConfig.HTTPClient = httpClient
 
 	case "siliconflow":
@@ -151,6 +145,33 @@ func NewService(cfg *Config) (Service, error) {
 		clientConfig.BaseURL = baseURL
 		clientConfig.HTTPClient = httpClient
 
+	case "dashscope":
+		baseURL := cfg.BaseURL
+		if baseURL == "" {
+			baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+		}
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
+
+	// --- International Providers ---
+	case "openai":
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		if cfg.BaseURL != "" {
+			clientConfig.BaseURL = cfg.BaseURL
+		}
+		clientConfig.HTTPClient = httpClient
+
+	case "openrouter":
+		baseURL := cfg.BaseURL
+		if baseURL == "" {
+			baseURL = "https://openrouter.ai/api/v1"
+		}
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		clientConfig.BaseURL = baseURL
+		clientConfig.HTTPClient = httpClient
+
+	// --- Local Providers ---
 	case "ollama":
 		baseURL := cfg.BaseURL
 		if baseURL == "" {
@@ -161,7 +182,14 @@ func NewService(cfg *Config) (Service, error) {
 		clientConfig.HTTPClient = httpClient
 
 	default:
-		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
+		// Generic fallback for any other OpenAI-compatible provider
+		slog.Info("Using generic OpenAI-compatible provider", "provider", cfg.Provider)
+		baseURL := cfg.BaseURL
+		clientConfig = openai.DefaultConfig(cfg.APIKey)
+		if baseURL != "" {
+			clientConfig.BaseURL = baseURL
+		}
+		clientConfig.HTTPClient = httpClient
 	}
 
 	client := openai.NewClientWithConfig(clientConfig)

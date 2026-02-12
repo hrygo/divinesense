@@ -138,29 +138,46 @@ env | grep MEMOS_ > memos_env_backup.txt
 
 ## 环境变量映射表
 
-| 旧变量 (MEMOS_*) | 新变量 (DIVINESENSE_*) | 状态 |
-|:------------------|:----------------------|:-----|
-| `MEMOS_DRIVER` | `DIVINESENSE_DRIVER` | **必须更新** |
-| `MEMOS_DSN` | `DIVINESENSE_DSN` | **必须更新** |
-| `MEMOS_MODE` | `DIVINESENSE_MODE` | **必须更新** |
-| `MEMOS_PORT` | - | 移除 (使用固定端口) |
-| `MEMOS_DATA` | - | 移除 (使用固定路径) |
-| `MEMOS_AI_ENABLED` | `DIVINESENSE_AI_ENABLED` | **必须更新** |
-| `MEMOS_AI_*_PROVIDER` | `DIVINESENSE_AI_*_PROVIDER` | **必须更新** |
-| `MEMOS_AI_*_API_KEY` | `DIVINESENSE_AI_*_API_KEY` | **必须更新** |
-| `MEMOS_OCR_ENABLED` | `DIVINESENSE_OCR_ENABLED` | **必须更新** |
+| 旧变量 (MEMOS_*)      | 新变量 (DIVINESENSE_*)      | 状态                |
+| :-------------------- | :-------------------------- | :------------------ |
+| `MEMOS_DRIVER`        | `DIVINESENSE_DRIVER`        | **必须更新**        |
+| `MEMOS_DSN`           | `DIVINESENSE_DSN`           | **必须更新**        |
+| `MEMOS_MODE`          | `DIVINESENSE_MODE`          | **必须更新**        |
+| `MEMOS_PORT`          | -                           | 移除 (使用固定端口) |
+| `MEMOS_DATA`          | -                           | 移除 (使用固定路径) |
+| `MEMOS_AI_ENABLED`    | `DIVINESENSE_AI_ENABLED`    | **必须更新**        |
+| `MEMOS_AI_*_PROVIDER` | `DIVINESENSE_AI_*_PROVIDER` | **必须更新**        |
+| `MEMOS_AI_*_API_KEY`  | `DIVINESENSE_AI_*_API_KEY`  | **必须更新**        |
+| `MEMOS_OCR_ENABLED`   | `DIVINESENSE_OCR_ENABLED`   | **必须更新**        |
 
 ⚠️ **重要**: DivineSense 不再支持 `MEMOS_*` 前缀的环境变量，必须在迁移时全部更新。
+
+### AI 环境变量变更 (v0.98.0 重构)
+
+AI 模块已重构为 **Unified LLM Configuration**，不再支持单一 Provider 的专用变量（如 `..._OPENAI_API_KEY`）。
+
+| 旧变量 (v0.97及以下)         | 新变量 (v0.98+)                    | 说明                           |
+| :--------------------------- | :--------------------------------- | :----------------------------- |
+| `..._AI_OPENAI_API_KEY`      | `DIVINESENSE_AI_LLM_API_KEY`       | 统一 LLM 密钥                  |
+| `..._AI_DEEPSEEK_API_KEY`    | `DIVINESENSE_AI_LLM_API_KEY`       | 统一 LLM 密钥                  |
+| `..._AI_ZAI_API_KEY`         | `DIVINESENSE_AI_LLM_API_KEY`       | 统一 LLM 密钥                  |
+| `..._AI_SILICONFLOW_API_KEY` | `DIVINESENSE_AI_EMBEDDING_API_KEY` | 专用于 Embedding/Rerank        |
+| `..._AI_LLM_PROVIDER`        | `DIVINESENSE_AI_LLM_PROVIDER`      | 保持不变 (值: zai, deepseek等) |
+
+**迁移操作**:
+1. 将主要对话 LLM 的 API Key 填入 `DIVINESENSE_AI_LLM_API_KEY`
+2. 如果使用 SiliconFlow 进行 Embedding，将其 Key 填入 `DIVINESENSE_AI_EMBEDDING_API_KEY`
+3. 也就是将 LLM 和 Embedding/Rerank 的凭证分离配置
 
 ---
 
 ## 数据目录变更
 
-| 平台 | 旧路径 | 新路径 |
-|:-----|:-------|:-------|
-| Linux | `/var/opt/memos` | `/var/opt/divinesense` |
-| Windows | `C:\ProgramData\memos` | `C:\ProgramData\divinesense` |
-| macOS | `/Library/Application Support/memos` | `/Library/Application Support/divinesense` |
+| 平台    | 旧路径                               | 新路径                                     |
+| :------ | :----------------------------------- | :----------------------------------------- |
+| Linux   | `/var/opt/memos`                     | `/var/opt/divinesense`                     |
+| Windows | `C:\ProgramData\memos`               | `C:\ProgramData\divinesense`               |
+| macOS   | `/Library/Application Support/memos` | `/Library/Application Support/divinesense` |
 
 **迁移数据目录**:
 ```bash
@@ -175,13 +192,13 @@ robocopy "C:\ProgramData\memos" "C:\ProgramData\divinesense" /E /R:0 /W:0
 
 ## Docker 容器名称变更
 
-| 旧名称 | 新名称 |
-|:-------|:-------|
-| `memos-postgres` | `divinesense-postgres` |
-| `memos-postgres-dev` | `divinesense-postgres-dev` |
-| `memos` | `divinesense` |
-| `memos_network` | `divinesense_network` |
-| `memos_data` | `divinesense_data` |
+| 旧名称                | 新名称                      |
+| :-------------------- | :-------------------------- |
+| `memos-postgres`      | `divinesense-postgres`      |
+| `memos-postgres-dev`  | `divinesense-postgres-dev`  |
+| `memos`               | `divinesense`               |
+| `memos_network`       | `divinesense_network`       |
+| `memos_data`          | `divinesense_data`          |
 | `memos_postgres_data` | `divinesense_postgres_data` |
 
 ---
