@@ -48,9 +48,11 @@ CREATE INDEX memo_embedding_idx
 ON memo USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 
--- Create GIN index for BM25 full-text search
-CREATE INDEX idx_memo_content_gin
+-- Create GIN index for BM25 full-text search (V0.98.0)
+CREATE INDEX IF NOT EXISTS idx_memo_content_gin
 ON memo USING gin(to_tsvector('simple', COALESCE(content, '')));
+
+COMMENT ON INDEX idx_memo_content_gin IS 'GIN index for BM25 full-text search on memo.content';
 
 -- memo_relation
 CREATE TABLE memo_relation (
