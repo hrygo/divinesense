@@ -272,6 +272,7 @@ const ChatMessages = memo(function ChatMessages({
   const lastScrollTimeRef = useRef(0);
   const isUserScrollingRef = useRef(false);
 
+  // Scroll to bottom only if user is already near bottom (for streaming updates)
   const scrollToBottomLocked = useCallback(() => {
     if (rafIdRef.current) return;
 
@@ -285,6 +286,24 @@ const ChatMessages = memo(function ChatMessages({
         if (distanceToBottom < SCROLL_THRESHOLD) {
           scrollRef.current.scrollTop = scrollHeight;
         }
+      }
+    });
+  }, []);
+
+  // Force scroll to bottom (for new messages - ignores user scroll state)
+  const scrollToBottomForced = useCallback(() => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        // Reset user scroll state since we forced scroll
+        isUserScrollingRef.current = false;
       }
     });
   }, []);
@@ -364,10 +383,15 @@ const ChatMessages = memo(function ChatMessages({
     prevIsTypingRef.current = isTyping;
     prevIsStreamingRef.current = isStreaming;
 
-    // Unified scroll trigger logic - single RAF for all cases
-    // Scroll when: new message, streaming content increase, or block content increase (SSE)
+    // Bug #163 fix: For new messages, FORCE scroll to bottom (ignore user scroll state)
+    // This ensures the latest block is always visible when created
+    if (hasNewMessage) {
+      scrollToBottomForced();
+      return; // Skip other scroll logic for new messages
+    }
+
+    // For streaming updates, use locked scroll (respects user scroll state)
     const shouldScroll =
-      (hasNewMessage && !isUserScrollingRef.current) ||
       (isStreaming && contentIncrease > 15 && !isUserScrollingRef.current) ||
       (lastBlockIsStreaming && blockContentIncrease > 15 && !isUserScrollingRef.current) ||
       (isTyping && !isUserScrollingRef.current);
@@ -388,7 +412,7 @@ const ChatMessages = memo(function ChatMessages({
         isUserScrollingRef.current = false;
       }
     }
-  }, [blocks?.length, blocks, streamingContent, isStreaming, isTyping, scrollToBottomLocked]);
+  }, [blocks?.length, blocks, streamingContent, isStreaming, isTyping, scrollToBottomLocked, scrollToBottomForced]);
 
   useEffect(() => {
     return () => {
