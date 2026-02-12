@@ -11,8 +11,9 @@ import (
 
 // Aggregator combines multiple expert results into a unified response.
 type Aggregator struct {
-	llm    llm.Service
-	config *OrchestratorConfig
+	llm          llm.Service
+	config       *OrchestratorConfig
+	promptConfig *PromptConfig
 }
 
 // NewAggregator creates a new result aggregator.
@@ -21,8 +22,9 @@ func NewAggregator(llmService llm.Service, config *OrchestratorConfig) *Aggregat
 		config = DefaultOrchestratorConfig()
 	}
 	return &Aggregator{
-		llm:    llmService,
-		config: config,
+		llm:          llmService,
+		config:       config,
+		promptConfig: GetPromptConfig(),
 	}
 }
 
@@ -50,8 +52,8 @@ func (a *Aggregator) Aggregate(ctx context.Context, result *ExecutionResult, cal
 		return successfulResults[0], nil
 	}
 
-	// Build aggregation prompt
-	prompt := a.buildAggregationPrompt(result.Plan.Analysis, successfulResults)
+	// Build aggregation prompt (default to Chinese, can be extended for language detection)
+	prompt := a.promptConfig.BuildAggregatorPrompt(result.Plan.Analysis, successfulResults, "zh")
 
 	// Call LLM for aggregation
 	messages := []llm.Message{
@@ -87,27 +89,4 @@ func (a *Aggregator) Aggregate(ctx context.Context, result *ExecutionResult, cal
 	}
 
 	return response, nil
-}
-
-// buildAggregationPrompt creates the prompt for result aggregation.
-func (a *Aggregator) buildAggregationPrompt(analysis string, results []string) string {
-	return fmt.Sprintf(`You are a helpful assistant that combines information from multiple sources into a coherent response.
-
-## Original User Request
-%s
-
-## Results from Expert Agents
-%s
-
-## Your Task
-Combine the above results into a single, coherent response that:
-1. Addresses the user's original request completely
-2. Integrates information naturally without repetition
-3. Highlights the most relevant information
-4. Maintains a friendly and helpful tone
-5. Uses appropriate formatting (bullet points, sections, etc.) for clarity
-
-## Response (in Chinese, matching the user's language)`,
-		analysis,
-		strings.Join(results, "\n\n"))
 }

@@ -12,8 +12,9 @@ import (
 
 // Decomposer uses LLM to analyze user input and decompose it into tasks.
 type Decomposer struct {
-	llm    llm.Service
-	config *OrchestratorConfig
+	llm          llm.Service
+	config       *OrchestratorConfig
+	promptConfig *PromptConfig
 }
 
 // NewDecomposer creates a new task decomposer.
@@ -22,8 +23,9 @@ func NewDecomposer(llmService llm.Service, config *OrchestratorConfig) *Decompos
 		config = DefaultOrchestratorConfig()
 	}
 	return &Decomposer{
-		llm:    llmService,
-		config: config,
+		llm:          llmService,
+		config:       config,
+		promptConfig: GetPromptConfig(),
 	}
 }
 
@@ -78,39 +80,7 @@ func (d *Decomposer) buildExpertDescriptions(experts []string, registry ExpertRe
 
 // buildDecompositionPrompt creates the prompt for task decomposition.
 func (d *Decomposer) buildDecompositionPrompt(userInput, expertDescriptions string) string {
-	return fmt.Sprintf(`You are an intelligent task orchestrator. Analyze the user's request and decompose it into tasks for expert agents.
-
-## Available Expert Agents
-%s
-
-## Your Task
-1. Analyze the user's request to understand what they need
-2. Determine which expert(s) should handle the request
-3. Create specific tasks for each expert
-4. Decide if tasks can run in parallel (independent) or must run sequentially
-
-## Output Format
-Respond with a JSON object in this exact format:
-{
-  "analysis": "Brief analysis of what the user wants",
-  "tasks": [
-    {"agent": "expert_name", "input": "specific input for this task", "purpose": "why this task is needed"}
-  ],
-  "parallel": true/false,
-  "aggregate": true/false
-}
-
-## Rules
-- Use only available expert agents
-- If only one expert is needed, create one task with parallel=false
-- If multiple experts are needed and tasks are independent, set parallel=true
-- Set aggregate=true when multiple results need to be combined
-- Keep task inputs specific and actionable
-
-## User Request
-%s
-
-## Response (JSON only, no markdown)`, expertDescriptions, userInput)
+	return d.promptConfig.BuildDecomposerPrompt(userInput, expertDescriptions)
 }
 
 // parseTaskPlan parses the LLM response into a TaskPlan.
@@ -153,17 +123,29 @@ func (d *Decomposer) parseTaskPlan(response string, validAgents []string) (*Task
 // fallbackPlan creates a simple plan when LLM parsing fails.
 func (d *Decomposer) fallbackPlan(userInput string, availableExperts []string) *TaskPlan {
 	// Default to first available expert (usually "memo" or "schedule")
-	expert := "amazing"
+	expert := ""
 	if len(availableExperts) > 0 {
-		// Prefer memo or schedule over amazing if available
+		// Prefer memo or schedule as they are core experts
 		for _, e := range availableExperts {
 			if e == "memo" || e == "schedule" {
 				expert = e
 				break
 			}
 		}
-		if expert == "amazing" {
+		// Fall back to first available if no preferred expert found
+		if expert == "" {
 			expert = availableExperts[0]
+		}
+	}
+
+	// If no experts available, return error plan
+	if expert == "" {
+		slog.Warn("decomposer: no experts available for fallback")
+		return &TaskPlan{
+			Analysis: "No expert agents available",
+			Tasks:    []*Task{},
+			Parallel: false,
+			Aggregate: false,
 		}
 	}
 
