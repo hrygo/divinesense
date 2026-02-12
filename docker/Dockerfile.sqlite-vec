@@ -5,9 +5,13 @@ FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS backend
 WORKDIR /backend-build
 
 # Install build dependencies (including gcc for CGO)
+# Cross-compilers for both AMD64 and ARM64 to support all platform combinations
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
+    gcc-aarch64-linux-gnu \
+    gcc-x86-64-linux-gnu \
+    libsqlite3-dev \
     git \
     ca-certificates \
     curl \
@@ -33,12 +37,29 @@ RUN if [ "$TARGETOS" = "linux" ]; then \
     fi
 
 # Build with CGO and sqlite_vec tag
-ARG TARGETOS TARGETARCH VERSION COMMIT
+ARG TARGETOS TARGETARCH BUILDARCH VERSION COMMIT
+# Set CC based on target architecture for cross-compilation
+# Handles all combinations: amd64→amd64, amd64→arm64, arm64→amd64, arm64→arm64
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 \
+    if [ "$BUILDARCH" = "$TARGETARCH" ]; then \
+        echo "Native compilation: BUILDARCH=$BUILDARCH, TARGETARCH=$TARGETARCH"; \
+        export CC=gcc; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        echo "Cross-compiling to ARM64"; \
+        export CC=aarch64-linux-gnu-gcc; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        echo "Cross-compiling to AMD64"; \
+        export CC=x86_64-linux-gnu-gcc; \
+    else \
+        echo "Unknown TARGETARCH=$TARGETARCH, using default gcc"; \
+        export CC=gcc; \
+    fi \
+    && echo "Using CC=$CC" \
+    && CGO_ENABLED=1 \
     GOOS=$TARGETOS \
     GOARCH=$TARGETARCH \
+    CC="$CC" \
     go build \
     -trimpath \
     -ldflags="-s -w" \
