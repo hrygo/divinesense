@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
+	"github.com/hrygo/divinesense/ai/agents/universal"
 	"github.com/hrygo/divinesense/ai/core/llm"
 )
 
@@ -35,8 +37,11 @@ func (d *Decomposer) Decompose(ctx context.Context, userInput string, registry E
 	experts := registry.GetAvailableExperts()
 	expertDescriptions := d.buildExpertDescriptions(experts, registry)
 
-	// Build the decomposition prompt
-	prompt := d.buildDecompositionPrompt(userInput, expertDescriptions)
+	// Build time context for relative date resolution (e.g., "下周五")
+	timeContext := universal.BuildTimeContext(time.Now().Location())
+
+	// Build the decomposition prompt with time context
+	prompt := d.buildDecompositionPrompt(userInput, expertDescriptions, timeContext)
 
 	// Call LLM for decomposition
 	messages := []llm.Message{
@@ -79,8 +84,8 @@ func (d *Decomposer) buildExpertDescriptions(experts []string, registry ExpertRe
 }
 
 // buildDecompositionPrompt creates the prompt for task decomposition.
-func (d *Decomposer) buildDecompositionPrompt(userInput, expertDescriptions string) string {
-	return d.promptConfig.BuildDecomposerPrompt(userInput, expertDescriptions)
+func (d *Decomposer) buildDecompositionPrompt(userInput, expertDescriptions string, timeContext *universal.TimeContext) string {
+	return d.promptConfig.BuildDecomposerPrompt(userInput, expertDescriptions, timeContext)
 }
 
 // parseTaskPlan parses the LLM response into a TaskPlan.

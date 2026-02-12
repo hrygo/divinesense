@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hrygo/divinesense/ai/agents/universal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -186,8 +187,19 @@ func defaultPromptConfig() *PromptConfig {
 }
 
 // BuildDecomposerPrompt builds the full decomposition prompt from config.
-func (c *PromptConfig) BuildDecomposerPrompt(userInput, expertDescriptions string) string {
+func (c *PromptConfig) BuildDecomposerPrompt(userInput, expertDescriptions string, timeContext *universal.TimeContext) string {
 	d := c.Decomposer
+
+	// Build time context section
+	timeContextSection := ""
+	if timeContext != nil {
+		timeContextSection = fmt.Sprintf(`## Current Time Context
+%s
+
+**Important**: Use the above time context to resolve relative dates (e.g., "明天" = %s, "下周三" = calculate from this week).
+`, timeContext.FormatAsJSONBlock(), timeContext.Relative.Tomorrow)
+	}
+
 	return fmt.Sprintf(`%s
 
 ## Available Expert Agents
@@ -196,8 +208,9 @@ func (c *PromptConfig) BuildDecomposerPrompt(userInput, expertDescriptions strin
 %s
 %s
 %s
+%s
 
-%s`, d.SystemContext, expertDescriptions, d.AnalysisInstructions, d.OutputFormat, d.Rules,
+%s`, d.SystemContext, expertDescriptions, timeContextSection, d.AnalysisInstructions, d.OutputFormat, d.Rules,
 		fmt.Sprintf(d.UserRequestTemplate, userInput))
 }
 

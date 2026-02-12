@@ -9,6 +9,9 @@ import (
 
 // Task represents a single task to be executed by an expert agent.
 type Task struct {
+	// ID is a unique identifier for the task (e.g., "task_1", "task_2")
+	ID string `json:"id,omitempty"`
+
 	// Agent is the name of the expert agent to handle this task (e.g., "memo", "schedule")
 	Agent string `json:"agent"`
 
@@ -17,6 +20,10 @@ type Task struct {
 
 	// Purpose describes why this task is needed (for transparency)
 	Purpose string `json:"purpose"`
+
+	// Dependencies is a list of task IDs that must complete before this task can start
+	// Example: ["task_1"] means this task depends on task_1's result
+	Dependencies []string `json:"dependencies,omitempty"`
 
 	// Result contains the execution result (populated after execution)
 	Result string `json:"result,omitempty"`
