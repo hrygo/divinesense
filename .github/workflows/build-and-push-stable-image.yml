@@ -1,12 +1,13 @@
 name: Build and Push Stable Image
 
 on:
-  push:
-    branches:
-      - "release/**"
-    tags:
-      - "v*.*.*"
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to build image for (e.g. v0.99.0)'
+        required: true
 
 jobs:
   prepare:
@@ -17,16 +18,20 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag_name }}"
           else
-            echo "version=${GITHUB_REF_NAME#release/}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF_NAME}"
           fi
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
 
   build-frontend:
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
 
       - uses: pnpm/action-setup@v4.1.0
         with:
@@ -74,6 +79,8 @@ jobs:
           - linux/arm64
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
 
       - name: Download frontend artifacts
         uses: actions/download-artifact@v4
@@ -189,6 +196,8 @@ jobs:
           - linux/arm64
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
 
       - name: Download frontend artifacts
         uses: actions/download-artifact@v4
