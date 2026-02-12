@@ -60,7 +60,11 @@ func (a *Aggregator) Aggregate(ctx context.Context, result *ExecutionResult, cal
 
 	response, stats, err := a.llm.Chat(ctx, messages)
 	if err != nil {
-		slog.Error("aggregator: LLM call failed", "error", err)
+		slog.Error("aggregator: LLM call failed, falling back to concatenation", "error", err)
+		// Notify frontend about fallback
+		if callback != nil {
+			callback("aggregation_fallback", "LLM aggregation failed, using simple concatenation")
+		}
 		// Fallback to simple concatenation
 		return strings.Join(successfulResults, "\n\n---\n\n"), nil
 	}

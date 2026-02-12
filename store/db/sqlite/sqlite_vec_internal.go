@@ -7,7 +7,7 @@ package sqlite
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/.lib
-#cgo LDFLAGS: ${SRCDIR}/.lib/libvec0.a
+#cgo LDFLAGS: ${SRCDIR}/.lib/libvec0.a -lm
 
 #include <sqlite3.h>
 

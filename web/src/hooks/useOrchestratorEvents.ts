@@ -7,13 +7,13 @@
  * @see docs/research/orchestrator-workers-research.md
  * @see Issue #169
  */
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
-  ParrotEventType,
   type OrchestratorPlanEvent,
-  type OrchestratorTaskStartEvent,
-  type OrchestratorTaskEndEvent,
   type OrchestratorTask,
+  type OrchestratorTaskEndEvent,
+  type OrchestratorTaskStartEvent,
+  ParrotEventType,
   type TaskStatus,
 } from "@/types/parrot";
 
@@ -44,6 +44,18 @@ const initialState: OrchestratorState = {
   phase: "idle",
   error: null,
 };
+
+/**
+ * Helper to handle parsing errors with UI feedback
+ */
+function handleParseError(context: string, error: unknown): Partial<OrchestratorState> {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  console.error(`${context}:`, error);
+  return {
+    phase: "error",
+    error: `${context}: ${errorMsg}`,
+  };
+}
 
 /**
  * Hook for handling Orchestrator events
@@ -81,7 +93,7 @@ export function useOrchestratorEvents() {
             error: null,
           }));
         } catch (e) {
-          console.error("Failed to parse plan event:", e);
+          setState((prev) => ({ ...prev, ...handleParseError("Failed to parse plan event", e) }));
         }
         break;
       }
@@ -100,7 +112,7 @@ export function useOrchestratorEvents() {
             return { ...prev, tasks: newTasks };
           });
         } catch (e) {
-          console.error("Failed to parse task_start event:", e);
+          setState((prev) => ({ ...prev, ...handleParseError("Failed to parse task_start event", e) }));
         }
         break;
       }
@@ -129,7 +141,7 @@ export function useOrchestratorEvents() {
             };
           });
         } catch (e) {
-          console.error("Failed to parse task_end event:", e);
+          setState((prev) => ({ ...prev, ...handleParseError("Failed to parse task_end event", e) }));
         }
         break;
       }

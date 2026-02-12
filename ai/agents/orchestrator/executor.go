@@ -95,15 +95,33 @@ func (e *Executor) executeParallel(ctx context.Context, tasks []*Task, callback 
 	sem := make(chan struct{}, e.config.MaxParallelTasks)
 
 	for i, task := range tasks {
+		// Check context before spawning more goroutines
+		select {
+		case <-ctx.Done():
+			// Mark remaining tasks as failed
+			for j := i; j < len(tasks); j++ {
+				tasks[j].Status = TaskStatusFailed
+				tasks[j].Error = ctx.Err().Error()
+			}
+			slog.Warn("executor: parallel execution cancelled", "failed_count", len(tasks)-i)
+			return
+		default:
+		}
+
 		wg.Add(1)
 		go func(idx int, t *Task) {
 			defer wg.Done()
 
-			// Acquire semaphore
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			e.executeTask(ctx, t, idx, callback)
+			// Acquire semaphore with context cancellation support
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+				e.executeTask(ctx, t, idx, callback)
+			case <-ctx.Done():
+				t.Status = TaskStatusFailed
+				t.Error = ctx.Err().Error()
+				slog.Warn("executor: task cancelled before execution", "index", idx)
+			}
 		}(i, task)
 	}
 
@@ -167,7 +185,11 @@ func (e *Executor) sendPlanEvent(plan *TaskPlan, callback EventCallback) {
 		"tasks":    plan.Tasks,
 		"parallel": plan.Parallel,
 	}
-	eventJSON, _ := json.Marshal(event)
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		slog.Error("executor: failed to marshal plan event", "error", err)
+		return
+	}
 	callback(EventTypePlan, string(eventJSON))
 }
 
@@ -179,7 +201,11 @@ func (e *Executor) sendTaskStartEvent(task *Task, index int, callback EventCallb
 		"purpose": task.Purpose,
 		"status":  string(task.Status),
 	}
-	eventJSON, _ := json.Marshal(event)
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		slog.Error("executor: failed to marshal task_start event", "error", err, "index", index)
+		return
+	}
 	callback(EventTypeTaskStart, string(eventJSON))
 }
 
@@ -193,15 +219,23 @@ func (e *Executor) sendTaskEndEvent(task *Task, index int, callback EventCallbac
 	if task.Error != "" {
 		event["error"] = task.Error
 	}
-	eventJSON, _ := json.Marshal(event)
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		slog.Error("executor: failed to marshal task_end event", "error", err, "index", index)
+		return
+	}
 	callback(EventTypeTaskEnd, string(eventJSON))
 }
 
+// Max result size to prevent OOM (10MB)
+const maxResultSize = 10 * 1024 * 1024
+
 // resultCollector collects results from event callbacks.
 type resultCollector struct {
-	mu       sync.Mutex
-	callback EventCallback
-	result   strings.Builder
+	mu        sync.Mutex
+	callback  EventCallback
+	result    strings.Builder
+	truncated bool
 }
 
 func (rc *resultCollector) onEvent(eventType string, eventData string) {
@@ -210,10 +244,16 @@ func (rc *resultCollector) onEvent(eventType string, eventData string) {
 		rc.callback(eventType, eventData)
 	}
 
-	// Collect text/content events as results
+	// Collect text/content events as results with size limit
 	if eventType == "content" || eventType == "text" || eventType == "response" {
 		rc.mu.Lock()
-		rc.result.WriteString(eventData)
+		if rc.result.Len()+len(eventData) <= maxResultSize {
+			rc.result.WriteString(eventData)
+		} else if !rc.truncated {
+			// Log once when we hit the limit
+			rc.truncated = true
+			slog.Warn("executor: result truncated due to size limit", "limit_bytes", maxResultSize)
+		}
 		rc.mu.Unlock()
 	}
 }

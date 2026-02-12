@@ -50,11 +50,14 @@ func TestNewLLMService(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Unsupported provider",
+			name: "Unsupported provider (uses generic fallback)",
 			cfg: &LLMConfig{
 				Provider: "unsupported",
+				Model:    "test-model",
+				APIKey:   "test-key",
 			},
-			expectError: true,
+			// NewLLMService now uses generic OpenAI-compatible fallback for unknown providers
+			expectError: false,
 		},
 	}
 

@@ -22,7 +22,8 @@ func TestLoadConfigs(t *testing.T) {
 		t.Error("no configs loaded")
 	}
 
-	expectedConfigs := []string{"memo", "schedule", "amazing"}
+	// Note: "amazing" config was removed in favor of Orchestrator-Workers architecture
+	expectedConfigs := []string{"memo", "schedule"}
 	for _, expected := range expectedConfigs {
 		found := false
 		for _, name := range configs {
@@ -49,12 +50,12 @@ func TestGetConfig(t *testing.T) {
 		return
 	}
 
+	// Note: "amazing" config was removed in favor of Orchestrator-Workers architecture
 	testCases := []struct {
 		name string
 	}{
 		{"memo"},
 		{"schedule"},
-		{"amazing"},
 	}
 
 	for _, tc := range testCases {
@@ -80,13 +81,13 @@ func TestGetConfig(t *testing.T) {
 
 // TestDefaultConfigs verifies that default configs can be used as fallback.
 func TestDefaultConfigs(t *testing.T) {
+	// Note: "amazing" config was removed in favor of Orchestrator-Workers architecture
 	tests := []struct {
 		name      string
 		defaultFn func() *ParrotConfig
 	}{
 		{"memo", DefaultMemoParrotConfig},
 		{"schedule", DefaultScheduleParrotConfig},
-		{"amazing", DefaultAmazingParrotConfig},
 	}
 
 	for _, tt := range tests {

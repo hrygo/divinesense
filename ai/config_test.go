@@ -18,7 +18,9 @@ func TestNewConfigFromProfile_SiliconFlow(t *testing.T) {
 		ALLMAPIKey:          "deepseek-key",
 		ALLMBaseURL:         "https://api.deepseek.com",
 		ALLMModel:           "deepseek-chat",
+		AIRerankProvider:    "siliconflow",
 		AIRerankModel:       "BAAI/bge-reranker-v2-m3",
+		AIRerankAPIKey:      "rerank-key", // Required for Reranker.Enabled to be true
 	}
 
 	cfg := NewConfigFromProfile(prof)
@@ -63,7 +65,7 @@ func TestNewConfigFromProfile_SiliconFlow(t *testing.T) {
 		t.Errorf("Expected LLM.Temperature=0.7, got %f", cfg.LLM.Temperature)
 	}
 
-	// Reranker config
+	// Reranker config - requires AIRerankAPIKey to be enabled
 	if !cfg.Reranker.Enabled {
 		t.Errorf("Expected Reranker.Enabled=true, got false")
 	}

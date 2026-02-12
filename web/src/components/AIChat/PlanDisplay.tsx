@@ -7,11 +7,12 @@
  * @see docs/research/orchestrator-workers-research.md
  * @see Issue #169
  */
-import { useTranslation } from "react-i18next";
+
 import { CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getTaskProgress, getTaskSummary } from "@/hooks/useOrchestratorEvents";
 import { cn } from "@/lib/utils";
 import type { OrchestratorTask, TaskStatus } from "@/types/parrot";
-import { getTaskProgress, getTaskSummary } from "@/hooks/useOrchestratorEvents";
 
 interface PlanDisplayProps {
   analysis: string | null;
@@ -80,9 +81,7 @@ export function PlanDisplay({ analysis, tasks, isParallel, className }: PlanDisp
       {/* Analysis section */}
       {analysis && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-            {t("ai.orchestrator.analysis", "任务分析")}
-          </h4>
+          <h4 className="text-sm font-medium text-muted-foreground mb-1">{t("ai.orchestrator.analysis", "任务分析")}</h4>
           <p className="text-sm text-foreground">{analysis}</p>
         </div>
       )}
@@ -91,19 +90,14 @@ export function PlanDisplay({ analysis, tasks, isParallel, className }: PlanDisp
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
           <span>
-            {isParallel
-              ? t("ai.orchestrator.parallelExecution", "并行执行中")
-              : t("ai.orchestrator.sequentialExecution", "顺序执行中")}
+            {isParallel ? t("ai.orchestrator.parallelExecution", "并行执行中") : t("ai.orchestrator.sequentialExecution", "顺序执行中")}
           </span>
           <span>
             {summary.completed}/{summary.total} {t("ai.orchestrator.completed", "完成")}
           </span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -111,28 +105,17 @@ export function PlanDisplay({ analysis, tasks, isParallel, className }: PlanDisp
       <div className="space-y-2">
         {tasks.map((task, index) => (
           <div
-            key={index}
-            className={cn(
-              "flex items-start gap-3 p-3 rounded-md transition-colors",
-              getTaskStatusBg(task.status)
-            )}
+            key={`${task.agent}-${index}`}
+            className={cn("flex items-start gap-3 p-3 rounded-md transition-colors", getTaskStatusBg(task.status))}
           >
             <TaskStatusIcon status={task.status} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {getAgentDisplayName(task.agent)}
-                </span>
-                {isParallel && (
-                  <span className="text-xs text-muted-foreground">
-                    #{index + 1}
-                  </span>
-                )}
+                <span className="text-xs font-medium text-muted-foreground">{getAgentDisplayName(task.agent)}</span>
+                {isParallel && <span className="text-xs text-muted-foreground">#{index + 1}</span>}
               </div>
               <p className="text-sm text-foreground truncate">{task.purpose}</p>
-              {task.error && (
-                <p className="text-xs text-red-500 mt-1">{task.error}</p>
-              )}
+              {task.error && <p className="text-xs text-red-500 mt-1">{task.error}</p>}
             </div>
           </div>
         ))}

@@ -9,11 +9,17 @@ func TestNewService_UnsupportedProvider(t *testing.T) {
 	cfg := &Config{
 		Provider: "unsupported",
 		Model:    "test-model",
+		APIKey:   "test-key",
 	}
 
-	_, err := NewService(cfg)
-	if err == nil {
-		t.Error("NewService() with unsupported provider should return error")
+	// NewService now uses generic OpenAI-compatible fallback for unknown providers
+	// This allows flexibility for any OpenAI-compatible API
+	svc, err := NewService(cfg)
+	if err != nil {
+		t.Errorf("NewService() with unknown provider should use fallback, got error: %v", err)
+	}
+	if svc == nil {
+		t.Error("NewService() returned nil service")
 	}
 }
 

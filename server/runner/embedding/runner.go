@@ -182,6 +182,11 @@ func (r *Runner) buildMemoContentWithAttachments(ctx context.Context, m *store.M
 		return combined
 	}
 
+	// Truncate content if too long (BAAI/bge-m3 supports up to 8192 tokens)
+	// 8000 chars is a safe limit for most content (roughly 2000-4000 tokens depending on language)
+	if len(content) > 8000 {
+		return content[:8000]
+	}
 	return content
 }
 

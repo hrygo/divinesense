@@ -69,6 +69,10 @@ const DEFAULT_STATE: AIChatState = {
   evolutionMode: false,
   immersiveMode: false,
   blocksByConversation: {}, // Phase 4: Initialize empty blocks map
+  pendingQueue: {
+    messages: [],
+    maxSize: 10,
+  },
 };
 
 const AIChatContext = createContext<AIChatContextValue | null>(null);
@@ -736,6 +740,70 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     });
   }, []);
 
+  // ============================================================
+  // PHASE 5: PENDING QUEUE ACTIONS (Issue #121)
+  // ============================================================
+  const addToPendingQueue = useCallback((content: string) => {
+    setState((prev) => {
+      const queue = prev.pendingQueue;
+      // Check if queue is full
+      if (queue.messages.length >= queue.maxSize) {
+        // Drop the oldest message (FIFO)
+        const newMessages = [
+          ...queue.messages.slice(1),
+          {
+            id: generateId(),
+            content,
+            timestamp: Date.now(),
+          },
+        ];
+        return {
+          ...prev,
+          pendingQueue: {
+            ...queue,
+            messages: newMessages,
+          },
+        };
+      }
+
+      // Add to queue
+      return {
+        ...prev,
+        pendingQueue: {
+          ...queue,
+          messages: [
+            ...queue.messages,
+            {
+              id: generateId(),
+              content,
+              timestamp: Date.now(),
+            },
+          ],
+        },
+      };
+    });
+  }, []);
+
+  const removeFromPendingQueue = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      pendingQueue: {
+        ...prev.pendingQueue,
+        messages: prev.pendingQueue.messages.filter((m) => m.id !== id),
+      },
+    }));
+  }, []);
+
+  const clearPendingQueue = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      pendingQueue: {
+        ...prev.pendingQueue,
+        messages: [],
+      },
+    }));
+  }, []);
+
   // Auto-save to localStorage when state changes (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -784,6 +852,9 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     saveToStorage,
     loadFromStorage,
     clearStorage,
+    addToPendingQueue,
+    removeFromPendingQueue,
+    clearPendingQueue,
   };
 
   return <AIChatContext.Provider value={contextValue}>{children}</AIChatContext.Provider>;

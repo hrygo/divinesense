@@ -2,7 +2,10 @@
 // It uses LLM to dynamically decompose tasks, dispatch to expert agents, and aggregate results.
 package orchestrator
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // Task represents a single task to be executed by an expert agent.
 type Task struct {
@@ -23,6 +26,54 @@ type Task struct {
 
 	// Status indicates the current status of the task
 	Status TaskStatus `json:"status"`
+}
+
+// NewTask creates a new task with validated fields and default status.
+func NewTask(agent, input, purpose string) (*Task, error) {
+	if agent == "" {
+		return nil, errors.New("agent cannot be empty")
+	}
+	if input == "" {
+		return nil, errors.New("input cannot be empty")
+	}
+	return &Task{
+		Agent:   agent,
+		Input:   input,
+		Purpose: purpose,
+		Status:  TaskStatusPending,
+	}, nil
+}
+
+// MarkRunning transitions the task to running state.
+// Returns an error if the transition is invalid.
+func (t *Task) MarkRunning() error {
+	if t.Status != TaskStatusPending {
+		return errors.New("can only mark pending task as running")
+	}
+	t.Status = TaskStatusRunning
+	return nil
+}
+
+// Complete transitions the task to completed state with a result.
+// Returns an error if the transition is invalid.
+func (t *Task) Complete(result string) error {
+	if t.Status != TaskStatusRunning {
+		return errors.New("can only complete running task")
+	}
+	t.Status = TaskStatusCompleted
+	t.Result = result
+	return nil
+}
+
+// Fail transitions the task to failed state with an error message.
+// Returns an error if the transition is invalid.
+func (t *Task) Fail(errMsg string) error {
+	if t.Status != TaskStatusRunning {
+		return errors.New("can only fail running task")
+	}
+	t.Status = TaskStatusFailed
+	t.Error = errMsg
+	return nil
 }
 
 // TaskStatus represents the status of a task.

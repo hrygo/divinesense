@@ -100,6 +100,7 @@ func (o *Orchestrator) Process(ctx context.Context, userInput string, callback E
 		aggregated, err := o.aggregator.Aggregate(ctx, result, callback)
 		if err != nil {
 			slog.Warn("orchestrator: aggregation failed, using concatenated results", "error", err)
+			result.IsAggregated = false
 		} else {
 			result.FinalResponse = aggregated
 			result.IsAggregated = true

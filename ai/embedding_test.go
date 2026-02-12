@@ -35,21 +35,25 @@ func TestNewEmbeddingService(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Ollama config - no longer supported",
+			name: "Ollama config - uses generic fallback",
 			cfg: &EmbeddingConfig{
 				Provider:   "ollama",
 				Model:      "nomic-embed-text",
 				Dimensions: 768,
 				BaseURL:    "http://localhost:11434",
 			},
-			expectError: true,
+			// NewEmbeddingService now uses generic OpenAI-compatible fallback for unknown providers
+			expectError: false,
 		},
 		{
-			name: "Unsupported provider",
+			name: "Unsupported provider - uses generic fallback",
 			cfg: &EmbeddingConfig{
 				Provider: "unsupported",
+				Model:    "test-model",
+				APIKey:   "test-key",
 			},
-			expectError: true,
+			// NewEmbeddingService now uses generic OpenAI-compatible fallback for unknown providers
+			expectError: false,
 		},
 	}
 

@@ -48,10 +48,14 @@ func (d *Decomposer) Decompose(ctx context.Context, userInput string, registry E
 	}
 
 	// Parse the response into a TaskPlan
-	plan, err := d.parseTaskPlan(response)
+	plan, err := d.parseTaskPlan(response, experts)
 	if err != nil {
-		slog.Warn("decomposer: failed to parse plan, using fallback", "error", err, "response", response)
-		return d.fallbackPlan(userInput, experts), nil
+		slog.Warn("decomposer: failed to parse plan, using fallback",
+			"error", err,
+			"response_length", len(response))
+		plan := d.fallbackPlan(userInput, experts)
+		plan.Analysis = "[Fallback Mode] " + plan.Analysis
+		return plan, nil
 	}
 
 	slog.Info("decomposer: task plan created",
@@ -110,7 +114,8 @@ Respond with a JSON object in this exact format:
 }
 
 // parseTaskPlan parses the LLM response into a TaskPlan.
-func (d *Decomposer) parseTaskPlan(response string) (*TaskPlan, error) {
+// validAgents is a list of valid agent names for validation.
+func (d *Decomposer) parseTaskPlan(response string, validAgents []string) (*TaskPlan, error) {
 	// Clean up the response - remove markdown code blocks if present
 	response = strings.TrimSpace(response)
 	response = strings.TrimPrefix(response, "```json")
@@ -128,8 +133,17 @@ func (d *Decomposer) parseTaskPlan(response string) (*TaskPlan, error) {
 		return nil, fmt.Errorf("no tasks in plan")
 	}
 
-	// Initialize task status
+	// Build valid agent set for validation
+	validSet := make(map[string]bool)
+	for _, a := range validAgents {
+		validSet[a] = true
+	}
+
+	// Validate agent names and initialize task status
 	for _, task := range plan.Tasks {
+		if !validSet[task.Agent] {
+			return nil, fmt.Errorf("invalid agent: %s (valid: %v)", task.Agent, validAgents)
+		}
 		task.Status = TaskStatusPending
 	}
 

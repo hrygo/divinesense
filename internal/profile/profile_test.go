@@ -124,7 +124,7 @@ func TestAIProfileProviderDefaults(t *testing.T) {
 			name:            "OpenAI defaults",
 			provider:        "openai",
 			expectedBaseURL: "https://api.openai.com/v1",
-			expectedModel:   "gpt-4o",
+			expectedModel:   "gpt-5.2", // Updated to match llmProviderDefaults
 		},
 		{
 			name:            "SiliconFlow defaults",
@@ -159,6 +159,8 @@ func TestAIProfileProviderDefaults(t *testing.T) {
 }
 
 // TestIsAIEnabled 测试 IsAIEnabled 逻辑。
+// Note: IsAIEnabled() now only checks if LLM API key is configured,
+// not the AIEnabled field. This allows dynamic enable/disable based on config.
 func TestIsAIEnabled(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -166,26 +168,18 @@ func TestIsAIEnabled(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name: "no API keys returns false",
+			name: "no API key returns false",
 			setupProfile: func(p *Profile) {
 				p.ALLMAPIKey = ""
 			},
 			expectedResult: false,
 		},
 		{
-			name: "Unified API key returns true (with AIEnabled=true)",
+			name: "API key returns true",
 			setupProfile: func(p *Profile) {
-				p.AIEnabled = true
 				p.ALLMAPIKey = "test-key"
 			},
 			expectedResult: true,
-		},
-		{
-			name: "API key without AIEnabled=false returns false",
-			setupProfile: func(p *Profile) {
-				p.ALLMAPIKey = "test-key"
-			},
-			expectedResult: false,
 		},
 	}
 
