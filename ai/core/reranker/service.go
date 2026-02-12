@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -91,7 +92,14 @@ func (s *service) Rerank(ctx context.Context, query string, documents []string, 
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", s.baseURL+"/v1/rerank", bytes.NewReader(body))
+	baseURL := strings.TrimRight(s.baseURL, "/")
+	if strings.HasSuffix(baseURL, "/v1") {
+		baseURL += "/rerank"
+	} else {
+		baseURL += "/v1/rerank"
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", baseURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

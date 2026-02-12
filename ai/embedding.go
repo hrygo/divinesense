@@ -34,22 +34,11 @@ type embeddingService struct {
 func NewEmbeddingService(cfg *EmbeddingConfig) (EmbeddingService, error) {
 	var clientConfig openai.ClientConfig
 
-	switch cfg.Provider {
-	case "siliconflow":
-		// SiliconFlow is compatible with OpenAI API
-		clientConfig = openai.DefaultConfig(cfg.APIKey)
-		if cfg.BaseURL != "" {
-			clientConfig.BaseURL = cfg.BaseURL
-		}
-
-	case "openai":
-		clientConfig = openai.DefaultConfig(cfg.APIKey)
-		if cfg.BaseURL != "" {
-			clientConfig.BaseURL = cfg.BaseURL
-		}
-
-	default:
-		return nil, fmt.Errorf("unsupported embedding provider: %s", cfg.Provider)
+	// Generic configuration for any OpenAI-compatible provider
+	// Includes siliconflow, openai, ollama, zai, dashscope, etc.
+	clientConfig = openai.DefaultConfig(cfg.APIKey)
+	if cfg.BaseURL != "" {
+		clientConfig.BaseURL = cfg.BaseURL
 	}
 
 	client := openai.NewClientWithConfig(clientConfig)

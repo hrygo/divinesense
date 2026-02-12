@@ -127,6 +127,12 @@ func TestLLMCallStats(t *testing.T) {
 	if stats.TotalTokens != 150 {
 		t.Errorf("TotalTokens = %v, want 150", stats.TotalTokens)
 	}
+	if stats.CacheReadTokens != 30 {
+		t.Errorf("CacheReadTokens = %v, want 30", stats.CacheReadTokens)
+	}
+	if stats.CacheWriteTokens != 70 {
+		t.Errorf("CacheWriteTokens = %v, want 70", stats.CacheWriteTokens)
+	}
 	if stats.ThinkingDurationMs != 500 {
 		t.Errorf("ThinkingDurationMs = %v, want 500", stats.ThinkingDurationMs)
 	}
