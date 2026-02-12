@@ -195,8 +195,7 @@ export interface EditorPlugin {
   getSuggestions?: (context: PluginContext, query: string) => SuggestionItem[] | Promise<SuggestionItem[]>;
   onKeyDown?: (context: PluginContext, event: KeyboardEvent) => boolean;
   onContentChange?: (context: PluginContext, content: string) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: Event types differ between clipboard and custom events
-  onPaste?: (context: PluginContext, event: any) => void;
+  onPaste?: (context: PluginContext, event: ClipboardEvent) => boolean;
   onCompositionStart?: (context: PluginContext) => void;
   onCompositionEnd?: (context: PluginContext) => void;
 }

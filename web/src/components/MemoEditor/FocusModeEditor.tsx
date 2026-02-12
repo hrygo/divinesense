@@ -10,12 +10,12 @@ import { handleError } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString } from "@/utils/memo";
-import { EditorContent, EditorMetadata, FocusModeExitButton, FocusModeOverlay } from "./components";
+import { EditorContent, EditorMetadata, FocusModeExitButton, FocusModeOverlay } from "./components/index";
 import { FOCUS_MODE_STYLES } from "./constants";
+import type { EnhancedEditorRefActions } from "./core/editor-types";
 import { useAutoSave, useFocusMode, useKeyboard, useMemoInit, useVirtualKeyboard } from "./hooks";
 import { cacheService, errorService, memoService, validationService } from "./services";
 import { useEditorContext } from "./state";
-import type { EditorRefActions } from "./types/editor";
 import type { MemoEditorProps } from "./types/memo-editor";
 
 /**
@@ -40,7 +40,7 @@ const FocusModeEditor: React.FC<MemoEditorProps> = ({
   const t = useTranslate();
   const queryClient = useQueryClient();
   const currentUser = useCurrentUser();
-  const editorRef = useRef<EditorRefActions>(null);
+  const editorRef = useRef<EnhancedEditorRefActions>(null);
   const { state, actions, dispatch } = useEditorContext();
   const { userGeneralSetting } = useAuth();
 

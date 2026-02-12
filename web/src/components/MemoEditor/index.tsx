@@ -1,34 +1,28 @@
-import { Sparkles } from "lucide-react";
-import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { toast } from "react-hot-toast";
+import { MEMO_EDITOR_CARD } from "@/components/ui/card/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import useMediaQuery from "@/hooks/useMediaQuery";
+import { memoKeys } from "@/hooks/useMemoQueries";
+import { userKeys } from "@/hooks/useUserQueries";
+import { handleError } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
-import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString } from "@/utils/memo";
-import { EditorMetadata, EditorToolbar, FocusModeExitButton, FocusModeOverlay, LinkMemoDialog, MobileToolsSheet } from "./components";
+import { EditorContent, EditorMetadata, EditorToolbar, FocusModeExitButton, FocusModeOverlay } from "./components";
 import { FOCUS_MODE_STYLES } from "./constants";
-import { useAutoSave, useFocusMode, useKeyboard, useMemoInit } from "./hooks";
+import type { EnhancedEditorRefActions } from "./core/editor-types";
+import { useAutoSave, useFocusMode, useKeyboard, useMemoInit, useVirtualKeyboard } from "./hooks";
+import { cacheService, errorService, memoService, validationService } from "./services";
 import { EditorProvider, useEditorContext } from "./state";
-import type { EditorRefActions } from "./types/editor";
-import type { MemoEditorProps } from "./types/memo-editor";
-
-/**
- * Enhanced MemoEditor - Full-featured editor with toolbar
- *
- * Design inspired by AIChat ChatInput:
- * - Positioned at bottom of main content area (not fixed to viewport)
- * - Uses existing components: EditorToolbar, EditorMetadata
- * - Auto-growing textarea with max height
- * - Mobile keyboard adaptation
- * - Focus mode for distraction-free writing
- */
+import type { MemoEditorProps } from "./types";
 
 const MemoEditor = (props: MemoEditorProps) => {
-  const { className, cacheKey, memoName, parentMemoName, autoFocus, placeholder, onSubmit, onConfirm, onCancel } = props;
+  const { className, cacheKey, memoName, parentMemoName, autoFocus, placeholder, onConfirm, onCancel } = props;
+
+  // Unused variable - kept for potential future use
+  void className;
 
   return (
     <EditorProvider>
@@ -39,7 +33,6 @@ const MemoEditor = (props: MemoEditorProps) => {
         parentMemoName={parentMemoName}
         autoFocus={autoFocus}
         placeholder={placeholder}
-        onSubmit={onSubmit}
         onConfirm={onConfirm}
         onCancel={onCancel}
       />
@@ -47,301 +40,132 @@ const MemoEditor = (props: MemoEditorProps) => {
   );
 };
 
-const MemoEditorImpl = forwardRef<HTMLDivElement, MemoEditorProps>(
-  ({ className, cacheKey, memoName, autoFocus, placeholder, onSubmit, onConfirm, onCancel: _onCancel }, ref) => {
-    const t = useTranslate();
-    const currentUser = useCurrentUser();
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const editorRef = useRef<EditorRefActions>(null);
-    const { state, actions, dispatch } = useEditorContext();
-    const { userGeneralSetting } = useAuth();
-    const [isSaving, setIsSaving] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-    const lastHeightRef = useRef(0);
-    const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-    const [linkSearchText, setLinkSearchText] = useState("");
-    const [filteredMemos] = useState<Memo[]>([]);
-    const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
-    const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+const MemoEditorImpl: React.FC<MemoEditorProps> = ({
+  className,
+  cacheKey,
+  memoName,
+  parentMemoName,
+  autoFocus,
+  placeholder,
+  onConfirm,
+  onCancel,
+}) => {
+  const t = useTranslate();
+  const queryClient = useQueryClient();
+  const currentUser = useCurrentUser();
+  const editorRef = useRef<EnhancedEditorRefActions>(null);
+  const { state, actions, dispatch } = useEditorContext();
+  const { userGeneralSetting } = useAuth();
 
-    // Get default visibility from user settings
-    const defaultVisibility = userGeneralSetting?.memoVisibility
-      ? convertVisibilityFromString(userGeneralSetting.memoVisibility)
-      : undefined;
+  // Get default visibility from user settings
+  const defaultVisibility = userGeneralSetting?.memoVisibility ? convertVisibilityFromString(userGeneralSetting.memoVisibility) : undefined;
 
-    useMemoInit(editorRef, memoName, cacheKey, currentUser?.name ?? "", autoFocus, defaultVisibility);
+  useMemoInit(editorRef, memoName, cacheKey, currentUser?.name ?? "", autoFocus, defaultVisibility);
 
-    // Auto-save content to localStorage
-    useAutoSave(state.content, currentUser?.name ?? "", cacheKey);
+  // Auto-save content to localStorage
+  useAutoSave(state.content, currentUser?.name ?? "", cacheKey);
 
-    // Focus mode management
-    useFocusMode(state.ui.isFocusMode);
+  // Track virtual keyboard height for mobile
+  const keyboardHeight = useVirtualKeyboard();
 
-    // Handle keyboard save (Ctrl/Cmd + Enter)
-    const handleKeyboardSave = useCallback(() => {
-      handleSave();
-    }, []);
+  // Focus mode management with body scroll lock
+  useFocusMode(state.ui.isFocusMode);
 
-    useKeyboard(editorRef, { onSave: handleKeyboardSave });
+  const handleToggleFocusMode = () => {
+    dispatch(actions.toggleFocusMode());
+  };
 
-    // Sync editorRef with textareaRef for external access
-    useEffect(() => {
-      if (textareaRef.current && editorRef.current) {
-        editorRef.current.focus = () => textareaRef.current?.focus();
-      }
-    }, [editorRef, textareaRef]);
+  useKeyboard(editorRef, { onSave: handleSave });
 
-    // Handle mobile keyboard visibility with debouncing
-    useEffect(() => {
-      if (typeof window === "undefined" || !window.visualViewport) return;
+  async function handleSave() {
+    // Validate before saving
+    const { valid, reason } = validationService.canSave(state);
+    if (!valid) {
+      toast.error(reason || "Cannot save");
+      return;
+    }
 
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let lastHeight = 0;
+    dispatch(actions.setLoading("saving", true));
 
-      const handleResize = () => {
-        const viewport = window.visualViewport;
-        if (!viewport) return;
+    try {
+      const result = await memoService.save(state, { memoName, parentMemoName });
 
-        const currentHeight = viewport.height;
-        if (Math.abs(currentHeight - lastHeight) < 10) {
-          return;
-        }
-        lastHeight = currentHeight;
-
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          const windowHeight = window.innerHeight;
-          const keyboardVisible = currentHeight < windowHeight * 0.85;
-          const newKeyboardHeight = keyboardVisible ? windowHeight - currentHeight : 0;
-          setKeyboardHeight(newKeyboardHeight);
-        }, 100);
-      };
-
-      window.visualViewport.addEventListener("resize", handleResize);
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId);
-        window.visualViewport?.removeEventListener("resize", handleResize);
-      };
-    }, []);
-
-    // Auto-resize textarea based on content
-    const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-      const target = e.target as HTMLTextAreaElement;
-
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
+      if (!result.hasChanges) {
+        toast.error(t("editor.no-changes-detected"));
+        onCancel?.();
+        return;
       }
 
-      rafIdRef.current = requestAnimationFrame(() => {
-        if (!target || !textareaRef.current) return;
+      // Clear localStorage cache on successful save
+      cacheService.clear(cacheService.key(currentUser?.name ?? "", cacheKey));
 
-        const currentScrollHeight = target.scrollHeight;
-        const maxHeight = 120;
-        const newHeight = Math.min(currentScrollHeight, maxHeight);
+      // Invalidate React Query cache to refresh memo lists across the app
+      const invalidationPromises = [
+        queryClient.invalidateQueries({ queryKey: memoKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: userKeys.stats() }),
+      ];
 
-        if (newHeight !== lastHeightRef.current) {
-          lastHeightRef.current = newHeight;
-          target.style.height = `${newHeight}px`;
-        }
+      // If this was a comment, also invalidate comments query for parent memo
+      if (parentMemoName) {
+        invalidationPromises.push(queryClient.invalidateQueries({ queryKey: memoKeys.comments(parentMemoName) }));
+      }
 
-        rafIdRef.current = null;
+      await Promise.all(invalidationPromises);
+
+      // Reset editor state to initial values
+      dispatch(actions.reset());
+
+      // Notify parent component of successful save
+      onConfirm?.(result.memoName);
+    } catch (error) {
+      handleError(error, toast.error, {
+        context: "Failed to save memo",
+        fallbackMessage: errorService.getErrorMessage(error),
       });
-    }, []);
+    } finally {
+      dispatch(actions.setLoading("saving", false));
+    }
+  }
 
-    // Reset height when value changes externally
-    useEffect(() => {
-      if (textareaRef.current && !state.content) {
-        textareaRef.current.style.height = "auto";
-      }
-    }, [state.content]);
+  return (
+    <>
+      <FocusModeOverlay isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} />
 
-    const handleToggleFocusMode = () => {
-      dispatch(actions.toggleFocusMode());
-    };
-
-    const handleSave = async () => {
-      if (isSaving) return;
-      setIsSaving(true);
-      try {
-        if (onSubmit) {
-          onSubmit(state.content);
-        }
-        if (onConfirm) {
-          onConfirm(memoName || "");
-        }
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    const handleKeyDown = useCallback(
-      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter") {
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            handleSave();
-          }
-        }
-      },
-      [handleSave],
-    );
-
-    const handleUploadAttachment = () => {
-      // TODO: Implement file upload
-      console.log("Upload attachment");
-    };
-
-    const handleLinkMemo = () => {
-      setLinkDialogOpen(true);
-    };
-
-    const handleSelectMemo = (memo: Memo) => {
-      // Add relation to state
-      // TODO: Implement proper relation creation
-      console.log("Link memo:", memo);
-      setLinkDialogOpen(false);
-    };
-
-    const md = useMediaQuery("md");
-
-    const handleAddLocation = () => {
-      // TODO: Implement location picker
-      console.log("Add location");
-    };
-
-    const handleVisibilityChange = (visibility: Visibility) => {
-      dispatch(actions.setMetadata({ visibility }));
-    };
-
-    return (
-      <>
-        <FocusModeOverlay isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} />
-
-        {/*
-          Bottom editor - inspired by ChatInput design
-          - Top border with gradient background
-          - shrink-0 to stay at bottom of flex container
-          - left-16 to avoid sidebar on mobile
-        */}
-        <div
-          ref={ref}
-          className={cn(
-            "shrink-0 border-t border-border/50",
-            "bg-gradient-to-b from-background/95 to-background",
-            FOCUS_MODE_STYLES.transition,
-            state.ui.isFocusMode && cn(FOCUS_MODE_STYLES.container.base, FOCUS_MODE_STYLES.container.spacing),
-            className,
-          )}
-          style={{
-            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined,
-          }}
-        >
-          {/* Exit button in focus mode */}
-          <FocusModeExitButton isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} title={t("editor.exit-focus-mode")} />
-
-          <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 py-3 sm:py-4">
-            {/* Metadata - attachments, relations, location */}
-            <EditorMetadata memoName={memoName} />
-
-            {/* Toolbar - with attachment and focus mode buttons */}
-            {!state.ui.isFocusMode && (
-              <EditorToolbar
-                onCancel={_onCancel}
-                onUploadAttachment={handleUploadAttachment}
-                onLinkMemo={handleLinkMemo}
-                onToggleFocusMode={handleToggleFocusMode}
-                onVisibilityChange={(visibility) => {
-                  dispatch(actions.setMetadata({ visibility }));
-                }}
-                onOpenMobileTools={() => setMobileToolsOpen(true)}
-                currentVisibility={state.metadata.visibility}
-              />
-            )}
-
-            {/* Input Box */}
-            <div
-              className={cn(
-                "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border shadow-sm transition-colors",
-                "bg-muted/30 border-border/50",
-                "focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50",
-              )}
-              style={{ contain: "layout" }}
-            >
-              <Textarea
-                ref={textareaRef}
-                value={state.content}
-                onChange={(e) => {
-                  dispatch(actions.updateContent(e.target.value));
-                  handleInput(e);
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder={placeholder ?? t("editor.any-thoughts")}
-                className={cn(
-                  "flex-1 min-h-[44px] max-h-[120px] bg-transparent border-0 outline-none resize-none",
-                  "text-sm leading-relaxed transition-colors",
-                  "text-foreground placeholder:text-muted-foreground/60",
-                  "focus:ring-0",
-                )}
-                rows={1}
-              />
-
-              {/* Save button */}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!state.content.trim() || isSaving}
-                className={cn(
-                  "shrink-0 h-11 px-4 min-w-[60px] rounded-lg transition-all",
-                  "hover:scale-105 active:scale-95",
-                  "text-sm font-medium",
-                  isSaving
-                    ? "bg-muted text-muted-foreground"
-                    : state.content.trim()
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-                )}
-                aria-label={t("editor.save")}
-              >
-                {isSaving ? <Sparkles className="w-5 h-5 opacity-50 animate-pulse mx-auto" /> : <span>{t("editor.save")}</span>}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Link Memo Dialog */}
-        <LinkMemoDialog
-          open={linkDialogOpen}
-          onOpenChange={setLinkDialogOpen}
-          searchText={linkSearchText}
-          onSearchChange={setLinkSearchText}
-          filteredMemos={filteredMemos}
-          isFetching={false}
-          onSelectMemo={handleSelectMemo}
-        />
-
-        {/* Mobile Tools Sheet - only show on mobile */}
-        {!md && (
-          <MobileToolsSheet
-            open={mobileToolsOpen}
-            onOpenChange={setMobileToolsOpen}
-            onUploadFile={handleUploadAttachment}
-            onLinkMemo={handleLinkMemo}
-            onAddLocation={handleAddLocation}
-            onVisibilityChange={handleVisibilityChange}
-            keyboardHeight={keyboardHeight}
-          />
+      {/*
+        Layout structure:
+        - Uses justify-between to push content to top and bottom
+        - In focus mode: becomes fixed with specific spacing, editor grows to fill space
+        - In normal mode: stays relative with max-height constraint
+      */}
+      <div
+        className={cn(
+          MEMO_EDITOR_CARD,
+          FOCUS_MODE_STYLES.transition,
+          state.ui.isFocusMode && cn(FOCUS_MODE_STYLES.container.base, FOCUS_MODE_STYLES.container.spacing),
+          className,
         )}
-      </>
-    );
-  },
-);
+        style={{
+          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined,
+        }}
+      >
+        {/* Exit button is absolutely positioned in top-right corner when active */}
+        <FocusModeExitButton isActive={state.ui.isFocusMode} onToggle={handleToggleFocusMode} title={t("editor.exit-focus-mode")} />
 
-MemoEditorImpl.displayName = "MemoEditorImpl";
+        {/* Editor content grows to fill available space in focus mode */}
+        <EditorContent ref={editorRef} placeholder={placeholder} autoFocus={autoFocus} />
+
+        {/* Metadata and toolbar grouped together at bottom */}
+        <div className="w-full flex flex-col gap-2">
+          <EditorMetadata memoName={memoName} />
+          <EditorToolbar onSave={handleSave} onCancel={onCancel} memoName={memoName} />
+        </div>
+      </div>
+    </>
+  );
+};
 
 export default MemoEditor;
 
-// Re-export for compatibility
 export { default as FocusModeEditor } from "./FocusModeEditor";
-export type { EditorRefActions } from "./types/editor";
-export type { MemoEditorProps } from "./types/memo-editor";
+export type { EditorMode } from "./hooks/useEditorMode";
+export { useEditorMode } from "./hooks/useEditorMode";

@@ -5,6 +5,7 @@ export { default as AttachmentList } from "./AttachmentList";
 export * from "./EditorContent";
 export * from "./EditorMetadata";
 export { EditorToolbar } from "./EditorToolbar";
+export { EditorWithPlugins, SuggestionMenu, SuggestionMenuItem } from "./EditorWithPlugins";
 export { FocusModeExitButton, FocusModeOverlay } from "./FocusModeOverlay";
 export { LinkMemoDialog } from "./LinkMemoDialog";
 export { LocationDialog } from "./LocationDialog";

@@ -1,13 +1,10 @@
 import { forwardRef } from "react";
+import type { EnhancedEditorRefActions } from "../core/editor-types";
 import { useDragAndDrop } from "../hooks";
-import { useEditorContext } from "../state/context";
-import { Editor } from "../state/Editor";
 import type { EditorContentProps } from "../types";
-import type { EditorRefActions } from "../types/editor";
+import { EditorWithPlugins } from "./EditorWithPlugins";
 
-export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({ placeholder }, ref) => {
-  const { state, actions, dispatch } = useEditorContext();
-
+export const EditorContent = forwardRef<EnhancedEditorRefActions, EditorContentProps>(({ placeholder }, ref) => {
   // Handle file drops (no-op for now, can be implemented later)
   const handleDrop = (_files: FileList) => {
     // TODO: implement file drop handling
@@ -15,39 +12,9 @@ export const EditorContent = forwardRef<EditorRefActions, EditorContentProps>(({
 
   const dragHandlers = useDragAndDrop(handleDrop);
 
-  const handleCompositionStart = () => {
-    dispatch(actions.setComposing(true));
-  };
-
-  const handleCompositionEnd = () => {
-    dispatch(actions.setComposing(false));
-  };
-
-  const handleContentChange = (content: string) => {
-    dispatch(actions.updateContent(content));
-  };
-
-  const handlePaste = (_e: React.ClipboardEvent) => {
-    // Paste handling is managed by Editor component internally
-  };
-
-  const handleKeyDown = (_e: React.KeyboardEvent) => {
-    // Keyboard handling is managed externally
-  };
-
   return (
-    <div className="w-full flex flex-col flex-1" {...dragHandlers.dragHandlers}>
-      <Editor
-        ref={ref}
-        className="memo-editor-content"
-        initialContent={state.content}
-        placeholder={placeholder ?? ""}
-        onContentChange={handleContentChange}
-        onPaste={handlePaste}
-        onKeyDown={handleKeyDown}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
-      />
+    <div className="w-full flex flex-col flex-1 relative" {...dragHandlers.dragHandlers}>
+      <EditorWithPlugins ref={ref} placeholder={placeholder ?? ""} />
     </div>
   );
 });

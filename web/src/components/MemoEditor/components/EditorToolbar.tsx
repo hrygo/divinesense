@@ -1,4 +1,4 @@
-import { Globe, Link2, Lock, type LucideIcon, MapPin, Maximize2, MoreHorizontal, Paperclip, Plus, Shield } from "lucide-react";
+import { Globe, Link2, Lock, type LucideIcon, MapPin, Maximize2, MoreHorizontal, Paperclip, Plus, Shield, Sparkles } from "lucide-react";
 import type { FC } from "react";
 import { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import { TOOLBAR_BUTTON_STYLES } from "../constants";
+import { useEditorContext } from "../state";
 import type { EditorToolbarProps } from "../types";
 
 // ============================================================================
@@ -105,19 +106,27 @@ const VisibilitySelector = memo(function VisibilitySelector({ value, onChange, i
  * - 响应式：移动端显示附件+关联，其他收纳到更多菜单
  */
 export const EditorToolbar: FC<EditorToolbarProps> = ({
+  onSave,
   onCancel,
   onUploadAttachment,
   onLinkMemo,
   onToggleFocusMode,
   onVisibilityChange,
   onOpenMobileTools,
-  currentVisibility = Visibility.PRIVATE,
+  memoName,
 }) => {
   const t = useTranslate();
   const md = useMediaQuery("md");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const { state } = useEditorContext();
 
   const hasCancel = !!onCancel;
+  const hasContent = state.content.trim().length > 0;
+  const isSaving = state.ui.isLoading.saving;
+
+  const handleSave = () => {
+    onSave?.();
+  };
 
   return (
     <div className="w-full flex items-center justify-between gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-t border-border/40 bg-muted/20 backdrop-blur-sm">
@@ -156,7 +165,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
       {/* Right: Settings and action buttons */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Visibility selector */}
-        {onVisibilityChange && <VisibilitySelector value={currentVisibility} onChange={onVisibilityChange} isDesktop={md} />}
+        {onVisibilityChange && <VisibilitySelector value={state.metadata.visibility} onChange={onVisibilityChange} isDesktop={md} />}
 
         {/* Focus mode button */}
         {onToggleFocusMode && (
@@ -177,6 +186,31 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {/* Save button - styled with breathing effect when has content */}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!hasContent || isSaving}
+          className={cn(
+            "shrink-0 h-9 px-4 min-w-[64px] rounded-xl transition-all duration-300",
+            "hover:scale-105 active:scale-95",
+            "text-sm font-medium",
+            isSaving
+              ? "bg-muted text-muted-foreground"
+              : hasContent
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
+          )}
+          aria-label={t("editor.save")}
+        >
+          {isSaving ? (
+            <Sparkles className="w-4 h-4 opacity-50 animate-pulse mx-auto" />
+          ) : (
+            <span>{memoName ? t("common.update") : t("editor.save")}</span>
+          )}
+        </button>
 
         {/* Cancel button - when cancel callback exists */}
         {hasCancel && (

@@ -19,6 +19,7 @@ export interface EditorContentProps {
 }
 
 export interface EditorToolbarProps {
+  onSave?: () => void;
   onCancel?: () => void;
   onUploadAttachment?: () => void;
   onLinkMemo?: () => void;
@@ -26,6 +27,7 @@ export interface EditorToolbarProps {
   onVisibilityChange?: (visibility: import("@/types/proto/api/v1/memo_service_pb").Visibility) => void;
   onOpenMobileTools?: () => void;
   currentVisibility?: import("@/types/proto/api/v1/memo_service_pb").Visibility;
+  memoName?: string;
 }
 
 export interface EditorMetadataProps {
