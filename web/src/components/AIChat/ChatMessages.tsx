@@ -338,6 +338,7 @@ const ChatMessages = memo(function ChatMessages({
   const prevStreamingContentLengthRef = useRef(0);
   const prevIsTypingRef = useRef(false);
   const prevIsStreamingRef = useRef(false);
+  const prevLastBlockContentRef = useRef("");
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollRef intentionally excluded as it's accessed conditionally
   useEffect(() => {
@@ -345,20 +346,30 @@ const ChatMessages = memo(function ChatMessages({
     const hasNewMessage = blocksLength > prevBlocksLengthRef.current;
     prevBlocksLengthRef.current = blocksLength;
 
-    // Streaming content increase detection
+    // Streaming content increase detection (from prop)
     const contentLength = streamingContent.length;
     const contentIncrease = contentLength - prevStreamingContentLengthRef.current;
     prevStreamingContentLengthRef.current = contentLength;
+
+    // Bug #163 fix: Also track last block's assistantContent for SSE updates
+    const lastBlock = blocks?.[blocksLength - 1];
+    const lastBlockContent = lastBlock?.assistantContent || "";
+    const blockContentIncrease = lastBlockContent.length - prevLastBlockContentRef.current.length;
+    prevLastBlockContentRef.current = lastBlockContent;
+
+    // Check if last block is streaming (inline check to avoid hoisting issues)
+    const lastBlockIsStreaming = lastBlock ? isStreamingStatus(lastBlock.status) : false;
 
     // Update refs for state change tracking
     prevIsTypingRef.current = isTyping;
     prevIsStreamingRef.current = isStreaming;
 
     // Unified scroll trigger logic - single RAF for all cases
-    // Reduced threshold from 50 to 15 for more responsive streaming
+    // Scroll when: new message, streaming content increase, or block content increase (SSE)
     const shouldScroll =
       (hasNewMessage && !isUserScrollingRef.current) ||
       (isStreaming && contentIncrease > 15 && !isUserScrollingRef.current) ||
+      (lastBlockIsStreaming && blockContentIncrease > 15 && !isUserScrollingRef.current) ||
       (isTyping && !isUserScrollingRef.current);
 
     if (shouldScroll) {
@@ -377,7 +388,7 @@ const ChatMessages = memo(function ChatMessages({
         isUserScrollingRef.current = false;
       }
     }
-  }, [blocks?.length, streamingContent, isStreaming, isTyping, scrollToBottomLocked]);
+  }, [blocks?.length, blocks, streamingContent, isStreaming, isTyping, scrollToBottomLocked]);
 
   useEffect(() => {
     return () => {
@@ -501,8 +512,8 @@ const ChatMessages = memo(function ChatMessages({
                 blockNumber={blockNumber}
                 totalBlocks={messageBlocks.length}
               >
-                {/* Typing cursor for streaming messages */}
-                {block.isLatest && isTyping && !block.assistantMessage?.error && (
+                {/* Typing cursor for streaming messages - only show for latest streaming block */}
+                {block.isLatest && isLastStreaming && !block.assistantMessage?.error && (
                   <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.AMAZING} variant="dots" />
                 )}
               </UnifiedMessageBlock>
