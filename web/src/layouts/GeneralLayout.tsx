@@ -25,12 +25,12 @@ import { cn } from "@/lib/utils";
  * @see docs/research/layout-spacing-unification.md
  */
 const GeneralLayout = () => {
-  const sm = useMediaQuery("sm");
+  const lg = useMediaQuery("lg");
 
   return (
     <section className="w-full h-full flex flex-col overflow-hidden">
       {/* Mobile Header - Fixed height h-14 with py-2 for vertical spacing */}
-      {!sm && (
+      {!lg && (
         <div className="w-full flex items-center justify-center px-4 py-2 h-14 shrink-0 border-b border-border/50 bg-background sticky top-0 z-10 overflow-hidden relative">
           <div className="absolute left-4 top-0 bottom-0 flex items-center">
             <NavigationDrawer />

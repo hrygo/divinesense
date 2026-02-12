@@ -14,7 +14,7 @@ import { redirectOnAuthFailure } from "@/utils/auth-redirect";
 const RootLayout = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const sm = useMediaQuery("sm");
+  const lg = useMediaQuery("lg");
   const currentUser = useCurrentUser();
   const { memoRelatedSetting } = useInstance();
   const { removeFilter } = useMemoFilterContext();
@@ -35,9 +35,9 @@ const RootLayout = () => {
   }, [prevPathname, pathname, searchParams, removeFilter]);
 
   return (
-    <div className="w-full h-full flex flex-row justify-start items-stretch sm:pl-16 overflow-hidden bg-background">
+    <div className="w-full h-full flex flex-row justify-start items-stretch lg:pl-16 overflow-hidden bg-background">
       <KeyboardShortcutsHelp />
-      {sm && (
+      {lg && (
         <div
           className={cn(
             "group flex flex-col justify-start items-start fixed top-0 left-0 select-none h-full bg-sidebar z-20",
