@@ -7,7 +7,7 @@
  * - 虚拟高度自动调整
  * - IME 组合状态处理
  */
-import { memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { EditorProps } from "../types/components";
 import type { CursorContext, CursorPosition, EnhancedEditorRefActions, VisibleRange } from "./editor-types";
 
@@ -71,10 +71,8 @@ function createMirrorDiv(textarea: HTMLTextAreaElement): HTMLDivElement {
 /**
  * Enhanced Editor Component
  */
-const EnhancedEditorComponent = (
-  { className, initialContent, placeholder, onContentChange, onPaste, onCompositionStart, onCompositionEnd }: EditorProps,
-  ref: React.ForwardedRef<EnhancedEditorRefActions>,
-) => {
+const EnhancedEditorComponent = forwardRef<EnhancedEditorRefActions, EditorProps>(
+  ({ className, initialContent, placeholder, onContentChange, onPaste, onCompositionStart, onCompositionEnd }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorDivRef = useRef<HTMLDivElement | null>(null);
   const [content, setContent] = useState(initialContent);
@@ -428,9 +426,10 @@ const EnhancedEditorComponent = (
       }}
     />
   );
-};
+});
+
+EnhancedEditorComponent.displayName = "EnhancedEditor";
 
 const EnhancedEditor = memo(EnhancedEditorComponent);
-EnhancedEditor.displayName = "EnhancedEditor";
 
 export default EnhancedEditor;
