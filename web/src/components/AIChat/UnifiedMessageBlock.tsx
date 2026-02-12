@@ -416,6 +416,8 @@ export interface UnifiedMessageBlockProps {
   blockId?: bigint;
   /** Block sequence number (1-based) for display */
   blockNumber?: number;
+  /** Total number of blocks in the conversation (for collapse strategy) */
+  totalBlocks?: number;
   /** Additional children to render in block body */
   children?: ReactNode;
   className?: string;
@@ -478,9 +480,18 @@ const BLOCK_THEMES: Record<
 // Helper Functions
 // ============================================================================
 
-function getDefaultCollapseState(isLatest: boolean, isStreaming: boolean): boolean {
-  if (isStreaming || isLatest) return false;
-  return true;
+/** Number of latest blocks to keep expanded by default */
+const EXPAND_LATEST_COUNT = 5;
+
+/**
+ * Determine default collapse state for a block.
+ * Keeps the latest N blocks expanded, older ones collapsed.
+ * Streaming blocks are always expanded.
+ */
+function getDefaultCollapseState(blockIndex: number, totalBlocks: number, isStreaming: boolean): boolean {
+  if (isStreaming) return false;
+  // Keep latest N blocks expanded
+  return blockIndex < totalBlocks - EXPAND_LATEST_COUNT;
 }
 
 // ============================================================================
@@ -1029,6 +1040,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   onQuickReply,
   blockId: _blockId,
   blockNumber,
+  totalBlocks,
   children,
   className,
 }: UnifiedMessageBlockProps) {
@@ -1058,11 +1070,15 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     isStreamingRef.current = isStreaming;
   }, [isLatest, isStreaming]);
 
-  const [collapsed, setCollapsed] = useState(() => getDefaultCollapseState(isLatest, isStreaming));
+  // Calculate block index (0-based) from blockNumber (1-based)
+  const blockIndex = (blockNumber ?? 1) - 1;
+  const effectiveTotalBlocks = totalBlocks ?? 1;
+
+  const [collapsed, setCollapsed] = useState(() => getDefaultCollapseState(blockIndex, effectiveTotalBlocks, isStreaming));
 
   useEffect(() => {
-    setCollapsed(getDefaultCollapseState(isLatestRef.current, isStreamingRef.current));
-  }, [isLatest, isStreaming]);
+    setCollapsed(getDefaultCollapseState(blockIndex, effectiveTotalBlocks, isStreamingRef.current));
+  }, [blockIndex, effectiveTotalBlocks, isStreaming]);
 
   const toggleCollapse = useCallback(() => {
     setCollapsed((prev) => !prev);
@@ -1181,10 +1197,11 @@ UnifiedMessageBlock.displayName = "UnifiedMessageBlock";
 export function useBlockState(messages: ConversationMessage[]) {
   const [blockStates, setBlockStates] = useState<Record<string, BlockState>>(() => {
     const initial: Record<string, BlockState> = {};
+    const totalBlocks = messages.length;
     messages.forEach((msg, i) => {
       const isLatest = i === messages.length - 1;
       initial[msg.id] = {
-        collapsed: getDefaultCollapseState(isLatest, false),
+        collapsed: getDefaultCollapseState(i, totalBlocks, false),
         isLatest,
         isStreaming: false,
       };
@@ -1211,12 +1228,13 @@ export function useBlockState(messages: ConversationMessage[]) {
         return hasChanges ? updated : prev;
       }
 
+      const totalBlocks = messages.length;
       const updated: Record<string, BlockState> = {};
       messages.forEach((msg, i) => {
         const isLatest = i === messages.length - 1;
         const existing = prev[msg.id];
         updated[msg.id] = {
-          collapsed: existing?.collapsed ?? getDefaultCollapseState(isLatest, false),
+          collapsed: existing?.collapsed ?? getDefaultCollapseState(i, totalBlocks, false),
           isLatest,
           isStreaming: false,
         };

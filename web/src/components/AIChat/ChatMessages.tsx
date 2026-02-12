@@ -490,15 +490,16 @@ const ChatMessages = memo(function ChatMessages({
                 blockSummary={block.blockSummary}
                 parrotId={blockParrotId}
                 isLatest={block.isLatest}
-                isStreaming={isLastStreaming && block.isLatest}
+                isStreaming={isLastStreaming && block.isLatest && isStreamingStatus(blocks[index]?.status)}
                 streamingPhase={blockIsLast ? streamingPhase : null}
                 onCopy={onCopyMessage}
                 onRegenerate={block.isLatest ? onRegenerate : undefined}
                 onDelete={block.isLatest && onDeleteMessage ? () => onDeleteMessage(0) : undefined}
-                onCancel={block.isLatest && isLastStreaming ? onCancel : undefined}
+                onCancel={block.isLatest && isLastStreaming && isStreamingStatus(blocks[index]?.status) ? onCancel : undefined}
                 onQuickReply={block.isLatest ? onQuickReply : undefined}
                 blockId={blockId}
                 blockNumber={blockNumber}
+                totalBlocks={messageBlocks.length}
               >
                 {/* Typing cursor for streaming messages */}
                 {block.isLatest && isTyping && !block.assistantMessage?.error && (

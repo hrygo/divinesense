@@ -554,7 +554,19 @@
       "payload_search_prefix": "Search for ",
       "payload_find_more_prefix": "Find more about ",
       "payload_summarize": "Summarize these notes",
-      "payload_search_notes": "Search my notes for "
+      "payload_search_notes": "Search my notes for ",
+      "confirm": "Yes",
+      "decline_change": "No, change time",
+      "yes_please": "Yes, please",
+      "no_thanks": "No, thanks",
+      "yes": "Yes",
+      "no": "No",
+      "hint_confirm": "Confirm this time",
+      "hint_decline_change": "Choose another time",
+      "hint_yes_please": "Accept help",
+      "hint_no_thanks": "Decline help",
+      "hint_yes": "Confirm",
+      "hint_no": "Deny"
     },
     "session_bar": {
       "title": "Session Stats",

@@ -26,6 +26,9 @@ type ConversationContext struct {
 	Turns        []ConversationTurn
 	mu           sync.RWMutex
 	UserID       int32
+	// RouteSticky: Intent stickiness for short confirmations (Issue #163)
+	LastRouteType ChatRouteType // Last successful route type
+	LastRouteTime time.Time     // When the last route was made
 }
 
 // ConversationTurn represents a single turn in the conversation.
@@ -113,6 +116,25 @@ func (c *ConversationContext) AddTurn(userInput, agentOutput string, toolCalls [
 	if len(c.Turns) > 10 {
 		c.Turns = c.Turns[len(c.Turns)-10:]
 	}
+}
+
+// SetLastRoute sets the last successful route for intent stickiness (Issue #163).
+func (c *ConversationContext) SetLastRoute(routeType ChatRouteType) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.LastRouteType = routeType
+	c.LastRouteTime = time.Now()
+}
+
+// GetLastRoute returns the last route type and whether it's within the sticky window.
+func (c *ConversationContext) GetLastRoute() (ChatRouteType, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	// Sticky window: 5 minutes
+	if c.LastRouteType != "" && time.Since(c.LastRouteTime) < 5*time.Minute {
+		return c.LastRouteType, true
+	}
+	return "", false
 }
 
 // UpdateWorkingState updates the working state with new information.

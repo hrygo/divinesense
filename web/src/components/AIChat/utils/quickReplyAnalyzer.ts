@@ -38,7 +38,7 @@ export interface QuickReplyAction {
  */
 export interface QuickReplyAnalysis {
   /** Detected response type */
-  responseType: "ScheduleCreated" | "MemoFound" | "ScheduleQuery" | "FreeTimeFound" | "Error" | "Generic";
+  responseType: "ScheduleCreated" | "MemoFound" | "ScheduleQuery" | "FreeTimeFound" | "FollowUpQuestion" | "Error" | "Generic";
   /** Suggested actions (max 4) */
   actions: QuickReplyAction[];
   /** Confidence score (0-1) */
@@ -135,12 +135,107 @@ function detectResponseType(toolNames: string[], content: string, toolCalls: Too
     };
   }
 
+  // Check for AI follow-up questions (e.g., "18点可以吗？", "需要我帮你安排吗？")
+  if (isFollowUpQuestion(content)) {
+    return {
+      responseType: "FollowUpQuestion",
+      actions: getFollowUpActions(content),
+      confidence: 0.8,
+    };
+  }
+
   // Default generic responses
   return {
     responseType: "Generic",
     actions: getGenericActions(),
     confidence: 0.5,
   };
+}
+
+/**
+ * Detect if the AI is asking a follow-up question
+ */
+function isFollowUpQuestion(content: string): boolean {
+  const patterns = [
+    /可以吗[？?]?$/, // "可以吗？"
+    /行吗[？?]?$/, // "行吗？"
+    /好吗[？?]?$/, // "好吗？"
+    /是否.*[？?]$/, // "是否...？"
+    /需要.*吗[？?]?$/, // "需要...吗？"
+    /\d+点.*[？?？]$/, // 时间点追问 "18点可以吗？"
+    /确认.*[？?？]$/, // "确认一下？"
+    /还是.*[？?？]$/, // "还是...？"
+  ];
+  return patterns.some((p) => p.test(content));
+}
+
+/**
+ * Actions for FollowUpQuestion response - context-aware confirm/decline
+ */
+function getFollowUpActions(content: string): QuickReplyAction[] {
+  // Time-related question (e.g., "18点可以吗？")
+  if (/\d+点/.test(content)) {
+    return [
+      {
+        id: "confirm_time",
+        label: "ai.quick_replies.confirm",
+        icon: "Check",
+        type: "fill_input",
+        payload: "可以",
+        hint: "ai.quick_replies.hint_confirm",
+      },
+      {
+        id: "decline_time",
+        label: "ai.quick_replies.decline_change",
+        icon: "X",
+        type: "fill_input",
+        payload: "不行，换一个时间",
+        hint: "ai.quick_replies.hint_decline_change",
+      },
+    ];
+  }
+
+  // Need/help question (e.g., "需要我帮你安排吗？")
+  if (/需要|帮/.test(content)) {
+    return [
+      {
+        id: "need_help",
+        label: "ai.quick_replies.yes_please",
+        icon: "Check",
+        type: "fill_input",
+        payload: "好的，谢谢",
+        hint: "ai.quick_replies.hint_yes_please",
+      },
+      {
+        id: "no_thanks",
+        label: "ai.quick_replies.no_thanks",
+        icon: "X",
+        type: "fill_input",
+        payload: "不用了，谢谢",
+        hint: "ai.quick_replies.hint_no_thanks",
+      },
+    ];
+  }
+
+  // Generic yes/no question
+  return [
+    {
+      id: "yes",
+      label: "ai.quick_replies.yes",
+      icon: "Check",
+      type: "fill_input",
+      payload: "是的",
+      hint: "ai.quick_replies.hint_yes",
+    },
+    {
+      id: "no",
+      label: "ai.quick_replies.no",
+      icon: "X",
+      type: "fill_input",
+      payload: "不是",
+      hint: "ai.quick_replies.hint_no",
+    },
+  ];
 }
 
 /**

@@ -549,7 +549,19 @@
       "payload_search_prefix": "搜索",
       "payload_find_more_prefix": "查找更多关于",
       "payload_summarize": "总结这些笔记",
-      "payload_search_notes": "在我的笔记中搜索"
+      "payload_search_notes": "在我的笔记中搜索",
+      "confirm": "可以",
+      "decline_change": "不行，换个时间",
+      "yes_please": "好的，谢谢",
+      "no_thanks": "不用了，谢谢",
+      "yes": "是的",
+      "no": "不是",
+      "hint_confirm": "确认这个时间",
+      "hint_decline_change": "选择其他时间",
+      "hint_yes_please": "接受帮助",
+      "hint_no_thanks": "不需要帮助",
+      "hint_yes": "确认",
+      "hint_no": "否认"
     },
     "session_bar": {
       "title": "会话统计",
