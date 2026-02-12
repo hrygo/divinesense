@@ -5,121 +5,7 @@ import (
 	"context"
 	"testing"
 	"time"
-
-	"github.com/hrygo/divinesense/ai/services/memory"
 )
-
-// mockMemoryService is a mock implementation of memory.MemoryService.
-type mockMemoryServiceForRouter struct {
-	episodes []memory.EpisodicMemory
-	messages map[string][]memory.Message
-}
-
-func newMockMemoryServiceForRouter() *mockMemoryServiceForRouter {
-	return &mockMemoryServiceForRouter{
-		episodes: make([]memory.EpisodicMemory, 0),
-		messages: make(map[string][]memory.Message),
-	}
-}
-
-func (m *mockMemoryServiceForRouter) GetRecentMessages(ctx context.Context, sessionID string, limit int) ([]memory.Message, error) {
-	if msgs, ok := m.messages[sessionID]; ok {
-		if len(msgs) > limit {
-			return msgs[len(msgs)-limit:], nil
-		}
-		return msgs, nil
-	}
-	return []memory.Message{}, nil
-}
-
-func (m *mockMemoryServiceForRouter) AddMessage(ctx context.Context, sessionID string, msg memory.Message) error {
-	if m.messages == nil {
-		m.messages = make(map[string][]memory.Message)
-	}
-	m.messages[sessionID] = append(m.messages[sessionID], msg)
-	return nil
-}
-
-func (m *mockMemoryServiceForRouter) SearchEpisodes(ctx context.Context, userID int32, query string, limit int) ([]memory.EpisodicMemory, error) {
-	result := make([]memory.EpisodicMemory, 0)
-	for _, ep := range m.episodes {
-		if ep.UserID == userID {
-			result = append(result, ep)
-			if len(result) >= limit {
-				break
-			}
-		}
-	}
-	return result, nil
-}
-
-func (m *mockMemoryServiceForRouter) SaveEpisode(ctx context.Context, episode memory.EpisodicMemory) error {
-	episode.ID = int64(len(m.episodes) + 1)
-	m.episodes = append(m.episodes, episode)
-	return nil
-}
-
-func (m *mockMemoryServiceForRouter) GetEpisode(ctx context.Context, id int64) (*memory.EpisodicMemory, error) {
-	if id <= 0 || int(id) > len(m.episodes) {
-		return nil, nil
-	}
-	return &m.episodes[id-1], nil
-}
-
-func (m *mockMemoryServiceForRouter) UpdateEpisode(ctx context.Context, episode memory.EpisodicMemory) error {
-	if episode.ID <= 0 || int(episode.ID) > len(m.episodes) {
-		return nil
-	}
-	m.episodes[episode.ID-1] = episode
-	return nil
-}
-
-func (m *mockMemoryServiceForRouter) DeleteEpisode(ctx context.Context, id int64) error {
-	if id <= 0 || int(id) > len(m.episodes) {
-		return nil
-	}
-	m.episodes = append(m.episodes[:id-1], m.episodes[id:]...)
-	return nil
-}
-
-func (m *mockMemoryServiceForRouter) ListEpisodes(ctx context.Context, userID int32, offset, limit int) ([]memory.EpisodicMemory, error) {
-	result := make([]memory.EpisodicMemory, 0)
-	for _, ep := range m.episodes {
-		if ep.UserID == userID {
-			result = append(result, ep)
-		}
-	}
-	if offset >= len(result) {
-		return []memory.EpisodicMemory{}, nil
-	}
-	end := offset + limit
-	if end > len(result) {
-		end = len(result)
-	}
-	return result[offset:end], nil
-}
-
-func (m *mockMemoryServiceForRouter) ListActiveUserIDs(ctx context.Context, lookbackDays int) ([]int32, error) {
-	userSet := make(map[int32]bool)
-	for _, ep := range m.episodes {
-		userSet[ep.UserID] = true
-	}
-	result := make([]int32, 0, len(userSet))
-	for uid := range userSet {
-		result = append(result, uid)
-	}
-	return result, nil
-}
-
-func (m *mockMemoryServiceForRouter) GetPreferences(ctx context.Context, userID int32) (*memory.UserPreferences, error) {
-	return &memory.UserPreferences{
-		Timezone: "UTC",
-	}, nil
-}
-
-func (m *mockMemoryServiceForRouter) UpdatePreferences(ctx context.Context, userID int32, prefs *memory.UserPreferences) error {
-	return nil
-}
 
 // TestService_Integration_FullRouting tests the complete routing flow.
 func TestService_Integration_FullRouting(t *testing.T) {
@@ -130,7 +16,6 @@ func TestService_Integration_FullRouting(t *testing.T) {
 			EnableCache: true,
 		})
 
-		// Clear rule-based match
 		intent, confidence, needsOrch, err := svc.ClassifyIntent(ctx, "明天下午3点开会")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -153,13 +38,11 @@ func TestService_Integration_FullRouting(t *testing.T) {
 
 		input := "搜索关于人工智能的笔记"
 
-		// First call - should use rule matcher
 		intent1, conf1, needsOrch1, err1 := svc.ClassifyIntent(ctx, input)
 		if err1 != nil {
 			t.Fatalf("first call failed: %v", err1)
 		}
 
-		// Second call - should hit cache
 		intent2, conf2, needsOrch2, err2 := svc.ClassifyIntent(ctx, input)
 		if err2 != nil {
 			t.Fatalf("second call failed: %v", err2)
@@ -191,41 +74,7 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		if !needsOrch {
 			t.Errorf("expected needsOrchestration=true for unknown intent")
 		}
-		_ = confidence // Don't check confidence for unknown
-	})
-}
-
-// TestService_Integration_WithHistory tests routing with history matching.
-func TestService_Integration_WithHistory(t *testing.T) {
-	ctx := context.Background()
-	userID := int32(123)
-
-	memSvc := newMockMemoryServiceForRouter()
-	svc := NewService(Config{
-		MemoryService: memSvc,
-		EnableCache:   false,
-	})
-
-	// Save some historical decisions
-	svc.historyMatcher.SaveDecision(ctx, userID, "查找Go语言笔记", IntentMemoSearch, true)
-	svc.historyMatcher.SaveDecision(ctx, userID, "明天会议", IntentScheduleCreate, true)
-
-	t.Run("history match for similar input", func(t *testing.T) {
-		ctxWithUser := WithUserID(ctx, userID)
-
-		intent, confidence, needsOrch, err := svc.ClassifyIntent(ctxWithUser, "搜索Go语言笔记")
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-
-		// Should match based on history (high similarity)
-		if intent != IntentMemoSearch {
-			t.Errorf("expected IntentMemoSearch, got %s", intent)
-		}
-		if confidence < 0.8 {
-			t.Errorf("expected high confidence from history match, got %f", confidence)
-		}
-		_ = needsOrch // Don't check needsOrchestration for this test
+		_ = confidence
 	})
 }
 
@@ -240,7 +89,6 @@ func TestService_Integration_UserContext(t *testing.T) {
 	userID := int32(456)
 	ctxWithUser := WithUserID(ctx, userID)
 
-	// Should not panic with user context
 	_, _, _, err := svc.ClassifyIntent(ctxWithUser, "搜索笔记")
 	if err != nil {
 		t.Fatalf("expected no error with user context, got %v", err)
@@ -290,7 +138,6 @@ func TestService_Integration_RouterStats(t *testing.T) {
 
 	svc := NewService(Config{})
 
-	// Get stats for a user with no history
 	stats, err := svc.GetRouterStats(ctx, userID, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -333,7 +180,6 @@ func TestService_Integration_Feedback(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	// Verify feedback was recorded
 	stats, err := storage.GetStats(ctx, userID, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("expected no error getting stats, got %v", err)
@@ -368,7 +214,6 @@ func BenchmarkService_Integration_WithCache(b *testing.B) {
 
 	input := "搜索关于人工智能的笔记"
 
-	// Prime the cache
 	svc.ClassifyIntent(ctx, input)
 
 	b.ResetTimer()

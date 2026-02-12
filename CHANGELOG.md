@@ -22,6 +22,49 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.99.0] - 2026-02-12
+
+### 🎯 Major Architecture Upgrade: Orchestrator-Workers Multi-Agent System
+
+This release introduces a complete **Orchestrator-Workers architecture** that replaces the previous single-agent model with a coordinated multi-agent system. This is a significant architectural evolution enabling better task decomposition, parallel execution, and expert agent coordination.
+
+#### Core Components (New)
+- **Orchestrator**: LLM-driven task decomposition and coordination hub
+  - `ai/agents/orchestrator/orchestrator.go` - Core orchestrator
+  - `ai/agents/orchestrator/decomposer.go` - Task decomposition engine
+  - `ai/agents/orchestrator/executor.go` - Parallel task executor
+  - `ai/agents/orchestrator/aggregator.go` - Result aggregation
+  - `ai/agents/orchestrator/expert_registry.go` - Expert agent registry
+
+#### Enhanced Features
+- **Time Context Injection**: Automatic temporal context for better scheduling
+- **DAG Dependency Support**: Tasks can declare dependencies and execute in correct order
+- **Externalized Prompts**: All prompts moved to `config/orchestrator/*.yaml` for easy tuning
+- **Structured Agent Protocols**: Schedule and Memo agents enhanced with structured protocols
+
+#### Removed (Legacy Code Cleanup)
+- `ai/agents/scheduler_v2.go` - Old scheduler replaced by Orchestrator
+- `ai/agents/prompts.go` - Migrated to config files
+- `ai/services/memory/` - Memory service replaced by agent-level context
+- `ai/services/schedule/fast_create_handler.go` - Simplified by new architecture
+- `ai/habit/` - Habit learning module (slated for redesign)
+- `ai/core/llm/anthropic_test.go` - Deprecated provider test
+
+#### Architecture Documentation
+- New `docs/research/orchestrator-workers-research.md` - Design rationale
+- New architecture diagram in docs
+
+### Changed
+- **Routing Service**: Simplified routing logic leveraging Orchestrator
+- **History Matcher**: Optimized for new architecture
+- **LLM Service**: Replaced `provider()` method with stored field for efficiency
+
+### Fixed
+- Orchestrator fallback bug when no expert agent matches
+- CI cross-compiler support for SQLite ARM64 builds
+
+---
+
 ## [v0.98.0] - 2026-02-10
 
 ### Added

@@ -2,7 +2,7 @@
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 >
-> **保鲜状态**: ✅ 2026-02-12 v0.98.0 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
+> **保鲜状态**: ✅ 2026-02-12 v0.99.0 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
 
 ---
 

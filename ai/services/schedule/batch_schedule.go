@@ -11,6 +11,16 @@ import (
 	"github.com/hrygo/divinesense/ai/aitime"
 )
 
+// ScheduleRequest represents a schedule creation request.
+type ScheduleRequest struct {
+	StartTime       time.Time `json:"start_time"`
+	EndTime         time.Time `json:"end_time,omitempty"`
+	Title           string    `json:"title"`
+	Location        string    `json:"location,omitempty"`
+	Duration        int       `json:"duration"`
+	ReminderMinutes int       `json:"reminder_minutes,omitempty"`
+}
+
 // BatchCreateRequest represents a batch schedule creation request.
 type BatchCreateRequest struct {
 	StartTime  time.Time       `json:"start_time"`

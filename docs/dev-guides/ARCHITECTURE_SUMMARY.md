@@ -4,22 +4,76 @@
 
 ---
 
-## 五位鹦鹉（内部代理）
+## Orchestrator-Workers 多代理架构
+
+```
+用户输入
+    ↓
+┌─────────────────────────────────────────┐
+│            Orchestrator                 │  ← LLM 驱动任务分解
+│  ┌─────────────────────────────────┐   │
+│  │  Decomposer (任务分解)           │   │
+│  │  Executor  (并行执行)            │   │
+│  │  Aggregator (结果聚合)           │   │
+│  └─────────────────────────────────┘   │
+└────────────────┬────────────────────────┘
+                 │
+        ┌────────┴────────┐
+        ↓                 ↓
+┌───────────────┐ ┌───────────────┐
+│ MemoParrot    │ │ ScheduleParrot│  ← Expert Agents (配置化)
+│ (灰灰)        │ │ (时巧)        │
+└───────────────┘ └───────────────┘
+        │                 │
+        └────────┬────────┘
+                 ↓
+         Aggregated Response
+```
+
+### 核心组件
+
+| 组件 | 文件 | 职责 |
+|:---|:---|:---|
+| Orchestrator | `ai/agents/orchestrator/orchestrator.go` | 任务编排入口 |
+| Decomposer | `ai/agents/orchestrator/decomposer.go` | 任务分解（DAG 依赖） |
+| Executor | `ai/agents/orchestrator/executor.go` | 并行执行 |
+| Aggregator | `ai/agents/orchestrator/aggregator.go` | 结果聚合 |
+| ExpertRegistry | `ai/agents/orchestrator/expert_registry.go` | 专家代理注册 |
+
+### 配置文件
+
+| 配置 | 路径 |
+|:---|:---|
+| Decomposer 提示词 | `config/orchestrator/decomposer.yaml` |
+| Aggregator 提示词 | `config/orchestrator/aggregator.yaml` |
+
+---
+
+## 专家代理 (Expert Agents)
 
 | 鹦鹉                   | 领域                 | 配置文件                      |
 | :--------------------- | :------------------- | :---------------------------- |
 | MemoParrot (灰灰)      | 笔记搜索             | `config/parrots/memo.yaml`    |
 | ScheduleParrot (时巧)  | 日程管理             | `config/parrots/schedule.yaml` |
-| AmazingParrot (折衷)   | 综合助理             | `config/parrots/amazing.yaml` |
-| GeekParrot (极客)      | Claude Code CLI 桥接 | 代码实现                      |
-| EvolutionParrot (进化) | 自我进化             | 代码实现                      |
 
-### 路由四层
-```
-用户输入 → Cache (LRU, 0ms) → Rule (0ms) → History (~10ms) → LLM (~400ms)
-```
+### 外部执行器 (External Executors)
 
-**注意**：`AUTO` 不是鹦鹉，是"请后端路由"的标记
+| 鹦鹉                   | 领域                 | 实现方式     |
+| :--------------------- | :------------------- | :----------- |
+| GeekParrot (极客)      | Claude Code CLI 桥接 | 代码实现     |
+| EvolutionParrot (进化) | 自我进化             | 代码实现     |
+
+> **注意**: AmazingParrot 已被 Orchestrator 替代，其职责由 Orchestrator 动态协调 Expert Agents 完成。
+
+---
+
+## 路由流程
+
+```
+用户输入 → ChatRouter → Orchestrator → Expert Agents → Response
+                ↓
+         Cache → Rule → History → LLM (~400ms)
+```
 
 ---
 
@@ -29,8 +83,8 @@
 | :--- | :--------------- | :------------------- |
 | 对话 | `AIConversation` | 包含多个 Block       |
 | 块   | `AIBlock`        | 一个用户-AI 交互轮次 |
-| 代理 | `ParrotAgent`    | 处理请求的 AI 实体   |
-| 路由 | `ChatRouter`     | 决定使用哪只鹦鹉     |
+| 任务 | `TaskPlan`       | Orchestrator 分解的结构化任务 |
+| 专家 | `ExpertAgent`    | 领域专家代理         |
 
 ### BlockMode vs AgentType
 
@@ -44,10 +98,10 @@
 
 ---
 
-## UniversalParrot 架构
+## UniversalParrot 架构（Expert Agents 基础）
 
 ```
-UniversalParrot (配置驱动)
+ExpertAgent (配置驱动)
 ├── ParrotFactory (工厂)
 ├── ParrotConfig (配置加载)
 ├── ExecutionStrategy (执行策略)
@@ -57,9 +111,7 @@ UniversalParrot (配置驱动)
 └── ToolRegistry (工具注册表)
 ```
 
----
-
-## 执行策略对比
+### 执行策略对比
 
 | 策略     | 适用场景         | 特点             |
 | :------- | :--------------- | :--------------- |
