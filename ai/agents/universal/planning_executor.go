@@ -4,6 +4,7 @@ package universal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -163,6 +164,12 @@ func (e *PlanningExecutor) Execute(
 	messages = append(messages, history...)
 	messages = append(messages, ai.Message{Role: "user", Content: synthesisPrompt})
 
+	// Log synthesis phase start
+	slog.Debug("planning: synthesis phase started",
+		"message_count", len(messages))
+
+	synthesisStart := time.Now()
+
 	// Use ChatStream for synthesis
 	contentChan, statsChan, errChan := llm.ChatStream(ctx, messages)
 
@@ -184,6 +191,10 @@ func (e *PlanningExecutor) Execute(
 	if streamResult.Stats != nil {
 		stats.AccumulateLLM(streamResult.Stats)
 	}
+
+	slog.Info("planning: synthesis phase completed",
+		"content_length", len(streamResult.Content),
+		"duration_ms", time.Since(synthesisStart).Milliseconds())
 
 	return streamResult.Content, stats, nil
 }

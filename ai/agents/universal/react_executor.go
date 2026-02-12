@@ -108,6 +108,12 @@ func (e *ReActExecutor) Execute(
 			},
 		})
 
+		// Log LLM call start for observability
+		llmStart := time.Now()
+		slog.Debug("react: LLM chat started",
+			"iteration", iteration+1,
+			"message_count", len(messages))
+
 		// Use ChatWithTools for streaming LLM response with tool support
 		response, llmStats, err := llm.ChatWithTools(ctx, messages, toolDescriptors)
 		if err != nil {
@@ -118,7 +124,8 @@ func (e *ReActExecutor) Execute(
 		slog.Info("react: LLM response",
 			"iteration", iteration+1,
 			"tool_calls", len(response.ToolCalls),
-			"content_length", len(response.Content))
+			"content_length", len(response.Content),
+			"duration_ms", time.Since(llmStart).Milliseconds())
 
 		// Check if LLM wants to call tools
 		hasStructuredToolCalls := len(response.ToolCalls) > 0
