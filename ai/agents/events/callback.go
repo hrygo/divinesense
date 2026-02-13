@@ -2,7 +2,10 @@
 // This package centralizes callback definitions to follow DRY principle.
 package events
 
-import "log/slog"
+import (
+	"log/slog"
+	"runtime/debug"
+)
 
 // Callback is the unified event callback type.
 // It receives an event type string and arbitrary event data.
@@ -24,7 +27,10 @@ func WrapSafe(cb Callback) SafeCallback {
 	}
 	return func(eventType string, eventData any) {
 		if err := cb(eventType, eventData); err != nil {
-			slog.Warn("event callback error (swallowed)", "event_type", eventType, "error", err)
+			slog.Warn("event callback error (swallowed)",
+				"event_type", eventType,
+				"error", err,
+				"stack", string(debug.Stack()))
 		}
 	}
 }

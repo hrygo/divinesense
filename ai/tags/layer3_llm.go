@@ -57,11 +57,8 @@ func (l *LLMLayer) Suggest(ctx context.Context, req *SuggestRequest) []Suggestio
 	ctx, cancel := context.WithTimeout(ctx, l.timeout)
 	defer cancel()
 
-	// Prepare content (truncate if too long)
-	content := req.Content
-	if len(content) > 500 {
-		content = content[:500] + "..."
-	}
+	// Prepare content (truncate if too long, Unicode-safe)
+	content := strutil.Truncate(req.Content, 500)
 
 	title := req.Title
 	if title == "" {

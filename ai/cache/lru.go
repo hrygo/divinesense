@@ -251,9 +251,25 @@ func (c *LRUCache[K, V]) Capacity() int {
 }
 
 // Contains checks if a key exists in the cache (without updating access order).
-// Note: Unlike Get, this method does NOT remove expired entries. It only checks
-// if the key exists AND has not expired. This is intentional to maintain the
-// "read-only" semantics of Contains. Use Get if you want expired entries to be removed.
+//
+// IMPORTANT: Unlike Get, this method does NOT remove expired entries. It only checks
+// if the key exists AND has not expired. This means Contains() may return true while
+// a subsequent Get() returns false (if the entry expired between the two calls).
+//
+// This "read-only" semantics is intentional for performance. If you need consistent
+// behavior with Get, call Get instead.
+//
+// Example:
+//
+//	// DON'T: Check then Get (race condition possible)
+//	if cache.Contains(key) {
+//	    val, ok := cache.Get(key) // ok may be false!
+//	}
+//
+//	// DO: Just call Get directly
+//	if val, ok := cache.Get(key); ok {
+//	    // use val
+//	}
 func (c *LRUCache[K, V]) Contains(key K) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

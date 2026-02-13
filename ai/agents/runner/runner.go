@@ -62,7 +62,7 @@ func ConversationIDToSessionID(conversationID int64) string {
 // EventCallback is the callback function type for agent events.
 // EventCallback 是代理事件的回调函数类型。
 //
-// Deprecated: Use events.Callback directly.
+// Deprecated: Use events.Callback directly. Will be removed in v1.0.0.
 type EventCallback = events.Callback
 
 // SafeCallbackFunc is a callback that logs errors instead of returning them.
@@ -70,7 +70,7 @@ type EventCallback = events.Callback
 // SafeCallbackFunc 是一个记录错误而不是返回错误的回调函数。
 // 使用 SafeCallback 包装 EventCallback 用于非关键事件。
 //
-// Deprecated: Use events.SafeCallback directly.
+// Deprecated: Use events.SafeCallback directly. Will be removed in v1.0.0.
 type SafeCallbackFunc = events.SafeCallback
 
 // SafeCallback wraps an EventCallback to log errors instead of propagating them.
@@ -78,7 +78,7 @@ type SafeCallbackFunc = events.SafeCallback
 // SafeCallback 包装 EventCallback 以记录错误而不是传播它们。
 // 用于错误不应中断执行的非关键回调。
 //
-// Deprecated: Use events.WrapSafe directly.
+// Deprecated: Use events.WrapSafe directly. Will be removed in v1.0.0.
 var SafeCallback = events.WrapSafe
 
 // CCRunner is the unified Claude Code CLI integration layer.
