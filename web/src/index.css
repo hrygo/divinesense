@@ -523,3 +523,86 @@
 .animate-pulse-slow {
   animation: pulse-slow 2s ease-in-out infinite;
 }
+
+/* ============================================================
+   Sticky Note Corner Fold Effect
+   Apple Notes style paper fold
+   ============================================================ */
+
+.sticky-note-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 1.25rem 1.25rem 0;
+  border-color: transparent rgba(0, 0, 0, 0.08) transparent transparent;
+  border-radius: 0 0.5rem 0 0;
+  pointer-events: none;
+  transition: border-color 200ms ease;
+}
+
+/* Hover effect - slightly darker fold */
+.group:hover .sticky-note-corner {
+  border-color: transparent rgba(0, 0, 0, 0.12) transparent transparent;
+}
+
+/* Dark mode adjustment */
+.dark .sticky-note-corner {
+  border-color: transparent rgba(255, 255, 255, 0.06) transparent transparent;
+}
+
+.dark .group:hover .sticky-note-corner {
+  border-color: transparent rgba(255, 255, 255, 0.1) transparent transparent;
+}
+
+/* Color-specific fold overlays for subtle tinting */
+.bg-amber-50 .sticky-note-corner {
+  border-color: transparent rgb(180 83 9 / 0.15) transparent transparent;
+}
+
+.bg-rose-50 .sticky-note-corner {
+  border-color: transparent rgb(190 18 60 / 0.15) transparent transparent;
+}
+
+.bg-sky-50 .sticky-note-corner {
+  border-color: transparent rgb(3 105 161 / 0.15) transparent transparent;
+}
+
+.bg-emerald-50 .sticky-note-corner {
+  border-color: transparent rgb(6 95 70 / 0.15) transparent transparent;
+}
+
+.bg-violet-50 .sticky-note-corner {
+  border-color: transparent rgb(109 40 217 / 0.15) transparent transparent;
+}
+
+.bg-orange-50 .sticky-note-corner {
+  border-color: transparent rgb(154 52 18 / 0.15) transparent transparent;
+}
+
+/* Dark mode color-specific folds */
+.dark .bg-amber-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(252 211 77 / 0.2) transparent transparent;
+}
+
+.dark .bg-rose-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(253 164 175 / 0.2) transparent transparent;
+}
+
+.dark .bg-sky-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(125 211 252 / 0.2) transparent transparent;
+}
+
+.dark .bg-emerald-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(110 231 183 / 0.2) transparent transparent;
+}
+
+.dark .bg-violet-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(196 181 253 / 0.2) transparent transparent;
+}
+
+.dark .bg-orange-950\/30 .sticky-note-corner {
+  border-color: transparent rgb(253 186 116 / 0.2) transparent transparent;
+}
