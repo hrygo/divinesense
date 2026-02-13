@@ -221,9 +221,14 @@ jobs:
           version: "28.x"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Generate and check
         run: |
-          make generate
+          buf generate
           if ! git diff --quiet; then
             echo "Generated files differ from committed files"
             git diff
