@@ -3,6 +3,7 @@ package routing
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -55,14 +56,10 @@ func (r *IntentRegistry) rebuildSortedCache() {
 	for _, cfg := range r.configs {
 		configs = append(configs, cfg)
 	}
-	// Sort by priority descending
-	for i := 0; i < len(configs); i++ {
-		for j := i + 1; j < len(configs); j++ {
-			if configs[j].Priority > configs[i].Priority {
-				configs[i], configs[j] = configs[j], configs[i]
-			}
-		}
-	}
+	// Sort by priority descending (higher priority first)
+	slices.SortFunc(configs, func(a, b IntentConfig) int {
+		return b.Priority - a.Priority
+	})
 	r.sortedByPri = configs
 }
 

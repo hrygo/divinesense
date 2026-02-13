@@ -13,6 +13,10 @@ import (
 	"log/slog"
 )
 
+// MaxTurnsPerSession is the maximum number of conversation turns to keep in memory.
+// This prevents unbounded memory growth in long conversations.
+const MaxTurnsPerSession = 10
+
 // ConversationContext maintains state across conversation turns.
 type ConversationContext struct {
 	CreatedAt time.Time
@@ -94,9 +98,9 @@ func (c *ConversationContext) AddTurn(userInput, agentOutput string, toolCalls [
 	c.Turns = append(c.Turns, turn)
 	c.UpdatedAt = time.Now()
 
-	// Keep only last 10 turns to manage memory
-	if len(c.Turns) > 10 {
-		c.Turns = c.Turns[len(c.Turns)-10:]
+	// Keep only last MaxTurnsPerSession turns to manage memory
+	if len(c.Turns) > MaxTurnsPerSession {
+		c.Turns = c.Turns[len(c.Turns)-MaxTurnsPerSession:]
 	}
 }
 

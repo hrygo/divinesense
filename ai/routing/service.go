@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type Service struct {
 	weightStorage     RouterWeightStorage
 	registry          *IntentRegistry // OCP-compliant intent registry
 	modelStrategy     ModelStrategy   // OCP-compliant model selection
+	bgWg              sync.WaitGroup  // WaitGroup for background goroutines
 }
 
 // Config contains the configuration for the router service.
@@ -25,16 +27,40 @@ type Config struct {
 	EnableCache    bool                // Enable routing result cache (default: true)
 	WeightStorage  RouterWeightStorage // Storage for dynamic weights (optional)
 	EnableFeedback bool                // Enable feedback-based weight adjustment (default: true)
+	Registry       *IntentRegistry     // Intent registry for OCP-compliant routing (DIP: inject instead of global)
+	ModelStrategy  ModelStrategy       // Model selection strategy (DIP: inject instead of constructor call)
+}
+
+// DefaultConfig returns a Config with sensible defaults.
+// This provides backward compatibility for callers that don't need custom configuration.
+func DefaultConfig() Config {
+	return Config{
+		EnableCache:    true,
+		EnableFeedback: true,
+		Registry:       DefaultRegistry(),
+		ModelStrategy:  NewDefaultModelStrategy(),
+	}
 }
 
 // NewService creates a new router service.
+// DIP-compliant: dependencies are injected via Config, not created internally.
 func NewService(cfg Config) *Service {
+	// Apply defaults for nil dependencies (backward compatibility)
+	registry := cfg.Registry
+	if registry == nil {
+		registry = DefaultRegistry()
+	}
+	modelStrategy := cfg.ModelStrategy
+	if modelStrategy == nil {
+		modelStrategy = NewDefaultModelStrategy()
+	}
+
 	svc := &Service{
 		ruleMatcher:    NewRuleMatcher(),
 		historyMatcher: NewHistoryMatcher(nil), // No memory service
 		weightStorage:  cfg.WeightStorage,
-		registry:       DefaultRegistry(),         // Use global registry by default
-		modelStrategy:  NewDefaultModelStrategy(), // Use default strategy
+		registry:       registry,
+		modelStrategy:  modelStrategy,
 	}
 
 	// Enable cache by default for performance
@@ -137,13 +163,21 @@ func (s *Service) saveToHistoryAsync(userID int32, input string, intent Intent) 
 	if s.historyMatcher == nil || userID <= 0 || intent == IntentUnknown {
 		return
 	}
+	s.bgWg.Add(1)
 	go func() {
+		defer s.bgWg.Done()
 		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := s.historyMatcher.SaveDecision(bgCtx, userID, input, intent, true); err != nil {
 			slog.Debug("failed to save routing decision", "error", err)
 		}
 	}()
+}
+
+// Shutdown waits for background tasks to complete.
+// Call this before service termination to ensure graceful shutdown.
+func (s *Service) Shutdown() {
+	s.bgWg.Wait()
 }
 
 // Returns: model configuration (local/cloud).
