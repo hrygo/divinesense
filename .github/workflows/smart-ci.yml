@@ -227,6 +227,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate and check
+        working-directory: proto
         run: |
           buf generate
           if ! git diff --quiet; then
