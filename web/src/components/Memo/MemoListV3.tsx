@@ -102,9 +102,12 @@ function useAutoFetchWhenNotScrollable({
 
 function KanbanSkeleton({ columns = 2 }: { columns?: number }) {
   return (
-    <div className={cn("grid gap-4", columns === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
+    <div className={cn("columns-1 sm:columns-2 gap-4", columns === 1 && "sm:columns-1")}>
       {Array.from({ length: columns === 1 ? 3 : 6 }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+        <div
+          key={i}
+          className="break-inside-avoid mb-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
+        >
           {/* Preview lines */}
           <div className="space-y-2">
             <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-full animate-pulse" />
@@ -260,12 +263,12 @@ export const MemoListV3 = memo(function MemoListV3({
         <KanbanSkeleton columns={2} />
       ) : (
         <>
-          {/* Kanban Grid - Responsive 1/2 columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+          {/* Kanban Masonry - Responsive 1/2 columns (CSS columns for true masonry) */}
+          <div className="columns-1 sm:columns-2 gap-4 w-full">
             {memos.map((memo, index) => (
               <div
                 key={memo.name}
-                className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out"
+                className="break-inside-avoid mb-4 animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out"
                 style={{
                   animationDelay: `${getAnimationDelay(index)}ms`,
                   animationFillMode: "both",
