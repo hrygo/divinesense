@@ -3,8 +3,6 @@ package schedule
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -72,80 +70,6 @@ func (r *RecurrenceRule) Validate() error {
 	}
 
 	return nil
-}
-
-// ParseRecurrenceRule parses a natural language recurrence pattern.
-// Examples:
-//   - "每天" → {Type: RecurrenceTypeDaily, Interval: 1}
-//   - "每3天" → {Type: RecurrenceTypeDaily, Interval: 3}
-//   - "每周一" → {Type: RecurrenceTypeWeekly, Weekdays: [1]}
-//   - "每周" → {Type: RecurrenceTypeWeekly, Interval: 1}
-//   - "每两周" → {Type: RecurrenceTypeDaily, Interval: 14}
-//   - "每月15号" → {Type: RecurrenceTypeMonthly, MonthDay: 15}
-func ParseRecurrenceRule(text string) (*RecurrenceRule, error) {
-	text = strings.TrimSpace(text)
-
-	// Daily patterns
-	if matched, _ := regexp.MatchString(`^(每|每天)(\d+)?天?$`, text); matched { //nolint:errcheck // regex is valid
-		rule := &RecurrenceRule{Type: RecurrenceTypeDaily, Interval: 1}
-		if parts := regexp.MustCompile(`(\d+)`).FindStringSubmatch(text); len(parts) > 1 {
-			if interval := parseInt(parts[1]); interval > 0 {
-				rule.Interval = interval
-			}
-		}
-		if err := rule.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid recurrence rule: %w", err)
-		}
-		return rule, nil
-	}
-
-	// Weekly patterns
-	if matched, _ := regexp.MatchString(`^每(\d+)?(周|星期)(一|二|三|四|五|六|日|天)?$`, text); matched { //nolint:errcheck // regex is valid
-		rule := &RecurrenceRule{Type: RecurrenceTypeWeekly, Interval: 1, Weekdays: []int{1, 2, 3, 4, 5}} // Default weekdays
-
-		// Check for specific weekday
-		weekdayMap := map[string]int{
-			"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
-			"六": 6, "日": 7, "天": 7,
-		}
-		if dayStr := regexp.MustCompile(`(周|星期)([一二三四五六日天])`).FindStringSubmatch(text); len(dayStr) > 2 {
-			day := dayStr[2]
-			if weekdayNum, ok := weekdayMap[day]; ok {
-				rule.Weekdays = []int{weekdayNum}
-			}
-		}
-
-		// Check for interval
-		if parts := regexp.MustCompile(`(\d+)`).FindStringSubmatch(text); len(parts) > 1 {
-			if interval := parseInt(parts[1]); interval > 0 {
-				rule.Interval = interval
-			}
-		}
-
-		if err := rule.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid recurrence rule: %w", err)
-		}
-		return rule, nil
-	}
-
-	// Monthly patterns
-	if matched, _ := regexp.MatchString(`^每(月)(\d{1,2})号?$`, text); matched { //nolint:errcheck // regex is valid
-		rule := &RecurrenceRule{Type: RecurrenceTypeMonthly, MonthDay: 0, Interval: 1}
-		if parts := regexp.MustCompile(`(\d{1,2})`).FindStringSubmatch(text); len(parts) > 1 {
-			if day := parseInt(parts[1]); day >= 1 && day <= 31 {
-				rule.MonthDay = day
-			}
-		}
-		if rule.MonthDay == 0 {
-			return nil, fmt.Errorf("invalid day of month: %s", text)
-		}
-		if err := rule.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid recurrence rule: %w", err)
-		}
-		return rule, nil
-	}
-
-	return nil, fmt.Errorf("unsupported recurrence pattern: %s", text)
 }
 
 // GenerateInstances generates all occurrence timestamps within a time range.
@@ -332,15 +256,6 @@ func getLastDayOfMonth(year int, month time.Month) int {
 	// First day of next month minus 1 day
 	firstOfMonth := time.Date(year, month+1, 1, 0, 0, 0, 0, time.UTC)
 	return firstOfMonth.AddDate(0, 0, -1).Day()
-}
-
-// parseInt parses an integer from string (for recurrence interval/day).
-func parseInt(s string) int {
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return 1
-	}
-	return val
 }
 
 // RecurrenceIterator provides lazy-loading iteration over recurrence instances.

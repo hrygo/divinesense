@@ -9,6 +9,7 @@ import (
 	"github.com/hrygo/divinesense/ai"
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/tools"
+	scheduletools "github.com/hrygo/divinesense/ai/agents/tools/schedule"
 	"github.com/hrygo/divinesense/ai/agents/universal"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
@@ -179,7 +180,7 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 				return userID
 			}
 			scheduleSvc := schedule.NewService(f.store)
-			tool := tools.NewScheduleAddTool(scheduleSvc, userIDGetter)
+			tool := scheduletools.NewScheduleAddTool(scheduleSvc, userIDGetter)
 			return agentpkg.ToolFromLegacy(
 				tool.Name(),
 				tool.Description(),
@@ -195,7 +196,7 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 				return userID
 			}
 			scheduleSvc := schedule.NewService(f.store)
-			tool := tools.NewScheduleQueryTool(scheduleSvc, userIDGetter)
+			tool := scheduletools.NewScheduleQueryTool(scheduleSvc, userIDGetter)
 			return agentpkg.ToolFromLegacy(
 				tool.Name(),
 				tool.Description(),
@@ -211,7 +212,7 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 				return userID
 			}
 			scheduleSvc := schedule.NewService(f.store)
-			tool := tools.NewScheduleUpdateTool(scheduleSvc, userIDGetter)
+			tool := scheduletools.NewScheduleUpdateTool(scheduleSvc, userIDGetter)
 			return agentpkg.ToolFromLegacy(
 				tool.Name(),
 				tool.Description(),
@@ -227,7 +228,7 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 				return userID
 			}
 			scheduleSvc := schedule.NewService(f.store)
-			tool := tools.NewFindFreeTimeTool(scheduleSvc, userIDGetter)
+			tool := scheduletools.NewFindFreeTimeTool(scheduleSvc, userIDGetter)
 			return agentpkg.ToolFromLegacy(
 				tool.Name(),
 				tool.Description(),
