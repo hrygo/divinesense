@@ -15,3 +15,4 @@
 | 笔记编辑器底部重构 | ✅ Issue Created | [memo-editor-bottom-redesign.md](./memo-editor-bottom-redesign.md)                 |
 | AIChat 普通模式优化 | ✅ Issue Created | [aichat-normal-mode-optimization.md](./aichat-normal-mode-optimization.md)         |
 | Orchestrator-Workers 多 Agent 架构 | ✅ Issue Created | [orchestrator-workers-research.md](./orchestrator-workers-research.md)         |
+| 彩色便签纸+禅意看板 | ✅ Issue Created | [memo-sticky-kanban-research.md](./memo-sticky-kanban-research.md)               |

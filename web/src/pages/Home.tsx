@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { HeroSection, MemoList } from "@/components/Memo";
+import { HeroSection, MemoListV3 } from "@/components/Memo";
 import { FixedEditor } from "@/components/Memo/FixedEditor";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -42,8 +42,8 @@ const Home = () => {
         {/* Hero Section with integrated intelligent search */}
         <HeroSection />
 
-        {/* Memo List - filtered by search query */}
-        <MemoList orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />
+        {/* Memo List - Zen Kanban with Sticky Notes */}
+        <MemoListV3 orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />
       </div>
 
       {/* Fixed Editor - outside container to handle its own width */}
