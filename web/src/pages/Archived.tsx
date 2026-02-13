@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MemoList } from "@/components/Memo";
+import { MemoListV3 } from "@/components/Memo";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -36,7 +36,7 @@ const Archived = () => {
     <div className="w-full min-h-full bg-background text-foreground">
       {/* Unified width container - matches AIChat responsive width */}
       <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
-        <MemoList state={State.ARCHIVED} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
+        <MemoListV3 state={State.ARCHIVED} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
       </div>
     </div>
   );

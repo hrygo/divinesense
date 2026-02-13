@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MemoList } from "@/components/Memo";
+import { MemoListV3 } from "@/components/Memo";
 import { ExploreHeroSection } from "@/components/Memo/ExploreHeroSection";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -47,7 +47,7 @@ const Explore = () => {
         <ExploreHeroSection totalMemos={0} totalUsers={0} />
 
         {/* Memo List - filtered by visibility */}
-        <MemoList state={State.NORMAL} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
+        <MemoListV3 state={State.NORMAL} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
       </div>
     </div>
   );
