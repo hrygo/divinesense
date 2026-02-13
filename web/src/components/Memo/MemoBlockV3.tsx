@@ -83,7 +83,7 @@ function formatRelativeTime(timestamp: number, t: (key: string, options?: Record
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return "now";
+  if (diffMins < 1) return t("common.now");
   if (diffMins < 60) return `${diffMins}m`;
   if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h`;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -296,13 +296,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
   const visibilityLabel = useMemo(() => {
     switch (memo.visibility) {
       case 1:
-        return "Public";
+        return t("memo.visibility.public");
       case 2:
-        return "Protected";
+        return t("memo.visibility.protected");
       default:
-        return "Private";
+        return t("memo.visibility.private");
     }
-  }, [memo.visibility]);
+  }, [memo.visibility, t]);
 
   // Quick actions menu
   const quickActions = useMemo(() => {
@@ -315,12 +315,12 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
     }> = [];
 
     if (!isArchived) {
-      actions.push({ key: "archive", icon: Archive, label: "Archive", action: handleToggleArchive });
+      actions.push({ key: "archive", icon: Archive, label: t("common.archive"), action: handleToggleArchive });
     } else {
       actions.push({
         key: "archive",
         icon: ArchiveRestore,
-        label: "Restore",
+        label: t("common.restore"),
         action: handleToggleArchive,
       });
     }
@@ -328,13 +328,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
     actions.push({
       key: "delete",
       icon: Trash2,
-      label: "Delete",
+      label: t("common.delete"),
       action: () => setDeleteDialogOpen(true),
       danger: true,
     });
 
     return actions;
-  }, [isArchived, handleToggleArchive]);
+  }, [isArchived, handleToggleArchive, t]);
 
   return (
     <>
@@ -372,7 +372,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
                   : "text-red-600 bg-red-100 dark:bg-red-900/30",
               )}
             >
-              {swipeDirection === "left" ? "Archive →" : "← Delete"}
+              {swipeDirection === "left" ? t("memo.swipe_archive") : t("memo.swipe_delete")}
             </span>
           </div>
         )}
@@ -426,7 +426,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
                     colorClasses.muted,
                   )}
                 >
-                  ✓ Clear completed tasks
+                  {t("memo.clear_completed_tasks")}
                 </button>
               )}
             </div>
@@ -497,6 +497,8 @@ function MemoCompactHeader({
   isArchived,
   colorClasses,
 }: MemoCompactHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-start gap-3 p-4">
       {/* Icon indicator - clickable for toggle */}
@@ -510,7 +512,7 @@ function MemoCompactHeader({
             : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20",
           colorClasses.text,
         )}
-        aria-label={isExpanded ? "Collapse" : "Expand"}
+        aria-label={isExpanded ? t("common.collapse") : t("common.expand")}
       >
         {memo.pinned ? <Pin className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
       </button>
@@ -539,7 +541,7 @@ function MemoCompactHeader({
           {memo.parent && (
             <span className={cn("flex items-center gap-1", colorClasses.muted)}>
               <MessageCircle className="w-3 h-3" />
-              Comment
+              {t("memo.comment_label")}
             </span>
           )}
         </div>
@@ -554,7 +556,7 @@ function MemoCompactHeader({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/30",
           colorClasses.muted,
         )}
-        aria-label={isExpanded ? "Collapse" : "Expand"}
+        aria-label={isExpanded ? t("common.collapse") : t("common.expand")}
       >
         {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
       </button>
@@ -607,6 +609,8 @@ function MemoCompactFooter({
   dropdownPosition,
   colorClasses,
 }: MemoCompactFooterProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       className={cn("flex items-center justify-between px-4 py-2.5", "border-t border-current/10", "bg-black/[0.02] dark:bg-white/[0.02]")}
@@ -621,19 +625,19 @@ function MemoCompactFooter({
         )}
       >
         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{isExpanded ? "Show less" : "Show more"}</span>
+        <span className="hidden sm:inline">{isExpanded ? t("memo.show-less") : t("memo.show-more")}</span>
       </button>
 
       {/* Right: Primary actions */}
       <div className="flex items-center gap-0.5">
         {/* Edit button - always visible when not archived */}
-        {!isArchived && <ActionButton icon={Edit3} label="Edit" onClick={onEdit} colorClasses={colorClasses} />}
+        {!isArchived && <ActionButton icon={Edit3} label={t("common.edit")} onClick={onEdit} colorClasses={colorClasses} />}
 
         {/* Pin button - visible for root memos */}
         {!memo.parent && !isArchived && (
           <ActionButton
             icon={memo.pinned ? PinOff : Pin}
-            label={memo.pinned ? "Unpin" : "Pin"}
+            label={memo.pinned ? t("common.unpin") : t("common.pin")}
             onClick={onTogglePin}
             colorClasses={colorClasses}
             className={memo.pinned ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : undefined}
@@ -641,18 +645,18 @@ function MemoCompactFooter({
         )}
 
         {/* Copy button */}
-        {!isArchived && <ActionButton icon={Copy} label="Copy" onClick={onCopy} colorClasses={colorClasses} />}
+        {!isArchived && <ActionButton icon={Copy} label={t("common.copy")} onClick={onCopy} colorClasses={colorClasses} />}
 
         {/* Share button - if available */}
         {!isArchived && typeof navigator !== "undefined" && "share" in navigator && (
-          <ActionButton icon={Share2} label="Share" onClick={onShare} colorClasses={colorClasses} />
+          <ActionButton icon={Share2} label={t("common.share")} onClick={onShare} colorClasses={colorClasses} />
         )}
 
         {/* Desktop (sm+): Show Archive button directly */}
         <div className="hidden sm:block">
           <ActionButton
             icon={isArchived ? ArchiveRestore : Archive}
-            label={isArchived ? "Restore" : "Archive"}
+            label={isArchived ? t("common.restore") : t("common.archive")}
             onClick={onToggleArchive}
             colorClasses={colorClasses}
           />
@@ -662,7 +666,7 @@ function MemoCompactFooter({
         <div className="hidden sm:block">
           <ActionButton
             icon={Trash2}
-            label="Delete"
+            label={t("common.delete")}
             onClick={onDelete}
             colorClasses={colorClasses}
             className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -673,7 +677,7 @@ function MemoCompactFooter({
         <div className="sm:hidden relative">
           <ActionButton
             icon={Ellipsis}
-            label="More actions"
+            label={t("memo.more_actions")}
             onClick={onQuickMenuToggle}
             colorClasses={colorClasses}
             isActive={quickMenuOpen}
@@ -702,11 +706,11 @@ function MemoCompactFooter({
           >
             {/* Header with close button */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Actions</span>
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t("memo.actions")}</span>
               <button
                 onClick={() => onQuickMenuToggle()}
                 className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                aria-label="Close menu"
+                aria-label={t("common.close")}
               >
                 <X className="w-3.5 h-3.5 text-zinc-400" />
               </button>

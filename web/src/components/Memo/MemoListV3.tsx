@@ -16,6 +16,7 @@
 
 import { Filter, Inbox, Search } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { MemoBlockV3 } from "@/components/Memo/MemoBlockV3";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
@@ -138,21 +139,23 @@ function KanbanSkeleton({ columns = 2 }: { columns?: number }) {
 // ============================================================================
 
 function EmptyState({ type }: { type: "all" | "filtered" | "search" }) {
+  const { t } = useTranslation();
+
   const config = {
     all: {
       icon: Inbox,
-      title: "No notes yet",
-      description: "Create your first note to get started",
+      title: t("memo.empty_all_title"),
+      description: t("memo.empty_all_subtitle"),
     },
     filtered: {
       icon: Filter,
-      title: "No matching notes",
-      description: "Try adjusting your filters",
+      title: t("memo.empty_filtered_title"),
+      description: t("memo.empty_filtered_subtitle"),
     },
     search: {
       icon: Search,
-      title: "No results found",
-      description: "Try different keywords",
+      title: t("memo.empty_search_title"),
+      description: t("memo.empty_search_subtitle"),
     },
   };
 
@@ -174,11 +177,13 @@ function EmptyState({ type }: { type: "all" | "filtered" | "search" }) {
 // ============================================================================
 
 function EndIndicator() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-center py-8">
       <div className="flex items-center gap-3 text-zinc-400 dark:text-zinc-500">
         <div className="w-12 h-px bg-zinc-200 dark:bg-zinc-700" />
-        <span className="text-xs">End of list</span>
+        <span className="text-xs">{t("memo.end_of_list")}</span>
         <div className="w-12 h-px bg-zinc-200 dark:bg-zinc-700" />
       </div>
     </div>
