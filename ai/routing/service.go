@@ -16,6 +16,8 @@ type Service struct {
 	cache             *RouterCache // Performance optimization: cache routing decisions
 	feedbackCollector *FeedbackCollector
 	weightStorage     RouterWeightStorage
+	registry          *IntentRegistry // OCP-compliant intent registry
+	modelStrategy     ModelStrategy   // OCP-compliant model selection
 }
 
 // Config contains the configuration for the router service.
@@ -31,6 +33,8 @@ func NewService(cfg Config) *Service {
 		ruleMatcher:    NewRuleMatcher(),
 		historyMatcher: NewHistoryMatcher(nil), // No memory service
 		weightStorage:  cfg.WeightStorage,
+		registry:       DefaultRegistry(),         // Use global registry by default
+		modelStrategy:  NewDefaultModelStrategy(), // Use default strategy
 	}
 
 	// Enable cache by default for performance
@@ -144,58 +148,12 @@ func (s *Service) saveToHistoryAsync(userID int32, input string, intent Intent) 
 
 // Returns: model configuration (local/cloud).
 func (s *Service) SelectModel(ctx context.Context, task TaskType) (ModelConfig, error) {
-	// Model selection strategy based on task complexity
-	switch task {
-	case TaskIntentClassification:
-		return ModelConfig{
-			Provider:    "local",
-			Model:       "qwen2.5-0.5b",
-			MaxTokens:   256,
-			Temperature: 0.1,
-		}, nil
-	case TaskEntityExtraction:
-		return ModelConfig{
-			Provider:    "local",
-			Model:       "qwen2.5-1.5b",
-			MaxTokens:   512,
-			Temperature: 0.2,
-		}, nil
-	case TaskSimpleQA:
-		return ModelConfig{
-			Provider:    "local",
-			Model:       "qwen2.5-3b",
-			MaxTokens:   1024,
-			Temperature: 0.3,
-		}, nil
-	case TaskComplexReasoning:
-		return ModelConfig{
-			Provider:    "cloud",
-			Model:       "deepseek-chat",
-			MaxTokens:   4096,
-			Temperature: 0.5,
-		}, nil
-	case TaskSummarization:
-		return ModelConfig{
-			Provider:    "cloud",
-			Model:       "deepseek-chat",
-			MaxTokens:   2048,
-			Temperature: 0.3,
-		}, nil
-	case TaskTagSuggestion:
-		return ModelConfig{
-			Provider:    "local",
-			Model:       "qwen2.5-1.5b",
-			MaxTokens:   256,
-			Temperature: 0.4,
-		}, nil
-	default:
-		return ModelConfig{
-			Provider:    "cloud",
-			Model:       "deepseek-chat",
-			MaxTokens:   2048,
-			Temperature: 0.5,
-		}, nil
+	// Use strategy for OCP-compliant model selection
+	if s.modelStrategy != nil {
+		return s.modelStrategy.SelectModel(ctx, task)
 	}
+	// Fallback to default
+	return DefaultFallbackModel(), nil
 }
 
 // userIDContextKey is the context key for user ID.

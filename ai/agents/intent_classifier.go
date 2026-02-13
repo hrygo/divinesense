@@ -3,29 +3,34 @@ package agent
 import (
 	"regexp"
 	"strings"
+
+	"github.com/hrygo/divinesense/ai/routing"
 )
 
 // TaskIntent represents the type of task across all agents.
-// This unified intent system covers memo, schedule, and amazing agents.
-type TaskIntent string
+// This is a type alias to routing.Intent for backward compatibility.
+//
+// Deprecated: Use routing.Intent directly for new code.
+type TaskIntent = routing.Intent
 
+// Intent constants - aliases to routing.Intent constants for backward compatibility.
 const (
 	// Schedule-related intents.
-	IntentSimpleCreate    TaskIntent = "schedule_create"   // 创建单个日程
-	IntentSimpleQuery     TaskIntent = "schedule_query"    // 查询日程/空闲
-	IntentSimpleUpdate    TaskIntent = "schedule_update"   // 修改/删除日程
-	IntentBatchCreate     TaskIntent = "schedule_batch"    // 重复日程
-	IntentConflictResolve TaskIntent = "schedule_conflict" // 处理冲突
+	IntentSimpleCreate    TaskIntent = routing.IntentScheduleCreate // 创建单个日程
+	IntentSimpleQuery     TaskIntent = routing.IntentScheduleQuery  // 查询日程/空闲
+	IntentSimpleUpdate    TaskIntent = routing.IntentScheduleUpdate // 修改/删除日程
+	IntentBatchCreate     TaskIntent = routing.IntentBatchSchedule  // 重复日程
+	IntentConflictResolve TaskIntent = "schedule_conflict"          // 处理冲突 (not in routing yet)
 
 	// Memo-related intents.
-	IntentMemoSearch TaskIntent = "memo_search" // 搜索笔记
-	IntentMemoCreate TaskIntent = "memo_create" // 创建笔记
+	IntentMemoSearch TaskIntent = routing.IntentMemoSearch // 搜索笔记
+	IntentMemoCreate TaskIntent = routing.IntentMemoCreate // 创建笔记
 
 	// Legacy aliases for backward compatibility.
-	IntentScheduleQuery  TaskIntent = "schedule_query"
-	IntentScheduleCreate TaskIntent = "schedule_create"
-	IntentScheduleUpdate TaskIntent = "schedule_update"
-	IntentBatchSchedule  TaskIntent = "schedule_batch"
+	IntentScheduleQuery  TaskIntent = routing.IntentScheduleQuery
+	IntentScheduleCreate TaskIntent = routing.IntentScheduleCreate
+	IntentScheduleUpdate TaskIntent = routing.IntentScheduleUpdate
+	IntentBatchSchedule  TaskIntent = routing.IntentBatchSchedule
 )
 
 // - Batch tasks (IntentBatchCreate) → Plan-Execute mode.
@@ -230,8 +235,7 @@ func (ic *IntentClassifier) hasNegation(input, lowerInput string) bool {
 func (ic *IntentClassifier) isMemoSearchIntent(input, lowerInput string) bool {
 	memoSearchKeywords := []string{
 		// Chinese
-		"笔记", "memo", "note", "记录", "搜索", "search", "查找", "find",
-		"写过", "记过", "提到", "关于",
+		"笔记", "记录", "搜索", "查找", "写过", "记过", "提到", "关于",
 		// English
 		"memo", "note", "find", "search", "look for",
 	}

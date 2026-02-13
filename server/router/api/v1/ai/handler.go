@@ -840,7 +840,7 @@ func (h *ParrotHandler) executeAgent(
 
 	// Execute agent
 	defer close(heartbeatDone) // Ensure heartbeat stops even on panic
-	execErr := agent.ExecuteWithCallback(ctx, req.Message, req.History, callback)
+	execErr := agent.Execute(ctx, req.Message, req.History, callback)
 	logger.Info("ai.agent.completed",
 		slog.String("execErr", fmt.Sprintf("%v", execErr)),
 		slog.Int64("duration_ms", time.Since(sessionStartTime).Milliseconds()))

@@ -63,29 +63,21 @@ const (
 )
 
 // IntentToAgentType converts Intent to AgentType.
-// This is the canonical mapping used across the routing system.
+// This queries the default registry for OCP-compliant mapping.
 func IntentToAgentType(intent Intent) AgentType {
-	switch intent {
-	case IntentMemoSearch, IntentMemoCreate:
-		return AgentTypeMemo
-	case IntentScheduleQuery, IntentScheduleCreate, IntentScheduleUpdate, IntentBatchSchedule:
-		return AgentTypeSchedule
-	default:
-		return AgentTypeUnknown
+	if at, ok := DefaultRegistry().GetAgentType(intent); ok {
+		return at
 	}
+	return AgentTypeUnknown
 }
 
 // AgentTypeToIntent converts AgentType to default Intent.
 // Used when a specific intent subtype cannot be determined.
 func AgentTypeToIntent(agentType AgentType) Intent {
-	switch agentType {
-	case AgentTypeMemo:
-		return IntentMemoCreate
-	case AgentTypeSchedule:
-		return IntentScheduleCreate
-	default:
-		return IntentUnknown
+	if intent, ok := DefaultRegistry().GetIntent(agentType); ok {
+		return intent
 	}
+	return IntentUnknown
 }
 
 // Intent represents the type of user intent.

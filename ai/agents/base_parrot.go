@@ -327,10 +327,9 @@ type ParrotAgent interface {
 	// Name returns the parrot's name (e.g., "memo", "schedule", "amazing", "geek", "evolution").
 	Name() string
 	// Execute processes the user input and streams events via callback.
-	Execute(ctx context.Context, userInput string, callback EventCallback) error
-	// ExecuteWithCallback processes the user input with history support and streams events via callback.
-	// This is the extended version of Execute that supports conversation history.
-	ExecuteWithCallback(ctx context.Context, userInput string, history []string, callback EventCallback) error
+	// history is optional - pass nil if no conversation history is needed.
+	// history 是可选的 - 如果不需要对话历史，传 nil。
+	Execute(ctx context.Context, userInput string, history []string, callback EventCallback) error
 	// SelfDescribe returns the parrot's metacognitive information.
 	SelfDescribe() *ParrotSelfCognition
 }

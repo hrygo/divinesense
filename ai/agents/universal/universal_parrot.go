@@ -93,17 +93,8 @@ func NewUniversalParrot(
 }
 
 // Execute implements agent.ParrotAgent.
-// Execute is a wrapper around ExecuteWithCallback with empty history.
+// history is optional - pass nil if no conversation history is needed.
 func (p *UniversalParrot) Execute(
-	ctx context.Context,
-	userInput string,
-	callback agent.EventCallback,
-) error {
-	return p.ExecuteWithCallback(ctx, userInput, nil, callback)
-}
-
-// ExecuteWithCallback provides an extended execution method with history support.
-func (p *UniversalParrot) ExecuteWithCallback(
 	ctx context.Context,
 	userInput string,
 	history []string,
@@ -143,7 +134,7 @@ func (p *UniversalParrot) ExecuteWithCallback(
 	)
 
 	if err != nil {
-		return agent.NewParrotError(p.config.Name, "ExecuteWithCallback", err)
+		return agent.NewParrotError(p.config.Name, "Execute", err)
 	}
 
 	// Cache result

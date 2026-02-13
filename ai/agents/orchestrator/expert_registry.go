@@ -131,7 +131,7 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 	}
 
 	// Execute with callback
-	return parrot.ExecuteWithCallback(ctx, input, nil, agentCallback)
+	return parrot.Execute(ctx, input, nil, agentCallback)
 }
 
 // Ensure ParrotExpertRegistry implements ExpertRegistry

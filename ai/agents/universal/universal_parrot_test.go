@@ -211,9 +211,9 @@ func TestUniversalParrot_ExecuteWithCache(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	// First call - cache miss
-	err = parrot.ExecuteWithCallback(ctx, "test query", nil, callback)
+	err = parrot.Execute(ctx, "test query", nil, callback)
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	if llmCalls != 1 {
@@ -221,9 +221,9 @@ func TestUniversalParrot_ExecuteWithCache(t *testing.T) {
 	}
 
 	// Second call with same input - cache hit
-	err = parrot.ExecuteWithCallback(ctx, "test query", nil, callback)
+	err = parrot.Execute(ctx, "test query", nil, callback)
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	// Should still be 1 due to cache hit
@@ -259,18 +259,18 @@ func TestUniversalParrot_CacheExpiration(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	// First call
-	err = parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	err = parrot.Execute(ctx, "test", nil, callback)
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	// Wait for cache to expire
 	time.Sleep(100 * time.Millisecond)
 
 	// Second call - cache should have expired
-	err = parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	err = parrot.Execute(ctx, "test", nil, callback)
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	if llmCalls != 2 {
@@ -278,8 +278,8 @@ func TestUniversalParrot_CacheExpiration(t *testing.T) {
 	}
 }
 
-// TestUniversalParrot_ExecuteWithCallback tests execution with callback.
-func TestUniversalParrot_ExecuteWithCallback(t *testing.T) {
+// TestUniversalParrot_Execute tests execution with callback.
+func TestUniversalParrot_Execute(t *testing.T) {
 	config := &ParrotConfig{
 		Name:     "test",
 		Strategy: StrategyDirect,
@@ -306,10 +306,10 @@ func TestUniversalParrot_ExecuteWithCallback(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = parrot.ExecuteWithCallback(ctx, "test input", nil, callback)
+	err = parrot.Execute(ctx, "test input", nil, callback)
 
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	mu.Lock()
@@ -342,10 +342,10 @@ func TestUniversalParrot_Execute_ErrorHandling(t *testing.T) {
 	ctx := context.Background()
 	callback := func(eventType string, data any) error { return nil }
 
-	err = parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	err = parrot.Execute(ctx, "test", nil, callback)
 
 	if err == nil {
-		t.Error("expected error from ExecuteWithCallback")
+		t.Error("expected error from Execute")
 	}
 
 	// Error should be wrapped with parrot name
@@ -384,9 +384,9 @@ func TestUniversalParrot_GetSessionStats(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	// Execute to accumulate stats
-	err = parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	err = parrot.Execute(ctx, "test", nil, callback)
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	stats := parrot.GetSessionStats()
@@ -667,7 +667,7 @@ func TestUniversalParrot_ConcurrentExecution(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			err := parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+			err := parrot.Execute(ctx, "test", nil, callback)
 			if err != nil {
 				errors <- err
 			}
@@ -730,7 +730,7 @@ func TestUniversalParrot_ContextCancellation(t *testing.T) {
 
 	callback := func(eventType string, data any) error { return nil }
 
-	err = parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	err = parrot.Execute(ctx, "test", nil, callback)
 
 	if err == nil {
 		t.Error("expected error due to timeout")
@@ -763,10 +763,10 @@ func TestUniversalParrot_ExecuteWithHistory(t *testing.T) {
 
 	history := []string{"Hello", "Hi there!", "How are you?", "I'm good"}
 
-	err = parrot.ExecuteWithCallback(ctx, "What's next?", history, callback)
+	err = parrot.Execute(ctx, "What's next?", history, callback)
 
 	if err != nil {
-		t.Fatalf("ExecuteWithCallback() error = %v", err)
+		t.Fatalf("Execute() error = %v", err)
 	}
 
 	// buildMessages creates: system prompt (1) + 2 pairs from history (4 strings -> 2 user+assistant pairs = 4 messages) = 5 messages
@@ -807,8 +807,8 @@ func TestUniversalParrot_DisabledCache(t *testing.T) {
 	callback := func(eventType string, data any) error { return nil }
 
 	// Execute twice with same input
-	parrot.ExecuteWithCallback(ctx, "test", nil, callback)
-	parrot.ExecuteWithCallback(ctx, "test", nil, callback)
+	parrot.Execute(ctx, "test", nil, callback)
+	parrot.Execute(ctx, "test", nil, callback)
 
 	// Should call LLM twice (no cache)
 	if llmCalls != 2 {

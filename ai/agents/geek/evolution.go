@@ -92,21 +92,11 @@ func (p *EvolutionParrot) SetDeviceContext(contextJson string) {
 }
 
 // Execute implements agentpkg.ParrotAgent.
-// Execute is a wrapper around ExecuteWithCallback with empty history.
+// history is ignored - Evolution mode manages its own state.
 func (p *EvolutionParrot) Execute(
 	ctx context.Context,
 	userInput string,
-	callback agentpkg.EventCallback,
-) error {
-	return p.ExecuteWithCallback(ctx, userInput, nil, callback)
-}
-
-// ExecuteWithCallback runs the Evolution Mode agent with streaming.
-// ExecuteWithCallback 运行进化模式代理并流式传输。
-func (p *EvolutionParrot) ExecuteWithCallback(
-	ctx context.Context,
-	userInput string,
-	history []string,
+	history []string, // Ignored - Evolution mode manages its own state
 	callback agentpkg.EventCallback,
 ) error {
 	// Check permissions first

@@ -70,18 +70,8 @@ func (p *GeekParrot) Name() string {
 }
 
 // Execute implements agentpkg.ParrotAgent.
-// Execute is a wrapper around ExecuteWithCallback with empty history.
+// history is ignored - Claude Code manages its own history.
 func (p *GeekParrot) Execute(
-	ctx context.Context,
-	userInput string,
-	callback agentpkg.EventCallback,
-) error {
-	return p.ExecuteWithCallback(ctx, userInput, nil, callback)
-}
-
-// ExecuteWithCallback runs Claude Code CLI with session persistence.
-// ExecuteWithCallback 运行 Claude Code CLI，支持会话持久化。
-func (p *GeekParrot) ExecuteWithCallback(
 	ctx context.Context,
 	userInput string,
 	history []string, // Ignored - Claude Code manages its own history

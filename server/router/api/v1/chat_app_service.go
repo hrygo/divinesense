@@ -528,7 +528,7 @@ func (s *APIV1Service) sendStreamingResponse(
 		agentCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 		defer cancel()
 
-		if err := agent.ExecuteWithCallback(agentCtx, prompt, nil, streamCallback); err != nil {
+		if err := agent.Execute(agentCtx, prompt, nil, streamCallback); err != nil {
 			slog.Error("agent streaming failed",
 				"user_id", cred.UserID,
 				"platform", platform,
