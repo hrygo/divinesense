@@ -967,6 +967,7 @@
   },
   "message": {
     "archived-successfully": "Archived successfully",
+    "error-occurred": "An error occurred",
     "copied": "Copied",
     "deleted-successfully": "Memo deleted successfully",
     "description-is-required": "Description is required",
@@ -978,6 +979,9 @@
     "remove-completed-task-list-items-successfully": "The removal was successful",
     "restored-successfully": "Restored successfully",
     "succeed-copy-content": "Content copied successfully.",
+    "failed-to-delete": "Failed to delete memo",
+    "failed-toggle-pin": "Failed to toggle pin status",
+    "failed-remove-tasks": "Failed to remove completed tasks",
     "succeed-copy-link": "Link copied successfully.",
     "update-succeed": "Update succeeded",
     "user-not-found": "User not found"

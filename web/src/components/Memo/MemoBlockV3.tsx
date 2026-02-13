@@ -53,6 +53,7 @@ import { handleError } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { State } from "@/types/proto/api/v1/common_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
+import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { hasCompletedTasks, removeCompletedTasks } from "@/utils/markdown-manipulation";
 import { getMemoColorClasses } from "@/utils/tag-colors";
 import { generatePreview } from "@/utils/text";
@@ -84,8 +85,8 @@ function formatRelativeTime(timestamp: number, t: (key: string, options?: Record
   const diffMins = Math.floor(diffMs / 60000);
 
   if (diffMins < 1) return t("common.now");
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h`;
+  if (diffMins < 60) return t("common.minutes-ago", { count: diffMins });
+  if (diffMins < 1440) return t("common.hours-ago", { count: Math.floor(diffMins / 60) });
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
@@ -135,7 +136,8 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
     try {
       localStorage.setItem(`memo-block-collapsed-${memoId}`, String(!isExpanded));
     } catch {
-      // ignore
+      // localStorage unavailable (private browsing, quota exceeded, etc.)
+      // Non-critical: collapse state won't persist across sessions
     }
   }, [memo.name, isExpanded]);
 
@@ -193,10 +195,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
         update: { name: memo.name, pinned: !memo.pinned },
         updateMask: ["pinned"],
       });
-    } catch {
-      // silent
+    } catch (error: unknown) {
+      handleError(error, toast.error, {
+        context: "Pin",
+        fallbackMessage: t("message.failed-toggle-pin"),
+      });
     }
-  }, [memo.name, memo.pinned, updateMemo]);
+  }, [memo.name, memo.pinned, updateMemo, t]);
 
   const handleToggleArchive = useCallback(async () => {
     const newState = memo.state === State.ARCHIVED ? State.NORMAL : State.ARCHIVED;
@@ -211,7 +216,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
     } catch (error: unknown) {
       handleError(error, toast.error, {
         context: newState === State.ARCHIVED ? "Archive" : "Restore",
-        fallbackMessage: "An error occurred",
+        fallbackMessage: t("message.error-occurred"),
       });
       return;
     }
@@ -240,20 +245,34 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
   }, [memo.name, t, profile.instanceUrl]);
 
   const confirmDelete = useCallback(async () => {
-    await deleteMemo(memo.name);
-    toast.success(t("message.deleted-successfully"));
-    if (isInMemoDetailPage) navigateTo("/");
-    queryClient.invalidateQueries({ queryKey: userKeys.stats() });
+    try {
+      await deleteMemo(memo.name);
+      toast.success(t("message.deleted-successfully"));
+      if (isInMemoDetailPage) navigateTo("/");
+      queryClient.invalidateQueries({ queryKey: userKeys.stats() });
+    } catch (error: unknown) {
+      handleError(error, toast.error, {
+        context: "Delete",
+        fallbackMessage: t("message.failed-to-delete"),
+      });
+    }
   }, [memo.name, t, isInMemoDetailPage, navigateTo, queryClient, deleteMemo]);
 
   const handleRemoveTasks = useCallback(async () => {
-    const newContent = removeCompletedTasks(memo.content);
-    await updateMemo({
-      update: { name: memo.name, content: newContent },
-      updateMask: ["content"],
-    });
-    toast.success(t("message.remove-completed-task-list-items-successfully"));
-    queryClient.invalidateQueries({ queryKey: userKeys.stats() });
+    try {
+      const newContent = removeCompletedTasks(memo.content);
+      await updateMemo({
+        update: { name: memo.name, content: newContent },
+        updateMask: ["content"],
+      });
+      toast.success(t("message.remove-completed-task-list-items-successfully"));
+      queryClient.invalidateQueries({ queryKey: userKeys.stats() });
+    } catch (error: unknown) {
+      handleError(error, toast.error, {
+        context: "RemoveTasks",
+        fallbackMessage: t("message.failed-remove-tasks"),
+      });
+    }
   }, [memo.name, memo.content, t, queryClient, updateMemo]);
 
   // Touch handlers for swipe gestures
@@ -295,9 +314,9 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
 
   const visibilityLabel = useMemo(() => {
     switch (memo.visibility) {
-      case 1:
+      case Visibility.PUBLIC:
         return t("memo.visibility.public");
-      case 2:
+      case Visibility.PROTECTED:
         return t("memo.visibility.protected");
       default:
         return t("memo.visibility.private");
@@ -529,9 +548,9 @@ function MemoCompactHeader({
           <span
             className={cn(
               "px-2 py-0.5 rounded-full text-[11px] font-medium",
-              memo.visibility === 1
+              memo.visibility === Visibility.PUBLIC
                 ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                : memo.visibility === 2
+                : memo.visibility === Visibility.PROTECTED
                   ? "bg-blue-500/20 text-blue-700 dark:text-blue-300"
                   : "bg-black/10 text-zinc-600 dark:text-zinc-400",
             )}
@@ -762,6 +781,7 @@ interface ActionButtonProps {
 function ActionButton({ icon: Icon, label, onClick, colorClasses, className, isActive, buttonRef }: ActionButtonProps) {
   return (
     <button
+      type="button"
       ref={buttonRef}
       onClick={onClick}
       className={cn(

@@ -34,7 +34,6 @@ export interface MemoListV3Props {
   filter?: string;
   pageSize?: number;
   onEdit?: (memo: Memo) => void;
-  showCreator?: boolean;
   className?: string;
 }
 
@@ -232,7 +231,7 @@ export const MemoListV3 = memo(function MemoListV3({
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 

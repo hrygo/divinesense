@@ -5,6 +5,7 @@ import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
+import { getMemoEditPath } from "@/utils/memo";
 
 const Archived = () => {
   const user = useCurrentUser();
@@ -26,8 +27,7 @@ const Archived = () => {
   // Handle memo edit - other actions are handled by MemoBlock
   const handleEdit = useCallback(
     (memo: Memo) => {
-      const memoId = memo.name.split("/").pop() || memo.name;
-      navigate(`/m/${memoId}`);
+      navigate(getMemoEditPath(memo));
     },
     [navigate],
   );
@@ -36,7 +36,7 @@ const Archived = () => {
     <div className="w-full min-h-full bg-background text-foreground">
       {/* Unified width container - matches AIChat responsive width */}
       <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
-        <MemoListV3 state={State.ARCHIVED} orderBy={orderBy} filter={memoFilter} showCreator onEdit={handleEdit} />
+        <MemoListV3 state={State.ARCHIVED} orderBy={orderBy} filter={memoFilter} onEdit={handleEdit} />
       </div>
     </div>
   );

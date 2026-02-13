@@ -15,10 +15,16 @@
 
 export interface TruncateOptions {
   maxLength?: number;
-  preserveCodeBlocks?: boolean;
   preserveLinks?: boolean;
   ellipsis?: string;
 }
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Maximum input length for stripMarkdown to prevent ReDoS (50KB) */
+const MAX_MARKDOWN_INPUT_LENGTH = 50000;
 
 // ============================================================================
 // Markdown Cleaning
@@ -26,9 +32,18 @@ export interface TruncateOptions {
 
 /**
  * Remove Markdown syntax from text for plain preview
+ *
+ * Note: For very long content (>10KB), consider using a dedicated markdown parser
+ * for better performance. Current implementation uses regex which may have
+ * backtracking issues on extremely long inputs.
+ *
+ * @param text - Raw text (may contain Markdown)
+ * @param options - Processing options
+ * @returns Clean text without Markdown syntax
  */
 export function stripMarkdown(text: string, options?: { preserveLinks?: boolean }): string {
-  let result = text;
+  // Prevent ReDoS by limiting input length
+  let result = text.length > MAX_MARKDOWN_INPUT_LENGTH ? text.slice(0, MAX_MARKDOWN_INPUT_LENGTH) : text;
 
   // Remove headers (# ## ### etc.)
   result = result.replace(/^#{1,6}\s+/gm, "");

@@ -1,4 +1,25 @@
+import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
+
+/**
+ * Extract memo ID from memo.name
+ *
+ * @param memo - Memo object with name property (format: "memos/{id}")
+ * @returns Extracted memo ID or full name if extraction fails
+ */
+export function getMemoId(memo: Memo): string {
+  return memo.name.split("/").pop() || memo.name;
+}
+
+/**
+ * Get edit path for a memo
+ *
+ * @param memo - Memo object
+ * @returns Path string for editing the memo (format: "/m/{id}")
+ */
+export function getMemoEditPath(memo: Memo): string {
+  return `/m/${getMemoId(memo)}`;
+}
 
 export const convertVisibilityFromString = (visibility: string) => {
   switch (visibility) {

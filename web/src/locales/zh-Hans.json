@@ -962,6 +962,7 @@
   },
   "message": {
     "archived-successfully": "归档成功",
+    "error-occurred": "发生错误",
     "copied": "已复制",
     "deleted-successfully": "成功删除！",
     "description-is-required": "请填写说明",
@@ -973,6 +974,9 @@
     "remove-completed-task-list-items-successfully": "移除成功！",
     "restored-successfully": "恢复成功",
     "succeed-copy-content": "复制内容到剪贴板成功。",
+    "failed-to-delete": "删除笔记失败",
+    "failed-toggle-pin": "切换置顶状态失败",
+    "failed-remove-tasks": "清除已完成任务失败",
     "succeed-copy-link": "复制链接到剪贴板成功。",
     "update-succeed": "更新成功",
     "user-not-found": "未找到该用户"

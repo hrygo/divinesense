@@ -197,6 +197,18 @@ const TAG_COLOR_RULES: Record<string, StickyColorKey> = {
   预算: "amber",
 };
 
+/**
+ * Pre-compiled word boundary regex rules for performance
+ * Avoids creating new RegExp objects on every function call
+ */
+const COMPILED_WORD_BOUNDARY_RULES: Array<{
+  regex: RegExp;
+  color: StickyColorKey;
+}> = Object.entries(TAG_COLOR_RULES).map(([keyword, color]) => ({
+  regex: new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
+  color,
+}));
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -225,6 +237,7 @@ function hashToColor(tag: string): StickyColorKey {
 
 /**
  * Find matching color rule for a tag
+ * Uses word boundary matching to avoid false positives (e.g., "worker" matching "work")
  */
 function findColorRule(tag: string): StickyColorKey | null {
   const normalizedTag = tag.toLowerCase().trim();
@@ -234,9 +247,10 @@ function findColorRule(tag: string): StickyColorKey | null {
     return TAG_COLOR_RULES[normalizedTag];
   }
 
-  // Partial match (tag contains keyword or keyword contains tag)
-  for (const [keyword, color] of Object.entries(TAG_COLOR_RULES)) {
-    if (normalizedTag.includes(keyword) || keyword.includes(normalizedTag)) {
+  // Word boundary match using pre-compiled regexes (more precise than simple includes)
+  // Only match if the keyword appears as a complete word in the tag
+  for (const { regex, color } of COMPILED_WORD_BOUNDARY_RULES) {
+    if (regex.test(normalizedTag)) {
       return color;
     }
   }
