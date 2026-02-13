@@ -51,12 +51,17 @@ type AIService struct {
 	mu                       sync.RWMutex
 }
 
-// Close gracefully shuts down the AI service, including the persister.
+// Close gracefully shuts down the AI service, including the persister and router service.
 func (s *AIService) Close(timeout time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	var errs []error
+
+	// Shutdown router service (waits for background goroutines)
+	if s.routerService != nil {
+		s.routerService.Shutdown()
+	}
 
 	if s.persister != nil {
 		if err := s.persister.Close(timeout); err != nil {
