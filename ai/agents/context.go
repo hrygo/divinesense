@@ -302,27 +302,3 @@ func (s *ContextStore) CleanupOld(maxAge time.Duration) int {
 
 	return deleted
 }
-
-// Helper functions
-
-// lower converts a string to lowercase using the standard library for proper Unicode support.
-func lower(s string) string {
-	return strings.ToLower(s)
-}
-
-func contains(s string, substrings []string) bool {
-	for _, sub := range substrings {
-		if len(s) >= len(sub) {
-			for i := 0; i <= len(s)-len(sub); i++ {
-				if s[i:i+len(sub)] == sub {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-func containsAny(s string, substrings []string) bool {
-	return contains(s, substrings)
-}
