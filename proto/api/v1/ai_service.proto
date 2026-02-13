@@ -269,43 +269,6 @@ service AIService {
   }
 }
 
-// ScheduleAgentService provides schedule-specific AI agent functionality.
-service ScheduleAgentService {
-  // Chat handles non-streaming schedule agent chat requests.
-  rpc Chat(ScheduleAgentChatRequest) returns (ScheduleAgentChatResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/schedule-agent/chat"
-      body: "*"
-    };
-  }
-
-  // ChatStream handles streaming schedule agent chat requests.
-  rpc ChatStream(ScheduleAgentChatRequest) returns (stream ScheduleAgentStreamResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/schedule-agent/chat/stream"
-      body: "*"
-    };
-  }
-}
-
-// ScheduleAgentChatRequest is the request for schedule agent chat.
-message ScheduleAgentChatRequest {
-  string message = 1 [(google.api.field_behavior) = REQUIRED]; // User's message
-  string user_timezone = 2; // User's timezone in IANA format (e.g., "Asia/Shanghai")
-}
-
-// ScheduleAgentChatResponse is the response for schedule agent chat (non-streaming).
-message ScheduleAgentChatResponse {
-  string response = 1; // Agent's response
-}
-
-// ScheduleAgentStreamResponse is the streaming response for schedule agent chat.
-message ScheduleAgentStreamResponse {
-  string event = 1; // JSON-encoded event with "type" and "data" fields
-  string content = 2; // Streaming content chunk
-  bool done = 3; // Stream end marker
-}
-
 // SemanticSearchRequest is the request for SemanticSearch.
 message SemanticSearchRequest {
   string query = 1 [(google.api.field_behavior) = REQUIRED];

@@ -27,7 +27,6 @@ import (
 
 type APIV1Service struct {
 	v1pb.UnimplementedAIServiceServer
-	v1pb.UnimplementedScheduleAgentServiceServer
 	v1pb.UnimplementedUserServiceServer
 	v1pb.UnimplementedScheduleServiceServer
 	v1pb.UnimplementedAttachmentServiceServer

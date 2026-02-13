@@ -24,8 +24,6 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// AIServiceName is the fully-qualified name of the AIService service.
 	AIServiceName = "memos.api.v1.AIService"
-	// ScheduleAgentServiceName is the fully-qualified name of the ScheduleAgentService service.
-	ScheduleAgentServiceName = "memos.api.v1.ScheduleAgentService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -132,12 +130,6 @@ const (
 	AIServiceSwitchBranchProcedure = "/memos.api.v1.AIService/SwitchBranch"
 	// AIServiceDeleteBranchProcedure is the fully-qualified name of the AIService's DeleteBranch RPC.
 	AIServiceDeleteBranchProcedure = "/memos.api.v1.AIService/DeleteBranch"
-	// ScheduleAgentServiceChatProcedure is the fully-qualified name of the ScheduleAgentService's Chat
-	// RPC.
-	ScheduleAgentServiceChatProcedure = "/memos.api.v1.ScheduleAgentService/Chat"
-	// ScheduleAgentServiceChatStreamProcedure is the fully-qualified name of the ScheduleAgentService's
-	// ChatStream RPC.
-	ScheduleAgentServiceChatStreamProcedure = "/memos.api.v1.ScheduleAgentService/ChatStream"
 )
 
 // AIServiceClient is a client for the memos.api.v1.AIService service.
@@ -1256,105 +1248,4 @@ func (UnimplementedAIServiceHandler) SwitchBranch(context.Context, *connect.Requ
 
 func (UnimplementedAIServiceHandler) DeleteBranch(context.Context, *connect.Request[v1.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.DeleteBranch is not implemented"))
-}
-
-// ScheduleAgentServiceClient is a client for the memos.api.v1.ScheduleAgentService service.
-type ScheduleAgentServiceClient interface {
-	// Chat handles non-streaming schedule agent chat requests.
-	Chat(context.Context, *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.Response[v1.ScheduleAgentChatResponse], error)
-	// ChatStream handles streaming schedule agent chat requests.
-	ChatStream(context.Context, *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.ServerStreamForClient[v1.ScheduleAgentStreamResponse], error)
-}
-
-// NewScheduleAgentServiceClient constructs a client for the memos.api.v1.ScheduleAgentService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewScheduleAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ScheduleAgentServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	scheduleAgentServiceMethods := v1.File_api_v1_ai_service_proto.Services().ByName("ScheduleAgentService").Methods()
-	return &scheduleAgentServiceClient{
-		chat: connect.NewClient[v1.ScheduleAgentChatRequest, v1.ScheduleAgentChatResponse](
-			httpClient,
-			baseURL+ScheduleAgentServiceChatProcedure,
-			connect.WithSchema(scheduleAgentServiceMethods.ByName("Chat")),
-			connect.WithClientOptions(opts...),
-		),
-		chatStream: connect.NewClient[v1.ScheduleAgentChatRequest, v1.ScheduleAgentStreamResponse](
-			httpClient,
-			baseURL+ScheduleAgentServiceChatStreamProcedure,
-			connect.WithSchema(scheduleAgentServiceMethods.ByName("ChatStream")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// scheduleAgentServiceClient implements ScheduleAgentServiceClient.
-type scheduleAgentServiceClient struct {
-	chat       *connect.Client[v1.ScheduleAgentChatRequest, v1.ScheduleAgentChatResponse]
-	chatStream *connect.Client[v1.ScheduleAgentChatRequest, v1.ScheduleAgentStreamResponse]
-}
-
-// Chat calls memos.api.v1.ScheduleAgentService.Chat.
-func (c *scheduleAgentServiceClient) Chat(ctx context.Context, req *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.Response[v1.ScheduleAgentChatResponse], error) {
-	return c.chat.CallUnary(ctx, req)
-}
-
-// ChatStream calls memos.api.v1.ScheduleAgentService.ChatStream.
-func (c *scheduleAgentServiceClient) ChatStream(ctx context.Context, req *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.ServerStreamForClient[v1.ScheduleAgentStreamResponse], error) {
-	return c.chatStream.CallServerStream(ctx, req)
-}
-
-// ScheduleAgentServiceHandler is an implementation of the memos.api.v1.ScheduleAgentService
-// service.
-type ScheduleAgentServiceHandler interface {
-	// Chat handles non-streaming schedule agent chat requests.
-	Chat(context.Context, *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.Response[v1.ScheduleAgentChatResponse], error)
-	// ChatStream handles streaming schedule agent chat requests.
-	ChatStream(context.Context, *connect.Request[v1.ScheduleAgentChatRequest], *connect.ServerStream[v1.ScheduleAgentStreamResponse]) error
-}
-
-// NewScheduleAgentServiceHandler builds an HTTP handler from the service implementation. It returns
-// the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewScheduleAgentServiceHandler(svc ScheduleAgentServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	scheduleAgentServiceMethods := v1.File_api_v1_ai_service_proto.Services().ByName("ScheduleAgentService").Methods()
-	scheduleAgentServiceChatHandler := connect.NewUnaryHandler(
-		ScheduleAgentServiceChatProcedure,
-		svc.Chat,
-		connect.WithSchema(scheduleAgentServiceMethods.ByName("Chat")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scheduleAgentServiceChatStreamHandler := connect.NewServerStreamHandler(
-		ScheduleAgentServiceChatStreamProcedure,
-		svc.ChatStream,
-		connect.WithSchema(scheduleAgentServiceMethods.ByName("ChatStream")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/memos.api.v1.ScheduleAgentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ScheduleAgentServiceChatProcedure:
-			scheduleAgentServiceChatHandler.ServeHTTP(w, r)
-		case ScheduleAgentServiceChatStreamProcedure:
-			scheduleAgentServiceChatStreamHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
-}
-
-// UnimplementedScheduleAgentServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedScheduleAgentServiceHandler struct{}
-
-func (UnimplementedScheduleAgentServiceHandler) Chat(context.Context, *connect.Request[v1.ScheduleAgentChatRequest]) (*connect.Response[v1.ScheduleAgentChatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.ScheduleAgentService.Chat is not implemented"))
-}
-
-func (UnimplementedScheduleAgentServiceHandler) ChatStream(context.Context, *connect.Request[v1.ScheduleAgentChatRequest], *connect.ServerStream[v1.ScheduleAgentStreamResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.ScheduleAgentService.ChatStream is not implemented"))
 }

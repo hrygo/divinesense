@@ -3,7 +3,7 @@ import { Code, ConnectError, createClient, type Interceptor } from "@connectrpc/
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { getAccessToken, setAccessToken } from "./auth-state";
 import { ActivityService } from "./types/proto/api/v1/activity_service_pb";
-import { AIService, ScheduleAgentService } from "./types/proto/api/v1/ai_service_pb";
+import { AIService } from "./types/proto/api/v1/ai_service_pb";
 import { AttachmentService } from "./types/proto/api/v1/attachment_service_pb";
 import { AuthService } from "./types/proto/api/v1/auth_service_pb";
 import { IdentityProviderService } from "./types/proto/api/v1/idp_service_pb";
@@ -193,4 +193,3 @@ export const identityProviderServiceClient = createClient(IdentityProviderServic
 // AI service clients
 export const aiServiceClient = createClient(AIService, transport);
 export const scheduleServiceClient = createClient(ScheduleService, transport);
-export const scheduleAgentServiceClient = createClient(ScheduleAgentService, transport);

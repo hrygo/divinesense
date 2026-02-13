@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { scheduleAgentServiceClient } from "@/connect";
+import { aiServiceClient } from "@/connect";
+import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 
 /**
  * Hook to chat with Schedule Agent (non-streaming)
+ * Uses AIService.Chat with AGENT_TYPE_SCHEDULE
  */
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -25,6 +27,7 @@ export interface ParsedEvent {
 
 /**
  * Hook to chat with Schedule Agent (non-streaming)
+ * Delegates to AIService.Chat with agentType=SCHEDULE
  */
 export function useScheduleAgentChat() {
   const queryClient = useQueryClient();
@@ -47,11 +50,18 @@ export function useScheduleAgentChat() {
 
       const fullMessage = parts.join("\n\n");
 
-      const response = await scheduleAgentServiceClient.chat({
+      // Use AIService.Chat with SCHEDULE agent type
+      let response = "";
+      for await (const chunk of aiServiceClient.chat({
         message: fullMessage,
         userTimezone: request.userTimezone || "Asia/Shanghai",
-      });
-      return response;
+        agentType: AgentType.SCHEDULE,
+      })) {
+        if (chunk.content) {
+          response += chunk.content;
+        }
+      }
+      return { response };
     },
     onSuccess: () => {
       // Invalidate schedule lists to refetch
@@ -78,6 +88,7 @@ export function parseEvent(eventJSON: string): ParsedEvent | null {
 
 /**
  * Hook to chat with Schedule Agent (streaming)
+ * Uses AIService.Chat with AGENT_TYPE_SCHEDULE
  * Returns an async generator that yields stream events
  */
 export async function* scheduleAgentChatStream(
@@ -85,15 +96,16 @@ export async function* scheduleAgentChatStream(
   userTimezone = "Asia/Shanghai",
   onEvent?: (event: { type: string; data: string }) => void,
 ): AsyncGenerator<{ type: string; data: string; content?: string; done?: boolean }, void> {
-  const response = await scheduleAgentServiceClient.chatStream({
+  const response = aiServiceClient.chat({
     message,
     userTimezone,
+    agentType: AgentType.SCHEDULE,
   });
 
   for await (const chunk of response) {
-    // Parse the event JSON
-    if (chunk.event) {
-      const parsed = parseEvent(chunk.event);
+    // Parse the event from eventType and eventData fields
+    if (chunk.eventType) {
+      const parsed = parseEvent(chunk.eventData || "{}");
       if (parsed) {
         onEvent?.(parsed);
         yield parsed;
@@ -102,8 +114,8 @@ export async function* scheduleAgentChatStream(
 
     // Yield the raw chunk for compatibility
     yield {
-      type: chunk.event ? "raw" : "data",
-      data: chunk.event || "",
+      type: chunk.eventType || "data",
+      data: chunk.eventData || "",
       content: chunk.content,
       done: chunk.done,
     };
