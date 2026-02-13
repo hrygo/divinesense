@@ -3,7 +3,6 @@
 package universal
 
 import (
-	"container/list"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/cache"
 )
 
 const (
@@ -39,7 +39,7 @@ type UniversalParrot struct {
 	scheduleService interface{} // schedule.Service
 
 	// Cache
-	cache *LRUCache
+	cache *cache.StringLRUCache
 
 	// Statistics
 	stats *NormalSessionStats
@@ -71,13 +71,13 @@ func NewUniversalParrot(
 	}
 
 	// Initialize cache if enabled
-	var cache *LRUCache
+	var lruCache *cache.StringLRUCache
 	if config.EnableCache {
 		cacheSize := config.CacheSize
 		if cacheSize <= 0 {
 			cacheSize = 100 // Default
 		}
-		cache = NewLRUCache(cacheSize, config.CacheTTL)
+		lruCache = cache.NewStringLRUCache(cacheSize, config.CacheTTL)
 	}
 
 	return &UniversalParrot{
@@ -85,7 +85,7 @@ func NewUniversalParrot(
 		strategy: strategy,
 		llm:      llm,
 		tools:    tools,
-		cache:    cache,
+		cache:    lruCache,
 		stats:    NewNormalSessionStats(config.Name),
 		userID:   userID,
 		timezone: "Local",
@@ -151,7 +151,7 @@ func (p *UniversalParrot) ExecuteWithCallback(
 	// Cache result
 	if p.cache != nil && result != "" {
 		cacheKey := p.generateCacheKey(p.config.Name, p.userID, userInput)
-		p.cache.Set(cacheKey, result)
+		p.cache.SetWithDefaultTTL(cacheKey, result)
 	}
 
 	// Accumulate stats
@@ -332,90 +332,6 @@ func (p *UniversalParrot) generateCacheKey(name string, userID int32, input stri
 func hashString(s string) string {
 	hash := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(hash[:]) // Use full hash for better distribution
-}
-
-// LRUCache is a simple LRU cache implementation using container/list for O(1) operations.
-type LRUCache struct {
-	mu    sync.Mutex
-	size  int
-	ttl   time.Duration
-	items map[string]*list.Element
-	lru   *list.List // front=least recent, back=most recent
-}
-
-type cacheItem struct {
-	key        string
-	value      string
-	expiration time.Time
-}
-
-// NewLRUCache creates a new LRU cache.
-func NewLRUCache(size int, ttl time.Duration) *LRUCache {
-	return &LRUCache{
-		size:  size,
-		ttl:   ttl,
-		items: make(map[string]*list.Element),
-		lru:   list.New(),
-	}
-}
-
-// Get retrieves a value from the cache.
-func (c *LRUCache) Get(key string) (string, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	elem, ok := c.items[key]
-	if !ok {
-		return "", false
-	}
-
-	item, ok := elem.Value.(*cacheItem)
-	if !ok {
-		return "", false
-	}
-	if time.Now().After(item.expiration) {
-		c.lru.Remove(elem)
-		delete(c.items, key)
-		return "", false
-	}
-
-	// Move to back (most recently used) - O(1)
-	c.lru.MoveToBack(elem)
-	return item.value, true
-}
-
-// Set stores a value in the cache.
-func (c *LRUCache) Set(key, value string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	item := &cacheItem{
-		key:        key,
-		value:      value,
-		expiration: time.Now().Add(c.ttl),
-	}
-
-	if elem, ok := c.items[key]; ok {
-		// Update existing - O(1)
-		elem.Value = item
-		c.lru.MoveToBack(elem)
-		return
-	}
-
-	// Evict if at capacity - O(1)
-	if c.lru.Len() >= c.size {
-		oldest := c.lru.Front()
-		if oldest != nil {
-			c.lru.Remove(oldest)
-			if item, ok := oldest.Value.(*cacheItem); ok {
-				delete(c.items, item.key)
-			}
-		}
-	}
-
-	// Add new - O(1)
-	elem := c.lru.PushBack(item)
-	c.items[key] = elem
 }
 
 // NormalSessionStats represents accumulated session statistics.

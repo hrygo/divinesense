@@ -107,15 +107,11 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 				// 创建 session stats 持久化器
 				persister := aistats.NewPersister(store.AgentStatsStore, 100, slog.Default())
 
-				// 创建会话标题生成器（使用 IntentClassifier 相同的轻量级模型）
+				// 创建会话标题生成器（使用已有 LLMService）
 				var titleGenerator *ai.TitleGenerator
-				if aiConfig.IntentClassifier.Enabled {
-					titleGenerator = ai.NewTitleGenerator(ai.TitleGeneratorConfig{
-						APIKey:  aiConfig.IntentClassifier.APIKey,
-						BaseURL: aiConfig.IntentClassifier.BaseURL,
-						Model:   aiConfig.IntentClassifier.Model,
-					})
-					slog.Info("Title generator initialized", "model", aiConfig.IntentClassifier.Model)
+				if llmService != nil {
+					titleGenerator = ai.NewTitleGeneratorWithLLM(llmService)
+					slog.Info("Title generator initialized with shared LLM service")
 				}
 
 				service.AIService = &AIService{

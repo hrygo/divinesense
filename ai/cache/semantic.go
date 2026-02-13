@@ -72,7 +72,7 @@ type SemanticCache struct {
 	cfg SemanticCacheConfig
 
 	// Exact match cache (SHA256 hash key)
-	exactCache *LRUCache
+	exactCache *ByteLRUCache
 
 	// Semantic match cache (vector similarity)
 	semanticCache struct {
@@ -100,7 +100,7 @@ func NewSemanticCache(cfg SemanticCacheConfig) *SemanticCache {
 
 	return &SemanticCache{
 		cfg:        cfg,
-		exactCache: NewLRUCache(cfg.MaxEntries, cfg.TTL),
+		exactCache: NewByteLRUCache(cfg.MaxEntries, cfg.TTL),
 		semanticCache: struct {
 			sync.RWMutex
 			entries map[string]*semanticCacheEntry

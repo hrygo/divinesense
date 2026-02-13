@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hrygo/divinesense/ai/core/llm"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -257,9 +258,9 @@ const intentSystemPromptStrict = `AI 助手意图分类器。判断用户意图�
 
 // intentJSONSchema defines the strict output schema for intent classification.
 // Using enum to constrain intent values and prevent hallucination.
-var intentJSONSchema = &jsonSchema{
+var intentJSONSchema = &llm.JSONSchema{
 	Type: "object",
-	Properties: map[string]*jsonSchema{
+	Properties: map[string]*llm.JSONSchema{
 		"intent": {
 			Type: "string",
 			Enum: []string{
@@ -280,19 +281,4 @@ var intentJSONSchema = &jsonSchema{
 	},
 	Required:             []string{"intent", "confidence"},
 	AdditionalProperties: false,
-}
-
-// jsonSchema implements json.Marshaler for OpenAI's JSON Schema format.
-type jsonSchema struct {
-	Properties           map[string]*jsonSchema `json:"properties,omitempty"`
-	Type                 string                 `json:"type"`
-	Description          string                 `json:"description,omitempty"`
-	Required             []string               `json:"required,omitempty"`
-	Enum                 []string               `json:"enum,omitempty"`
-	AdditionalProperties bool                   `json:"additionalProperties"`
-}
-
-func (s *jsonSchema) MarshalJSON() ([]byte, error) {
-	type alias jsonSchema
-	return json.Marshal((*alias)(s))
 }

@@ -26,7 +26,7 @@ type CacheEntry struct {
 // - Reduces history matching overhead (~10ms) for similar inputs
 // - Improves perceived latency for common queries
 type RouterCache struct {
-	cache          *cache.LRUCache
+	cache          *cache.ByteLRUCache
 	defaultTTL     time.Duration
 	llmResultTTL   time.Duration // Longer TTL for LLM results (expensive)
 	hitCount       int64
@@ -55,7 +55,7 @@ func NewRouterCache(cfg CacheConfig) *RouterCache {
 	}
 
 	return &RouterCache{
-		cache:          cache.NewLRUCache(cfg.Capacity, cfg.DefaultTTL),
+		cache:          cache.NewByteLRUCache(cfg.Capacity, cfg.DefaultTTL),
 		defaultTTL:     cfg.DefaultTTL,
 		llmResultTTL:   cfg.LLMResultTTL,
 		lastStatsReset: time.Now(),

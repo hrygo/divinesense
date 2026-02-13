@@ -1,14 +1,16 @@
-// Package universal provides tests for LRU cache.
+// Package universal provides tests for LRU cache integration.
 package universal
 
 import (
 	"testing"
 	"time"
+
+	"github.com/hrygo/divinesense/ai/cache"
 )
 
 // TestLRUCache_Concurrency tests concurrent access safety.
 func TestLRUCache_Concurrency(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	lru := cache.NewStringLRUCache(100, time.Minute)
 	done := make(chan bool)
 
 	// Concurrent writers
@@ -16,7 +18,7 @@ func TestLRUCache_Concurrency(t *testing.T) {
 		go func(n int) {
 			for j := 0; j < 100; j++ {
 				key := string(rune(n)) + string(rune(j))
-				cache.Set(key, "value")
+				lru.SetWithDefaultTTL(key, "value")
 			}
 			done <- true
 		}(i)
@@ -27,7 +29,7 @@ func TestLRUCache_Concurrency(t *testing.T) {
 		go func(n int) {
 			for j := 0; j < 100; j++ {
 				key := string(rune(n)) + string(rune(j))
-				cache.Get(key)
+				lru.Get(key)
 			}
 			done <- true
 		}(i)
@@ -39,8 +41,8 @@ func TestLRUCache_Concurrency(t *testing.T) {
 	}
 
 	// Verify cache still works
-	cache.Set("final", "check")
-	val, found := cache.Get("final")
+	lru.SetWithDefaultTTL("final", "check")
+	val, found := lru.Get("final")
 	if !found || val != "check" {
 		t.Error("cache corrupted after concurrent operations")
 	}
@@ -48,46 +50,54 @@ func TestLRUCache_Concurrency(t *testing.T) {
 
 // TestLRUCache_EdgeCases tests edge cases.
 func TestLRUCache_EdgeCases(t *testing.T) {
-	cache := NewLRUCache(1, time.Minute)
+	lru := cache.NewStringLRUCache(1, time.Minute)
 
 	// Empty key
-	cache.Set("", "empty")
-	val, found := cache.Get("")
+	lru.SetWithDefaultTTL("", "empty")
+	val, found := lru.Get("")
 	if !found || val != "empty" {
 		t.Error("failed to handle empty key")
 	}
 
-	// Nil size cache (should still work with size 1)
-	cache2 := NewLRUCache(0, time.Minute)
-	// Note: NewLRUCache doesn't default size 0 to 1, it uses 0 as-is
-	if cache2.size < 0 {
-		t.Errorf("expected non-negative size, got %d", cache2.size)
+	// Zero size cache (should default to 1000)
+	lru2 := cache.NewStringLRUCache(0, time.Minute)
+	if lru2.Capacity() != 1000 {
+		t.Errorf("expected default capacity 1000, got %d", lru2.Capacity())
 	}
 }
 
 // TestLRUCache_Overwrite tests overwriting existing values.
 func TestLRUCache_Overwrite(t *testing.T) {
-	cache := NewLRUCache(2, time.Minute)
+	lru := cache.NewStringLRUCache(2, time.Minute)
 
-	cache.Set("key1", "value1")
-	cache.Set("key1", "value2")
-	cache.Set("key1", "value3")
+	lru.SetWithDefaultTTL("key1", "value1")
+	lru.SetWithDefaultTTL("key1", "value2")
+	lru.SetWithDefaultTTL("key1", "value3")
 
-	val, found := cache.Get("key1")
+	val, found := lru.Get("key1")
 	if !found || val != "value3" {
 		t.Errorf("expected 'value3', got '%s'", val)
 	}
 }
 
-// TestLRUCache_ZeroTTL tests immediate expiration.
-func TestLRUCache_ZeroTTL(t *testing.T) {
-	cache := NewLRUCache(10, 0)
+// TestLRUCache_TTL tests TTL expiration.
+func TestLRUCache_TTL(t *testing.T) {
+	lru := cache.NewStringLRUCache(10, 50*time.Millisecond)
 
-	cache.Set("key1", "value1")
+	lru.SetWithDefaultTTL("key1", "value1")
 
-	// Should be expired immediately
-	_, found := cache.Get("key1")
+	// Should be found immediately
+	val, found := lru.Get("key1")
+	if !found || val != "value1" {
+		t.Error("expected key to be found")
+	}
+
+	// Wait for expiration
+	time.Sleep(100 * time.Millisecond)
+
+	// Should be expired
+	_, found = lru.Get("key1")
 	if found {
-		t.Error("expected key to be expired with zero TTL")
+		t.Error("expected key to be expired")
 	}
 }

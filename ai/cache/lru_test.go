@@ -27,7 +27,7 @@ func TestLRUCache_Creation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cache := NewLRUCache(tc.capacity, tc.defaultTTL)
+			cache := NewByteLRUCache(tc.capacity, tc.defaultTTL)
 			assert.Equal(t, tc.expectCap, cache.Capacity())
 			assert.Equal(t, 0, cache.Size())
 		})
@@ -36,7 +36,7 @@ func TestLRUCache_Creation(t *testing.T) {
 
 // TestLRUCache_BasicSetGet tests basic Set and Get operations.
 func TestLRUCache_BasicSetGet(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	t.Run("Set and Get returns value", func(t *testing.T) {
 		key := "test-key"
@@ -81,7 +81,7 @@ func TestLRUCache_BasicSetGet(t *testing.T) {
 
 // TestLRUCache_TTLExpiration tests TTL-based expiration.
 func TestLRUCache_TTLExpiration(t *testing.T) {
-	cache := NewLRUCache(100, 50*time.Millisecond)
+	cache := NewByteLRUCache(100, 50*time.Millisecond)
 
 	t.Run("value expires after TTL", func(t *testing.T) {
 		key := "expiring-key"
@@ -101,7 +101,7 @@ func TestLRUCache_TTLExpiration(t *testing.T) {
 	})
 
 	t.Run("custom TTL overrides default", func(t *testing.T) {
-		cache := NewLRUCache(100, 10*time.Millisecond)
+		cache := NewByteLRUCache(100, 10*time.Millisecond)
 
 		// Set with longer TTL
 		cache.Set("long", []byte("long"), 100*time.Millisecond)
@@ -117,7 +117,7 @@ func TestLRUCache_TTLExpiration(t *testing.T) {
 
 // TestLRUCache_LRUEviction tests LRU eviction policy.
 func TestLRUCache_LRUEviction(t *testing.T) {
-	cache := NewLRUCache(3, time.Minute)
+	cache := NewByteLRUCache(3, time.Minute)
 
 	t.Run("evicts least recently used when full", func(t *testing.T) {
 		// Fill cache
@@ -145,7 +145,7 @@ func TestLRUCache_LRUEviction(t *testing.T) {
 	})
 
 	t.Run("eviction respects update time", func(t *testing.T) {
-		cache := NewLRUCache(3, time.Minute)
+		cache := NewByteLRUCache(3, time.Minute)
 
 		cache.Set("key1", []byte("1"), 0)
 		cache.Set("key2", []byte("2"), 0)
@@ -167,7 +167,7 @@ func TestLRUCache_LRUEviction(t *testing.T) {
 
 // TestLRUCache_Invalidation tests cache invalidation.
 func TestLRUCache_Invalidation(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	t.Run("invalidate exact key", func(t *testing.T) {
 		cache.Set("user:1", []byte("1"), 0)
@@ -210,7 +210,7 @@ func TestLRUCache_Invalidation(t *testing.T) {
 
 // TestLRUCache_Clearing tests clearing the cache.
 func TestLRUCache_Clearing(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	// Add entries
 	for i := 0; i < 10; i++ {
@@ -232,7 +232,7 @@ func TestLRUCache_Clearing(t *testing.T) {
 
 // TestLRUCache_ExpiredCleanup tests cleanup of expired entries.
 func TestLRUCache_ExpiredCleanup(t *testing.T) {
-	cache := NewLRUCache(100, 50*time.Millisecond)
+	cache := NewByteLRUCache(100, 50*time.Millisecond)
 
 	// Add entries with different TTLs
 	cache.Set("expired1", []byte("1"), 50*time.Millisecond)
@@ -263,7 +263,7 @@ func TestLRUCache_ExpiredCleanup(t *testing.T) {
 
 // TestLRUCache_ThreadSafety tests thread safety.
 func TestLRUCache_ThreadSafety(t *testing.T) {
-	cache := NewLRUCache(1000, time.Minute)
+	cache := NewByteLRUCache(1000, time.Minute)
 	var wg sync.WaitGroup
 
 	// Concurrent writers
@@ -301,7 +301,7 @@ func TestLRUCache_ThreadSafety(t *testing.T) {
 
 // TestLRUCache_SizeMethod tests Size method.
 func TestLRUCache_SizeMethod(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	assert.Equal(t, 0, cache.Size(), "new cache should be empty")
 
@@ -317,14 +317,14 @@ func TestLRUCache_CapacityMethod(t *testing.T) {
 	testCases := []int{10, 100, 1000}
 
 	for _, cap := range testCases {
-		cache := NewLRUCache(cap, time.Minute)
+		cache := NewByteLRUCache(cap, time.Minute)
 		assert.Equal(t, cap, cache.Capacity())
 	}
 }
 
 // TestLRUCache_ZeroCapacityHandling tests behavior with zero capacity.
 func TestLRUCache_ZeroCapacityHandling(t *testing.T) {
-	cache := NewLRUCache(0, time.Minute)
+	cache := NewByteLRUCache(0, time.Minute)
 
 	cache.Set("key", []byte("value"), 0)
 	_, ok := cache.Get("key")
@@ -335,7 +335,7 @@ func TestLRUCache_ZeroCapacityHandling(t *testing.T) {
 
 // TestLRUCache_GetPromotion tests that Get promotes entry to front.
 func TestLRUCache_GetPromotion(t *testing.T) {
-	cache := NewLRUCache(3, time.Minute)
+	cache := NewByteLRUCache(3, time.Minute)
 
 	// Fill cache
 	cache.Set("key1", []byte("1"), 0)
@@ -357,7 +357,7 @@ func TestLRUCache_GetPromotion(t *testing.T) {
 
 // BenchmarkLRUCache_Set benchmarks Set operation.
 func BenchmarkLRUCache_Set(b *testing.B) {
-	cache := NewLRUCache(10000, time.Minute)
+	cache := NewByteLRUCache(10000, time.Minute)
 	value := []byte("test-value")
 
 	b.ResetTimer()
@@ -369,7 +369,7 @@ func BenchmarkLRUCache_Set(b *testing.B) {
 
 // BenchmarkLRUCache_Get benchmarks Get operation.
 func BenchmarkLRUCache_Get(b *testing.B) {
-	cache := NewLRUCache(10000, time.Minute)
+	cache := NewByteLRUCache(10000, time.Minute)
 	cache.Set("test-key", []byte("test-value"), 0)
 
 	b.ResetTimer()
@@ -380,7 +380,7 @@ func BenchmarkLRUCache_Get(b *testing.B) {
 
 // BenchmarkLRUCache_SetAndEvict benchmarks Set with eviction.
 func BenchmarkLRUCache_SetAndEvict(b *testing.B) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 	value := []byte("test-value")
 
 	b.ResetTimer()

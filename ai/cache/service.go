@@ -24,7 +24,7 @@ func DefaultServiceConfig() ServiceConfig {
 
 // Service implements CacheService with LRU eviction.
 type Service struct {
-	lru *LRUCache
+	lru *ByteLRUCache
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -48,7 +48,7 @@ func NewService(cfg ServiceConfig) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Service{
-		lru:             NewLRUCache(cfg.Capacity, cfg.DefaultTTL),
+		lru:             NewByteLRUCache(cfg.Capacity, cfg.DefaultTTL),
 		ctx:             ctx,
 		cancel:          cancel,
 		cleanupInterval: cfg.CleanupInterval,

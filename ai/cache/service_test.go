@@ -11,7 +11,7 @@ import (
 )
 
 func TestLRUCache_BasicOperations(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	t.Run("SetAndGet", func(t *testing.T) {
 		cache.Set("key1", []byte("value1"), 0)
@@ -38,7 +38,7 @@ func TestLRUCache_BasicOperations(t *testing.T) {
 }
 
 func TestLRUCache_Expiration(t *testing.T) {
-	cache := NewLRUCache(100, 50*time.Millisecond)
+	cache := NewByteLRUCache(100, 50*time.Millisecond)
 
 	cache.Set("expiring", []byte("value"), 50*time.Millisecond)
 
@@ -57,7 +57,7 @@ func TestLRUCache_Expiration(t *testing.T) {
 }
 
 func TestLRUCache_Eviction(t *testing.T) {
-	cache := NewLRUCache(3, time.Minute)
+	cache := NewByteLRUCache(3, time.Minute)
 
 	// Fill cache
 	cache.Set("key1", []byte("1"), 0)
@@ -82,7 +82,7 @@ func TestLRUCache_Eviction(t *testing.T) {
 }
 
 func TestLRUCache_Invalidate(t *testing.T) {
-	cache := NewLRUCache(100, time.Minute)
+	cache := NewByteLRUCache(100, time.Minute)
 
 	t.Run("ExactMatch", func(t *testing.T) {
 		cache.Set("user:1", []byte("1"), 0)
@@ -116,7 +116,7 @@ func TestLRUCache_Invalidate(t *testing.T) {
 }
 
 func TestLRUCache_ConcurrentAccess(t *testing.T) {
-	cache := NewLRUCache(1000, time.Minute)
+	cache := NewByteLRUCache(1000, time.Minute)
 	var wg sync.WaitGroup
 
 	// Concurrent writes

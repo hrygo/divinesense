@@ -233,7 +233,7 @@ func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext st
 // SafeCallback wraps an EventCallback to log errors instead of propagating them.
 //
 // Deprecated: Use runner.SafeCallback directly.
-func SafeCallback(callback EventCallback) runner.SafeCallbackFunc {
+func SafeCallback(callback EventCallback) SafeCallbackFunc {
 	return runner.SafeCallback(callback)
 }
 
