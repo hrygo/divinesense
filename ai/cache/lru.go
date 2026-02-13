@@ -42,26 +42,45 @@ func NewLRUCache[K comparable, V any](capacity int, defaultTTL time.Duration) *L
 }
 
 // Get retrieves a value from the cache.
+// Uses a two-phase locking strategy: RLock for read, upgrade to Lock only if modification needed.
 func (c *LRUCache[K, V]) Get(key K) (V, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	// Phase 1: Read lock to check existence and expiration
+	c.mu.RLock()
 	e, ok := c.cache[key]
 	if !ok {
+		c.mu.RUnlock()
 		var zero V
 		return zero, false
 	}
 
-	// Check expiration
-	if time.Now().After(e.expiresAt) {
-		c.removeEntry(e)
+	// Check expiration while holding read lock
+	expired := time.Now().After(e.expiresAt)
+	c.mu.RUnlock()
+
+	// If expired, need write lock to remove
+	if expired {
+		c.mu.Lock()
+		// Re-check after acquiring write lock (double-checked locking)
+		if e, ok := c.cache[key]; ok && time.Now().After(e.expiresAt) {
+			c.removeEntry(e)
+		}
+		c.mu.Unlock()
 		var zero V
 		return zero, false
 	}
 
-	// Move to front (most recently used)
-	c.order.MoveToFront(e.element)
-	return e.value, true
+	// Phase 2: Write lock to update LRU order
+	c.mu.Lock()
+	// Re-check entry still exists (may have been removed by another goroutine)
+	if e, ok := c.cache[key]; ok {
+		c.order.MoveToFront(e.element)
+		value := e.value
+		c.mu.Unlock()
+		return value, true
+	}
+	c.mu.Unlock()
+	var zero V
+	return zero, false
 }
 
 // Set stores a value in the cache.
@@ -232,6 +251,9 @@ func (c *LRUCache[K, V]) Capacity() int {
 }
 
 // Contains checks if a key exists in the cache (without updating access order).
+// Note: Unlike Get, this method does NOT remove expired entries. It only checks
+// if the key exists AND has not expired. This is intentional to maintain the
+// "read-only" semantics of Contains. Use Get if you want expired entries to be removed.
 func (c *LRUCache[K, V]) Contains(key K) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

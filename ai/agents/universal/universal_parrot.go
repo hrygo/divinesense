@@ -109,9 +109,7 @@ func (p *UniversalParrot) ExecuteWithCallback(
 	history []string,
 	callback agent.EventCallback,
 ) error {
-	p.mu.Lock()
-	startTime := time.Now()
-	p.mu.Unlock()
+	startTime := time.Now() // No lock needed: local variable, thread-safe
 
 	// Check cache
 	if p.cache != nil {
@@ -378,6 +376,10 @@ func (s *NormalSessionStats) GetStatsSnapshot() *NormalSessionStats {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Deep copy ToolsUsed slice to prevent external modification
+	toolsUsed := make([]string, len(s.ToolsUsed))
+	copy(toolsUsed, s.ToolsUsed)
+
 	return &NormalSessionStats{
 		StartTime:            s.StartTime,
 		EndTime:              s.EndTime,
@@ -392,7 +394,7 @@ func (s *NormalSessionStats) GetStatsSnapshot() *NormalSessionStats {
 		GenerationDurationMs: s.GenerationDurationMs,
 		TotalDurationMs:      s.TotalDurationMs,
 		ToolCallCount:        s.ToolCallCount,
-		ToolsUsed:            s.ToolsUsed,
+		ToolsUsed:            toolsUsed,
 		TotalCostMilliCents:  s.TotalCostMilliCents,
 	}
 }

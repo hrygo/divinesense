@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai/core/llm"
+	"github.com/hrygo/divinesense/ai/internal/strutil"
 )
 
 // LLM parameters for title generation
@@ -72,13 +73,9 @@ func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse 
 	ctx, cancel := context.WithTimeout(ctx, titleTimeout)
 	defer cancel()
 
-	// Truncate inputs
-	if len(userMessage) > titleMaxLen {
-		userMessage = userMessage[:titleMaxLen] + "..."
-	}
-	if len(aiResponse) > titleMaxLen {
-		aiResponse = aiResponse[:titleMaxLen] + "..."
-	}
+	// Truncate inputs using rune-aware truncation (Unicode-safe)
+	userMessage = strutil.Truncate(userMessage, titleMaxLen)
+	aiResponse = strutil.Truncate(aiResponse, titleMaxLen)
 	prompt := fmt.Sprintf("用户消息: %s\n\nAI 回复: %s\n\n请为这段对话生成一个简短的标题。", userMessage, aiResponse)
 
 	messages := []llm.Message{
