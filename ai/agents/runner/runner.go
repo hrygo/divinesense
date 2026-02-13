@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/hrygo/divinesense/ai/agents/events"
 )
 
 const (
@@ -59,36 +61,25 @@ func ConversationIDToSessionID(conversationID int64) string {
 
 // EventCallback is the callback function type for agent events.
 // EventCallback 是代理事件的回调函数类型。
-type EventCallback func(eventType string, eventData any) error
+//
+// Deprecated: Use events.Callback directly.
+type EventCallback = events.Callback
 
 // SafeCallbackFunc is a callback that logs errors instead of returning them.
 // Use SafeCallback to wrap an EventCallback for non-critical events.
 // SafeCallbackFunc 是一个记录错误而不是返回错误的回调函数。
 // 使用 SafeCallback 包装 EventCallback 用于非关键事件。
-type SafeCallbackFunc func(eventType string, eventData any)
+//
+// Deprecated: Use events.SafeCallback directly.
+type SafeCallbackFunc = events.SafeCallback
 
 // SafeCallback wraps an EventCallback to log errors instead of propagating them.
 // Use this for non-critical callbacks where errors should not interrupt execution.
 // SafeCallback 包装 EventCallback 以记录错误而不是传播它们。
 // 用于错误不应中断执行的非关键回调。
-func SafeCallback(callback EventCallback) SafeCallbackFunc {
-	if callback == nil {
-		return nil
-	}
-	return func(eventType string, eventData any) {
-		// Execute callback and log errors instead of returning them
-		if err := callback(eventType, eventData); err != nil {
-			// Log the callback error but don't propagate it
-			// This prevents callback failures from interrupting agent execution
-			// Use Background context as this is independent logging with no deadline
-			slog.Default().LogAttrs(context.Background(), slog.LevelWarn,
-				"callback failed (non-critical)",
-				slog.String("event_type", eventType),
-				slog.Any("error", err),
-			)
-		}
-	}
-}
+//
+// Deprecated: Use events.WrapSafe directly.
+var SafeCallback = events.WrapSafe
 
 // CCRunner is the unified Claude Code CLI integration layer.
 // CCRunner 是统一的 Claude Code CLI 集成层。

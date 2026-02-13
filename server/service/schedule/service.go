@@ -57,6 +57,11 @@ func (e *ConflictError) Error() string {
 	return fmt.Sprintf("schedule conflict with %d alternatives", len(e.Alternatives))
 }
 
+// IsConflict implements the agent.ConflictError interface for DIP.
+func (e *ConflictError) IsConflict() bool {
+	return true
+}
+
 // NewConflictError creates a new conflict error with structured data for i18n.
 func NewConflictError(alternatives []TimeSlotAlternative, conflictCount int, originalStart int64) *ConflictError {
 	return &ConflictError{

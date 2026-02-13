@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai/core/llm"
+	"github.com/hrygo/divinesense/ai/internal/strutil"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -66,7 +67,7 @@ func (ic *LLMIntentClassifier) Classify(ctx context.Context, input string) (Task
 	if err != nil {
 		slog.Warn("LLM intent classification failed, using fallback",
 			"error", err,
-			"input", truncateForLog(input, 50))
+			"input", strutil.Truncate(input, 50))
 		return ic.fallback.Classify(input), nil
 	}
 	return result.Intent, nil
@@ -135,7 +136,7 @@ func (ic *LLMIntentClassifier) ClassifyWithDetails(ctx context.Context, input st
 	slog.Debug("llm_intent_classification_success",
 		"prompt_version", "v1",
 		"model", ic.model,
-		"input", truncateForLog(input, 30),
+		"input", strutil.Truncate(input, 30),
 		"intent", result.Intent,
 		"confidence", result.Confidence,
 		"latency_ms", latency.Milliseconds(),
@@ -226,14 +227,6 @@ func (ic *LLMIntentClassifier) ClassifyAndRoute(ctx context.Context, input strin
 	}
 	usePlanExecute := ic.ShouldUsePlanExecute(intent)
 	return intent, usePlanExecute, nil
-}
-
-// truncateForLog truncates a string for logging purposes.
-func truncateForLog(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 // intentSystemPromptStrict is a minimal prompt for strict JSON schema mode.

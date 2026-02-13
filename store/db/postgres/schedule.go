@@ -297,6 +297,11 @@ func (e *ConflictConstraintError) Error() string {
 	return "schedule conflicts with an existing schedule"
 }
 
+// IsConflict implements the agent.ConflictError interface for DIP.
+func (e *ConflictConstraintError) IsConflict() bool {
+	return true
+}
+
 func (e *ConflictConstraintError) Unwrap() error {
 	return e.Err
 }

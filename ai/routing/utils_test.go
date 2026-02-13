@@ -7,7 +7,7 @@ import (
 )
 
 // TestTruncate tests the truncate utility function.
-// Note: truncate uses byte length, not rune length.
+// Note: truncate uses rune length (Unicode-safe).
 func TestTruncate(t *testing.T) {
 	testCases := []struct {
 		input    string
@@ -20,23 +20,16 @@ func TestTruncate(t *testing.T) {
 		{"", 5, ""},
 		{"a", 1, "a"},
 		{"ab", 1, "a..."},
-		// Each Chinese character is 3 bytes in UTF-8
-		// "中文测试" = 12 bytes, so maxLen=5 truncates after 1 character + ...
-		// The output may contain invalid UTF-8 which is acceptable for truncate
-		{"中文测试", 5, "中..."},
-		{"中文测试很长", 5, "中..."},
+		// Unicode-safe truncation: Chinese characters counted as runes, not bytes
+		// "中文测试" = 4 runes, maxLen=5 means no truncation needed
+		{"中文测试", 5, "中文测试"},
+		// "中文测试很长" = 6 runes, maxLen=5 truncates to 5 runes
+		{"中文测试很长", 5, "中文测试很..."},
 	}
 
 	for _, tc := range testCases {
 		result := truncate(tc.input, tc.maxLen)
 		if result != tc.expected {
-			// For Chinese strings with byte truncation (non-ASCII), check length and suffix
-			if len(tc.input) > 0 && tc.input[0] >= 128 {
-				// Contains non-ASCII: just check that result is truncated and ends with ...
-				if len(result) <= tc.maxLen+3 && strings.HasSuffix(result, "...") {
-					continue // Valid truncation
-				}
-			}
 			t.Errorf("truncate(%q, %d) = %q, expected %q", tc.input, tc.maxLen, result, tc.expected)
 		}
 	}

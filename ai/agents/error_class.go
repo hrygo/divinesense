@@ -9,10 +9,19 @@ import (
 	"net"
 	"strings"
 	"time"
-
-	"github.com/hrygo/divinesense/server/service/schedule"
-	postgresstore "github.com/hrygo/divinesense/store/db/postgres"
 )
+
+// ============================================================================
+// DIP: Interface for conflict error detection
+// ============================================================================
+
+// ConflictError is an interface for detecting schedule conflict errors.
+// This follows DIP (Dependency Inversion Principle) - the AI layer depends on
+// an abstraction, not concrete implementations in server/store packages.
+type ConflictError interface {
+	error
+	IsConflict() bool
+}
 
 // ============================================================================
 // Error Definitions (from errors.go - merged to avoid circular dependency)
@@ -101,18 +110,10 @@ func ClassifyError(err error) *ClassifiedError {
 
 	// Check for specific known errors first
 
-	// 1. Check for schedule conflict errors
-	if errors.Is(err, schedule.ErrScheduleConflict) {
-		return &ClassifiedError{
-			Class:      ErrorClassConflict,
-			Original:   err,
-			ActionHint: "find_free_time",
-		}
-	}
-
-	// 2. Check for database-level conflict constraint
-	var conflictErr *postgresstore.ConflictConstraintError
-	if errors.As(err, &conflictErr) {
+	// 1. Check for conflict errors using the ConflictError interface (DIP)
+	// This works with any error type that implements IsConflict() bool
+	var conflictErr ConflictError
+	if errors.As(err, &conflictErr) && conflictErr.IsConflict() {
 		return &ClassifiedError{
 			Class:      ErrorClassConflict,
 			Original:   err,

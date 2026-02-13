@@ -7,24 +7,49 @@ import (
 	"time"
 )
 
-// Consumers: Team B (Assistant+Schedule), Team C (Memo Enhancement).
-type RouterService interface {
+// ============================================================================
+// ISP: Segregated interfaces for different consumer needs
+// ============================================================================
+
+// IntentClassifier handles intent classification only.
+// Consumers that only need intent classification should depend on this interface.
+type IntentClassifier interface {
 	// ClassifyIntent classifies user intent from input text.
 	// Returns: intent type, confidence (0-1), needsOrchestration, error
 	// Implementation: FastRouter (cache -> rule), high confidence routes directly,
 	// low confidence/complex requests need orchestration
 	ClassifyIntent(ctx context.Context, input string) (Intent, float32, bool, error)
+}
 
+// ModelSelector handles model selection only.
+// Consumers that only need model selection should depend on this interface.
+type ModelSelector interface {
 	// SelectModel selects an appropriate model based on task type.
 	// Returns: model configuration (local/cloud)
 	SelectModel(ctx context.Context, task TaskType) (ModelConfig, error)
+}
 
+// FeedbackService handles feedback collection and statistics.
+// Consumers that only need to record feedback or get stats should depend on this interface.
+// Note: Named FeedbackService (not FeedbackCollector) to avoid conflict with the
+// concrete FeedbackCollector struct in feedback.go.
+type FeedbackService interface {
 	// RecordFeedback records user feedback for a routing decision.
 	// This enables dynamic weight adjustment for improved routing accuracy.
 	RecordFeedback(ctx context.Context, feedback *RouterFeedback) error
 
 	// GetRouterStats retrieves routing accuracy statistics.
 	GetRouterStats(ctx context.Context, userID int32, timeRange time.Duration) (*RouterStats, error)
+}
+
+// RouterService is the aggregate interface combining all routing capabilities.
+// Consumers: Team B (Assistant+Schedule), Team C (Memo Enhancement).
+// This interface is kept for backward compatibility; prefer using the specific
+// sub-interfaces (IntentClassifier, ModelSelector, FeedbackService) when possible.
+type RouterService interface {
+	IntentClassifier
+	ModelSelector
+	FeedbackService
 }
 
 // AgentType represents the agent type for routing.

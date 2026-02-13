@@ -243,10 +243,3 @@ func SafeCallback(callback EventCallback) SafeCallbackFunc {
 func NewEventWithMeta(eventType, eventData string, meta *EventMeta) *EventWithMeta {
 	return runner.NewEventWithMeta(eventType, eventData, meta)
 }
-
-// TruncateString truncates a string to a maximum length for logging.
-//
-// Deprecated: Use runner.TruncateString directly.
-func TruncateString(s string, maxLen int) string {
-	return runner.TruncateString(s, maxLen)
-}

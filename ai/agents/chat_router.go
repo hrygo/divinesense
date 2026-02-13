@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/hrygo/divinesense/ai/internal/strutil"
 	routerpkg "github.com/hrygo/divinesense/ai/routing"
 )
 
@@ -81,7 +82,7 @@ func (r *ChatRouter) RouteWithContext(ctx context.Context, input string, session
 	if sessionCtx != nil && isShortConfirmation(input) {
 		if lastRoute, ok := sessionCtx.GetLastRoute(); ok {
 			slog.Debug("route reused for short confirmation",
-				"input", TruncateString(input, 30),
+				"input", strutil.Truncate(input, 30),
 				"route", lastRoute,
 				"method", "session_sticky")
 			return &ChatRouteResult{
@@ -98,7 +99,7 @@ func (r *ChatRouter) RouteWithContext(ctx context.Context, input string, session
 	if err != nil {
 		slog.Warn("router service failed, needs orchestration",
 			"error", err,
-			"input", TruncateString(input, 30))
+			"input", strutil.Truncate(input, 30))
 		return &ChatRouteResult{
 			Route:              "", // Empty route indicates orchestration needed
 			Confidence:         0.5,

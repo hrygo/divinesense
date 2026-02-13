@@ -1,14 +1,15 @@
 package routing
 
-import "strings"
+import (
+	"strings"
 
-// truncate truncates a string to maxLen characters.
+	"github.com/hrygo/divinesense/ai/internal/strutil"
+)
+
+// truncate truncates a string to maxLen characters (Unicode-safe).
 // This is a utility function used across the router package.
 func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
+	return strutil.Truncate(s, maxLen)
 }
 
 // containsAny checks if s contains any of the patterns.

@@ -5,6 +5,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/hrygo/divinesense/ai/internal/strutil"
 )
 
 // TimeDecayDays is the decay period for time proximity calculation.
@@ -101,13 +103,9 @@ func CalculateWeightedSimilarity(b *Breakdown, w Weights) float64 {
 	return b.Vector*w.Vector + b.TagCoOccur*w.TagCoOccur + b.TimeProx*w.TimeProx
 }
 
-// Truncate truncates content to maxLen characters.
+// Truncate truncates content to maxLen characters (Unicode-safe).
 func Truncate(content string, maxLen int) string {
-	runes := []rune(content)
-	if len(runes) <= maxLen {
-		return content
-	}
-	return string(runes[:maxLen]) + "..."
+	return strutil.Truncate(content, maxLen)
 }
 
 // ExtractTitle extracts title from memo content (first line).

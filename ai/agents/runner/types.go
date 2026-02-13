@@ -2,18 +2,14 @@ package runner
 
 import (
 	"fmt"
+
+	"github.com/hrygo/divinesense/ai/internal/strutil"
 )
 
 // TruncateString truncates a string to a maximum length for logging.
+// Uses rune-level truncation to avoid creating invalid UTF-8.
 func TruncateString(s string, maxLen int) string {
-	if s == "" {
-		return ""
-	}
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	return string(runes[:maxLen]) + "..."
+	return strutil.Truncate(s, maxLen)
 }
 
 // SummarizeInput creates a human-readable summary of tool input.
