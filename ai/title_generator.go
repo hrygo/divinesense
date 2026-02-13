@@ -59,7 +59,11 @@ func NewTitleGenerator(cfg TitleGeneratorConfig) *TitleGenerator {
 
 // NewTitleGeneratorWithLLM creates a new title generator with an existing LLMService.
 // This is the preferred constructor for dependency injection.
+// Panics if llmService is nil.
 func NewTitleGeneratorWithLLM(llmService LLMService) *TitleGenerator {
+	if llmService == nil {
+		panic("ai: NewTitleGeneratorWithLLM: llmService cannot be nil")
+	}
 	return &TitleGenerator{llm: llmService}
 }
 
