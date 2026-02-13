@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedAvatar } from "@/components/AIChat/AnimatedAvatar";
@@ -15,8 +15,6 @@ interface ChatHeaderProps {
   currentCapability?: CapabilityType;
   capabilityStatus?: CapabilityStatus;
   currentMode?: AIMode;
-  immersiveMode?: boolean;
-  onImmersiveModeToggle?: (enabled: boolean) => void;
   /** Phase 4: Blocks for session stats display */
   blocks?: AIBlock[];
 }
@@ -139,8 +137,6 @@ export function ChatHeader({
   currentCapability = CapabilityType.AUTO,
   capabilityStatus = "idle",
   currentMode = "normal",
-  immersiveMode = false,
-  onImmersiveModeToggle,
   blocks,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
@@ -190,25 +186,12 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right Section - Session Stats + Immersive Toggle + Thinking indicator */}
+      {/* Right Section - Session Stats + Thinking indicator */}
       <div className="flex items-center gap-2">
         {/* Session Stats - PC only */}
         <HeaderSessionStats blocks={blocks} mode={currentMode} />
 
-        {/* Immersive Mode Toggle - Desktop only */}
-        {onImmersiveModeToggle && (
-          <button
-            onClick={() => onImmersiveModeToggle(!immersiveMode)}
-            className={cn(
-              "hidden lg:flex items-center justify-center w-8 h-8 rounded-lg transition-all",
-              "text-muted-foreground hover:text-foreground hover:bg-muted",
-              immersiveMode && "text-primary bg-primary/10",
-            )}
-            title={immersiveMode ? t("ai.exit-immersive") : t("ai.enter-immersive")}
-          >
-            {immersiveMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-        )}
+        {/* Thinking indicator */}
         {isThinking && (
           <div className="flex items-center gap-1.5 text-sm">
             <Sparkles className={cn("w-4 h-4 animate-pulse", modeStyle.thinking)} />

@@ -1,11 +1,13 @@
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import { AIChatSidebar } from "@/components/AIChat/AIChatSidebar";
 import { ModeThemeProvider } from "@/components/AIChat/ModeThemeProvider";
 import NavigationDrawer from "@/components/NavigationDrawer";
 import RouteHeaderImage from "@/components/RouteHeaderImage";
 import { Button } from "@/components/ui/button";
+import { SidebarCollapseButton } from "@/components/ui/SidebarCollapseButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AIChatProvider, useAIChat } from "@/contexts/AIChatContext";
 import useMediaQuery from "@/hooks/useMediaQuery";
@@ -83,9 +85,10 @@ function getModeStyles(mode: AIMode) {
 }
 
 const AIChatLayoutContent = () => {
+  const { t } = useTranslation();
   const lg = useMediaQuery("lg");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { state } = useAIChat();
+  const { state, toggleImmersiveMode } = useAIChat();
   const currentMode = state.currentMode || "normal";
   const immersiveMode = state.immersiveMode || false;
 
@@ -193,6 +196,16 @@ const AIChatLayoutContent = () => {
       >
         <Outlet />
       </div>
+
+      {/* Sidebar Collapse Button - Desktop only */}
+      {lg && (
+        <SidebarCollapseButton
+          isExpanded={!immersiveMode}
+          onToggle={() => toggleImmersiveMode(!immersiveMode)}
+          expandLabel={t("sidebar.expand")}
+          collapseLabel={t("sidebar.collapse")}
+        />
+      )}
     </section>
   );
 };

@@ -15,6 +15,10 @@
       "retry": "Retry Connection"
     }
   },
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
   "ai": {
     "aichat": {
       "amazing-insight": {
@@ -794,6 +798,8 @@
     "wed": "Wed"
   },
   "editor": {
+    "collapse": "Collapse editor",
+    "expand": "Expand editor",
     "chars": "chars",
     "add-your-comment-here": "Add your comment here...",
     "ai-tag": {

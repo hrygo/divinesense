@@ -21,7 +21,7 @@
  * - 玻璃态背景 + 渐变边框
  */
 
-import { Feather, ImagePlus, Paperclip, PenLine, Send, Sparkles } from "lucide-react";
+import { ChevronDown, Feather, ImagePlus, Paperclip, PenLine, Send, Sparkles } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import MemoEditor from "@/components/MemoEditor";
@@ -71,6 +71,7 @@ type EditorState = "empty" | "hasContent" | "focused";
  * - 玻璃态背景 + 渐变边框
  * - 状态感知的视觉反馈
  * - 移动端键盘适配
+ * - 收起/展开功能（v3.0）
  */
 export const FixedEditor = memo(function FixedEditor({ placeholder, className }: FixedEditorProps) {
   const { t } = useTranslation();
@@ -80,8 +81,31 @@ export const FixedEditor = memo(function FixedEditor({ placeholder, className }:
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Collapsed state - persisted to localStorage
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("fixed-editor-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
   // 计算编辑器状态
   const editorState: EditorState = isFocused ? "focused" : hasContent ? "hasContent" : "empty";
+
+  // Toggle collapse
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem("fixed-editor-collapsed", String(newValue));
+      } catch {
+        // ignore storage errors
+      }
+      return newValue;
+    });
+  }, []);
 
   // 移动端键盘高度处理
   useEffect(() => {
@@ -137,6 +161,44 @@ export const FixedEditor = memo(function FixedEditor({ placeholder, className }:
     };
   }, []);
 
+  // ═══════════════════════════════════════════════════════════════
+  // Collapsed State - Mini Trigger
+  // ═══════════════════════════════════════════════════════════════
+  if (isCollapsed) {
+    return (
+      <div className={cn("sticky bottom-0 left-0 right-0 z-50 flex justify-center", className)}>
+        {/* Mini Trigger Button */}
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            "flex items-center justify-center",
+            "w-12 h-12 rounded-full",
+            "bg-background/80 backdrop-blur-xl",
+            "border-2 border-border/40",
+            "shadow-lg shadow-primary/5",
+            "text-muted-foreground hover:text-primary",
+            "transition-all duration-300",
+            "hover:border-primary/30 hover:shadow-primary/10",
+            "active:scale-95",
+          )}
+          aria-label={t("editor.expand")}
+          title={t("editor.expand")}
+          style={{
+            animationName: "breath-trigger",
+            animationDuration: `${BREATH_DURATION}ms`,
+            animationTimingFunction: "ease-in-out",
+            animationIterationCount: "infinite",
+          }}
+        >
+          <Sparkles className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Expanded State - Full Editor
+  // ═══════════════════════════════════════════════════════════════
   return (
     <div
       ref={containerRef}
@@ -207,6 +269,25 @@ export const FixedEditor = memo(function FixedEditor({ placeholder, className }:
           内容容器 - 响应式宽度
           ═══════════════════════════════════════════════════════════ */}
       <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 py-3 sm:py-4">
+        {/* Collapse Button - Top Center */}
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
+            "flex items-center justify-center",
+            "w-8 h-6 rounded-full",
+            "bg-background/80 backdrop-blur-sm border border-border/50",
+            "text-muted-foreground hover:text-foreground",
+            "transition-all duration-300",
+            "hover:bg-muted/50 hover:border-border",
+            "active:scale-95",
+          )}
+          aria-label={t("editor.collapse")}
+          title={t("editor.collapse")}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
+
         {/* 编辑器卡片 */}
         <div
           ref={contentRef}
@@ -328,6 +409,16 @@ if (typeof document !== "undefined") {
         50% {
           opacity: 0.6;
           transform: translateX(-50%) scale(1.05);
+        }
+      }
+
+      /* 迷你触发器呼吸动画 - v3.0 */
+      @keyframes breath-trigger {
+        0%, 100% {
+          box-shadow: 0 4px 12px rgba(var(--primary), 0.1);
+        }
+        50% {
+          box-shadow: 0 4px 20px rgba(var(--primary), 0.2);
         }
       }
     `;

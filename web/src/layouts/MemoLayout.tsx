@@ -1,11 +1,12 @@
-import { Maximize2, MenuIcon, Minimize2 } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { MenuIcon } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { matchPath, Outlet, useLocation } from "react-router-dom";
 import { MemoExplorer, type MemoExplorerContext } from "@/components/MemoExplorer";
 import NavigationDrawer from "@/components/NavigationDrawer";
 import RouteHeaderImage from "@/components/RouteHeaderImage";
 import { Button } from "@/components/ui/button";
+import { SidebarCollapseButton } from "@/components/ui/SidebarCollapseButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { userServiceClient } from "@/connect";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -15,15 +16,15 @@ import useMediaQuery from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { Routes } from "@/router";
 
-// localStorage key for Immersive Mode preference
-const IMMERSIVE_MODE_STORAGE_KEY = "divinesense.immersive_mode";
-
 // Context for sidebar toggle state - allows child components to trigger sidebar toggle
+// Note: immersiveMode is now derived from !desktopSidebarOpen for simplicity
 interface MemoLayoutContextValue {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  /** @deprecated Use !sidebarOpen instead */
   immersiveMode: boolean;
+  /** @deprecated Use toggleSidebar instead */
   toggleImmersiveMode: (enabled: boolean) => void;
 }
 
@@ -46,6 +47,7 @@ const MemoLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Desktop sidebar state - persisted to localStorage
+  // immersiveMode is now derived as !desktopSidebarOpen
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -56,55 +58,20 @@ const MemoLayout = () => {
     }
   });
 
-  // Immersive mode state - persisted to localStorage (follows AIChat pattern)
-  const [immersiveMode, setImmersiveMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return localStorage.getItem(IMMERSIVE_MODE_STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  // Save sidebar state before immersive mode, restore on exit
-  const previousSidebarOpenRef = useRef(true);
+  // Derived state for backward compatibility
+  const immersiveMode = !desktopSidebarOpen;
 
   const toggleDesktopSidebar = useCallback(() => {
     setDesktopSidebarOpen((prev) => {
       const newValue = !prev;
       try {
         localStorage.setItem("memo-sidebar-open", String(newValue));
-        // If user manually expands sidebar while in immersive mode, exit immersive mode
-        if (newValue && immersiveMode) {
-          setImmersiveMode(false);
-          localStorage.setItem(IMMERSIVE_MODE_STORAGE_KEY, "false");
-        }
       } catch {
         // ignore storage errors
       }
       return newValue;
     });
-  }, [immersiveMode]);
-
-  const toggleImmersiveMode = useCallback(
-    (enabled: boolean) => {
-      setImmersiveMode(enabled);
-      try {
-        localStorage.setItem(IMMERSIVE_MODE_STORAGE_KEY, String(enabled));
-        // When enabling immersive mode, save and collapse sidebar
-        if (enabled) {
-          previousSidebarOpenRef.current = desktopSidebarOpen;
-          setDesktopSidebarOpen(false);
-        } else {
-          // When disabling immersive mode, restore previous sidebar state
-          setDesktopSidebarOpen(previousSidebarOpenRef.current);
-        }
-      } catch (e) {
-        console.error("Failed to save immersive mode preference:", e);
-      }
-    },
-    [desktopSidebarOpen],
-  );
+  }, []);
 
   // Context value for child components
   const layoutContextValue = useMemo(
@@ -115,19 +82,17 @@ const MemoLayout = () => {
         setDesktopSidebarOpen(open);
         try {
           localStorage.setItem("memo-sidebar-open", String(open));
-          // If user manually expands sidebar while in immersive mode, exit immersive mode
-          if (open && immersiveMode) {
-            setImmersiveMode(false);
-            localStorage.setItem(IMMERSIVE_MODE_STORAGE_KEY, "false");
-          }
         } catch {
           // ignore storage errors
         }
       },
       immersiveMode,
-      toggleImmersiveMode,
+      toggleImmersiveMode: (_enabled: boolean) => {
+        // For backward compatibility, toggle sidebar
+        toggleDesktopSidebar();
+      },
     }),
-    [desktopSidebarOpen, immersiveMode, toggleImmersiveMode],
+    [desktopSidebarOpen, immersiveMode, toggleDesktopSidebar],
   );
 
   // Determine context based on current route
@@ -224,10 +189,10 @@ const MemoLayout = () => {
           className={cn(
             // Fixed positioning
             "fixed top-0 left-16 shrink-0 h-svh border-r border-border w-80 overflow-y-auto overflow-x-hidden transition-all duration-300 z-30",
-            // Visibility: hide on mobile or in immersive mode, always keep DOM for layout stability
-            !lg || immersiveMode ? "hidden" : "",
+            // Visibility: hide on mobile or when collapsed
+            !lg || !desktopSidebarOpen ? "hidden" : "",
             // Background and blur - only when visible
-            lg && !immersiveMode && "bg-background backdrop-blur-sm",
+            lg && desktopSidebarOpen && "bg-background backdrop-blur-sm",
           )}
         >
           <MemoExplorer className="px-4 pt-4 pb-4" context={context} statisticsData={statistics} tagCount={tags} />
@@ -237,31 +202,25 @@ const MemoLayout = () => {
         <div
           className={cn(
             "flex-1 min-h-0 overflow-y-auto flex flex-col transition-all duration-300 bg-muted/50 dark:bg-muted/10 relative",
-            lg && !immersiveMode ? "pl-80" : "",
+            lg && desktopSidebarOpen ? "pl-80" : "",
           )}
         >
-          {/* Immersive Mode Toggle Button - Fixed at top-right of main content area, only on Home */}
-          {lg && location.pathname === Routes.HOME && (
-            <div className="fixed top-4 right-4 z-50">
-              <button
-                onClick={() => toggleImmersiveMode(!immersiveMode)}
-                className={cn(
-                  "flex items-center justify-center w-8 h-8 rounded-md transition-all",
-                  "text-muted-foreground hover:text-foreground hover:bg-muted",
-                  immersiveMode && "text-primary bg-primary/10",
-                )}
-                title={immersiveMode ? t("ai.exit-immersive") || "Exit immersive" : t("ai.enter-immersive") || "Enter immersive"}
-              >
-                {immersiveMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </button>
-            </div>
-          )}
           {/* Unified spacing container */}
           <div className="w-full min-h-full pt-4 sm:pt-6">
             {/* Page Content */}
             <Outlet />
           </div>
         </div>
+
+        {/* Sidebar Collapse Button - Desktop only */}
+        {lg && (
+          <SidebarCollapseButton
+            isExpanded={desktopSidebarOpen}
+            onToggle={toggleDesktopSidebar}
+            expandLabel={t("sidebar.expand")}
+            collapseLabel={t("sidebar.collapse")}
+          />
+        )}
       </section>
     </MemoLayoutContext.Provider>
   );

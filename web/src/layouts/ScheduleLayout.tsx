@@ -1,11 +1,13 @@
 import { Search, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import { ScheduleCalendar } from "@/components/AIChat/ScheduleCalendar";
 import { ScheduleSearchBar } from "@/components/AIChat/ScheduleSearchBar";
 import NavigationDrawer from "@/components/NavigationDrawer";
 import RouteHeaderImage from "@/components/RouteHeaderImage";
 import { Button } from "@/components/ui/button";
+import { SidebarCollapseButton } from "@/components/ui/SidebarCollapseButton";
 import { useScheduleContext } from "@/contexts/ScheduleContext";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { useSchedulesOptimized } from "@/hooks/useScheduleQueries";
@@ -38,9 +40,33 @@ const ScheduleSidebar = () => {
  * @see docs/research/layout-spacing-unification.md
  */
 const ScheduleLayout = () => {
+  const { t } = useTranslation();
   const lg = useMediaQuery("lg");
   const { setFilteredSchedules, setHasSearchFilter } = useScheduleContext();
   const [showSearch, setShowSearch] = useState(false);
+
+  // Desktop sidebar state - persisted to localStorage
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = localStorage.getItem("schedule-sidebar-open");
+      return saved !== "false"; // default to true
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleDesktopSidebar = useCallback(() => {
+    setDesktopSidebarOpen((prev) => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem("schedule-sidebar-open", String(newValue));
+      } catch {
+        // ignore storage errors
+      }
+      return newValue;
+    });
+  }, []);
 
   // Fetch schedules for search
   const anchorDate = new Date();
@@ -88,17 +114,32 @@ const ScheduleLayout = () => {
         )}
       </div>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Always rendered to maintain layout, hidden via class */}
       {lg && (
-        <div className="fixed top-0 left-16 shrink-0 h-svh border-r border-border bg-background w-80 overflow-y-auto">
+        <div
+          className={cn(
+            "fixed top-0 left-16 shrink-0 h-svh border-r border-border bg-background w-80 overflow-y-auto transition-all duration-300",
+            !desktopSidebarOpen && "hidden",
+          )}
+        >
           <ScheduleSidebar />
         </div>
       )}
 
       {/* Main Content */}
-      <div className={cn("flex-1 min-h-0 overflow-hidden", lg ? "pl-80" : "")}>
+      <div className={cn("flex-1 min-h-0 overflow-hidden transition-all duration-300", lg && desktopSidebarOpen ? "pl-80" : "")}>
         <Outlet />
       </div>
+
+      {/* Sidebar Collapse Button - Desktop only */}
+      {lg && (
+        <SidebarCollapseButton
+          isExpanded={desktopSidebarOpen}
+          onToggle={toggleDesktopSidebar}
+          expandLabel={t("sidebar.expand")}
+          collapseLabel={t("sidebar.collapse")}
+        />
+      )}
     </section>
   );
 };

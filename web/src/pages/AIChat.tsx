@@ -49,8 +49,6 @@ interface UnifiedChatViewProps {
   upcomingScheduleCount?: number;
   currentMode: AIMode;
   onModeChange: (mode: AIMode) => void;
-  immersiveMode: boolean;
-  onImmersiveModeToggle: (enabled: boolean) => void;
   isAdmin?: boolean;
   conversationId?: number;
 }
@@ -75,8 +73,6 @@ function UnifiedChatView({
   upcomingScheduleCount,
   currentMode,
   onModeChange,
-  immersiveMode,
-  onImmersiveModeToggle,
   conversationId,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
@@ -133,8 +129,6 @@ function UnifiedChatView({
         capabilityStatus={capabilityStatus}
         isThinking={isThinking}
         currentMode={currentMode}
-        immersiveMode={immersiveMode}
-        onImmersiveModeToggle={onImmersiveModeToggle}
         blocks={blocks}
       />
 
@@ -237,7 +231,6 @@ const AIChat = () => {
     setCurrentCapability,
     setCapabilityStatus,
     setMode,
-    toggleImmersiveMode,
     // Phase 4: Block methods
     appendUserInput,
     incrementMessageCount,
@@ -250,7 +243,6 @@ const AIChat = () => {
   const currentCapability = state.currentCapability || CapabilityType.AUTO;
   const capabilityStatus = state.capabilityStatus || "idle";
   const currentMode = state.currentMode || "normal";
-  const immersiveMode = state.immersiveMode || false;
 
   // ============================================================
   // Phase 4: Unified Block Model - Use blocks as primary data source
@@ -698,8 +690,6 @@ const AIChat = () => {
       capabilityStatus={capabilityStatus}
       currentMode={currentMode}
       onModeChange={setMode}
-      immersiveMode={immersiveMode}
-      onImmersiveModeToggle={toggleImmersiveMode}
       isAdmin={true}
       conversationId={currentConversationIdNum}
     />
