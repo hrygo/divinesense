@@ -63,7 +63,7 @@ func (r *ChatRouterWithMetadata) RouteWithContextWithMetadata(
 	}
 
 	// Layer 1: Fall back to original routing logic
-	result, err := r.ChatRouter.RouteWithContext(ctx, input, sessionCtx)
+	result, err := r.RouteWithContext(ctx, input, sessionCtx)
 	if err != nil {
 		return result, err
 	}
