@@ -21,8 +21,9 @@ const (
 
 // Executor executes tasks by dispatching them to expert agents.
 type Executor struct {
-	registry ExpertRegistry
-	config   *OrchestratorConfig
+	registry       ExpertRegistry
+	config         *OrchestratorConfig
+	handoffHandler *HandoffHandler
 }
 
 // NewExecutor creates a new task executor.
@@ -31,8 +32,21 @@ func NewExecutor(registry ExpertRegistry, config *OrchestratorConfig) *Executor 
 		config = DefaultOrchestratorConfig()
 	}
 	return &Executor{
-		registry: registry,
-		config:   config,
+		registry:       registry,
+		config:         config,
+		handoffHandler: nil,
+	}
+}
+
+// NewExecutorWithHandoff creates a new task executor with handoff support.
+func NewExecutorWithHandoff(registry ExpertRegistry, config *OrchestratorConfig, handoffHandler *HandoffHandler) *Executor {
+	if config == nil {
+		config = DefaultOrchestratorConfig()
+	}
+	return &Executor{
+		registry:       registry,
+		config:         config,
+		handoffHandler: handoffHandler,
 	}
 }
 
@@ -163,6 +177,26 @@ func (e *Executor) executeTask(ctx context.Context, task *Task, index int, callb
 			"index", index,
 			"agent", task.Agent,
 			"error", err)
+
+		// Try handoff if handler is available
+		if e.handoffHandler != nil {
+			handoffResult := e.handoffHandler.HandleTaskFailure(ctx, task, err, callback)
+			if handoffResult.Success && handoffResult.NewTask != nil {
+				slog.Info("executor: attempting handoff",
+					"task", task.ID,
+					"from", task.Agent,
+					"to", handoffResult.NewExpert)
+
+				// Execute with new expert
+				task.Agent = handoffResult.NewExpert
+				task.Input = handoffResult.NewTask.Input
+				task.Status = TaskStatusPending
+
+				// Re-execute the task with new expert
+				e.executeTask(ctx, task, index, callback)
+				return
+			}
+		}
 	} else {
 		task.Status = TaskStatusCompleted
 		task.Result = resultCollector.getResult()
