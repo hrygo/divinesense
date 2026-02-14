@@ -266,6 +266,37 @@ func (m *MetadataManager) SetCurrentAgent(
 	return nil
 }
 
+// UpdateCacheOnly updates the in-memory cache without persisting to database.
+// This should be called immediately after routing to enable sticky routing
+// for the next request without waiting for block completion.
+// Phase 2 fix: enables sticky routing across consecutive requests.
+func (m *MetadataManager) UpdateCacheOnly(
+	conversationID int32,
+	agent string,
+	intent string,
+	confidence float32,
+) {
+	// Calculate sticky window
+	stickyWindow := m.CalculateStickyWindow(float64(confidence))
+	stickyUntil := time.Now().Add(stickyWindow)
+
+	// Update cache atomically
+	m.cache.Store(conversationID, &SessionMetadata{
+		LastAgent:            agent,
+		LastIntent:           intent,
+		LastIntentConfidence: confidence,
+		StickyUntil:          stickyUntil,
+		LastUpdated:          time.Now(),
+	})
+
+	slog.Debug("MetadataManager.UpdateCacheOnly",
+		"conversation_id", conversationID,
+		"agent", agent,
+		"intent", intent,
+		"confidence", confidence,
+		"sticky_until", stickyUntil.Format(time.RFC3339))
+}
+
 // Invalidate clears the cache for a conversation.
 func (m *MetadataManager) Invalidate(conversationID int32) {
 	m.cache.Delete(conversationID)

@@ -253,6 +253,21 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	storeAdapter := ctxpkg.NewStoreAdapter(s.Store)
 	msgProvider := ctxpkg.NewBlockStoreMessageProvider(storeAdapter, 0) // userID not used in GetRecentMessages
 	contextBuilder := ctxpkg.NewService(ctxpkg.DefaultConfig()).WithMessageProvider(msgProvider)
+
+	// Phase 3: Inject EpisodicProvider for long-term memory retrieval
+	// This enables semantic search over past conversation episodes.
+	if s.EmbeddingService != nil {
+		vectorSearchAdapter := ctxpkg.NewVectorSearchStoreAdapter(s.Store)
+		episodicProvider := ctxpkg.NewEpisodicProvider(
+			vectorSearchAdapter,
+			s.EmbeddingService, // EmbeddingService implements ctxpkg.EmbeddingService
+			ctxpkg.DefaultEpisodicConfig(),
+			"", // agentType is set per-request
+		)
+		contextBuilder = contextBuilder.WithEpisodicProvider(episodicProvider)
+		slog.Info("Episodic memory provider enabled for context building")
+	}
+
 	parrotHandler.SetContextBuilder(contextBuilder)
 	slog.Info("Backend-driven context construction enabled")
 

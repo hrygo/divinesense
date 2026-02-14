@@ -119,6 +119,13 @@ type Driver interface {
 	ListActiveUserIDs(ctx context.Context, cutoff time.Time) ([]int32, error)
 	DeleteEpisodicMemory(ctx context.Context, delete *DeleteEpisodicMemory) error
 
+	// EpisodicMemoryEmbedding model related methods.
+	UpsertEpisodicMemoryEmbedding(ctx context.Context, embedding *EpisodicMemoryEmbedding) (*EpisodicMemoryEmbedding, error)
+	ListEpisodicMemoryEmbeddings(ctx context.Context, find *FindEpisodicMemoryEmbedding) ([]*EpisodicMemoryEmbedding, error)
+	DeleteEpisodicMemoryEmbedding(ctx context.Context, episodicMemoryID int32) error
+	FindEpisodicMemoriesWithoutEmbedding(ctx context.Context, find *FindEpisodicMemoriesWithoutEmbedding) ([]*EpisodicMemory, error)
+	EpisodicVectorSearch(ctx context.Context, opts *EpisodicVectorSearchOptions) ([]*EpisodicMemoryWithScore, error)
+
 	// UserPreferences model related methods.
 	UpsertUserPreferences(ctx context.Context, upsert *UpsertUserPreferences) (*UserPreferences, error)
 	GetUserPreferences(ctx context.Context, find *FindUserPreferences) (*UserPreferences, error)

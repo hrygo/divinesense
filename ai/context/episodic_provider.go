@@ -64,9 +64,9 @@ type VectorSearchEpisodicOptions struct {
 // Following Interface Segregation Principle (ISP), this interface only
 // exposes the essential embedding operation needed for episodic retrieval.
 type EmbeddingService interface {
-	// Embedding generates a vector embedding for the given text.
+	// Embed generates a vector embedding for the given text.
 	// Returns a float32 slice representing the semantic vector.
-	Embedding(ctx context.Context, text string) ([]float32, error)
+	Embed(ctx context.Context, text string) ([]float32, error)
 }
 
 // NewEpisodicProvider creates a new episodic memory provider.
@@ -106,7 +106,7 @@ func (p *EpisodicProviderImpl) SearchEpisodes(
 	}
 
 	// Generate embedding for query
-	queryEmb, err := p.embedder.Embedding(ctx, query)
+	queryEmb, err := p.embedder.Embed(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
 	}
@@ -264,3 +264,22 @@ func truncateSummary(content string, maxLen int) string {
 // Ensure implementations satisfy interfaces.
 var _ EpisodicProvider = (*EpisodicProviderImpl)(nil)
 var _ EpisodicProvider = (*MemoBasedEpisodicProvider)(nil)
+
+// EmbeddingProviderAdapter adapts *embedding.Provider to EmbeddingService interface.
+// This allows the core embedding.Provider to be used with EpisodicProviderImpl.
+type EmbeddingProviderAdapter struct {
+	provider *embedding.Provider
+}
+
+// NewEmbeddingProviderAdapter creates a new adapter.
+func NewEmbeddingProviderAdapter(p *embedding.Provider) *EmbeddingProviderAdapter {
+	return &EmbeddingProviderAdapter{provider: p}
+}
+
+// Embed implements EmbeddingService interface.
+func (a *EmbeddingProviderAdapter) Embed(ctx context.Context, text string) ([]float32, error) {
+	return a.provider.Embedding(ctx, text)
+}
+
+// Ensure EmbeddingProviderAdapter implements EmbeddingService interface.
+var _ EmbeddingService = (*EmbeddingProviderAdapter)(nil)

@@ -20,6 +20,7 @@ import (
 	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	"github.com/hrygo/divinesense/ai/routing"
+	"github.com/hrygo/divinesense/ai/services/memory"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/internal/errors"
@@ -45,6 +46,12 @@ type ParrotHandler struct {
 	titleGenerator         *ai.TitleGenerator               // Title generator for auto-naming conversations
 	metadataMgr            *ctxpkg.MetadataManager          // Context engineering: metadata-based sticky routing
 	contextBuilder         *ctxpkg.Service                  // P0 fix: backend-driven context construction
+	memoryGenerator        MemoryGenerator                  // Phase 3: async episodic memory generation
+}
+
+// MemoryGenerator defines the interface for async memory generation.
+type MemoryGenerator interface {
+	GenerateAsync(ctx context.Context, req memory.MemoryRequest)
 }
 
 // NewParrotHandler creates a new parrot handler.
@@ -89,6 +96,12 @@ func (h *ParrotHandler) SetMetadataManager(mgr *ctxpkg.MetadataManager) {
 // P0 fix: enables context-engineering.md Phase 1 backend-driven context.
 func (h *ParrotHandler) SetContextBuilder(builder *ctxpkg.Service) {
 	h.contextBuilder = builder
+}
+
+// SetMemoryGenerator configures the memory generator for async episodic memory creation.
+// Phase 3: enables context-engineering.md Phase 3 memory generation.
+func (h *ParrotHandler) SetMemoryGenerator(gen MemoryGenerator) {
+	h.memoryGenerator = gen
 }
 
 // maybeGenerateConversationTitle auto-generates a conversation title after the first block.
@@ -299,6 +312,18 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 					Route:      string(routeResult.Route),
 					Confidence: routeResult.Confidence,
 					Method:     routeResult.Method,
+				}
+
+				// Phase 2 fix: Immediately update cache for sticky routing
+				// This enables the next request to use the current routing result
+				// without waiting for block completion.
+				if h.metadataMgr != nil && req.ConversationID > 0 {
+					h.metadataMgr.UpdateCacheOnly(
+						req.ConversationID,
+						string(routeResult.Route),
+						extractIntentFromRoute(string(routeResult.Route)),
+						float32(routeResult.Confidence),
+					)
 				}
 			}
 		}
@@ -1106,6 +1131,18 @@ func (h *ParrotHandler) executeAgent(
 					slog.Int64("block_id", currentBlock.ID),
 					slog.Int("content_length", len(finalContent)),
 				)
+
+				// Phase 3: Async episodic memory generation
+				// Trigger memory generation after successful block completion
+				if h.memoryGenerator != nil && len(currentBlock.UserInputs) > 0 {
+					h.memoryGenerator.GenerateAsync(ctx, memory.MemoryRequest{
+						BlockID:   currentBlock.ID,
+						UserID:    req.UserID,
+						AgentType: string(req.AgentType),
+						UserInput: currentBlock.UserInputs[0].Content,
+						Outcome:   finalContent,
+					})
+				}
 
 				// Context Engineering: Persist routing metadata for sticky routing
 				if h.metadataMgr != nil && req.RouteResult != nil && currentBlock.ConversationID > 0 {
