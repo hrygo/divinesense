@@ -57,6 +57,11 @@ type BuiltContext struct {
 // ContextBuilder builds conversation context from stored blocks.
 // It enforces SEPARATOR filtering and applies token limits.
 //
+// Deprecated: Use ai/context.Service with BlockStoreMessageProvider instead.
+// The new architecture provides better separation of concerns and supports
+// the full context-engineering.md design including episodic memory.
+// This implementation will be removed in a future version.
+//
 // Architecture Note:
 // This component supports a hybrid data source:
 // 1. Persisted blocks from the database (authoritative)

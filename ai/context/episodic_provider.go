@@ -58,8 +58,14 @@ type VectorSearchEpisodicOptions struct {
 	MinScore  float32
 }
 
-// EmbeddingService defines the interface for embedding generation.
+// EmbeddingService defines the interface for text embedding generation.
+// This interface abstracts the embedding provider, allowing different
+// implementations (e.g., SiliconFlow, OpenAI) to be used interchangeably.
+// Following Interface Segregation Principle (ISP), this interface only
+// exposes the essential embedding operation needed for episodic retrieval.
 type EmbeddingService interface {
+	// Embedding generates a vector embedding for the given text.
+	// Returns a float32 slice representing the semantic vector.
 	Embedding(ctx context.Context, text string) ([]float32, error)
 }
 
@@ -156,7 +162,13 @@ type MemoBasedEpisodicProvider struct {
 }
 
 // MemoVectorSearchStore defines the interface for memo vector search.
+// This interface abstracts the memo storage's vector search capability,
+// allowing MemoBasedEpisodicProvider to search through historical memos
+// for relevant context. Following ISP, it only exposes the vector search
+// operation needed for episodic memory retrieval.
 type MemoVectorSearchStore interface {
+	// VectorSearch performs a similarity search against memo embeddings.
+	// Returns memos ordered by similarity score (highest first).
 	VectorSearch(ctx context.Context, opts *MemoVectorSearchOptions) ([]*MemoWithScore, error)
 }
 
