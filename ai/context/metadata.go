@@ -96,7 +96,7 @@ func (m *MetadataManager) GetLastAgent(
 	}
 
 	// Cache miss or expired, query from store
-	latestBlock, err := m.blockStore.GetLatestBlock(ctx, conversationID)
+	latestBlock, err := m.blockStore.GetLatestAIBlock(ctx, conversationID)
 	if err != nil {
 		return "", err
 	}
@@ -135,7 +135,7 @@ func (m *MetadataManager) GetSessionMetadata(
 	}
 
 	// Query from store
-	latestBlock, err := m.blockStore.GetLatestBlock(ctx, conversationID)
+	latestBlock, err := m.blockStore.GetLatestAIBlock(ctx, conversationID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (m *MetadataManager) SetCurrentAgent(
 	update.SetMetadataIntentConfidence(confidence)
 	update.SetMetadataStickyUntil(stickyUntil.Unix())
 
-	_, err := m.blockStore.UpdateBlock(ctx, update)
+	_, err := m.blockStore.UpdateAIBlock(ctx, update)
 	if err != nil {
 		return err
 	}

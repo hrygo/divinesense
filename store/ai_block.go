@@ -161,18 +161,19 @@ type FindAIBlock struct {
 }
 
 // AIBlockStore defines the interface for block storage operations
+// P0 fix: align method names with Driver interface for compatibility
 type AIBlockStore interface {
-	// CreateBlock creates a new block
-	CreateBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error)
+	// CreateAIBlock creates a new block
+	CreateAIBlock(ctx context.Context, create *CreateAIBlock) (*AIBlock, error)
 
-	// GetBlock retrieves a block by ID
-	GetBlock(ctx context.Context, id int64) (*AIBlock, error)
+	// GetAIBlock retrieves a block by ID
+	GetAIBlock(ctx context.Context, id int64) (*AIBlock, error)
 
-	// ListBlocks retrieves blocks for a conversation
-	ListBlocks(ctx context.Context, find *FindAIBlock) ([]*AIBlock, error)
+	// ListAIBlocks retrieves blocks for a conversation
+	ListAIBlocks(ctx context.Context, find *FindAIBlock) ([]*AIBlock, error)
 
-	// UpdateBlock updates a block
-	UpdateBlock(ctx context.Context, update *UpdateAIBlock) (*AIBlock, error)
+	// UpdateAIBlock updates a block
+	UpdateAIBlock(ctx context.Context, update *UpdateAIBlock) (*AIBlock, error)
 
 	// AppendUserInput appends a user input to an existing block
 	AppendUserInput(ctx context.Context, blockID int64, input UserInput) error
@@ -183,17 +184,17 @@ type AIBlockStore interface {
 	// AppendEventsBatch appends multiple events to the event stream in a single query
 	AppendEventsBatch(ctx context.Context, blockID int64, events []BlockEvent) error
 
-	// UpdateStatus updates the block status
-	UpdateStatus(ctx context.Context, blockID int64, status AIBlockStatus) error
+	// UpdateAIBlockStatus updates the block status
+	UpdateAIBlockStatus(ctx context.Context, blockID int64, status AIBlockStatus) error
 
-	// DeleteBlock deletes a block
-	DeleteBlock(ctx context.Context, id int64) error
+	// DeleteAIBlock deletes a block
+	DeleteAIBlock(ctx context.Context, id int64) error
 
-	// GetLatestBlock retrieves the latest block for a conversation
-	GetLatestBlock(ctx context.Context, conversationID int32) (*AIBlock, error)
+	// GetLatestAIBlock retrieves the latest block for a conversation
+	GetLatestAIBlock(ctx context.Context, conversationID int32) (*AIBlock, error)
 
-	// GetPendingBlocks retrieves all pending/streaming blocks for cleanup
-	GetPendingBlocks(ctx context.Context) ([]*AIBlock, error)
+	// GetPendingAIBlocks retrieves all pending/streaming blocks for cleanup
+	GetPendingAIBlocks(ctx context.Context) ([]*AIBlock, error)
 
 	// ========== Tree Branching Methods (tree-conversation-branching) ==========
 

@@ -20,7 +20,7 @@ func NewStoreAdapter(s store.AIBlockStore) *StoreAdapter {
 
 // ListBlocks retrieves blocks for a conversation.
 func (a *StoreAdapter) ListBlocks(ctx context.Context, conversationID int32) ([]*Block, error) {
-	blocks, err := a.store.ListBlocks(ctx, &store.FindAIBlock{
+	blocks, err := a.store.ListAIBlocks(ctx, &store.FindAIBlock{
 		ConversationID: &conversationID,
 	})
 	if err != nil {
@@ -38,7 +38,7 @@ func (a *StoreAdapter) ListBlocks(ctx context.Context, conversationID int32) ([]
 
 // GetLatestBlock retrieves the most recent block for a conversation.
 func (a *StoreAdapter) GetLatestBlock(ctx context.Context, conversationID int32) (*Block, error) {
-	block, err := a.store.GetLatestBlock(ctx, conversationID)
+	block, err := a.store.GetLatestAIBlock(ctx, conversationID)
 	if err != nil {
 		return nil, err
 	}

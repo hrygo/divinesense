@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
@@ -235,7 +237,15 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	} else {
 		slog.Info("Chat router enabled with rule-based routing (no LLM fallback)")
 	}
-	parrotHandler.SetChatRouter(chatRouter)
+
+	// P0 fix: Enable metadata-based sticky routing (context-engineering.md Phase 2)
+	// This allows routing decisions to be based on persisted database state (AIBlock.Metadata),
+	// not just in-memory session state.
+	metadataMgr := ctxpkg.NewMetadataManager(s.Store, 5*time.Minute) // 5 min cache TTL
+	chatRouterWithMetadata := agentpkg.NewChatRouterWithMetadata(chatRouter, metadataMgr)
+	parrotHandler.SetChatRouterWithMetadata(chatRouterWithMetadata)
+	parrotHandler.SetMetadataManager(metadataMgr)
+	slog.Info("Chat router with metadata-based sticky routing enabled")
 
 	return aichat.NewRoutingHandler(parrotHandler)
 }
