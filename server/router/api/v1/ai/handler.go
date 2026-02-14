@@ -19,8 +19,8 @@ import (
 	"github.com/hrygo/divinesense/ai/agents/geek"
 	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
+	"github.com/hrygo/divinesense/ai/memory"
 	"github.com/hrygo/divinesense/ai/routing"
-	"github.com/hrygo/divinesense/ai/services/memory"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/internal/errors"
@@ -46,12 +46,7 @@ type ParrotHandler struct {
 	titleGenerator         *ai.TitleGenerator               // Title generator for auto-naming conversations
 	metadataMgr            *ctxpkg.MetadataManager          // Context engineering: metadata-based sticky routing
 	contextBuilder         *ctxpkg.Service                  // P0 fix: backend-driven context construction
-	memoryGenerator        MemoryGenerator                  // Phase 3: async episodic memory generation
-}
-
-// MemoryGenerator defines the interface for async memory generation.
-type MemoryGenerator interface {
-	GenerateAsync(ctx context.Context, req memory.MemoryRequest)
+	memoryGenerator        memory.Generator                 // Phase 3: async episodic memory generation (extension point)
 }
 
 // NewParrotHandler creates a new parrot handler.
@@ -100,7 +95,9 @@ func (h *ParrotHandler) SetContextBuilder(builder *ctxpkg.Service) {
 
 // SetMemoryGenerator configures the memory generator for async episodic memory creation.
 // Phase 3: enables context-engineering.md Phase 3 memory generation.
-func (h *ParrotHandler) SetMemoryGenerator(gen MemoryGenerator) {
+// Default is NoOpGenerator (no-op). Use simple.Generator for dev/test, or integrate
+// with professional memory services (Mem0, Letta) for production.
+func (h *ParrotHandler) SetMemoryGenerator(gen memory.Generator) {
 	h.memoryGenerator = gen
 }
 

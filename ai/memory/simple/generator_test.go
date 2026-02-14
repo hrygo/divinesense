@@ -1,4 +1,4 @@
-package memory
+package simple
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai/core/llm"
+	"github.com/hrygo/divinesense/ai/memory"
 	"github.com/hrygo/divinesense/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +102,7 @@ func TestGenerator_GenerateSync(t *testing.T) {
 		Timeout:          10 * time.Second,
 	})
 
-	req := MemoryRequest{
+	req := memory.MemoryRequest{
 		BlockID:   1,
 		UserID:    100,
 		AgentType: "memo",
@@ -114,12 +115,12 @@ func TestGenerator_GenerateSync(t *testing.T) {
 
 	// Verify memory was created
 	require.Len(t, mockStore.memories, 1)
-	memory := mockStore.memories[0]
+	mem := mockStore.memories[0]
 
-	assert.Equal(t, int32(100), memory.UserID)
-	assert.Equal(t, "memo", memory.AgentType)
-	assert.Equal(t, "success", memory.Outcome)
-	assert.Equal(t, "Test summary of the interaction", memory.Summary)
+	assert.Equal(t, int32(100), mem.UserID)
+	assert.Equal(t, "memo", mem.AgentType)
+	assert.Equal(t, "success", mem.Outcome)
+	assert.Equal(t, "Test summary of the interaction", mem.Summary)
 }
 
 func TestGenerator_GenerateSync_LLMFailure(t *testing.T) {
@@ -129,7 +130,7 @@ func TestGenerator_GenerateSync_LLMFailure(t *testing.T) {
 
 	g := NewGenerator(mockStore, mockLLM, mockEmbedder, DefaultConfig())
 
-	req := MemoryRequest{
+	req := memory.MemoryRequest{
 		BlockID:   1,
 		UserID:    100,
 		AgentType: "memo",
@@ -152,7 +153,7 @@ func TestGenerator_GenerateSync_EmbeddingFailure(t *testing.T) {
 
 	g := NewGenerator(mockStore, mockLLM, mockEmbedder, DefaultConfig())
 
-	req := MemoryRequest{
+	req := memory.MemoryRequest{
 		BlockID:   1,
 		UserID:    100,
 		AgentType: "memo",
@@ -172,7 +173,7 @@ func TestGenerator_GenerateAsync(t *testing.T) {
 
 	g := NewGenerator(mockStore, mockLLM, mockEmbedder, DefaultConfig())
 
-	req := MemoryRequest{
+	req := memory.MemoryRequest{
 		BlockID:   1,
 		UserID:    100,
 		AgentType: "memo",
@@ -199,7 +200,7 @@ func TestGenerator_GenerateAsync_Disabled(t *testing.T) {
 		Enabled: false,
 	})
 
-	req := MemoryRequest{
+	req := memory.MemoryRequest{
 		BlockID:   1,
 		UserID:    100,
 		AgentType: "memo",
@@ -224,7 +225,7 @@ func TestGenerator_Shutdown(t *testing.T) {
 
 	// Start multiple async generations
 	for i := 0; i < 3; i++ {
-		req := MemoryRequest{
+		req := memory.MemoryRequest{
 			BlockID:   int64(i + 1),
 			UserID:    100,
 			AgentType: "memo",
@@ -284,4 +285,9 @@ func TestTruncateText(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestGenerator_ImplementsInterface(t *testing.T) {
+	// Ensure Generator implements memory.Generator interface
+	var _ memory.Generator = (*Generator)(nil)
 }

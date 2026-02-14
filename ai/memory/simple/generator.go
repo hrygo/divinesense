@@ -1,6 +1,22 @@
-// Package memory provides episodic memory generation services.
-// It handles the asynchronous creation of memories from completed AI interactions.
-package memory
+// Package simple provides a basic memory generator implementation.
+//
+// WARNING: This implementation is NOT production-ready for the following reasons:
+//   - Fixed importance scoring (0.5) without dynamic evaluation
+//   - No forgetting/decay mechanism
+//   - No memory consolidation or deduplication
+//   - No security protection against memory poisoning
+//   - Single-dimension (vector) retrieval only
+//
+// For production use, consider:
+//   - Mem0 (https://mem0.ai) - Hybrid datastore with graph/vector/KV
+//   - Letta (https://letta.com) - Hierarchical memory with sleep-time compute
+//   - Custom implementation based on your domain requirements
+//
+// This package is suitable for:
+//   - Development and testing environments
+//   - Prototyping memory-aware features
+//   - Learning about memory engineering concepts
+package simple
 
 import (
 	"context"
@@ -10,8 +26,12 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai/core/llm"
+	"github.com/hrygo/divinesense/ai/memory"
 	"github.com/hrygo/divinesense/store"
 )
+
+// DefaultEmbeddingModel is the default embedding model for episodic memories.
+const DefaultEmbeddingModel = "BAAI/bge-m3"
 
 // Config holds configuration for the memory generator.
 type Config struct {
@@ -36,6 +56,7 @@ func DefaultConfig() *Config {
 }
 
 // Generator generates episodic memories from completed interactions.
+// See package documentation for limitations and production recommendations.
 type Generator struct {
 	store    MemoryStore
 	llm      LLMService
@@ -50,9 +71,6 @@ type MemoryStore interface {
 	CreateEpisodicMemory(ctx context.Context, create *store.EpisodicMemory) (*store.EpisodicMemory, error)
 	UpsertEpisodicMemoryEmbedding(ctx context.Context, embedding *store.EpisodicMemoryEmbedding) (*store.EpisodicMemoryEmbedding, error)
 }
-
-// DefaultEmbeddingModel is the default embedding model for episodic memories.
-const DefaultEmbeddingModel = "BAAI/bge-m3"
 
 // LLMService defines the interface for LLM-based summary generation.
 type LLMService interface {
@@ -87,18 +105,8 @@ func NewGenerator(
 	}
 }
 
-// MemoryRequest contains the data needed to generate a memory.
-type MemoryRequest struct {
-	BlockID   int64
-	UserID    int32
-	AgentType string
-	UserInput string
-	Outcome   string // Assistant's response
-}
-
 // GenerateAsync starts asynchronous memory generation.
-// This method returns immediately and processes the memory in a goroutine.
-func (g *Generator) GenerateAsync(ctx context.Context, req MemoryRequest) {
+func (g *Generator) GenerateAsync(ctx context.Context, req memory.MemoryRequest) {
 	if !g.config.Enabled {
 		return
 	}
@@ -133,7 +141,7 @@ func (g *Generator) GenerateAsync(ctx context.Context, req MemoryRequest) {
 }
 
 // generate performs the actual memory generation.
-func (g *Generator) generate(ctx context.Context, req MemoryRequest) error {
+func (g *Generator) generate(ctx context.Context, req memory.MemoryRequest) error {
 	startTime := time.Now()
 
 	// Step 1: Generate summary
@@ -154,7 +162,9 @@ func (g *Generator) generate(ctx context.Context, req MemoryRequest) error {
 	}
 
 	// Step 3: Create episodic memory record
-	memory := &store.EpisodicMemory{
+	// NOTE: Importance is fixed at 0.5 - this is a limitation of the simple implementation.
+	// Production systems should use dynamic scoring based on relevance, frequency, and recency.
+	memoryRecord := &store.EpisodicMemory{
 		UserID:     req.UserID,
 		AgentType:  req.AgentType,
 		UserInput:  req.UserInput,
@@ -162,12 +172,10 @@ func (g *Generator) generate(ctx context.Context, req MemoryRequest) error {
 		Summary:    summary,
 		Timestamp:  time.Now(),
 		CreatedTs:  time.Now().Unix(),
-		Importance: 0.5, // Default importance
+		Importance: 0.5, // Fixed importance - see note above
 	}
 
-	// Note: Embedding is stored separately via UpdateEpisodicMemoryEmbedding
-	// For now, we store the memory without embedding (will be added in Phase 3a)
-	created, err := g.store.CreateEpisodicMemory(ctx, memory)
+	created, err := g.store.CreateEpisodicMemory(ctx, memoryRecord)
 	if err != nil {
 		return fmt.Errorf("memory creation failed: %w", err)
 	}
@@ -228,7 +236,7 @@ Summary:`, truncatedInput, truncatedOutcome)
 }
 
 // GenerateSync generates memory synchronously (for testing).
-func (g *Generator) GenerateSync(ctx context.Context, req MemoryRequest) error {
+func (g *Generator) GenerateSync(ctx context.Context, req memory.MemoryRequest) error {
 	return g.generate(ctx, req)
 }
 
@@ -256,9 +264,5 @@ func truncateText(text string, maxLen int) string {
 	return text[:maxLen] + "..."
 }
 
-// Ensure Generator implements the interface for dependency injection.
-var _ interface {
-	GenerateAsync(ctx context.Context, req MemoryRequest)
-	GenerateSync(ctx context.Context, req MemoryRequest) error
-	Shutdown(ctx context.Context) error
-} = (*Generator)(nil)
+// Ensure Generator implements memory.Generator.
+var _ memory.Generator = (*Generator)(nil)

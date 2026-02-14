@@ -12,9 +12,17 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- （待添加）
+- **Memory Extension Point** (`ai/memory/`): 抽象记忆生成扩展点
+  - `memory.Generator` 接口定义，支持多种实现
+  - `NoOpGenerator` 默认实现（无操作，生产安全）
+  - `simple.Generator` 简化实现（开发/测试用，非生产级）
+  - 文档化专业方案集成指南（Mem0, Letta）
 
 ### Changed
+- **Memory Architecture Refactoring**: 记忆工程架构重构
+  - 移动 `ai/services/memory/` → `ai/memory/simple/`
+  - 记忆生成默认禁用（NoOpGenerator），需显式配置启用
+  - 理由：记忆工程是专业领域，当前实现过于简化
 - **AI 模型文档更新**：统一采用供应商无关的通用描述
   - README: 将对话 LLM 从 DeepSeek 更新为 Z.AI GLM
   - 架构文档：对话 LLM 使用通用描述"支持多提供商切换，通过环境变量配置"
