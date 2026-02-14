@@ -87,6 +87,15 @@ enable_cache: true
 cache_ttl: 5m
 cache_size: 100
 
+# Long-term memory configuration (Phase 3: context-engineering.md)
+# Enables semantic search through historical conversations for context
+long_term_memory:
+  enabled: true                    # Enable episodic memory retrieval
+  retrieval:
+    max_results: 3                 # Maximum episodes to retrieve
+    min_similarity: 0.75           # Minimum similarity threshold (0-1)
+    embedding_model: "BAAI/bge-m3" # Embedding model for vector search
+
 # Self-description for Orchestrator routing
 self_description:
   name: memo

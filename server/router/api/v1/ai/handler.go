@@ -18,6 +18,7 @@ import (
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/geek"
 	"github.com/hrygo/divinesense/ai/agents/orchestrator"
+	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	"github.com/hrygo/divinesense/ai/routing"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
@@ -41,6 +42,7 @@ type ParrotHandler struct {
 	persister      *aistats.Persister         // session stats persister
 	blockManager   *BlockManager              // Phase 5: Unified Block Model support
 	titleGenerator *ai.TitleGenerator         // Title generator for auto-naming conversations
+	metadataMgr    *ctxpkg.MetadataManager    // Context engineering: metadata-based sticky routing
 }
 
 // NewParrotHandler creates a new parrot handler.
@@ -62,6 +64,12 @@ func (h *ParrotHandler) SetChatRouter(router *agentpkg.ChatRouter) {
 // SetOrchestrator configures the orchestrator for complex/multi-intent requests.
 func (h *ParrotHandler) SetOrchestrator(orch *orchestrator.Orchestrator) {
 	h.orchestrator = orch
+}
+
+// SetMetadataManager configures the metadata manager for context engineering.
+// This enables metadata-based sticky routing and state persistence.
+func (h *ParrotHandler) SetMetadataManager(mgr *ctxpkg.MetadataManager) {
+	h.metadataMgr = mgr
 }
 
 // maybeGenerateConversationTitle auto-generates a conversation title after the first block.
@@ -249,6 +257,15 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 				"method", routeResult.Method,
 				"confidence", routeResult.Confidence,
 				"needs_orchestration", needsOrchestration)
+
+			// Store route result for metadata persistence
+			if !needsOrchestration && routeResult.Route != "" {
+				req.RouteResult = &RouteResultMeta{
+					Route:      string(routeResult.Route),
+					Confidence: routeResult.Confidence,
+					Method:     routeResult.Method,
+				}
+			}
 		}
 	} else if agentType == AgentTypeAuto {
 		// No router configured, use orchestrator
@@ -1031,6 +1048,22 @@ func (h *ParrotHandler) executeAgent(
 					slog.Int("content_length", len(finalContent)),
 				)
 
+				// Context Engineering: Persist routing metadata for sticky routing
+				if h.metadataMgr != nil && req.RouteResult != nil && currentBlock.ConversationID > 0 {
+					if err := h.metadataMgr.SetCurrentAgent(
+						ctx,
+						currentBlock.ConversationID,
+						currentBlock.ID,
+						req.RouteResult.Route,
+						extractIntentFromRoute(req.RouteResult.Route),
+						float32(req.RouteResult.Confidence),
+					); err != nil {
+						logger.Warn("Failed to persist routing metadata",
+							slog.String("error", err.Error()),
+						)
+					}
+				}
+
 				// Auto-generate conversation title after first successful block
 				// Only if title_source is "default" (never been auto-generated or user-edited)
 				if h.titleGenerator != nil && currentBlock.ConversationID > 0 {
@@ -1159,4 +1192,16 @@ func formatToolsList(tools []string) string {
 		return "none"
 	}
 	return strings.Join(tools, ", ")
+}
+
+// extractIntentFromRoute extracts the intent from a route type for metadata storage.
+func extractIntentFromRoute(route string) string {
+	switch route {
+	case string(agentpkg.RouteTypeMemo):
+		return "memo_search"
+	case string(agentpkg.RouteTypeSchedule):
+		return "schedule_manage"
+	default:
+		return "unknown"
+	}
 }

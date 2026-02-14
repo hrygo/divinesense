@@ -95,6 +95,15 @@ enable_cache: true
 cache_ttl: 5m
 cache_size: 50
 
+# Long-term memory configuration (Phase 3: context-engineering.md)
+# Schedule agent has limited need for historical context
+long_term_memory:
+  enabled: false                   # Disabled for schedule agent
+  retrieval:
+    max_results: 0
+    min_similarity: 0.0
+    embedding_model: "BAAI/bge-m3"
+
 # Self-description for Orchestrator routing
 self_description:
   name: schedule

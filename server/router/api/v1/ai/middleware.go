@@ -26,6 +26,16 @@ type ChatRequest struct {
 	IsTempConversation bool
 	GeekMode           bool
 	EvolutionMode      bool
+	// RouteResult stores the routing decision for metadata persistence.
+	// Set by ParrotHandler.Handle after routing, used in executeAgent.
+	RouteResult *RouteResultMeta
+}
+
+// RouteResultMeta stores routing metadata for persistence.
+type RouteResultMeta struct {
+	Route      string
+	Confidence float64
+	Method     string
 }
 
 // Handler is the interface for handling chat requests.
