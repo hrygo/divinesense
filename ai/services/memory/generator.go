@@ -48,7 +48,11 @@ type Generator struct {
 // MemoryStore defines the interface for memory persistence.
 type MemoryStore interface {
 	CreateEpisodicMemory(ctx context.Context, create *store.EpisodicMemory) (*store.EpisodicMemory, error)
+	UpsertEpisodicMemoryEmbedding(ctx context.Context, embedding *store.EpisodicMemoryEmbedding) (*store.EpisodicMemoryEmbedding, error)
 }
+
+// DefaultEmbeddingModel is the default embedding model for episodic memories.
+const DefaultEmbeddingModel = "BAAI/bge-m3"
 
 // LLMService defines the interface for LLM-based summary generation.
 type LLMService interface {
@@ -168,7 +172,18 @@ func (g *Generator) generate(ctx context.Context, req MemoryRequest) error {
 		return fmt.Errorf("memory creation failed: %w", err)
 	}
 
-	// Log the embedding dimension for debugging
+	// Step 4: Store embedding vector
+	embeddingRecord := &store.EpisodicMemoryEmbedding{
+		EpisodicMemoryID: int32(created.ID),
+		Model:            DefaultEmbeddingModel,
+		Embedding:        embeddingVector,
+		CreatedTs:        time.Now().Unix(),
+		UpdatedTs:        time.Now().Unix(),
+	}
+	if _, err := g.store.UpsertEpisodicMemoryEmbedding(ctx, embeddingRecord); err != nil {
+		return fmt.Errorf("embedding storage failed: %w", err)
+	}
+
 	slog.Info("Memory generated successfully",
 		"block_id", req.BlockID,
 		"memory_id", created.ID,
@@ -178,11 +193,6 @@ func (g *Generator) generate(ctx context.Context, req MemoryRequest) error {
 		"embedding_dim", len(embeddingVector),
 		"duration_ms", time.Since(startTime).Milliseconds(),
 	)
-
-	// TODO: Store embedding when episodic_memory.embedding column is ready
-	// if err := g.store.UpdateEpisodicMemoryEmbedding(ctx, created.ID, embeddingVector); err != nil {
-	// 	return fmt.Errorf("embedding storage failed: %w", err)
-	// }
 
 	return nil
 }

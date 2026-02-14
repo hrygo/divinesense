@@ -14,8 +14,9 @@ import (
 
 // MockMemoryStore implements MemoryStore for testing.
 type MockMemoryStore struct {
-	memories []*store.EpisodicMemory
-	err      error
+	memories   []*store.EpisodicMemory
+	embeddings []*store.EpisodicMemoryEmbedding
+	err        error
 }
 
 func (m *MockMemoryStore) CreateEpisodicMemory(ctx context.Context, create *store.EpisodicMemory) (*store.EpisodicMemory, error) {
@@ -25,6 +26,15 @@ func (m *MockMemoryStore) CreateEpisodicMemory(ctx context.Context, create *stor
 	create.ID = int64(len(m.memories) + 1)
 	m.memories = append(m.memories, create)
 	return create, nil
+}
+
+func (m *MockMemoryStore) UpsertEpisodicMemoryEmbedding(ctx context.Context, embedding *store.EpisodicMemoryEmbedding) (*store.EpisodicMemoryEmbedding, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	embedding.ID = int32(len(m.embeddings) + 1)
+	m.embeddings = append(m.embeddings, embedding)
+	return embedding, nil
 }
 
 // MockLLMService implements LLMService for testing.
