@@ -892,7 +892,31 @@ func (h *ParrotHandler) executeAgent(
 
 	// Execute agent
 	defer close(heartbeatDone) // Ensure heartbeat stops even on panic
-	execErr := agent.Execute(ctx, req.Message, req.History, callback)
+
+	// P0-2: Use backend-driven context construction if contextBuilder is available
+	// This implements context-engineering.md Phase 1: Backend as Source of Truth
+	history := req.History
+	if h.contextBuilder != nil && req.ConversationID > 0 {
+		sessionID := fmt.Sprintf("conv_%d", req.ConversationID)
+		ctxReq := &ctxpkg.ContextRequest{
+			SessionID:    sessionID,
+			CurrentQuery: req.Message,
+			AgentType:    req.AgentType.String(),
+			UserID:       req.UserID,
+		}
+		builtHistory, err := h.contextBuilder.BuildHistory(ctx, ctxReq)
+		if err != nil {
+			logger.Warn("Failed to build history from context engine, falling back to req.History",
+				slog.String("error", err.Error()))
+		} else if builtHistory != nil {
+			history = builtHistory
+			logger.Debug("Using backend-driven context",
+				slog.Int("history_count", len(history)),
+				slog.String("source", "context_builder"))
+		}
+	}
+
+	execErr := agent.Execute(ctx, req.Message, history, callback)
 	logger.Info("ai.agent.completed",
 		slog.String("execErr", fmt.Sprintf("%v", execErr)),
 		slog.Int64("duration_ms", time.Since(sessionStartTime).Milliseconds()))

@@ -247,6 +247,15 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	parrotHandler.SetMetadataManager(metadataMgr)
 	slog.Info("Chat router with metadata-based sticky routing enabled")
 
+	// P0-2: Enable backend-driven context construction (context-engineering.md Phase 1)
+	// This replaces client-side history with server-side context building.
+	// The ContextBuilder fetches history from AIBlockStore instead of trusting req.History.
+	storeAdapter := ctxpkg.NewStoreAdapter(s.Store)
+	msgProvider := ctxpkg.NewBlockStoreMessageProvider(storeAdapter, 0) // userID not used in GetRecentMessages
+	contextBuilder := ctxpkg.NewService(ctxpkg.DefaultConfig()).WithMessageProvider(msgProvider)
+	parrotHandler.SetContextBuilder(contextBuilder)
+	slog.Info("Backend-driven context construction enabled")
+
 	return aichat.NewRoutingHandler(parrotHandler)
 }
 

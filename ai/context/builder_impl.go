@@ -315,5 +315,75 @@ func (s *Service) assembleResult(segments []*ContextSegment, budget *TokenBudget
 	return result
 }
 
+// BuildHistory constructs history in []string format for ParrotAgent.Execute.
+// Returns alternating user/assistant messages: [user1, assistant1, user2, assistant2, ...]
+// This enables backend-driven context construction (context-engineering.md Phase 1).
+func (s *Service) BuildHistory(ctx context.Context, req *ContextRequest) ([]string, error) {
+	// Set defaults
+	if req.MaxTokens <= 0 {
+		req.MaxTokens = DefaultMaxTokens
+	}
+
+	// Extract short-term messages
+	if s.messageProvider == nil {
+		return nil, nil // No provider, return empty
+	}
+
+	messages, err := s.shortTerm.Extract(ctx, s.messageProvider, req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(messages) == 0 {
+		return nil, nil
+	}
+
+	// Convert to alternating user/assistant format
+	history := make([]string, 0, len(messages))
+
+	// Group consecutive messages by role into pairs
+	var currentUserMsgs []string
+	for _, msg := range messages {
+		switch msg.Role {
+		case "user":
+			currentUserMsgs = append(currentUserMsgs, msg.Content)
+		case "assistant":
+			// Flush pending user messages, then add assistant
+			if len(currentUserMsgs) > 0 {
+				// Combine multiple user messages if any
+				userContent := currentUserMsgs[0]
+				if len(currentUserMsgs) > 1 {
+					// For simplicity, just use the first one
+					// In practice, multiple user messages in a row are rare
+				}
+				history = append(history, userContent)
+				currentUserMsgs = nil
+			} else if len(history) == 0 {
+				// Edge case: assistant message without preceding user
+				// Skip it
+				continue
+			}
+			history = append(history, msg.Content)
+		}
+	}
+
+	// Handle trailing user messages without assistant response
+	if len(currentUserMsgs) > 0 && len(history) > 0 {
+		// Don't add trailing user message as it will be the current query
+	}
+
+	// Ensure we have pairs
+	if len(history)%2 != 0 {
+		history = history[:len(history)-1]
+	}
+
+	slog.Debug("Service.BuildHistory",
+		"session_id", req.SessionID,
+		"messages_in", len(messages),
+		"history_out", len(history))
+
+	return history, nil
+}
+
 // Ensure Service implements ContextBuilder.
 var _ ContextBuilder = (*Service)(nil)

@@ -218,6 +218,81 @@ func TestServiceStats(t *testing.T) {
 	assert.Greater(t, stats.AverageTokens, float64(0))
 }
 
+// MockMessageProvider for testing BuildHistory
+type mockMessageProvider struct {
+	messages []*Message
+	err      error
+}
+
+func (m *mockMessageProvider) GetRecentMessages(ctx context.Context, sessionID string, limit int) ([]*Message, error) {
+	return m.messages, m.err
+}
+
+func TestServiceBuildHistory(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Returns alternating user/assistant pairs", func(t *testing.T) {
+		messages := []*Message{
+			{Role: "user", Content: "Hello", Timestamp: time.Now()},
+			{Role: "assistant", Content: "Hi there", Timestamp: time.Now().Add(time.Second)},
+			{Role: "user", Content: "How are you?", Timestamp: time.Now().Add(2 * time.Second)},
+			{Role: "assistant", Content: "I'm doing well", Timestamp: time.Now().Add(3 * time.Second)},
+		}
+		mockProvider := &mockMessageProvider{messages: messages}
+		svc := NewService(DefaultConfig()).WithMessageProvider(mockProvider)
+
+		history, err := svc.BuildHistory(ctx, &ContextRequest{SessionID: "test"})
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Hello", "Hi there", "How are you?", "I'm doing well"}, history)
+	})
+
+	t.Run("Returns nil when no provider", func(t *testing.T) {
+		svc := NewService(DefaultConfig())
+
+		history, err := svc.BuildHistory(ctx, &ContextRequest{SessionID: "test"})
+
+		require.NoError(t, err)
+		assert.Nil(t, history)
+	})
+
+	t.Run("Returns nil when no messages", func(t *testing.T) {
+		mockProvider := &mockMessageProvider{messages: []*Message{}}
+		svc := NewService(DefaultConfig()).WithMessageProvider(mockProvider)
+
+		history, err := svc.BuildHistory(ctx, &ContextRequest{SessionID: "test"})
+
+		require.NoError(t, err)
+		assert.Nil(t, history)
+	})
+
+	t.Run("Handles provider error", func(t *testing.T) {
+		mockProvider := &mockMessageProvider{err: assert.AnError}
+		svc := NewService(DefaultConfig()).WithMessageProvider(mockProvider)
+
+		history, err := svc.BuildHistory(ctx, &ContextRequest{SessionID: "test"})
+
+		require.Error(t, err)
+		assert.Nil(t, history)
+	})
+
+	t.Run("Ensures even number of messages", func(t *testing.T) {
+		// Odd number of messages (trailing user without assistant response)
+		messages := []*Message{
+			{Role: "user", Content: "Hello", Timestamp: time.Now()},
+			{Role: "assistant", Content: "Hi there", Timestamp: time.Now().Add(time.Second)},
+			{Role: "user", Content: "How are you?", Timestamp: time.Now().Add(2 * time.Second)},
+		}
+		mockProvider := &mockMessageProvider{messages: messages}
+		svc := NewService(DefaultConfig()).WithMessageProvider(mockProvider)
+
+		history, err := svc.BuildHistory(ctx, &ContextRequest{SessionID: "test"})
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Hello", "Hi there"}, history) // Trailing user removed
+	})
+}
+
 // Benchmark tests.
 func BenchmarkBuild(b *testing.B) {
 	svc := NewService(DefaultConfig())

@@ -13,6 +13,11 @@ type ContextBuilder interface {
 	// Build constructs the full context from various sources.
 	Build(ctx context.Context, req *ContextRequest) (*ContextResult, error)
 
+	// BuildHistory constructs history in []string format for ParrotAgent.Execute.
+	// Returns alternating user/assistant messages: [user1, assistant1, user2, assistant2, ...]
+	// This enables backend-driven context construction (context-engineering.md Phase 1).
+	BuildHistory(ctx context.Context, req *ContextRequest) ([]string, error)
+
 	// GetStats returns context building statistics.
 	GetStats() *ContextStats
 }
