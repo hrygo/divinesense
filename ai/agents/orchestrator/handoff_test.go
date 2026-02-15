@@ -216,13 +216,9 @@ func TestBuildFallbackResponse(t *testing.T) {
 // TestHandoffResult_Fields tests HandoffResult fields.
 func TestHandoffResult_Fields(t *testing.T) {
 	result := &HandoffResult{
-		Success:         true,
-		NewExpert:       "ScheduleParrot",
-		Error:           "",
-		Reason:          "",
-		FallbackMessage: "fallback",
-		Attempts:        1,
-		Depth:           2,
+		Success:   true,
+		NewExpert: "ScheduleParrot",
+		Depth:     2,
 	}
 
 	if !result.Success {

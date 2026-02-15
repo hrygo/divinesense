@@ -498,9 +498,6 @@ func (h *HandoffHandler) HandleSimpleHandoff(req SimpleHandoffRequest) SimpleHan
 	}
 }
 
-// Ensure HandoffHandler implements error handling
-var _ error = (*HandoffError)(nil)
-
 // HandoffError represents an error that occurred during handoff.
 type HandoffError struct {
 	OriginalError error
