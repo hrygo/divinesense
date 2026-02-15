@@ -479,7 +479,10 @@ func (h *HandoffHandler) HandleSimpleHandoff(req SimpleHandoffRequest) SimpleHan
 		OriginalError:       req.Reason,
 	}
 
-	ctx := context.Background()
+	// Use a context with timeout to allow cancellation
+	ctx, cancel := context.WithTimeout(context.Background(), HandoffTimeout)
+	defer cancel()
+
 	callback := func(eventType string, eventData string) {}
 	handOffContext := NewHandoffContext()
 

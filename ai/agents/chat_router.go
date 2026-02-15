@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 
 	"github.com/hrygo/divinesense/ai/internal/strutil"
 	routerpkg "github.com/hrygo/divinesense/ai/routing"
@@ -231,11 +233,14 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 
 	go func() {
 		// Create a callback to collect results
+		var mu sync.Mutex
 		var result strings.Builder
 		callback := func(eventType string, eventData string) error {
 			// Collect content events
 			if eventType == "content" || eventType == "text" || eventType == "response" {
+				mu.Lock()
 				result.WriteString(eventData)
+				mu.Unlock()
 			}
 			return nil
 		}
@@ -245,7 +250,9 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 			errChan <- err
 			return
 		}
+		mu.Lock()
 		resultChan <- result.String()
+		mu.Unlock()
 	}()
 
 	// Wait for result or error
@@ -313,8 +320,11 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 			return routeResult, nil
 		}
 
-		// Not a MissingCapability error, just return the error
-		routeResult.ExecutionResult = "执行出错：" + err.Error()
+		// Not a MissingCapability error, return sanitized error
+		routeResult.ExecutionResult = "执行出错，请稍后重试"
+		slog.Error("chatrouter: expert execution failed",
+			"expert", expertName,
+			"error_type", fmt.Sprintf("%T", err))
 		return routeResult, nil
 	}
 }

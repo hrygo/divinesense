@@ -280,11 +280,9 @@ type MissingCapability struct {
 	Suggestion string
 }
 
-// Error returns the error message.
+// Error returns a sanitized error message.
 func (e *MissingCapability) Error() string {
-	if e.OriginalError != nil {
-		return e.OriginalError.Error()
-	}
+	// Always return a sanitized message to prevent leaking internal error details
 	return fmt.Sprintf("expert %s lacks required capabilities: %v", e.Expert, e.MissingCapabilities)
 }
 

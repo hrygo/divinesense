@@ -76,6 +76,9 @@ func (t *ReportInabilityTool) InputType() map[string]interface{} {
 	}
 }
 
+// MaxInputLength is the maximum allowed length for input fields.
+const MaxInputLength = 1000
+
 // Run executes the report inability tool.
 // Returns a confirmation message that will trigger early stopping in the agent.
 func (t *ReportInabilityTool) Run(ctx context.Context, input string) (string, error) {
@@ -91,6 +94,17 @@ func (t *ReportInabilityTool) Run(ctx context.Context, input string) (string, er
 	}
 	if reportInput.Reason == "" {
 		return "", fmt.Errorf("reason is required")
+	}
+
+	// Validate input length to prevent DoS attacks
+	if len(reportInput.Capability) > MaxInputLength {
+		return "", fmt.Errorf("capability exceeds maximum length of %d", MaxInputLength)
+	}
+	if len(reportInput.Reason) > MaxInputLength {
+		return "", fmt.Errorf("reason exceeds maximum length of %d", MaxInputLength)
+	}
+	if len(reportInput.SuggestedAgent) > MaxInputLength {
+		return "", fmt.Errorf("suggested_agent exceeds maximum length of %d", MaxInputLength)
 	}
 
 	// Return a special message that indicates inability
