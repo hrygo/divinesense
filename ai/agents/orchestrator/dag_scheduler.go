@@ -246,8 +246,8 @@ func (s *DAGScheduler) Run(ctx context.Context) error {
 			}
 			s.mu.Unlock()
 
-			// Avoid hot loop
-			time.Sleep(10 * time.Millisecond)
+			// Avoid hot loop - use 50ms to reduce CPU usage while remaining responsive
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 }

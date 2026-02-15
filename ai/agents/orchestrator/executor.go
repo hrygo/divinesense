@@ -169,12 +169,11 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 
 	// Create result collector with thread-safe event forwarding
 	resultCollector := newResultCollector(dispatcher)
-	// defer resultCollector.close() // No longer needed
 
 	// Execute via expert registry with retry logic
 	var err error
-	maxRetries := 3
-	backoff := 1 * time.Second
+	maxRetries := e.config.MaxRetries
+	backoff := e.config.RetryBackoff
 
 	for i := 0; i <= maxRetries; i++ {
 		// Use resultCollector.onEvent as callback

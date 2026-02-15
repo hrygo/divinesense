@@ -233,6 +233,12 @@ type OrchestratorConfig struct {
 
 	// DefaultLanguage is the default language for aggregation
 	DefaultLanguage string `json:"default_language"`
+
+	// MaxRetries is the maximum number of retries for transient errors
+	MaxRetries int `json:"max_retries"`
+
+	// RetryBackoff is the initial backoff duration for retries
+	RetryBackoff time.Duration `json:"retry_backoff"`
 }
 
 // DefaultOrchestratorConfig returns the default configuration.
@@ -244,6 +250,8 @@ func DefaultOrchestratorConfig() *OrchestratorConfig {
 		DecompositionModel: "default",
 		AggregationModel:   "default",
 		DefaultLanguage:    "zh",
+		MaxRetries:         3,
+		RetryBackoff:       time.Second,
 	}
 }
 
