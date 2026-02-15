@@ -252,56 +252,29 @@ func (h *HandoffHandler) HandleCannotComplete(
 }
 
 // buildFallbackResponse generates a user-friendly fallback message when handoff fails.
-func (h *HandoffHandler) buildFallbackResponse(task *Task, reason HandoffFailReason) string {
+// Note: This message is shown to users, so it should NOT contain any user input
+// to prevent sensitive information leakage.
+func (h *HandoffHandler) buildFallbackResponse(_ *Task, reason HandoffFailReason) string {
 	var message string
 
 	switch reason {
 	case FailNoMatchingExpert:
-		message = fmt.Sprintf(
-			"抱歉，当前任务需要的能力超出了我可以协调的范围。\n\n任务内容：%s\n\n建议：您可以尝试重新描述任务，或明确指定需要的帮助类型（如「搜索笔记」或「创建日程」）。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，当前任务需要的能力超出了我可以协调的范围。建议您重新描述任务，或明确指定需要的帮助类型（如「搜索笔记」或「创建日程」）。"
 	case FailTargetUnavailable:
-		message = fmt.Sprintf(
-			"抱歉，目标的专家代理暂时不可用。\n\n任务内容：%s\n\n建议：请稍后重试，或尝试修改任务描述。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，目标的专家代理暂时不可用。请稍后重试，或尝试修改任务描述。"
 	case FailTargetExecution:
-		message = fmt.Sprintf(
-			"抱歉，在将任务转交给合适的专家时遇到问题。\n\n任务内容：%s\n\n建议：请尝试重新描述您的需求。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，在将任务转交给合适的专家时遇到问题。请尝试重新描述您的需求。"
 	case FailMaxDepthExceeded:
-		message = fmt.Sprintf(
-			"抱歉，您的请求经过多次转接仍未找到合适的处理方式。\n\n任务内容：%s\n\n建议：请尝试将任务拆分成更简单的步骤，或直接说明您需要什么帮助。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，您的请求经过多次转接仍未找到合适的处理方式。请尝试将任务拆分成更简单的步骤，或直接说明您需要什么帮助。"
 	case FailTimeout:
-		message = fmt.Sprintf(
-			"抱歉，处理您的请求超时了。\n\n任务内容：%s\n\n建议：请尝试简化任务或稍后重试。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，处理您的请求超时了。请尝试简化任务或稍后重试。"
 	case FailContextLost:
-		message = fmt.Sprintf(
-			"抱歉，处理您的请求时出现了连接问题。\n\n任务内容：%s\n\n建议：请重新提交您的请求。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，处理您的请求时出现了连接问题。请重新提交您的请求。"
 	default:
-		message = fmt.Sprintf(
-			"抱歉，无法完成您的请求。\n\n任务内容：%s\n\n请尝试重新描述您的需求。",
-			truncateString(task.Input, 100),
-		)
+		message = "抱歉，无法完成您的请求。请尝试重新描述您的需求。"
 	}
 
 	return message
-}
-
-// truncateString truncates a string to a maximum length.
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 // HandleTaskFailure handles task failure and determines if handoff is appropriate.
@@ -317,10 +290,11 @@ func (h *HandoffHandler) HandleTaskFailure(
 	reason := h.analyzeFailureReason(task.Agent, err)
 
 	// If no clear missing capabilities, return failure
+	// Note: OriginalError is logged internally but not exposed to users for security
 	if len(reason.MissingCapabilities) == 0 {
 		return &HandoffResult{
 			Success:         false,
-			Error:           err.Error(),
+			Error:           "任务执行失败，请重试", // Sanitized error message for user
 			FallbackMessage: h.buildFallbackResponse(task, FailTargetExecution),
 			Reason:          FailTargetExecution,
 		}

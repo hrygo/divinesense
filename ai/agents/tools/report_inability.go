@@ -4,7 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
+
+// ValidExpertAgents is the whitelist of valid expert agent names.
+// This prevents injection attacks via suggested_agent field.
+var ValidExpertAgents = map[string]bool{
+	"memo":     true,
+	"schedule": true,
+}
+
+// isValidExpertAgent checks if the suggested agent name is valid.
+func isValidExpertAgent(name string) bool {
+	if name == "" {
+		return true // Empty is allowed (optional field)
+	}
+	return ValidExpertAgents[strings.ToLower(name)]
+}
 
 // ReportInabilityInput represents the input for reporting inability to handle a task.
 // 当专家发现自己无法完成任务时使用此输入。
@@ -105,6 +121,11 @@ func (t *ReportInabilityTool) Run(ctx context.Context, input string) (string, er
 	}
 	if len(reportInput.SuggestedAgent) > MaxInputLength {
 		return "", fmt.Errorf("suggested_agent exceeds maximum length of %d", MaxInputLength)
+	}
+
+	// Validate suggested_agent against whitelist to prevent injection
+	if !isValidExpertAgent(reportInput.SuggestedAgent) {
+		return "", fmt.Errorf("invalid suggested_agent: %s is not a valid expert", reportInput.SuggestedAgent)
 	}
 
 	// Return a special message that indicates inability
