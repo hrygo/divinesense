@@ -12,12 +12,22 @@ type mockCapabilityMap struct {
 
 func (m *mockCapabilityMap) IdentifyCapabilities(text string) []string {
 	text = strings.ToLower(text)
+	var results []string
 	for key, caps := range m.capabilities {
 		if strings.Contains(text, key) {
-			return caps
+			results = append(results, caps...)
 		}
 	}
-	return nil
+	// Remove duplicates
+	seen := make(map[string]bool)
+	var unique []string
+	for _, cap := range results {
+		if !seen[cap] {
+			seen[cap] = true
+			unique = append(unique, cap)
+		}
+	}
+	return unique
 }
 
 // newTestMatcher creates a RuleMatcher with mock capabilityMap for testing.
@@ -25,24 +35,32 @@ func newTestMatcher() *RuleMatcher {
 	matcher := NewRuleMatcher()
 	matcher.SetCapabilityMap(&mockCapabilityMap{
 		capabilities: map[string][]string{
+			// Schedule triggers
 			"日程":   {"日程", "创建日程", "查询日程"},
 			"安排":   {"日程", "安排"},
 			"会议":   {"日程", "会议"},
 			"提醒":   {"日程", "提醒"},
 			"预约":   {"日程"},
 			"开会":   {"日程", "会议"},
+			"创建日程": {"日程", "创建日程"},
+			"查询日程": {"日程", "查询日程"},
+			// Memo triggers - more comprehensive
 			"笔记":   {"笔记", "搜索笔记"},
 			"搜索":   {"笔记", "搜索笔记"},
 			"查找":   {"笔记", "搜索笔记"},
-			"记录":   {"笔记"},
-			"memo": {"笔记"},
-			"修改":   {"日程更新"},
-			"更新":   {"日程更新"},
-			"取消":   {"日程更新"},
-			"删除":   {"日程更新"},
-			"批量":   {"批量日程"},
-			"每周":   {"批量日程"},
-			"每天":   {"批量日程"},
+			"记录":   {"笔记", "搜索笔记"},
+			"memo": {"笔记", "搜索笔记"},
+			"找":    {"笔记", "搜索笔记"},
+			"帮我找":  {"笔记", "搜索笔记"},
+			// Schedule update triggers
+			"修改": {"日程更新"},
+			"更新": {"日程更新"},
+			"取消": {"日程更新"},
+			"删除": {"日程更新"},
+			// Batch triggers
+			"批量": {"批量日程"},
+			"每周": {"批量日程"},
+			"每天": {"批量日程"},
 		},
 	})
 	return matcher
