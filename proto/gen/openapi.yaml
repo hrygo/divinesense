@@ -759,6 +759,31 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/format:
+        post:
+            tags:
+                - AIService
+            description: Format formats user content into structured Markdown.
+            operationId: AIService_Format
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/FormatRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FormatResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/knowledge-graph:
         get:
             tags:
@@ -4336,6 +4361,24 @@ components:
                     items:
                         $ref: '#/components/schemas/UserInput'
             description: ForkBlockRequest is the request for ForkBlock.
+        FormatRequest:
+            required:
+                - content
+            type: object
+            properties:
+                content:
+                    type: string
+            description: FormatRequest is the request for Format.
+        FormatResponse:
+            type: object
+            properties:
+                formatted:
+                    type: string
+                changed:
+                    type: boolean
+                source:
+                    type: string
+            description: FormatResponse is the response for Format.
         GeneralSetting_CustomProfile:
             type: object
             properties:

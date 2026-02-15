@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/hrygo/divinesense/ai/format"
 	"github.com/hrygo/divinesense/ai/tags"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/store"
@@ -185,6 +186,35 @@ func (s *AIService) SuggestTags(ctx context.Context, req *v1pb.SuggestTagsReques
 	}
 
 	return &v1pb.SuggestTagsResponse{Tags: tagNames}, nil
+}
+
+// Format formats user content into structured Markdown.
+func (s *AIService) Format(ctx context.Context, req *v1pb.FormatRequest) (*v1pb.FormatResponse, error) {
+	// Get current user
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	if req.Content == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "content is required")
+	}
+
+	// Use Formatter to format content
+	formatter := format.NewFormatter(s.LLMService)
+	resp, err := formatter.Format(ctx, &format.FormatRequest{
+		Content: req.Content,
+		UserID:  user.ID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to format content: %v", err)
+	}
+
+	return &v1pb.FormatResponse{
+		Formatted: resp.Formatted,
+		Changed:   resp.Changed,
+		Source:    resp.Source,
+	}, nil
 }
 
 // getTagSuggester returns a TagSuggester instance.

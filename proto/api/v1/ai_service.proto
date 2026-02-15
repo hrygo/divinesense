@@ -26,6 +26,14 @@ service AIService {
     };
   }
 
+  // Format formats user content into structured Markdown.
+  rpc Format(FormatRequest) returns (FormatResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/format"
+      body: "*"
+    };
+  }
+
   // Chat streams a chat response with AI agents.
   rpc Chat(ChatRequest) returns (stream ChatResponse) {
     option (google.api.http) = {
@@ -296,6 +304,18 @@ message SuggestTagsRequest {
 // SuggestTagsResponse is the response for SuggestTags.
 message SuggestTagsResponse {
   repeated string tags = 1;
+}
+
+// FormatRequest is the request for Format.
+message FormatRequest {
+  string content = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// FormatResponse is the response for Format.
+message FormatResponse {
+  string formatted = 1;
+  bool changed = 2;
+  string source = 3;
 }
 
 // ScheduleQueryMode specifies the query mode for schedule filtering.

@@ -108,6 +108,17 @@ func (s *ConnectServiceHandler) SuggestTags(ctx context.Context, req *connect.Re
 	return connect.NewResponse(resp), nil
 }
 
+func (s *ConnectServiceHandler) Format(ctx context.Context, req *connect.Request[v1pb.FormatRequest]) (*connect.Response[v1pb.FormatResponse], error) {
+	if s.AIService == nil || !s.AIService.IsEnabled() {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.Format(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (s *ConnectServiceHandler) SemanticSearch(ctx context.Context, req *connect.Request[v1pb.SemanticSearchRequest]) (*connect.Response[v1pb.SemanticSearchResponse], error) {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
