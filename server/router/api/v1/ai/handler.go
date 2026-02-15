@@ -942,6 +942,11 @@ func (h *ParrotHandler) executeAgent(
 			// Return error instead of falling back to req.History
 			return err
 		}
+		// Handle nil history gracefully
+		if builtHistory == nil {
+			logger.Warn("BuildHistory returned nil, using empty history")
+			builtHistory = []string{}
+		}
 		history = builtHistory
 		logger.Debug("Using backend-driven context",
 			slog.Int("history_count", len(history)),

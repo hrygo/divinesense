@@ -425,12 +425,12 @@ export interface DangerBlockEvent {
 /**
  * Parrot chat parameters
  * 鹦鹉聊天参数
+ * Note: history field removed - backend-driven context construction (context-engineering.md Phase 1)
  */
 export interface ParrotChatParams {
   agentType: ParrotAgentType;
   message: string;
   conversationId?: number; // Backend will build history from this ID
-  history?: string[]; // Deprecated: Kept for backward compatibility
   userTimezone?: string;
 }
 

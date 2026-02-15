@@ -24,6 +24,7 @@ const (
 // Dynamic budget adjustment thresholds (Issue #211: Phase 3)
 const (
 	// HistoryLengthThreshold is the number of turns after which dynamic adjustment kicks in
+	// Triggers when historyLength > 20 (i.e., at 21+ turns)
 	HistoryLengthThreshold = 20
 	// ShortTermReductionRatio is how much to reduce ShortTerm when conversation is long
 	ShortTermReductionRatio = 0.375 // Reduce from 40% to 25% (40% * 0.375 = 15% reduction)
@@ -173,7 +174,7 @@ func AllocateBudget(total int, hasRetrieval bool) *TokenBudget {
 
 // AllocateForAgentWithHistory allocates token budget based on agent type and conversation length.
 // Issue #211: Phase 3 - Dynamic budget adjustment based on conversation turns
-// When conversation exceeds HistoryLengthThreshold (20 turns), it compresses ShortTerm
+// When conversation exceeds 20 turns (historyLength > 20, i.e., 21+ turns), it compresses ShortTerm
 // and increases LongTerm/Retrieval to handle long conversations more efficiently.
 func (a *BudgetAllocator) AllocateForAgentWithHistory(total int, hasRetrieval bool, agentType string, historyLength int) *TokenBudget {
 	budget := a.AllocateForAgent(total, hasRetrieval, agentType)

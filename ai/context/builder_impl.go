@@ -118,6 +118,14 @@ func (s *Service) Build(ctx context.Context, req *ContextRequest) (*ContextResul
 		req.MaxTokens = DefaultMaxTokens
 	}
 
+	// Auto-populate HistoryLength if not set (Issue #211: Phase 3)
+	// This ensures dynamic budget adjustment works even if caller doesn't set it
+	if req.HistoryLength <= 0 && req.SessionID != "" && s.messageProvider != nil {
+		if historyLen, err := s.GetHistoryLength(ctx, req.SessionID); err == nil {
+			req.HistoryLength = historyLen
+		}
+	}
+
 	// Allocate token budget (Issue #93: profile-based allocation)
 	// Issue #211: Phase 3 - Dynamic adjustment based on conversation length
 	hasRetrieval := len(req.RetrievalResults) > 0

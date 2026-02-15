@@ -234,9 +234,9 @@ function handleParrotEvent(eventType: string, eventData: string, eventMeta?: Pro
 
 /**
  * Query keys factory for parrot-related queries
+ * Note: history key removed - history now built by backend (context-engineering.md Phase 1)
  */
 export const parrotKeys = {
   all: ["parrot"] as const,
   chat: (agentType: ParrotAgentType) => [...parrotKeys.all, "chat", agentType] as const,
-  history: (agentType: ParrotAgentType) => [...parrotKeys.all, "history", agentType] as const,
 };

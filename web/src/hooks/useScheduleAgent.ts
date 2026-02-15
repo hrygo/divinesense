@@ -5,16 +5,13 @@ import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 /**
  * Hook to chat with Schedule Agent (non-streaming)
  * Uses AIService.Chat with AGENT_TYPE_SCHEDULE
+ * Note: History is now built by backend using conversationId (context-engineering.md Phase 1)
  */
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
 
 interface ScheduleAgentChatRequest {
   message: string;
   userTimezone?: string;
-  history?: ChatMessage[];
+  conversationId?: number; // Backend will build history from this ID
 }
 
 /**
@@ -34,28 +31,16 @@ export function useScheduleAgentChat() {
 
   return useMutation({
     mutationFn: async (request: ScheduleAgentChatRequest) => {
-      // Build context-aware message
-      const parts: string[] = [];
-
-      // Conversation History
-      if (request.history && request.history.length > 0) {
-        parts.push("[Conversation History]");
-        request.history.forEach((msg) => {
-          parts.push(`${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`);
-        });
-      }
-
-      // Current Message
-      parts.push(`User: ${request.message}`);
-
-      const fullMessage = parts.join("\n\n");
+      // Backend-driven context: use conversationId to build history
+      // No longer use frontend-provided history (context-engineering.md Phase 1)
 
       // Use AIService.Chat with SCHEDULE agent type
       let response = "";
       for await (const chunk of aiServiceClient.chat({
-        message: fullMessage,
+        message: request.message,
         userTimezone: request.userTimezone || "Asia/Shanghai",
         agentType: AgentType.SCHEDULE,
+        conversationId: request.conversationId,
       })) {
         if (chunk.content) {
           response += chunk.content;
