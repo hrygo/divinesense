@@ -94,8 +94,9 @@ func isWellFormatted(content string) bool {
 
 func parseFormattedContent(content string) string {
 	content = strings.TrimSpace(content)
-	content = strings.Trim(content, "```markdown")
-	content = strings.Trim(content, "```")
+	content = strings.TrimPrefix(content, "```markdown")
+	content = strings.TrimPrefix(content, "```")
+	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
 	return content
 }

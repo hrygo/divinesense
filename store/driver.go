@@ -84,6 +84,19 @@ type Driver interface {
 	VectorSearch(ctx context.Context, opts *VectorSearchOptions) ([]*MemoWithScore, error)
 	BM25Search(ctx context.Context, opts *BM25SearchOptions) ([]*BM25Result, error)
 
+	// MemoSummary model related methods.
+	UpsertMemoSummary(ctx context.Context, upsert *UpsertMemoSummary) (*MemoSummary, error)
+	ListMemoSummarys(ctx context.Context, find *FindMemoSummary) ([]*MemoSummary, error)
+	DeleteMemoSummary(ctx context.Context, memoID int32) error
+	FindMemosWithoutSummary(ctx context.Context, limit int) ([]*Memo, error)
+
+	// MemoTag model related methods.
+	UpsertMemoTag(ctx context.Context, upsert *UpsertMemoTag) (*MemoTag, error)
+	UpsertMemoTags(ctx context.Context, upserts []*UpsertMemoTag) error
+	ListMemoTags(ctx context.Context, find *FindMemoTag) ([]*MemoTag, error)
+	DeleteMemoTag(ctx context.Context, memoID int32, tag string) error
+	DeleteAllMemoTags(ctx context.Context, memoID int32) error
+
 	// Schedule model related methods.
 	CreateSchedule(ctx context.Context, create *Schedule) (*Schedule, error)
 	ListSchedules(ctx context.Context, find *FindSchedule) ([]*Schedule, error)

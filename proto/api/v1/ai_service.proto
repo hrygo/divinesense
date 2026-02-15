@@ -34,6 +34,14 @@ service AIService {
     };
   }
 
+  // Summary generates a summary for memo content.
+  rpc Summary(SummaryRequest) returns (SummaryResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/summary"
+      body: "*"
+    };
+  }
+
   // Chat streams a chat response with AI agents.
   rpc Chat(ChatRequest) returns (stream ChatResponse) {
     option (google.api.http) = {
@@ -316,6 +324,18 @@ message FormatResponse {
   string formatted = 1;
   bool changed = 2;
   string source = 3;
+}
+
+// SummaryRequest is the request for Summary.
+message SummaryRequest {
+  string content = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2; // Optional: memo resource name (e.g., "memos/xxx")
+}
+
+// SummaryResponse is the response for Summary.
+message SummaryResponse {
+  string summary = 1;
+  string source = 2; // "llm", "fallback_first_para", "fallback_first_sentence", "fallback_truncate"
 }
 
 // ScheduleQueryMode specifies the query mode for schedule filtering.

@@ -41,6 +41,8 @@ const (
 	AIServiceSuggestTagsProcedure = "/memos.api.v1.AIService/SuggestTags"
 	// AIServiceFormatProcedure is the fully-qualified name of the AIService's Format RPC.
 	AIServiceFormatProcedure = "/memos.api.v1.AIService/Format"
+	// AIServiceSummaryProcedure is the fully-qualified name of the AIService's Summary RPC.
+	AIServiceSummaryProcedure = "/memos.api.v1.AIService/Summary"
 	// AIServiceChatProcedure is the fully-qualified name of the AIService's Chat RPC.
 	AIServiceChatProcedure = "/memos.api.v1.AIService/Chat"
 	// AIServiceGetRelatedMemosProcedure is the fully-qualified name of the AIService's GetRelatedMemos
@@ -142,6 +144,8 @@ type AIServiceClient interface {
 	SuggestTags(context.Context, *connect.Request[v1.SuggestTagsRequest]) (*connect.Response[v1.SuggestTagsResponse], error)
 	// Format formats user content into structured Markdown.
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
+	// Summary generates a summary for memo content.
+	Summary(context.Context, *connect.Request[v1.SummaryRequest]) (*connect.Response[v1.SummaryResponse], error)
 	// Chat streams a chat response with AI agents.
 	Chat(context.Context, *connect.Request[v1.ChatRequest]) (*connect.ServerStreamForClient[v1.ChatResponse], error)
 	// GetRelatedMemos finds memos related to a specific memo.
@@ -248,6 +252,12 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			httpClient,
 			baseURL+AIServiceFormatProcedure,
 			connect.WithSchema(aIServiceMethods.ByName("Format")),
+			connect.WithClientOptions(opts...),
+		),
+		summary: connect.NewClient[v1.SummaryRequest, v1.SummaryResponse](
+			httpClient,
+			baseURL+AIServiceSummaryProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("Summary")),
 			connect.WithClientOptions(opts...),
 		),
 		chat: connect.NewClient[v1.ChatRequest, v1.ChatResponse](
@@ -474,6 +484,7 @@ type aIServiceClient struct {
 	semanticSearch            *connect.Client[v1.SemanticSearchRequest, v1.SemanticSearchResponse]
 	suggestTags               *connect.Client[v1.SuggestTagsRequest, v1.SuggestTagsResponse]
 	format                    *connect.Client[v1.FormatRequest, v1.FormatResponse]
+	summary                   *connect.Client[v1.SummaryRequest, v1.SummaryResponse]
 	chat                      *connect.Client[v1.ChatRequest, v1.ChatResponse]
 	getRelatedMemos           *connect.Client[v1.GetRelatedMemosRequest, v1.GetRelatedMemosResponse]
 	getParrotSelfCognition    *connect.Client[v1.GetParrotSelfCognitionRequest, v1.GetParrotSelfCognitionResponse]
@@ -525,6 +536,11 @@ func (c *aIServiceClient) SuggestTags(ctx context.Context, req *connect.Request[
 // Format calls memos.api.v1.AIService.Format.
 func (c *aIServiceClient) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
 	return c.format.CallUnary(ctx, req)
+}
+
+// Summary calls memos.api.v1.AIService.Summary.
+func (c *aIServiceClient) Summary(ctx context.Context, req *connect.Request[v1.SummaryRequest]) (*connect.Response[v1.SummaryResponse], error) {
+	return c.summary.CallUnary(ctx, req)
 }
 
 // Chat calls memos.api.v1.AIService.Chat.
@@ -715,6 +731,8 @@ type AIServiceHandler interface {
 	SuggestTags(context.Context, *connect.Request[v1.SuggestTagsRequest]) (*connect.Response[v1.SuggestTagsResponse], error)
 	// Format formats user content into structured Markdown.
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
+	// Summary generates a summary for memo content.
+	Summary(context.Context, *connect.Request[v1.SummaryRequest]) (*connect.Response[v1.SummaryResponse], error)
 	// Chat streams a chat response with AI agents.
 	Chat(context.Context, *connect.Request[v1.ChatRequest], *connect.ServerStream[v1.ChatResponse]) error
 	// GetRelatedMemos finds memos related to a specific memo.
@@ -817,6 +835,12 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		AIServiceFormatProcedure,
 		svc.Format,
 		connect.WithSchema(aIServiceMethods.ByName("Format")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceSummaryHandler := connect.NewUnaryHandler(
+		AIServiceSummaryProcedure,
+		svc.Summary,
+		connect.WithSchema(aIServiceMethods.ByName("Summary")),
 		connect.WithHandlerOptions(opts...),
 	)
 	aIServiceChatHandler := connect.NewServerStreamHandler(
@@ -1043,6 +1067,8 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceSuggestTagsHandler.ServeHTTP(w, r)
 		case AIServiceFormatProcedure:
 			aIServiceFormatHandler.ServeHTTP(w, r)
+		case AIServiceSummaryProcedure:
+			aIServiceSummaryHandler.ServeHTTP(w, r)
 		case AIServiceChatProcedure:
 			aIServiceChatHandler.ServeHTTP(w, r)
 		case AIServiceGetRelatedMemosProcedure:
@@ -1134,6 +1160,10 @@ func (UnimplementedAIServiceHandler) SuggestTags(context.Context, *connect.Reque
 
 func (UnimplementedAIServiceHandler) Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.Format is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) Summary(context.Context, *connect.Request[v1.SummaryRequest]) (*connect.Response[v1.SummaryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.Summary is not implemented"))
 }
 
 func (UnimplementedAIServiceHandler) Chat(context.Context, *connect.Request[v1.ChatRequest], *connect.ServerStream[v1.ChatResponse]) error {

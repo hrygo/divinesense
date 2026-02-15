@@ -2,15 +2,15 @@ import { create } from "@bufbuild/protobuf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { aiServiceClient } from "@/connect";
-import i18n from "@/i18n";
 import { ParrotAgentType, parrotToProtoAgentType } from "@/types/parrot";
-import { type Block, FormatRequestSchema } from "@/types/proto/api/v1/ai_service_pb";
 import {
+  type Block,
   BlockMode,
   BlockStatus,
   BlockType,
   ChatRequestSchema,
   DetectDuplicatesRequestSchema,
+  FormatRequestSchema,
   GetKnowledgeGraphRequestSchema,
   GetRelatedMemosRequestSchema,
   LinkMemosRequestSchema,

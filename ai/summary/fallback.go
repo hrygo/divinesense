@@ -69,25 +69,27 @@ func extractFirstSentence(content string) string {
 	// 优先检查英文标点，然后是中文标点
 	endMarkers := []string{"?", "!", ".", "？", "！", "。"}
 	for _, marker := range endMarkers {
-		if idx := strings.Index(firstLine, marker); idx >= 0 {
-			// 检查标记后是否是句末（空格、换行、字符串结尾或非大写字母）
-			nextIdx := idx + len(marker)
-			if nextIdx >= len(firstLine) {
-				return firstLine[:nextIdx]
-			}
-			nextChar := firstLine[nextIdx]
-			// 如果后面是空格或非大写字母，则认为是句末
-			if nextChar == ' ' || nextChar == '\n' || nextChar < 'A' || nextChar > 'Z' {
-				return firstLine[:nextIdx]
-			}
-			// 问号感叹号后面如果是句末标点也算
-			if (marker == "?" || marker == "!") && nextIdx < len(firstLine) {
-				// 检查后面是否有其他句末标点
-				remaining := firstLine[nextIdx:]
-				for _, endMark := range []string{".", "。", "?", "？", "!", "！"} {
-					if strings.HasPrefix(strings.TrimLeft(remaining, " "), endMark) {
-						return firstLine[:nextIdx]
-					}
+		idx := strings.Index(firstLine, marker)
+		if idx < 0 {
+			continue
+		}
+		// 检查标记后是否是句末（空格、换行、字符串结尾或非大写字母）
+		nextIdx := idx + len(marker)
+		if nextIdx >= len(firstLine) {
+			return firstLine[:nextIdx]
+		}
+		nextChar := firstLine[nextIdx]
+		// 如果后面是空格或非大写字母，则认为是句末
+		if nextChar == ' ' || nextChar == '\n' || nextChar < 'A' || nextChar > 'Z' {
+			return firstLine[:nextIdx]
+		}
+		// 问号感叹号后面如果是句末标点也算
+		if (marker == "?" || marker == "!") && nextIdx < len(firstLine) {
+			// 检查后面是否有其他句末标点
+			remaining := firstLine[nextIdx:]
+			for _, endMark := range []string{".", "。", "?", "？", "!", "！"} {
+				if strings.HasPrefix(strings.TrimLeft(remaining, " "), endMark) {
+					return firstLine[:nextIdx]
 				}
 			}
 		}

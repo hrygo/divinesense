@@ -23,6 +23,7 @@ const (
 	AIService_SemanticSearch_FullMethodName            = "/memos.api.v1.AIService/SemanticSearch"
 	AIService_SuggestTags_FullMethodName               = "/memos.api.v1.AIService/SuggestTags"
 	AIService_Format_FullMethodName                    = "/memos.api.v1.AIService/Format"
+	AIService_Summary_FullMethodName                   = "/memos.api.v1.AIService/Summary"
 	AIService_Chat_FullMethodName                      = "/memos.api.v1.AIService/Chat"
 	AIService_GetRelatedMemos_FullMethodName           = "/memos.api.v1.AIService/GetRelatedMemos"
 	AIService_GetParrotSelfCognition_FullMethodName    = "/memos.api.v1.AIService/GetParrotSelfCognition"
@@ -73,6 +74,8 @@ type AIServiceClient interface {
 	SuggestTags(ctx context.Context, in *SuggestTagsRequest, opts ...grpc.CallOption) (*SuggestTagsResponse, error)
 	// Format formats user content into structured Markdown.
 	Format(ctx context.Context, in *FormatRequest, opts ...grpc.CallOption) (*FormatResponse, error)
+	// Summary generates a summary for memo content.
+	Summary(ctx context.Context, in *SummaryRequest, opts ...grpc.CallOption) (*SummaryResponse, error)
 	// Chat streams a chat response with AI agents.
 	Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error)
 	// GetRelatedMemos finds memos related to a specific memo.
@@ -184,6 +187,16 @@ func (c *aIServiceClient) Format(ctx context.Context, in *FormatRequest, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FormatResponse)
 	err := c.cc.Invoke(ctx, AIService_Format_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) Summary(ctx context.Context, in *SummaryRequest, opts ...grpc.CallOption) (*SummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SummaryResponse)
+	err := c.cc.Invoke(ctx, AIService_Summary_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -571,6 +584,8 @@ type AIServiceServer interface {
 	SuggestTags(context.Context, *SuggestTagsRequest) (*SuggestTagsResponse, error)
 	// Format formats user content into structured Markdown.
 	Format(context.Context, *FormatRequest) (*FormatResponse, error)
+	// Summary generates a summary for memo content.
+	Summary(context.Context, *SummaryRequest) (*SummaryResponse, error)
 	// Chat streams a chat response with AI agents.
 	Chat(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error
 	// GetRelatedMemos finds memos related to a specific memo.
@@ -666,6 +681,9 @@ func (UnimplementedAIServiceServer) SuggestTags(context.Context, *SuggestTagsReq
 }
 func (UnimplementedAIServiceServer) Format(context.Context, *FormatRequest) (*FormatResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Format not implemented")
+}
+func (UnimplementedAIServiceServer) Summary(context.Context, *SummaryRequest) (*SummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Summary not implemented")
 }
 func (UnimplementedAIServiceServer) Chat(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error {
 	return status.Error(codes.Unimplemented, "method Chat not implemented")
@@ -846,6 +864,24 @@ func _AIService_Format_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AIServiceServer).Format(ctx, req.(*FormatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_Summary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).Summary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_Summary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).Summary(ctx, req.(*SummaryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1509,6 +1545,10 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Format",
 			Handler:    _AIService_Format_Handler,
+		},
+		{
+			MethodName: "Summary",
+			Handler:    _AIService_Summary_Handler,
 		},
 		{
 			MethodName: "GetRelatedMemos",

@@ -790,8 +790,72 @@ CREATE INDEX idx_audit_operation ON agent_security_audit(operation_type, occurre
 CREATE INDEX idx_audit_session ON agent_security_audit(session_id) WHERE session_id IS NOT NULL;
 
 -- =============================================================================
+-- AI Memo Summary (V0.99.0)
+-- =============================================================================
+-- memo_summary
+CREATE TABLE memo_summary (
+  id SERIAL PRIMARY KEY,
+  memo_id INTEGER NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  error_message TEXT,
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  CONSTRAINT fk_memo_summary_memo
+    FOREIGN KEY (memo_id)
+    REFERENCES memo(id)
+    ON DELETE CASCADE,
+  CONSTRAINT uq_memo_summary_memo
+    UNIQUE (memo_id)
+);
+
+CREATE INDEX idx_memo_summary_memo_id ON memo_summary (memo_id);
+CREATE INDEX idx_memo_summary_status ON memo_summary (status);
+
+CREATE OR REPLACE FUNCTION update_memo_summary_updated_ts()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_ts = EXTRACT(EPOCH FROM NOW())::BIGINT;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_memo_summary_updated_ts
+  BEFORE UPDATE ON memo_summary
+  FOR EACH ROW
+  EXECUTE FUNCTION update_memo_summary_updated_ts();
+
+COMMENT ON TABLE memo_summary IS 'Stores AI-generated summaries for memos (max 200 characters)';
+COMMENT ON COLUMN memo_summary.status IS 'Generation status: PENDING, GENERATING, COMPLETED, FAILED';
+
+-- =============================================================================
+-- AI Memo Tags (V0.99.0)
+-- =============================================================================
+-- memo_tags
+CREATE TABLE memo_tags (
+  id SERIAL PRIMARY KEY,
+  memo_id INTEGER NOT NULL,
+  tag TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 1.0,
+  source VARCHAR(20) NOT NULL DEFAULT 'llm',
+  created_ts BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  CONSTRAINT fk_memo_tags_memo
+    FOREIGN KEY (memo_id)
+    REFERENCES memo(id)
+    ON DELETE CASCADE,
+  CONSTRAINT uq_memo_tags_memo_tag
+    UNIQUE (memo_id, tag)
+);
+
+CREATE INDEX idx_memo_tags_memo_id ON memo_tags (memo_id);
+CREATE INDEX idx_memo_tags_tag ON memo_tags (tag);
+
+COMMENT ON TABLE memo_tags IS 'Stores AI-generated tags for memos with confidence scores';
+COMMENT ON COLUMN memo_tags.source IS 'Tag source: llm, rules, statistics, user';
+
+-- =============================================================================
 -- 版本记录
 -- =============================================================================
 INSERT INTO system_setting (name, value, description) VALUES
-('schema_version', '0.54.2', '数据库 schema 版本')
+('schema_version', '0.99.0', '数据库 schema 版本')
 ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;

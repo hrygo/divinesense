@@ -1105,6 +1105,31 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/summary:
+        post:
+            tags:
+                - AIService
+            description: Summary generates a summary for memo content.
+            operationId: AIService_Summary
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SummaryRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SummaryResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/attachments:
         get:
             tags:
@@ -5960,6 +5985,24 @@ components:
                     items:
                         type: string
             description: SuggestTagsResponse is the response for SuggestTags.
+        SummaryRequest:
+            required:
+                - content
+            type: object
+            properties:
+                content:
+                    type: string
+                name:
+                    type: string
+            description: SummaryRequest is the request for Summary.
+        SummaryResponse:
+            type: object
+            properties:
+                summary:
+                    type: string
+                source:
+                    type: string
+            description: SummaryResponse is the response for Summary.
         SwitchBranchRequest:
             required:
                 - conversationId

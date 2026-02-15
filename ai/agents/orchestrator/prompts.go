@@ -84,7 +84,10 @@ func LoadPromptConfig() (*PromptConfig, error) {
 
 // getBaseDir returns the base directory for config files.
 func getBaseDir() string {
-	execPath, _ := os.Executable()
+	execPath, err := os.Executable()
+	if err != nil {
+		return "."
+	}
 	return filepath.Dir(execPath)
 }
 
