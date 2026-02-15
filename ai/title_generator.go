@@ -11,24 +11,16 @@ import (
 	"github.com/hrygo/divinesense/ai/internal/strutil"
 )
 
-// LLM parameters for title generation
-const (
-	titleTimeout      = 15 * time.Second
-	titleMaxTokens    = 20
-	titleTemperature  = 0.1
-	titleTopP         = 0.5
-	titleMaxLen       = 500
-	titleMaxRuneCount = 50
-)
-
 // TitleGenerator generates meaningful titles for AI conversations.
+// Uses configuration from config/prompts/title.yaml.
 type TitleGenerator struct {
-	llm LLMService
+	llm    LLMService
+	config *TitlePromptConfig
 }
 
 // TitleGeneratorConfig holds configuration for the title generator.
 //
-// Deprecated: Use NewTitleGenerator(llm LLMService) directly.
+// Deprecated: Use NewTitleGeneratorWithLLM(llm LLMService) directly.
 // This config is kept for backward compatibility.
 type TitleGeneratorConfig struct {
 	APIKey  string
@@ -42,20 +34,21 @@ type TitleGeneratorConfig struct {
 // This constructor is kept for backward compatibility.
 func NewTitleGenerator(cfg TitleGeneratorConfig) *TitleGenerator {
 	// Create LLM service from config (backward compatibility)
+	config := GetTitlePromptConfig()
 	llmCfg := &LLMConfig{
 		Provider:    "generic",
 		APIKey:      cfg.APIKey,
 		BaseURL:     cfg.BaseURL,
 		Model:       cfg.Model,
-		MaxTokens:   titleMaxTokens,
-		Temperature: titleTemperature,
+		MaxTokens:   config.Params.MaxTokens,
+		Temperature: float32(config.Params.Temperature),
 	}
 	llmService, err := NewLLMService(llmCfg)
 	if err != nil {
 		slog.Error("failed to create LLM service for title generator", "error", err)
 		return nil
 	}
-	return &TitleGenerator{llm: llmService}
+	return &TitleGenerator{llm: llmService, config: config}
 }
 
 // NewTitleGeneratorWithLLM creates a new title generator with an existing LLMService.
@@ -65,21 +58,36 @@ func NewTitleGeneratorWithLLM(llmService LLMService) *TitleGenerator {
 	if llmService == nil {
 		panic("ai: NewTitleGeneratorWithLLM: llmService cannot be nil")
 	}
-	return &TitleGenerator{llm: llmService}
+	return &TitleGenerator{
+		llm:    llmService,
+		config: GetTitlePromptConfig(),
+	}
 }
 
 // Generate generates a title based on the conversation content.
 func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, titleTimeout)
+	cfg := tg.config
+	timeout := time.Duration(cfg.Params.TimeoutSeconds) * time.Second
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Truncate inputs using rune-aware truncation (Unicode-safe)
-	userMessage = strutil.Truncate(userMessage, titleMaxLen)
-	aiResponse = strutil.Truncate(aiResponse, titleMaxLen)
-	prompt := fmt.Sprintf("用户消息: %s\n\nAI 回复: %s\n\n请为这段对话生成一个简短的标题。", userMessage, aiResponse)
+	truncateLen := cfg.Params.InputTruncateChars
+	userMessage = strutil.Truncate(userMessage, truncateLen)
+	aiResponse = strutil.Truncate(aiResponse, truncateLen)
+
+	// Build prompt from template
+	prompt, err := cfg.BuildConversationPrompt(&ConversationPromptData{
+		UserMessage: userMessage,
+		AIResponse:  aiResponse,
+	})
+	if err != nil {
+		return "", fmt.Errorf("build prompt: %w", err)
+	}
 
 	messages := []llm.Message{
-		llm.SystemPrompt(titleSystemPrompt),
+		llm.SystemPrompt(cfg.SystemPrompt),
 		llm.UserMessage(prompt),
 	}
 
@@ -113,9 +121,10 @@ func (tg *TitleGenerator) Generate(ctx context.Context, userMessage, aiResponse 
 	}
 
 	// Truncate to max length (rune-aware for UTF-8)
+	maxRunes := cfg.Params.MaxRunes
 	runes := []rune(result.Title)
-	if len(runes) > titleMaxRuneCount {
-		result.Title = string(runes[:titleMaxRuneCount])
+	if len(runes) > maxRunes {
+		result.Title = string(runes[:maxRunes])
 	}
 
 	slog.Debug("title_generation_success",
@@ -154,22 +163,3 @@ type BlockContent struct {
 	UserInput        string
 	AssistantContent string
 }
-
-// titleSystemPrompt is the system prompt for title generation.
-const titleSystemPrompt = `你是一个专业的对话标题生成助手。你的任务是根据用户和AI的对话内容，生成一个简洁、准确的标题。
-
-要求：
-1. 标题长度：3-15个字符（中文）或 3-8个单词（英文）
-2. 标题应该反映对话的核心主题
-3. 使用简洁的语言，避免使用"关于..."、"讨论了..."等冗余表述
-4. 如果是问题，可以直接用问题本身作为标题
-5. 如果是任务，可以用任务描述作为标题
-6. 保持中立客观的语气
-
-示例：
-- 输入: "如何用Go连接PostgreSQL数据库？" -> 输出: "Go连接PostgreSQL"
-- 输入: "帮我写一个二分查找算法" -> 输出: "二分查找算法实现"
-- 输入: "今天天气怎么样？" -> 输出: "天气查询"
-- 输入: "我的日程安排" -> 输出: "日程管理"
-
-请直接返回JSON格式：{"title": "生成的标题"}`

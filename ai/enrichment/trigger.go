@@ -90,7 +90,13 @@ func (t *Trigger) processContent(content *MemoContent, workerID int) {
 	// Execute post-save pipeline (tags, title, summary)
 	results := t.pipeline.EnrichPostSave(ctx, content)
 
-	// Log results
+	// Log results (skip if no post-enrichers configured)
+	if results == nil {
+		slog.Debug("enrichment trigger skipped (no post-enrichers)",
+			"memo_id", content.MemoID,
+			"worker", workerID)
+		return
+	}
 	for _, result := range results {
 		status := "success"
 		if !result.Success {

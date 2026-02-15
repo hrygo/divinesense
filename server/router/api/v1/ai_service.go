@@ -9,8 +9,10 @@ import (
 
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
+	"github.com/hrygo/divinesense/ai/enrichment"
 	"github.com/hrygo/divinesense/ai/routing"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
+	"github.com/hrygo/divinesense/ai/tags"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/server/middleware"
@@ -42,12 +44,14 @@ type AIService struct {
 	conversationSummarizer   *aichat.ConversationSummarizer
 	TitleGenerator           *pluginai.TitleGenerator // Conversation title generator
 	EmbeddingModel           string
-	persister                *aistats.Persister // session stats async persister
+	persister                *aistats.Persister  // session stats async persister
+	enrichmentTrigger        *enrichment.Trigger // Async enrichment trigger
 	routerServiceMu          sync.RWMutex
 	chatEventBusMu           sync.RWMutex
 	contextBuilderMu         sync.RWMutex
 	conversationSummarizerMu sync.RWMutex
 	agentFactoryMu           sync.RWMutex
+	enrichmentTriggerMu      sync.RWMutex
 	mu                       sync.RWMutex
 }
 
@@ -57,6 +61,12 @@ func (s *AIService) Close(timeout time.Duration) error {
 	defer s.mu.Unlock()
 
 	var errs []error
+
+	// Shutdown enrichment trigger (waits for background goroutines)
+	if s.enrichmentTrigger != nil {
+		s.enrichmentTrigger.Stop()
+		s.enrichmentTrigger = nil
+	}
 
 	// Shutdown router service (waits for background goroutines)
 	if s.routerService != nil {
@@ -166,6 +176,70 @@ func (s *AIService) getAgentFactory() *aichat.AgentFactory {
 
 	s.agentFactory = factory
 	return s.agentFactory
+}
+
+// getEnrichmentTrigger returns the enrichment trigger, initializing it on first use.
+// Thread-safe: uses RWMutex for lazy initialization.
+func (s *AIService) getEnrichmentTrigger() *enrichment.Trigger {
+	// Fast path: read lock
+	s.enrichmentTriggerMu.RLock()
+	if s.enrichmentTrigger != nil {
+		s.enrichmentTriggerMu.RUnlock()
+		return s.enrichmentTrigger
+	}
+	s.enrichmentTriggerMu.RUnlock()
+
+	// Slow path: write lock for initialization
+	s.enrichmentTriggerMu.Lock()
+	defer s.enrichmentTriggerMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if s.enrichmentTrigger != nil {
+		return s.enrichmentTrigger
+	}
+
+	// Create enrichers
+	var enrichers []enrichment.Enricher
+
+	// Add summary enricher if LLM is available
+	if s.LLMService != nil {
+		enrichers = append(enrichers, enrichment.NewSummaryEnricher(s.LLMService))
+	}
+
+	// Add tags enricher if store is available
+	if s.Store != nil {
+		suggester := tags.NewTagSuggester(s.Store, s.LLMService, nil)
+		enrichers = append(enrichers, enrichment.NewTagsEnricher(suggester))
+	}
+
+	// Add title enricher if LLM is available
+	if s.LLMService != nil {
+		enrichers = append(enrichers, enrichment.NewTitleEnricher(s.LLMService))
+	}
+
+	// Create pipeline and trigger
+	pipeline := enrichment.NewPipeline(enrichers...)
+	trigger := enrichment.NewTrigger(pipeline, 3) // 3 workers
+	trigger.Start()
+
+	s.enrichmentTrigger = trigger
+	slog.Info("Enrichment trigger initialized", "enrichers", len(enrichers))
+	return s.enrichmentTrigger
+}
+
+// TriggerEnrichment triggers async enrichment for a memo.
+// This is called after memo creation/update to generate summary, tags, title.
+func (s *AIService) TriggerEnrichment(memoID string, content string, title string, userID int32) {
+	trigger := s.getEnrichmentTrigger()
+	if trigger == nil {
+		return
+	}
+	trigger.TriggerAsync(&enrichment.MemoContent{
+		MemoID:  memoID,
+		Content: content,
+		Title:   title,
+		UserID:  userID,
+	})
 }
 
 // getCurrentUser gets the authenticated user from context.

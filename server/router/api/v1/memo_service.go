@@ -142,6 +142,11 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 		slog.Warn("Failed to dispatch memo created webhook", slog.Any("err", err))
 	}
 
+	// Trigger async enrichment (summary, tags, title) if AI service is available
+	if s.AIService != nil && s.AIService.IsLLMEnabled() {
+		s.AIService.TriggerEnrichment(fmt.Sprintf("%d", memo.ID), memo.Content, "", user.ID)
+	}
+
 	return memoMessage, nil
 }
 
@@ -471,6 +476,11 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 	// Try to dispatch webhook when memo is updated.
 	if err := s.DispatchMemoUpdatedWebhook(ctx, memoMessage); err != nil {
 		slog.Warn("Failed to dispatch memo updated webhook", slog.Any("err", err))
+	}
+
+	// Trigger async enrichment (summary, tags, title) if content changed and AI service is available
+	if s.AIService != nil && s.AIService.IsLLMEnabled() {
+		s.AIService.TriggerEnrichment(fmt.Sprintf("%d", memo.ID), memo.Content, "", user.ID)
 	}
 
 	return memoMessage, nil

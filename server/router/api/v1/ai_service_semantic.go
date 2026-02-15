@@ -220,6 +220,12 @@ func (s *AIService) Format(ctx context.Context, req *v1pb.FormatRequest) (*v1pb.
 
 // Summary generates a summary for memo content.
 func (s *AIService) Summary(ctx context.Context, req *v1pb.SummaryRequest) (*v1pb.SummaryResponse, error) {
+	// Get current user for authentication validation
+	_, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
 	// Validate content
 	if req.Content == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "content is required")

@@ -7,25 +7,23 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/core/llm"
 	"github.com/hrygo/divinesense/ai/internal/strutil"
 )
 
 // TitleEnricher 为 Memo 内容生成标题
+// Uses configuration from config/prompts/title.yaml.
 type TitleEnricher struct {
 	llmService llm.Service
-	timeout    time.Duration
-	maxLen     int
-	maxRunes   int
+	config     *ai.TitlePromptConfig
 }
 
 // NewTitleEnricher 创建新的标题增强器
 func NewTitleEnricher(llmService llm.Service) *TitleEnricher {
 	return &TitleEnricher{
 		llmService: llmService,
-		timeout:    10 * time.Second,
-		maxLen:     500,
-		maxRunes:   50,
+		config:     ai.GetTitlePromptConfig(),
 	}
 }
 
@@ -42,6 +40,7 @@ func (e *TitleEnricher) Phase() Phase {
 // Enrich 执行标题增强
 func (e *TitleEnricher) Enrich(ctx context.Context, content *MemoContent) *EnrichmentResult {
 	start := time.Now()
+	cfg := e.config
 
 	if e.llmService == nil {
 		return &EnrichmentResult{
@@ -52,35 +51,38 @@ func (e *TitleEnricher) Enrich(ctx context.Context, content *MemoContent) *Enric
 		}
 	}
 
-	// Set timeout for title generation
-	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	// Set timeout from config
+	timeout := time.Duration(cfg.Params.TimeoutSeconds) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Truncate content (rune-aware for UTF-8)
-	truncatedContent := strutil.Truncate(content.Content, e.maxLen)
+	truncateLen := cfg.Params.InputTruncateChars
+	truncatedContent := strutil.Truncate(content.Content, truncateLen)
 
 	title := content.Title
 	if title == "" {
 		title = "(无标题)"
 	}
 
-	// Build prompt
-	prompt := fmt.Sprintf(`请为以下笔记生成一个简短的标题。
-
-笔记标题: %s
-
-笔记内容:
-%s
-
-要求：
-1. 标题长度：3-15个字符（中文）或 3-8个单词（英文）
-2. 标题应该反映笔记的核心主题
-3. 使用简洁的语言
-4. 直接返回JSON格式：{"title": "生成的标题"}`, title, truncatedContent)
+	// Build prompt from template
+	prompt, err := cfg.BuildMemoPrompt(&ai.MemoPromptData{
+		Content: truncatedContent,
+		Title:   title,
+	})
+	if err != nil {
+		return &EnrichmentResult{
+			Type:    EnrichmentTitle,
+			Success: false,
+			Error:   fmt.Errorf("build prompt: %w", err),
+			Latency: time.Since(start),
+		}
+	}
 
 	// Call LLM
 	messages := []llm.Message{
-		{Role: "user", Content: prompt},
+		llm.SystemPrompt(cfg.SystemPrompt),
+		llm.UserMessage(prompt),
 	}
 
 	response, stats, err := e.llmService.Chat(ctx, messages)
@@ -125,9 +127,10 @@ func (e *TitleEnricher) Enrich(ctx context.Context, content *MemoContent) *Enric
 	}
 
 	// Truncate to max length (rune-aware for UTF-8)
+	maxRunes := cfg.Params.MaxRunes
 	runes := []rune(result.Title)
-	if len(runes) > e.maxRunes {
-		result.Title = string(runes[:e.maxRunes])
+	if len(runes) > maxRunes {
+		result.Title = string(runes[:maxRunes])
 	}
 
 	slog.Debug("title_enrichment_success",
