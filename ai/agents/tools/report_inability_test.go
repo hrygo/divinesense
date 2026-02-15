@@ -137,16 +137,3 @@ func TestReportInabilityInput_Error(t *testing.T) {
 		t.Errorf("got %q, want %q", input.Error(), expected)
 	}
 }
-
-func TestMissingCapability_Error(t *testing.T) {
-	mc := MissingCapability{
-		Capability:     "create_event",
-		Reason:         "outside my domain",
-		SuggestedAgent: "schedule",
-	}
-
-	expected := "missing capability: create_event - outside my domain (suggested: schedule)"
-	if mc.Error() != expected {
-		t.Errorf("got %q, want %q", mc.Error(), expected)
-	}
-}

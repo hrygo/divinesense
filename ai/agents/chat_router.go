@@ -72,33 +72,30 @@ type HandoffResult struct {
 	FallbackMessage string `json:"fallback_message,omitempty"`
 }
 
-// HandoffTask represents a task for handoff.
-type HandoffTask struct {
-	ID      string
-	Agent   string
-	Input   string
-	Purpose string
+// SimpleHandoffHandler is a simple interface for handling handoff between experts.
+// This avoids circular imports by using interface{} and type assertions.
+type SimpleHandoffHandler interface {
+	// HandleSimpleHandoff processes a simplified handoff request.
+	HandleSimpleHandoff(req SimpleHandoffRequest) SimpleHandoverResult
 }
 
-// CannotCompleteReason defines reasons why an expert cannot complete a task.
-type CannotCompleteReason struct {
-	MissingCapabilities []string
-	OriginalError       string
-	SuggestedExpert     string
+// SimpleHandoffRequest is a simplified request for handoff.
+type SimpleHandoffRequest struct {
+	TaskID   string
+	Agent    string
+	Input    string
+	Capacity string
+	Reason   string
 }
 
-// HandoffHandlerResult contains the result of a handoff operation.
-type HandoffHandlerResult struct {
+// SimpleHandoverResult is a simplified result for handoff.
+type SimpleHandoverResult struct {
 	Success         bool
-	NewExpert       string
-	NewTask         *HandoffTask
+	FromExpert      string
+	ToExpert        string
+	NewTaskInput    string
 	Error           string
 	FallbackMessage string
-}
-
-// HandoffHandlerInterface defines the interface for handling handoff between experts.
-type HandoffHandlerInterface interface {
-	HandleCannotComplete(ctx context.Context, task *HandoffTask, reason CannotCompleteReason) *HandoffHandlerResult
 }
 
 // ExpertRegistryInterface defines the interface for accessing expert agents.
@@ -110,7 +107,7 @@ type ExpertRegistryInterface interface {
 // It is a thin adapter over routing.Service (three-layer routing).
 type ChatRouter struct {
 	routerService  *routerpkg.Service      // Three-layer router service (required)
-	handoffHandler HandoffHandlerInterface // For handoff support
+	handoffHandler SimpleHandoffHandler    // For handoff support
 	expertRegistry ExpertRegistryInterface // For expert execution
 }
 
@@ -129,7 +126,7 @@ func NewChatRouter(routerSvc *routerpkg.Service) *ChatRouter {
 // routerSvc is required and provides the three-layer routing.
 // handoffHandler is optional - when provided, enables handoff on MissingCapability errors.
 // expertRegistry is required when handoffHandler is provided.
-func NewChatRouterWithHandoff(routerSvc *routerpkg.Service, handoffHandler HandoffHandlerInterface, expertRegistry ExpertRegistryInterface) *ChatRouter {
+func NewChatRouterWithHandoff(routerSvc *routerpkg.Service, handoffHandler SimpleHandoffHandler, expertRegistry ExpertRegistryInterface) *ChatRouter {
 	if routerSvc == nil {
 		panic("routing.Service is required for ChatRouter")
 	}
@@ -264,39 +261,33 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 				"expert", expertName,
 				"missing", missingCap.MissingCapabilities)
 
-			// Create a task for handoff
-			task := &HandoffTask{
-				ID:      "task_" + strings.ReplaceAll(expertName, " ", "_"),
-				Agent:   expertName,
-				Input:   input,
-				Purpose: "user request",
-			}
-
-			// Convert MissingCapability to CannotCompleteReason
-			reason := CannotCompleteReason{
-				MissingCapabilities: missingCap.MissingCapabilities,
-				OriginalError:       err.Error(),
-				SuggestedExpert:     missingCap.Suggestion,
+			// Create a simplified handoff request
+			req := SimpleHandoffRequest{
+				TaskID:   "task_" + strings.ReplaceAll(expertName, " ", "_"),
+				Agent:    expertName,
+				Input:    input,
+				Capacity: strings.Join(missingCap.MissingCapabilities, ", "),
+				Reason:   err.Error(),
 			}
 
 			// Handle handoff
-			handoffResult := r.handoffHandler.HandleCannotComplete(ctx, task, reason)
+			handoffResult := r.handoffHandler.HandleSimpleHandoff(req)
 
-			// Convert HandoffHandlerResult to ChatRouter.HandoffResult
+			// Convert to ChatRouter.HandoffResult
 			routeResult.Handoff = true
 			routeResult.HandoffResult = &HandoffResult{
 				Success:         handoffResult.Success,
 				FromExpert:      expertName,
-				ToExpert:        handoffResult.NewExpert,
+				ToExpert:        handoffResult.ToExpert,
 				Error:           handoffResult.Error,
 				FallbackMessage: handoffResult.FallbackMessage,
 			}
 
 			// If handoff succeeded, execute with the new expert
-			if handoffResult.Success && handoffResult.NewTask != nil {
+			if handoffResult.Success && handoffResult.NewTaskInput != "" {
 				slog.Info("chatrouter: handoff succeeded, executing with new expert",
 					"from", expertName,
-					"to", handoffResult.NewExpert)
+					"to", handoffResult.ToExpert)
 
 				// Execute with new expert
 				var newResult strings.Builder
@@ -307,7 +298,7 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 					return nil
 				}
 
-				newErr := r.expertRegistry.ExecuteExpert(ctx, handoffResult.NewExpert, handoffResult.NewTask.Input, newCallback)
+				newErr := r.expertRegistry.ExecuteExpert(ctx, handoffResult.ToExpert, handoffResult.NewTaskInput, newCallback)
 				if newErr != nil {
 					slog.Error("chatrouter: failed to execute with handoff expert", "error", newErr)
 					routeResult.ExecutionResult = handoffResult.FallbackMessage

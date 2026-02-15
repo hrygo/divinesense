@@ -444,6 +444,57 @@ func (h *HandoffHandler) sendEvent(eventType string, data map[string]any, callba
 	callback(eventType, string(eventJSON))
 }
 
+// SimpleHandoffRequest is a simplified request for ChatRouter integration.
+// This avoids circular imports between agent and orchestrator packages.
+type SimpleHandoffRequest struct {
+	TaskID   string
+	Agent    string
+	Input    string
+	Capacity string
+	Reason   string
+}
+
+// SimpleHandoffResult is a simplified result for ChatRouter integration.
+type SimpleHandoffResult struct {
+	Success         bool
+	FromExpert      string
+	ToExpert        string
+	NewTaskInput    string
+	Error           string
+	FallbackMessage string
+}
+
+// HandleSimpleHandoff handles a simplified handoff request from ChatRouter.
+// This is a wrapper around the full HandleCannotComplete method.
+func (h *HandoffHandler) HandleSimpleHandoff(req SimpleHandoffRequest) SimpleHandoffResult {
+	// Convert to internal types
+	task := &Task{
+		ID:    req.TaskID,
+		Agent: req.Agent,
+		Input: req.Input,
+	}
+
+	reason := CannotCompleteReason{
+		MissingCapabilities: []string{req.Capacity},
+		OriginalError:       req.Reason,
+	}
+
+	ctx := context.Background()
+	callback := func(eventType string, eventData string) {}
+	handOffContext := NewHandoffContext()
+
+	result := h.HandleCannotComplete(ctx, task, reason, callback, handOffContext)
+
+	return SimpleHandoffResult{
+		Success:         result.Success,
+		FromExpert:      req.Agent,
+		ToExpert:        result.NewExpert,
+		NewTaskInput:    "",
+		Error:           result.Error,
+		FallbackMessage: result.FallbackMessage,
+	}
+}
+
 // Ensure HandoffHandler implements error handling
 var _ error = (*HandoffError)(nil)
 

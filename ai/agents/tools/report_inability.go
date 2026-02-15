@@ -19,19 +19,6 @@ func (i *ReportInabilityInput) Error() string {
 	return fmt.Sprintf("cannot handle capability %s: %s", i.Capability, i.Reason)
 }
 
-// MissingCapability is an error type that indicates the agent cannot handle a specific capability.
-// MissingCapability 错误类型，表示代理无法处理特定能力。
-type MissingCapability struct {
-	Capability     string
-	Reason         string
-	SuggestedAgent string
-}
-
-// Error returns a human-readable error message.
-func (m *MissingCapability) Error() string {
-	return fmt.Sprintf("missing capability: %s - %s (suggested: %s)", m.Capability, m.Reason, m.SuggestedAgent)
-}
-
 // ReportInabilityTool allows an expert agent to report when it cannot handle a task.
 // This enables the Handoff mechanism where the Orchestrator can route to a different expert.
 // ReportInabilityTool 允许专家代理在无法处理任务时进行报告。
