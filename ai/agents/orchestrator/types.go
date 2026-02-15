@@ -90,8 +90,16 @@ const (
 	TaskStatusPending   TaskStatus = "pending"
 	TaskStatusRunning   TaskStatus = "running"
 	TaskStatusCompleted TaskStatus = "completed"
-	TaskStatusFailed    TaskStatus = "failed"
+	// TaskStatusFailed indicates the task failed
+	TaskStatusFailed TaskStatus = "failed"
+	// TaskStatusSkipped indicates the task was skipped due to upstream failure
+	TaskStatusSkipped TaskStatus = "skipped"
 )
+
+// IsTerminal returns true if the status is a final state (Completed, Failed, Skipped).
+func (ts TaskStatus) IsTerminal() bool {
+	return ts == TaskStatusCompleted || ts == TaskStatusFailed || ts == TaskStatusSkipped
+}
 
 // TaskPlan represents the overall plan for handling a user request.
 type TaskPlan struct {
