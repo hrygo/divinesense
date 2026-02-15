@@ -146,6 +146,9 @@ jobs:
               go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
                 $(go list ./plugin/... | grep -v "github.com/hrygo/divinesense/plugin/cron$")
               ;;
+            ai)
+              go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui ./ai/...
+              ;;
             other)
               go test -short -timeout=60s -race -coverprofile=coverage.out -covermode=atomic -tags=noui \
                 ./cmd/... ./internal/...
