@@ -3,6 +3,7 @@ package simple
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,12 +16,16 @@ import (
 
 // MockMemoryStore implements MemoryStore for testing.
 type MockMemoryStore struct {
+	mu         sync.Mutex
 	memories   []*store.EpisodicMemory
 	embeddings []*store.EpisodicMemoryEmbedding
 	err        error
 }
 
 func (m *MockMemoryStore) CreateEpisodicMemory(ctx context.Context, create *store.EpisodicMemory) (*store.EpisodicMemory, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -30,6 +35,9 @@ func (m *MockMemoryStore) CreateEpisodicMemory(ctx context.Context, create *stor
 }
 
 func (m *MockMemoryStore) UpsertEpisodicMemoryEmbedding(ctx context.Context, embedding *store.EpisodicMemoryEmbedding) (*store.EpisodicMemoryEmbedding, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if m.err != nil {
 		return nil, m.err
 	}

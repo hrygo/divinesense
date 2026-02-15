@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	agents "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/e2e/mocks"
 
 	"github.com/stretchr/testify/assert"
@@ -52,6 +53,19 @@ func (m *MockExpertRegistryForTest) GetExpertDescription(name string) string {
 		return "日程管理专家。创建、查询、更新日程。"
 	default:
 		return "专家代理: " + name
+	}
+}
+
+// GetExpertConfig returns the self-cognition configuration of an expert agent.
+func (m *MockExpertRegistryForTest) GetExpertConfig(name string) *agents.ParrotSelfCognition {
+	return &agents.ParrotSelfCognition{
+		Name:         name,
+		Emoji:        "🦜",
+		Title:        "专家代理",
+		Personality:  []string{},
+		Capabilities: []string{},
+		Limitations:  []string{},
+		WorkingStyle: "precise",
 	}
 }
 
