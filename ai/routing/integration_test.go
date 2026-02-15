@@ -7,12 +7,21 @@ import (
 	"time"
 )
 
+// newTestService creates a Service with test capabilityMap for integration tests.
+func newTestService(cfg Config) *Service {
+	svc := NewService(cfg)
+	// Override ruleMatcher with one that has capabilityMap
+	matcher := newTestMatcher()
+	svc.ruleMatcher = matcher
+	return svc
+}
+
 // TestService_Integration_FullRouting tests the complete routing flow.
 func TestService_Integration_FullRouting(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("rule-based routing", func(t *testing.T) {
-		svc := NewService(Config{
+		svc := newTestService(Config{
 			EnableCache: true,
 		})
 
@@ -32,7 +41,7 @@ func TestService_Integration_FullRouting(t *testing.T) {
 	})
 
 	t.Run("cache hit after first classification", func(t *testing.T) {
-		svc := NewService(Config{
+		svc := newTestService(Config{
 			EnableCache: true,
 		})
 
@@ -60,7 +69,7 @@ func TestService_Integration_FullRouting(t *testing.T) {
 	})
 
 	t.Run("needs orchestration for unknown intent", func(t *testing.T) {
-		svc := NewService(Config{
+		svc := newTestService(Config{
 			EnableCache: false,
 		})
 
@@ -82,7 +91,7 @@ func TestService_Integration_FullRouting(t *testing.T) {
 func TestService_Integration_UserContext(t *testing.T) {
 	ctx := context.Background()
 
-	svc := NewService(Config{
+	svc := newTestService(Config{
 		EnableCache: false,
 	})
 
@@ -98,7 +107,7 @@ func TestService_Integration_UserContext(t *testing.T) {
 // TestService_Integration_ModelSelection tests model selection.
 func TestService_Integration_ModelSelection(t *testing.T) {
 	ctx := context.Background()
-	svc := NewService(Config{})
+	svc := newTestService(Config{})
 
 	tasks := []struct {
 		task             TaskType
@@ -136,7 +145,7 @@ func TestService_Integration_RouterStats(t *testing.T) {
 	ctx := context.Background()
 	userID := int32(789)
 
-	svc := NewService(Config{})
+	svc := newTestService(Config{})
 
 	stats, err := svc.GetRouterStats(ctx, userID, 24*time.Hour)
 	if err != nil {
@@ -160,7 +169,7 @@ func TestService_Integration_Feedback(t *testing.T) {
 	userID := int32(999)
 
 	storage := NewInMemoryWeightStorage()
-	svc := NewService(Config{
+	svc := newTestService(Config{
 		WeightStorage:  storage,
 		EnableFeedback: true,
 	})
@@ -193,7 +202,7 @@ func TestService_Integration_Feedback(t *testing.T) {
 // BenchmarkService_Integration_ClassifyIntent benchmarks the full routing flow.
 func BenchmarkService_Integration_ClassifyIntent(b *testing.B) {
 	ctx := context.Background()
-	svc := NewService(Config{
+	svc := newTestService(Config{
 		EnableCache: true,
 	})
 
@@ -208,7 +217,7 @@ func BenchmarkService_Integration_ClassifyIntent(b *testing.B) {
 // BenchmarkService_Integration_WithCache benchmarks with cache hits.
 func BenchmarkService_Integration_WithCache(b *testing.B) {
 	ctx := context.Background()
-	svc := NewService(Config{
+	svc := newTestService(Config{
 		EnableCache: true,
 	})
 

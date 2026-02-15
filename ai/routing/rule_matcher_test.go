@@ -5,9 +5,52 @@ import (
 	"testing"
 )
 
+// mockCapabilityMap implements KeywordCapabilitySource for testing.
+type mockCapabilityMap struct {
+	capabilities map[string][]string // input -> capabilities
+}
+
+func (m *mockCapabilityMap) IdentifyCapabilities(text string) []string {
+	text = strings.ToLower(text)
+	for key, caps := range m.capabilities {
+		if strings.Contains(text, key) {
+			return caps
+		}
+	}
+	return nil
+}
+
+// newTestMatcher creates a RuleMatcher with mock capabilityMap for testing.
+func newTestMatcher() *RuleMatcher {
+	matcher := NewRuleMatcher()
+	matcher.SetCapabilityMap(&mockCapabilityMap{
+		capabilities: map[string][]string{
+			"日程":   {"日程", "创建日程", "查询日程"},
+			"安排":   {"日程", "安排"},
+			"会议":   {"日程", "会议"},
+			"提醒":   {"日程", "提醒"},
+			"预约":   {"日程"},
+			"开会":   {"日程", "会议"},
+			"笔记":   {"笔记", "搜索笔记"},
+			"搜索":   {"笔记", "搜索笔记"},
+			"查找":   {"笔记", "搜索笔记"},
+			"记录":   {"笔记"},
+			"memo": {"笔记"},
+			"修改":   {"日程更新"},
+			"更新":   {"日程更新"},
+			"取消":   {"日程更新"},
+			"删除":   {"日程更新"},
+			"批量":   {"批量日程"},
+			"每周":   {"批量日程"},
+			"每天":   {"批量日程"},
+		},
+	})
+	return matcher
+}
+
 // TestRuleMatcher_MemoSearch tests memo search intent matching.
 func TestRuleMatcher_MemoSearch(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	testCases := []struct {
 		input         string
@@ -39,7 +82,7 @@ func TestRuleMatcher_MemoSearch(t *testing.T) {
 
 // TestRuleMatcher_ScheduleCreate tests schedule create intent matching.
 func TestRuleMatcher_ScheduleCreate(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	testCases := []struct {
 		input         string
@@ -69,7 +112,7 @@ func TestRuleMatcher_ScheduleCreate(t *testing.T) {
 
 // TestRuleMatcher_ScheduleUpdate tests schedule update intent matching.
 func TestRuleMatcher_ScheduleUpdate(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	testCases := []struct {
 		input         string
@@ -97,7 +140,7 @@ func TestRuleMatcher_ScheduleUpdate(t *testing.T) {
 
 // TestRuleMatcher_BatchSchedule tests batch schedule intent matching.
 func TestRuleMatcher_BatchSchedule(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	testCases := []struct {
 		input         string
@@ -125,7 +168,7 @@ func TestRuleMatcher_BatchSchedule(t *testing.T) {
 
 // TestRuleMatcher_NormalizeInput tests input normalization.
 func TestRuleMatcher_NormalizeInput(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	testCases := []struct {
 		input    string
@@ -147,7 +190,7 @@ func TestRuleMatcher_NormalizeInput(t *testing.T) {
 
 // BenchmarkRuleMatcher_Match benchmarks the rule matching performance.
 func BenchmarkRuleMatcher_MatchMixed(b *testing.B) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 	inputs := []string{
 		"搜索笔记",
 		"明天下午3点开会",

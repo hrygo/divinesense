@@ -14,13 +14,6 @@ type KeywordCapabilitySource interface {
 	IdentifyCapabilities(text string) []string
 }
 
-// Pre-defined core keywords for each category (avoid map creation on every call).
-var coreKeywordsByCategory = map[string][]string{
-	"schedule": {"日程", "安排", "会议", "提醒", "预约", "开会"},
-	"memo":     {"笔记", "搜索", "查找", "记录", "memo"},
-	"amazing":  {"综合", "总结", "分析", "周报"},
-}
-
 // Pre-compiled regex patterns for intent sub-classification.
 var (
 	updatePatternRegex = regexp.MustCompile(`修改|更新|取消|改|删除`)
@@ -174,26 +167,14 @@ func (m *RuleMatcher) normalizeInput(input string) string {
 }
 
 // hasCoreKeyword checks if input contains a core keyword for the given category.
-// Optimized: uses strings.Contains which is highly optimized in Go.
-// Falls back to hardcoded keywords if capabilityMap is not set.
+// Uses dynamic capabilityMap to determine keywords.
 func (m *RuleMatcher) hasCoreKeyword(input, category string) bool {
-	// Try dynamic capability map first if available
-	if m.capabilityMap != nil {
-		capabilities := m.capabilityMap.IdentifyCapabilities(input)
-		for _, cap := range capabilities {
-			if m.capabilityMatchesCategory(cap, category) {
-				return true
-			}
-		}
-	}
-
-	// Fall back to hardcoded keywords
-	keywords, ok := coreKeywordsByCategory[category]
-	if !ok {
+	if m.capabilityMap == nil {
 		return false
 	}
-	for _, kw := range keywords {
-		if strings.Contains(input, kw) {
+	capabilities := m.capabilityMap.IdentifyCapabilities(input)
+	for _, cap := range capabilities {
+		if m.capabilityMatchesCategory(cap, category) {
 			return true
 		}
 	}
@@ -221,20 +202,18 @@ func (m *RuleMatcher) capabilityMatchesCategory(capability, category string) boo
 }
 
 // hasMemoKeyword checks if input contains memo-related keywords.
-// This is used to avoid routing memo queries to schedule via fast path.
+// Uses dynamic capabilityMap to determine keywords.
 func (m *RuleMatcher) hasMemoKeyword(input string) bool {
-	// Try dynamic capability map first if available
-	if m.capabilityMap != nil {
-		capabilities := m.capabilityMap.IdentifyCapabilities(input)
-		for _, cap := range capabilities {
-			if m.capabilityMatchesCategory(cap, "memo") {
-				return true
-			}
+	if m.capabilityMap == nil {
+		return false
+	}
+	capabilities := m.capabilityMap.IdentifyCapabilities(input)
+	for _, cap := range capabilities {
+		if m.capabilityMatchesCategory(cap, "memo") {
+			return true
 		}
 	}
-
-	// Fall back to hardcoded keywords
-	return strings.Contains(input, "笔记") || strings.Contains(input, "memo")
+	return false
 }
 
 // calculateScore calculates the weighted score for a keyword set.

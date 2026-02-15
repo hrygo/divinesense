@@ -240,10 +240,7 @@ func executeTool(ctx context.Context, tools []agent.ToolWithSchema, name, input 
 
 // shouldEarlyStop checks if the agent should stop early based on tool results.
 // Returns true if a tool executed successfully, or inability was reported.
-// Success is auto-detected by checking:
-// 1. JSON response with "success" field set to true
-// 2. JSON response with "error" field being null/empty
-// 3. Tool names with create/add patterns (for backward compatibility)
+// Success is auto-detected by checking JSON response "success" or "error" fields.
 func shouldEarlyStop(toolResult string) bool {
 	if toolResult == "" {
 		return false
@@ -252,25 +249,6 @@ func shouldEarlyStop(toolResult string) bool {
 	// Auto-detect success from JSON response
 	if isSuccessFromJSON(toolResult) {
 		return true
-	}
-
-	// Fallback: check for legacy success indicators (for backward compatibility)
-	successIndicators := []string{
-		"✓ 已创建",
-		"✓ 已更新",
-		"已成功创建",
-		"成功创建日程",
-		"Successfully created",
-		"Successfully updated",
-		"schedule created",
-		"schedule updated",
-	}
-
-	lowerResult := strings.ToLower(toolResult)
-	for _, indicator := range successIndicators {
-		if strings.Contains(toolResult, indicator) || strings.Contains(lowerResult, strings.ToLower(indicator)) {
-			return true
-		}
 	}
 
 	// Check for inability report (for Handoff mechanism)

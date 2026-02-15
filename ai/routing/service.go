@@ -24,11 +24,12 @@ type Service struct {
 
 // Config contains the configuration for the router service.
 type Config struct {
-	EnableCache    bool                // Enable routing result cache (default: true)
-	WeightStorage  RouterWeightStorage // Storage for dynamic weights (optional)
-	EnableFeedback bool                // Enable feedback-based weight adjustment (default: true)
-	Registry       *IntentRegistry     // Intent registry for OCP-compliant routing (DIP: inject instead of global)
-	ModelStrategy  ModelStrategy       // Model selection strategy (DIP: inject instead of constructor call)
+	EnableCache    bool                    // Enable routing result cache (default: true)
+	WeightStorage  RouterWeightStorage     // Storage for dynamic weights (optional)
+	EnableFeedback bool                    // Enable feedback-based weight adjustment (default: true)
+	Registry       *IntentRegistry         // Intent registry for OCP-compliant routing (DIP: inject instead of global)
+	ModelStrategy  ModelStrategy           // Model selection strategy (DIP: inject instead of constructor call)
+	CapabilityMap  KeywordCapabilitySource // Dynamic capability map for keyword loading (optional)
 }
 
 // DefaultConfig returns a Config with sensible defaults.
@@ -61,6 +62,11 @@ func NewService(cfg Config) *Service {
 		weightStorage:  cfg.WeightStorage,
 		registry:       registry,
 		modelStrategy:  modelStrategy,
+	}
+
+	// Set capability map if provided
+	if cfg.CapabilityMap != nil {
+		svc.ruleMatcher.SetCapabilityMap(cfg.CapabilityMap)
 	}
 
 	// Enable cache by default for performance

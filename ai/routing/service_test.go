@@ -9,7 +9,7 @@ import (
 )
 
 func TestRuleMatcher_ScheduleIntent(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	tests := []struct {
 		name           string
@@ -68,7 +68,7 @@ func TestRuleMatcher_ScheduleIntent(t *testing.T) {
 }
 
 func TestRuleMatcher_MemoIntent(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	tests := []struct {
 		name           string
@@ -108,7 +108,7 @@ func TestRuleMatcher_MemoIntent(t *testing.T) {
 }
 
 func TestRuleMatcher_NoMatch(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	tests := []string{
 		"hi", // Too short
@@ -126,7 +126,7 @@ func TestRuleMatcher_NoMatch(t *testing.T) {
 
 func TestService_ClassifyIntent_Layer1Only(t *testing.T) {
 	// Create service with no memory or LLM
-	svc := NewService(Config{})
+	svc := newTestService(Config{})
 	ctx := context.Background()
 
 	tests := []struct {
@@ -239,7 +239,7 @@ func TestHistoryMatcher_Similarity(t *testing.T) {
 }
 
 func TestRuleMatcher_TimePatterns(t *testing.T) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 
 	tests := []struct {
 		input   string
@@ -263,7 +263,7 @@ func TestRuleMatcher_TimePatterns(t *testing.T) {
 
 // Benchmark tests.
 func BenchmarkRuleMatcher_Match(b *testing.B) {
-	matcher := NewRuleMatcher()
+	matcher := newTestMatcher()
 	input := "明天下午3点开会"
 
 	b.ResetTimer()
