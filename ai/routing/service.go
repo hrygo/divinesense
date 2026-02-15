@@ -112,9 +112,17 @@ func (s *Service) ClassifyIntent(ctx context.Context, input string) (Intent, flo
 	var matched bool
 
 	if userID > 0 {
+		// MatchWithUser still returns 3 values for backward compatibility
 		intent, confidence, matched = s.ruleMatcher.MatchWithUser(input, userID)
 	} else {
-		intent, confidence, matched = s.ruleMatcher.Match(input)
+		// Use MatchResult and convert for service layer
+		result := s.ruleMatcher.Match(input)
+		if result.Matched {
+			// Convert MatchResult to Intent using legacy conversion
+			intent = s.ruleMatcher.GenericActionToIntent(result.Action, result.Keywords, input)
+			confidence = result.Confidence
+			matched = true
+		}
 	}
 
 	if matched {

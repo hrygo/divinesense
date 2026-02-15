@@ -8,6 +8,7 @@ import (
 	"time"
 
 	pluginai "github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/routing"
 	aistats "github.com/hrygo/divinesense/ai/services/stats"
@@ -116,10 +117,27 @@ func (s *AIService) getRouterService() *routing.Service {
 		return nil
 	}
 
+	// Build config-driven capability map from expert registry
+	var capabilityMap routing.KeywordCapabilitySource
+
+	if factory := s.getAgentFactory(); factory != nil {
+		// Get expert configurations from factory
+		expertConfigs := factory.GetSelfCognitionConfigs()
+
+		if len(expertConfigs) > 0 {
+			// Build CapabilityMap from expert configs
+			capabilityMap = orchestrator.NewCapabilityMap()
+			if cm, ok := capabilityMap.(*orchestrator.CapabilityMap); ok {
+				cm.BuildFromConfigs(expertConfigs)
+			}
+		}
+	}
+
 	// FastRouter: cache -> rule (no LLM layer)
 	// Complex/low-confidence requests are handled by Orchestrator
 	s.routerService = routing.NewService(routing.Config{
-		EnableCache: true,
+		EnableCache:   true,
+		CapabilityMap: capabilityMap,
 	})
 
 	return s.routerService

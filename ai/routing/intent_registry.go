@@ -8,6 +8,23 @@ import (
 	"sync"
 )
 
+// ExpertConfig represents the minimal expert configuration needed for routing.
+// This avoids import cycles between routing and agent packages.
+type ExpertConfig interface {
+	GetName() string
+	GetCapabilities() []string
+}
+
+// ActionToCategoryMapping defines how GenericAction maps to Category (AgentType).
+// This is the bridge between RuleMatcher (outputs GenericAction) and ExpertRouter (maps to Expert).
+type ActionToCategoryMapping struct {
+	Action    GenericAction // Generic action from RuleMatcher
+	AgentType AgentType     // Target agent type
+	Priority  int           // Higher = checked first
+	// Optional: additional keywords for disambiguation
+	Keywords []string
+}
+
 // IntentConfig holds configuration for a single intent type.
 type IntentConfig struct {
 	Intent    Intent           // Intent identifier
@@ -34,6 +51,200 @@ func NewIntentRegistry() *IntentRegistry {
 		agentMap:  make(map[Intent]AgentType),
 		intentMap: make(map[AgentType]Intent),
 	}
+}
+
+// BuildFromExpertConfigs builds the intent registry from ParrotSelfCognition configurations.
+// This enables config-driven routing without hardcoded expert types.
+// BuildFromExpertConfigs builds the intent registry from expert configurations.
+// This enables config-driven routing without hardcoded expert types.
+func (r *IntentRegistry) BuildFromExpertConfigs(configs []ExpertConfig) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Clear existing configs
+	r.configs = make(map[Intent]IntentConfig)
+	r.agentMap = make(map[Intent]AgentType)
+	r.intentMap = make(map[AgentType]Intent)
+
+	// Build action to category mappings from expert capabilities
+	// Each expert's capabilities define what actions they can handle
+	actionToCategory := make(map[GenericAction][]ActionToCategoryMapping)
+
+	for _, config := range configs {
+		if config == nil {
+			continue
+		}
+
+		// Determine agent type from expert name
+		agentType := r.inferAgentType(config.GetName(), config.GetCapabilities())
+
+		// Map each capability to a generic action
+		for _, cap := range config.GetCapabilities() {
+			action := r.capabilityToAction(cap)
+			if action == ActionNone {
+				continue
+			}
+
+			mapping := ActionToCategoryMapping{
+				Action:    action,
+				AgentType: agentType,
+				Priority:  100,
+			}
+
+			actionToCategory[action] = append(actionToCategory[action], mapping)
+		}
+	}
+
+	// Register intent configs based on action mappings
+	// This is the bridge: GenericAction -> Intent -> AgentType
+	for action, mappings := range actionToCategory {
+		for _, m := range mappings {
+			intent := r.actionToIntent(action, m.AgentType)
+			r.configs[intent] = IntentConfig{
+				Intent:    intent,
+				AgentType: m.AgentType,
+				Priority:  m.Priority,
+				RouteType: string(m.AgentType),
+			}
+			r.agentMap[intent] = m.AgentType
+			r.intentMap[m.AgentType] = intent
+		}
+	}
+
+	r.rebuildSortedCache()
+}
+
+// inferAgentType infers the agent type from expert name and capabilities.
+func (r *IntentRegistry) inferAgentType(name string, capabilities []string) AgentType {
+	nameLower := strings.ToLower(name)
+
+	// Check name first
+	if strings.Contains(nameLower, "memo") || strings.Contains(nameLower, "笔记") {
+		return AgentTypeMemo
+	}
+	if strings.Contains(nameLower, "schedule") || strings.Contains(nameLower, "日程") {
+		return AgentTypeSchedule
+	}
+
+	// Check capabilities
+	for _, cap := range capabilities {
+		capLower := strings.ToLower(cap)
+		if strings.Contains(capLower, "笔记") || strings.Contains(capLower, "memo") ||
+			strings.Contains(capLower, "搜索") {
+			return AgentTypeMemo
+		}
+		if strings.Contains(capLower, "日程") || strings.Contains(capLower, "schedule") ||
+			strings.Contains(capLower, "会议") {
+			return AgentTypeSchedule
+		}
+	}
+
+	return AgentTypeUnknown
+}
+
+// capabilityToAction maps a capability name to a generic action.
+func (r *IntentRegistry) capabilityToAction(capability string) GenericAction {
+	capLower := strings.ToLower(capability)
+
+	// Search actions
+	if strings.Contains(capLower, "搜索") || strings.Contains(capLower, "查询") ||
+		strings.Contains(capLower, "search") || strings.Contains(capLower, "query") ||
+		strings.Contains(capLower, "查找") {
+		return ActionSearch
+	}
+
+	// Create actions
+	if strings.Contains(capLower, "创建") || strings.Contains(capLower, "新建") ||
+		strings.Contains(capLower, "create") || strings.Contains(capLower, "记录") {
+		return ActionCreate
+	}
+
+	// Update actions
+	if strings.Contains(capLower, "更新") || strings.Contains(capLower, "修改") ||
+		strings.Contains(capLower, "delete") || strings.Contains(capLower, "删除") {
+		return ActionUpdate
+	}
+
+	// Batch actions
+	if strings.Contains(capLower, "批量") || strings.Contains(capLower, "batch") ||
+		strings.Contains(capLower, "重复") {
+		return ActionBatch
+	}
+
+	// Query actions (default for schedule)
+	if strings.Contains(capLower, "查询") || strings.Contains(capLower, "查看") ||
+		strings.Contains(capLower, "query") {
+		return ActionQuery
+	}
+
+	return ActionNone
+}
+
+// actionToIntent converts a GenericAction + AgentType to a specific Intent.
+func (r *IntentRegistry) actionToIntent(action GenericAction, agentType AgentType) Intent {
+	switch agentType {
+	case AgentTypeMemo:
+		switch action {
+		case ActionSearch:
+			return IntentMemoSearch
+		case ActionCreate:
+			return IntentMemoCreate
+		}
+	case AgentTypeSchedule:
+		switch action {
+		case ActionQuery:
+			return IntentScheduleQuery
+		case ActionCreate:
+			return IntentScheduleCreate
+		case ActionUpdate:
+			return IntentScheduleUpdate
+		case ActionBatch:
+			return IntentBatchSchedule
+		}
+	}
+	// Default
+	return IntentUnknown
+}
+
+// ClassifyAction classifies a GenericAction to an AgentType using registered mappings.
+func (r *IntentRegistry) ClassifyAction(action GenericAction, keywords []string) (AgentType, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Find the first matching mapping based on priority
+	// This allows multiple experts to handle the same action
+	keywordsLower := make(map[string]bool)
+	for _, kw := range keywords {
+		keywordsLower[strings.ToLower(kw)] = true
+	}
+
+	for _, cfg := range r.sortedByPri {
+		if cfg.Intent == IntentUnknown {
+			continue
+		}
+		// Match by action
+		intentAction := r.intentToAction(cfg.Intent)
+		if intentAction == action {
+			return cfg.AgentType, true
+		}
+	}
+
+	return AgentTypeUnknown, false
+}
+
+// intentToAction converts an Intent back to GenericAction.
+func (r *IntentRegistry) intentToAction(intent Intent) GenericAction {
+	switch intent {
+	case IntentMemoSearch, IntentMemoCreate:
+		return ActionSearch
+	case IntentScheduleQuery, IntentScheduleCreate:
+		return ActionQuery
+	case IntentScheduleUpdate:
+		return ActionUpdate
+	case IntentBatchSchedule:
+		return ActionBatch
+	}
+	return ActionNone
 }
 
 // Register adds or updates an intent configuration.

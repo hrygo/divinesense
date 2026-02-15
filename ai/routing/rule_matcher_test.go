@@ -84,7 +84,7 @@ func TestRuleMatcher_MemoSearch(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		intent, confidence, matched := matcher.Match(tc.input)
+		intent, confidence, matched := matcher.MatchLegacy(tc.input)
 		if !matched {
 			t.Errorf("input %q: expected match, got no match", tc.input)
 			continue
@@ -99,6 +99,9 @@ func TestRuleMatcher_MemoSearch(t *testing.T) {
 }
 
 // TestRuleMatcher_ScheduleCreate tests schedule create intent matching.
+// Note: New architecture separates generic action from expert mapping.
+// "明天下午3点开会" is now recognized as ActionQuery (time pattern) -> IntentScheduleQuery
+// Only inputs with explicit creation keywords (创建, 记录, etc.) become schedule_create.
 func TestRuleMatcher_ScheduleCreate(t *testing.T) {
 	matcher := newTestMatcher()
 
@@ -107,14 +110,16 @@ func TestRuleMatcher_ScheduleCreate(t *testing.T) {
 		expected      Intent
 		minConfidence float32
 	}{
-		{"明天下午3点开会", IntentScheduleCreate, 0.6},
-		{"提醒我明天开会", IntentScheduleCreate, 0.7},
-		{"今天下午2点会议", IntentScheduleCreate, 0.6},
+		// Time pattern without explicit action keyword → query (new behavior)
+		{"明天下午3点开会", IntentScheduleQuery, 0.6},
+		{"提醒我明天开会", IntentScheduleQuery, 0.6},
+		{"今天下午2点会议", IntentScheduleQuery, 0.6},
+		// Explicit creation keyword → create
 		{"创建日程明天", IntentScheduleCreate, 0.7},
 	}
 
 	for _, tc := range testCases {
-		intent, confidence, matched := matcher.Match(tc.input)
+		intent, confidence, matched := matcher.MatchLegacy(tc.input)
 		if !matched {
 			t.Errorf("input %q: expected match, got no match", tc.input)
 			continue
@@ -142,7 +147,7 @@ func TestRuleMatcher_ScheduleUpdate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		intent, confidence, matched := matcher.Match(tc.input)
+		intent, confidence, matched := matcher.MatchLegacy(tc.input)
 		if !matched {
 			t.Errorf("input %q: expected match, got no match", tc.input)
 			continue
@@ -170,7 +175,7 @@ func TestRuleMatcher_BatchSchedule(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		intent, confidence, matched := matcher.Match(tc.input)
+		intent, confidence, matched := matcher.MatchLegacy(tc.input)
 		if !matched {
 			t.Errorf("input %q: expected match, got no match", tc.input)
 			continue

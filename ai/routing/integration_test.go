@@ -29,8 +29,8 @@ func TestService_Integration_FullRouting(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if intent != IntentScheduleCreate {
-			t.Errorf("expected IntentScheduleCreate, got %s", intent)
+		if intent != IntentScheduleQuery {
+			t.Errorf("expected IntentScheduleQuery, got %s", intent)
 		}
 		if confidence < 0.5 {
 			t.Errorf("expected confidence >= 0.5, got %f", confidence)

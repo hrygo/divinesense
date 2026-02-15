@@ -80,6 +80,28 @@ func AgentTypeToIntent(agentType AgentType) Intent {
 	return IntentUnknown
 }
 
+// GenericAction represents a generic action type that is domain-agnostic.
+// This is used by RuleMatcher for pure pattern recognition without hardcoding expert types.
+type GenericAction string
+
+const (
+	ActionQuery  GenericAction = "query"  // 查询、查看、有什么
+	ActionSearch GenericAction = "search" // 搜索、查找
+	ActionCreate GenericAction = "create" // 创建、记录、新增
+	ActionUpdate GenericAction = "update" // 修改、更新、删除
+	ActionBatch  GenericAction = "batch"  // 批量、每天、每周
+	ActionNone   GenericAction = "none"   // 无明确动作
+)
+
+// MatchResult contains the result of rule-based pattern matching.
+// RuleMatcher only identifies patterns, not expert types.
+type MatchResult struct {
+	Action     GenericAction // Detected generic action
+	Keywords   []string      // Matched trigger keywords from CapabilityMap
+	Confidence float32       // Confidence score (0-1)
+	Matched    bool          // Whether any pattern was matched
+}
+
 // Intent represents the type of user intent.
 type Intent string
 

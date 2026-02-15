@@ -8,6 +8,7 @@ import (
 
 	"github.com/hrygo/divinesense/ai"
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	agents "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/tools"
 	scheduletools "github.com/hrygo/divinesense/ai/agents/tools/schedule"
 	"github.com/hrygo/divinesense/ai/agents/universal"
@@ -298,4 +299,21 @@ func (f *AgentFactory) createScheduleParrot(_ context.Context, cfg *CreateConfig
 	}
 	scheduleSvc := schedule.NewService(f.store)
 	return f.parrotFactory.CreateScheduleParrot(cfg.UserID, scheduleSvc)
+}
+
+// GetSelfCognitionConfigs returns all ParrotSelfCognition configurations from the factory.
+// This is used by routing to build config-driven intent mappings.
+func (f *AgentFactory) GetSelfCognitionConfigs() []*agents.ParrotSelfCognition {
+	if f.parrotFactory == nil {
+		return nil
+	}
+
+	names := f.parrotFactory.ListConfigs()
+	var configs []*agents.ParrotSelfCognition
+	for _, name := range names {
+		if cfg, ok := f.parrotFactory.GetConfig(name); ok && cfg.SelfDescription != nil {
+			configs = append(configs, cfg.SelfDescription)
+		}
+	}
+	return configs
 }
