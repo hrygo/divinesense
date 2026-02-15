@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -182,12 +183,18 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 			break
 		}
 
-		// Check if error is transient.
-		// For MVP, we retry all errors up to maxRetries.
-		// TODO: refinements to only retry network/timeout/capacity errors.
+		// Only retry transient errors
+		if !isTransientError(err) {
+			slog.Warn("executor: task execution failed, non-transient error, not retrying",
+				"trace_id", traceID,
+				"task_id", task.ID,
+				"error", err,
+			)
+			break
+		}
 
 		if i < maxRetries {
-			slog.Warn("executor: task execution failed, retrying",
+			slog.Warn("executor: task execution failed, retrying transient error",
 				"trace_id", traceID,
 				"task_id", task.ID,
 				"attempt", i+1,
@@ -356,4 +363,57 @@ func (rc *resultCollector) getResult() string {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.result.String()
+}
+
+// transientErrorKeywords contains keywords that indicate a transient error.
+var transientErrorKeywords = []string{
+	"timeout",
+	"timed out",
+	"connection refused",
+	"connection reset",
+	"temporary failure",
+	"service unavailable",
+	"too many requests",
+	"rate limit",
+	"429",
+	"503",
+	"502",
+	"504",
+	"context deadline exceeded",
+	"i/o timeout",
+	"network unreachable",
+	"no route to host",
+	"transient",
+	"retry",
+	"temporary",
+}
+
+// isTransientError checks if an error is transient and worth retrying.
+// It returns true if the error is likely temporary and retrying might help.
+func isTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	errMsgLower := strings.ToLower(errMsg)
+
+	// Check for context cancellation/deadline - don't retry if explicitly cancelled
+	if errors.Is(err, context.Canceled) {
+		return false
+	}
+
+	// Check for deadline exceeded - these are often retryable
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	// Check for transient error keywords
+	for _, keyword := range transientErrorKeywords {
+		if strings.Contains(errMsgLower, strings.ToLower(keyword)) {
+			return true
+		}
+	}
+
+	return false
 }

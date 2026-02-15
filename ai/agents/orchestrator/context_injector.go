@@ -54,20 +54,15 @@ func (ci *ContextInjector) ResolveInput(input string, tasks map[string]*Task) (s
 
 		result := task.GetResult()
 
-		// Heuristic detection: check if match is surrounded by quotes in the original string.
-		// If so, we should escape the result to ensure valid JSON if it contains quotes.
-		// Strategy: Marshal the result to get a JSON string, then strip outer quotes.
-		// This handles escaping of internal quotes and special characters.
+		// Always JSON-escape the result to ensure valid JSON output.
+		// This prevents injection issues and ensures consistent escaping.
+		// The outer quotes are kept to maintain valid JSON string format.
 		b, err := json.Marshal(result)
 		if err != nil {
 			// Should not happen for string, but safe fallback
 			return result
 		}
-		s := string(b)
-		if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-			return s[1 : len(s)-1]
-		}
-		return result
+		return string(b)
 	})
 
 	if err != nil {

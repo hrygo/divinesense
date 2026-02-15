@@ -54,6 +54,7 @@ func (d *EventDispatcher) dispatchLoop() {
 }
 
 // Send sends an event strictly sequentially.
+// Uses non-blocking send to prevent executor goroutine from stalling on slow consumers.
 func (d *EventDispatcher) Send(eventType, eventData string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -62,14 +63,19 @@ func (d *EventDispatcher) Send(eventType, eventData string) {
 		return
 	}
 
-	// Non-blocking send with drop policy if full?
-	// Or blocking? Blocking is safer for correctness, but can stall execution.
-	// Given we are in an agent executor, stalling on slow UI is bad.
-	// But dropping events is also bad.
-	// Let's use a reasonably large buffer and blocking send, assuming UI consumes fast enough.
-	// Or use select with warning.
-
-	d.eventCh <- event{Type: eventType, Data: eventData}
+	// Use non-blocking send with select to prevent backpressure
+	// If channel is full, log warning and drop event (better than blocking executor)
+	select {
+	case d.eventCh <- event{Type: eventType, Data: eventData}:
+		// Event sent successfully
+	default:
+		// Channel full - log warning and drop event to prevent executor stall
+		slog.Warn("event dispatcher: channel full, dropping event",
+			"trace_id", d.traceID,
+			"event_type", eventType,
+			"buffer_size", cap(d.eventCh),
+		)
+	}
 }
 
 // Close closes the dispatcher and waits for all events to be processed.

@@ -87,8 +87,8 @@ func TestDAG_LinearExecution(t *testing.T) {
 	}
 
 	registry.On("ExecuteExpert", mock.Anything, "memo", "task 1", mock.Anything).Return(nil).Run(mockExec("result1", t1))
-	registry.On("ExecuteExpert", mock.Anything, "memo", "task 2 result1", mock.Anything).Return(nil).Run(mockExec("result2", t2))
-	registry.On("ExecuteExpert", mock.Anything, "memo", "task 3 result2", mock.Anything).Return(nil).Run(mockExec("result3", t3))
+	registry.On("ExecuteExpert", mock.Anything, "memo", "task 2 \"result1\"", mock.Anything).Return(nil).Run(mockExec("result2", t2))
+	registry.On("ExecuteExpert", mock.Anything, "memo", "task 3 \"result2\"", mock.Anything).Return(nil).Run(mockExec("result3", t3))
 
 	// Execute
 	result := executor.ExecutePlan(context.Background(), plan, nil, "test-trace-id")
@@ -150,7 +150,7 @@ func TestDAG_DiamondExecution(t *testing.T) {
 	})
 
 	// Mock D
-	registry.On("ExecuteExpert", mock.Anything, "memo", "Join ResB ResC", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+	registry.On("ExecuteExpert", mock.Anything, "memo", "Join \"ResB\" \"ResC\"", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		_, bDone := executed.Load("B")
 		_, cDone := executed.Load("C")
 		assert.True(t, bDone, "B must be done before D")
