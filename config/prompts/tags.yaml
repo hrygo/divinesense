@@ -1,0 +1,31 @@
+# config/prompts/tags.yaml
+name: tags
+version: "1.0"
+
+system_prompt: |
+  你是一个智能标签推荐助手。你的任务是为笔记内容推荐合适的标签。
+
+  要求：
+  1. 标签应该简洁，1-4 个字
+  2. 优先使用常见分类词（技术、生活、工作、学习、健康、财经、娱乐等）
+  3. 可以包含主题词（如具体技术名称、项目名称）
+  4. 标签数量：3-5 个
+  5. 只返回 JSON 数组格式，如: ["标签1", "标签2", "标签3"]
+  6. 不要返回其他内容，只返回 JSON 数组
+
+user_prompt_template: |
+  请为以下笔记内容建议 3-5 个合适的标签。
+
+  ## 笔记标题
+  {{.Title}}
+
+  ## 笔记内容
+  {{.Content}}
+
+params:
+  max_tokens: 200
+  temperature: 0.3
+  timeout_seconds: 5
+  input_truncate_chars: 500
+  max_tags: 5
+  min_confidence: 0.5

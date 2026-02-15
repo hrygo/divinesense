@@ -1,0 +1,60 @@
+# config/enrichment.yaml
+# AI Enrichment Configuration
+# Controls behavior of memo content enrichment (Summary, Format, Tags, Title)
+
+enrichment:
+  # Enable/disable enrichment types
+  enabled:
+    format: true   # Pre-save: format content to Markdown
+    summary: true  # Post-save: generate AI summary
+    tags: true     # Post-save: generate AI tags
+    title: true    # Post-save: generate AI title
+
+  # Pre-save (synchronous) enrichment
+  pre_save:
+    # Format configuration
+    format:
+      enabled: true
+      timeout_seconds: 10
+
+  # Post-save (asynchronous) enrichment
+  post_save:
+    # Async trigger configuration
+    trigger:
+      enabled: true
+      workers: 3           # Number of concurrent workers
+      queue_size: 100      # Queue buffer size
+
+    # Summary configuration
+    summary:
+      enabled: true
+      timeout_seconds: 15
+      max_chars: 200        # Maximum summary length
+      fallback_enabled: true # Enable fallback on LLM failure
+
+    # Tags configuration
+    tags:
+      enabled: true
+      timeout_seconds: 5
+      max_tags: 5           # Maximum tags to generate
+      min_confidence: 0.5   # Minimum confidence threshold
+
+    # Title configuration
+    title:
+      enabled: true
+      timeout_seconds: 10
+      max_runes: 50         # Maximum title length in runes
+
+# Fallback strategy configuration
+fallback:
+  # Summary fallback levels (in order of priority)
+  summary:
+    - source: llm
+      enabled: true
+    - source: first_paragraph
+      enabled: true
+    - source: first_sentence
+      enabled: true
+    - source: truncate
+      enabled: true
+      max_chars: 200
