@@ -91,6 +91,16 @@ func (p *BlockStoreMessageProvider) GetRecentMessages(
 	return messages, nil
 }
 
+// GetBlockCount returns the number of blocks for a conversation.
+// Used by GetHistoryLength for accurate conversation turn counting.
+func (p *BlockStoreMessageProvider) GetBlockCount(ctx context.Context, conversationID int32) (int, error) {
+	blocks, err := p.blockStore.ListBlocks(ctx, conversationID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list blocks: %w", err)
+	}
+	return len(blocks), nil
+}
+
 // blocksToMessages converts Block slice to Message slice.
 func (p *BlockStoreMessageProvider) blocksToMessages(blocks []*Block) []*Message {
 	messages := make([]*Message, 0, len(blocks)*2) // user + assistant per block

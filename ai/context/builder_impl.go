@@ -324,27 +324,47 @@ func (s *Service) assembleResult(segments []*ContextSegment, budget *TokenBudget
 	return result
 }
 
-// GetHistoryLength returns the number of conversation turns (blocks) for a session.
+// GetHistoryLength returns the number of conversation blocks for a session.
 // Used for dynamic budget adjustment (Issue #211: Phase 3).
+//
+// Note: This method tries to get the actual block count if the messageProvider
+// is a BlockStoreMessageProvider, otherwise falls back to message count / 2.
 func (s *Service) GetHistoryLength(ctx context.Context, sessionID string) (int, error) {
 	if s.messageProvider == nil {
 		return 0, nil
 	}
 
-	// Use a large limit to get all messages
+	// Try to get actual block count from BlockStoreMessageProvider
+	if bsp, ok := s.messageProvider.(*BlockStoreMessageProvider); ok {
+		conversationID, err := ParseSessionID(sessionID)
+		if err != nil {
+			slog.Debug("failed to parse sessionID for block count", "session_id", sessionID, "error", err)
+			// Fall back to message-based calculation
+		} else {
+			blocks, err := bsp.GetBlockCount(ctx, conversationID)
+			if err == nil && blocks > 0 {
+				slog.Debug("GetHistoryLength (block-based)",
+					"session_id", sessionID,
+					"blocks", blocks)
+				return blocks, nil
+			}
+		}
+	}
+
+	// Fallback: use message count / 2 as approximation
+	// Each block contains 2 messages (user + assistant), so divide by 2
+	// If odd number, round up to account for incomplete final block
 	messages, err := s.shortTerm.Extract(ctx, s.messageProvider, sessionID)
 	if err != nil {
 		return 0, err
 	}
 
-	// Each block contains 2 messages (user + assistant), so divide by 2
-	// If odd number, round up to account for incomplete final block
 	turns := len(messages) / 2
 	if len(messages)%2 > 0 {
 		turns++
 	}
 
-	slog.Debug("GetHistoryLength",
+	slog.Debug("GetHistoryLength (message-based approximation)",
 		"session_id", sessionID,
 		"messages_count", len(messages),
 		"turns", turns)
@@ -387,12 +407,8 @@ func (s *Service) BuildHistory(ctx context.Context, req *ContextRequest) ([]stri
 		case "assistant":
 			// Flush pending user messages, then add assistant
 			if len(currentUserMsgs) > 0 {
-				// Combine multiple user messages if any
-				userContent := currentUserMsgs[0]
-				if len(currentUserMsgs) > 1 {
-					// For simplicity, just use the first one
-					// In practice, multiple user messages in a row are rare
-				}
+				// Combine multiple user messages if any (Issue #211: fix data loss)
+				userContent := strings.Join(currentUserMsgs, "\n---\n")
 				history = append(history, userContent)
 				currentUserMsgs = nil
 			} else if len(history) == 0 {

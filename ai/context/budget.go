@@ -176,6 +176,7 @@ func AllocateBudget(total int, hasRetrieval bool) *TokenBudget {
 // Issue #211: Phase 3 - Dynamic budget adjustment based on conversation turns
 // When conversation exceeds 20 turns (historyLength > 20, i.e., 21+ turns), it compresses ShortTerm
 // and increases LongTerm/Retrieval to handle long conversations more efficiently.
+// Note: Has a maximum adjustment cap to prevent over-compression for extremely long conversations.
 func (a *BudgetAllocator) AllocateForAgentWithHistory(total int, hasRetrieval bool, agentType string, historyLength int) *TokenBudget {
 	budget := a.AllocateForAgent(total, hasRetrieval, agentType)
 
@@ -185,10 +186,22 @@ func (a *BudgetAllocator) AllocateForAgentWithHistory(total int, hasRetrieval bo
 			"history_length", historyLength,
 			"threshold", HistoryLengthThreshold)
 
-		// Calculate reduction/increase amounts
-		shortTermReduction := int(float64(budget.ShortTermMemory) * ShortTermReductionRatio)
-		longTermIncrease := int(float64(budget.LongTermMemory) * LongTermIncreaseRatio)
-		retrievalIncrease := int(float64(budget.Retrieval) * LongTermIncreaseRatio)
+		// Calculate effective adjustment factor with cap
+		// Cap at 100 turns to prevent over-compression for extremely long conversations
+		const maxAdjustmentTurns = 100
+		effectiveTurns := historyLength
+		if effectiveTurns > maxAdjustmentTurns {
+			effectiveTurns = maxAdjustmentTurns
+		}
+		adjustmentFactor := float64(effectiveTurns-HistoryLengthThreshold) / float64(maxAdjustmentTurns-HistoryLengthThreshold)
+		if adjustmentFactor > 1.0 {
+			adjustmentFactor = 1.0
+		}
+
+		// Calculate reduction/increase amounts with cap
+		shortTermReduction := int(float64(budget.ShortTermMemory) * ShortTermReductionRatio * adjustmentFactor)
+		longTermIncrease := int(float64(budget.LongTermMemory) * LongTermIncreaseRatio * adjustmentFactor)
+		retrievalIncrease := int(float64(budget.Retrieval) * LongTermIncreaseRatio * adjustmentFactor)
 
 		// Apply adjustments
 		budget.ShortTermMemory -= shortTermReduction
@@ -211,6 +224,9 @@ func (a *BudgetAllocator) AllocateForAgentWithHistory(total int, hasRetrieval bo
 		}
 
 		slog.Debug("Dynamic budget adjustment applied",
+			"history_length", historyLength,
+			"effective_turns", effectiveTurns,
+			"adjustment_factor", adjustmentFactor,
 			"short_term_before", budget.ShortTermMemory+shortTermReduction,
 			"short_term_after", budget.ShortTermMemory,
 			"long_term_before", budget.LongTermMemory-longTermIncrease,
