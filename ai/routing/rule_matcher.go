@@ -8,6 +8,12 @@ import (
 	"unicode"
 )
 
+// KeywordCapabilitySource defines an interface for dynamic keyword loading.
+// This avoids import cycles between routing and orchestrator packages.
+type KeywordCapabilitySource interface {
+	IdentifyCapabilities(text string) []string
+}
+
 // Pre-defined core keywords for each category (avoid map creation on every call).
 var coreKeywordsByCategory = map[string][]string{
 	"schedule": {"日程", "安排", "会议", "提醒", "预约", "开会"},
@@ -27,6 +33,7 @@ var (
 // RuleMatcher implements Layer 1 rule-based intent matching.
 // Target: 0ms latency, handle 60%+ of requests.
 type RuleMatcher struct {
+	capabilityMap    KeywordCapabilitySource // Dynamic capability map for keyword loading
 	scheduleKeywords map[string]int
 	memoKeywords     map[string]int
 	amazingKeywords  map[string]int
@@ -34,6 +41,8 @@ type RuleMatcher struct {
 	// User-specific custom weights (optional, for dynamic adjustment)
 	customWeights   map[int32]map[string]map[string]int // userID -> category -> keyword -> weight
 	customWeightsMu sync.RWMutex
+	keywordsMu      sync.RWMutex
+	keywordsLoaded  bool
 }
 
 // NewRuleMatcher creates a new rule matcher with predefined keyword weights.
@@ -75,6 +84,12 @@ func NewRuleMatcher() *RuleMatcher {
 	}
 }
 
+// SetCapabilityMap sets the capability map for dynamic keyword loading.
+// This enables the RuleMatcher to load keywords from configured capabilities instead of hardcoded values.
+func (m *RuleMatcher) SetCapabilityMap(capMap KeywordCapabilitySource) {
+	m.capabilityMap = capMap
+}
+
 // Returns: intent, confidence, matched (true if rule matched).
 func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 	// Fast path: normalize once
@@ -82,9 +97,9 @@ func (m *RuleMatcher) Match(input string) (Intent, float32, bool) {
 
 	// FAST PATH: Time pattern + query pattern → schedule query (e.g., "明天有什么事情要做")
 	// This handles common schedule queries without requiring core keywords like "日程" or "安排"
-	// IMPORTANT: Skip this fast path if input contains "笔记" keyword to avoid routing errors
+	// IMPORTANT: Skip this fast path if input contains memo-related keywords to avoid routing errors
 	// e.g., "查看今天的笔记" should route to memo, not schedule
-	if m.hasTimePattern(input) && queryPatternRegex.MatchString(lower) && !strings.Contains(lower, "笔记") {
+	if m.hasTimePattern(input) && queryPatternRegex.MatchString(lower) && !m.hasMemoKeyword(input) {
 		return IntentScheduleQuery, 0.85, true
 	}
 
@@ -160,7 +175,19 @@ func (m *RuleMatcher) normalizeInput(input string) string {
 
 // hasCoreKeyword checks if input contains a core keyword for the given category.
 // Optimized: uses strings.Contains which is highly optimized in Go.
+// Falls back to hardcoded keywords if capabilityMap is not set.
 func (m *RuleMatcher) hasCoreKeyword(input, category string) bool {
+	// Try dynamic capability map first if available
+	if m.capabilityMap != nil {
+		capabilities := m.capabilityMap.IdentifyCapabilities(input)
+		for _, cap := range capabilities {
+			if m.capabilityMatchesCategory(cap, category) {
+				return true
+			}
+		}
+	}
+
+	// Fall back to hardcoded keywords
 	keywords, ok := coreKeywordsByCategory[category]
 	if !ok {
 		return false
@@ -171,6 +198,43 @@ func (m *RuleMatcher) hasCoreKeyword(input, category string) bool {
 		}
 	}
 	return false
+}
+
+// capabilityMatchesCategory checks if a capability matches the given category.
+// This maps capability names to rule matcher categories.
+func (m *RuleMatcher) capabilityMatchesCategory(capability, category string) bool {
+	capLower := strings.ToLower(capability)
+
+	switch category {
+	case "schedule":
+		return strings.Contains(capLower, "日程") ||
+			strings.Contains(capLower, "schedule") ||
+			strings.Contains(capLower, "会议") ||
+			strings.Contains(capLower, "提醒")
+	case "memo":
+		return strings.Contains(capLower, "笔记") ||
+			strings.Contains(capLower, "memo") ||
+			strings.Contains(capLower, "搜索") ||
+			strings.Contains(capLower, "记录")
+	}
+	return false
+}
+
+// hasMemoKeyword checks if input contains memo-related keywords.
+// This is used to avoid routing memo queries to schedule via fast path.
+func (m *RuleMatcher) hasMemoKeyword(input string) bool {
+	// Try dynamic capability map first if available
+	if m.capabilityMap != nil {
+		capabilities := m.capabilityMap.IdentifyCapabilities(input)
+		for _, cap := range capabilities {
+			if m.capabilityMatchesCategory(cap, "memo") {
+				return true
+			}
+		}
+	}
+
+	// Fall back to hardcoded keywords
+	return strings.Contains(input, "笔记") || strings.Contains(input, "memo")
 }
 
 // calculateScore calculates the weighted score for a keyword set.
