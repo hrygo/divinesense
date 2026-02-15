@@ -15,7 +15,7 @@ func TestPersister_Enqueue(t *testing.T) {
 	p := NewPersister(mockStore, 10, nil)
 
 	stats := &agent.AgentSessionStatsForStorage{
-		SessionID:       "test-session-123",
+		SessionID:       "test-session-123-" + time.Now().Format(time.RFC3339Nano),
 		ConversationID:  1,
 		UserID:          1,
 		AgentType:       "geek",
@@ -30,9 +30,12 @@ func TestPersister_Enqueue(t *testing.T) {
 		t.Fatal("failed to enqueue stats")
 	}
 
-	// Verify queue size
-	if p.QueueSize() != 1 {
-		t.Errorf("expected queue size 1, got %d", p.QueueSize())
+	// Wait for the async processQueue to handle the item
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify queue is empty after processing
+	if p.QueueSize() != 0 {
+		t.Errorf("expected queue size 0 after processing, got %d", p.QueueSize())
 	}
 
 	// Close the persister
