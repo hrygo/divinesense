@@ -186,3 +186,13 @@ type ExpertRegistry interface {
 
 // EventCallback is the callback function for streaming events to the frontend.
 type EventCallback func(eventType string, eventData string)
+
+// HandoffHandlerInterface defines the interface for handling task handoff between experts.
+// This enables dependency injection for better testability.
+type HandoffHandlerInterface interface {
+	// HandleTaskFailure handles task failure and determines if handoff is appropriate.
+	HandleTaskFailure(ctx context.Context, task *Task, err error, callback EventCallback, handOffContext *HandoffContext) *HandoffResult
+
+	// HandleCannotComplete processes a cannot_complete event and determines next action.
+	HandleCannotComplete(ctx context.Context, task *Task, reason CannotCompleteReason, callback EventCallback, handOffContext *HandoffContext) *HandoffResult
+}
