@@ -808,8 +808,7 @@
       "tooltip": "将内容格式化为结构化 Markdown",
       "success": "内容格式化成功",
       "error": "格式化失败",
-      "empty-result": "未返回格式化内容",
-      "prompt": "请将以下内容格式化为结构清晰的 Markdown 文档。要求：\n1. 添加合适的标题层级\n2. 使用列表整理要点\n3. 添加适当的分段\n4. 保留原文的核心意思，不要改变内容\n5. 如果有代码，使用代码块\n6. 直接输出格式化后的内容，不要添加任何解释\n\n原始内容：\n{{content}}"
+      "empty-result": "未返回格式化内容"
     },
     "ai-suggest-tags": "AI 推荐标签",
     "ai-suggest-tags-empty": "暂无推荐标签",

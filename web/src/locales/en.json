@@ -813,8 +813,7 @@
       "tooltip": "Format content to structured Markdown",
       "success": "Content formatted successfully",
       "error": "Failed to format content",
-      "empty-result": "No formatted content returned",
-      "prompt": "Please format the following content into a well-structured Markdown document. Requirements:\n1. Add appropriate heading levels\n2. Use lists to organize key points\n3. Add proper paragraph breaks\n4. Preserve the original meaning without changing the content\n5. Use code blocks for any code\n6. Output only the formatted content without any explanation\n\nOriginal content:\n{{content}}"
+      "empty-result": "No formatted content returned"
     },
     "ai-suggest-tags": "AI Suggest Tags",
     "ai-suggest-tags-empty": "No tags suggested",

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { aiServiceClient } from "@/connect";
 import i18n from "@/i18n";
 import { ParrotAgentType, parrotToProtoAgentType } from "@/types/parrot";
-import type { Block } from "@/types/proto/api/v1/ai_service_pb";
+import { type Block, FormatRequestSchema } from "@/types/proto/api/v1/ai_service_pb";
 import {
   BlockMode,
   BlockStatus,
@@ -989,45 +989,17 @@ export type KnowledgeGraphResult = Awaited<ReturnType<typeof aiServiceClient.get
 
 /**
  * useFormatContent formats user content into structured Markdown using AI.
- * This is a simpler version of useChat that just returns formatted content.
+ * Uses dedicated Format API (no session required).
  */
 export function useFormatContent() {
   return useMutation({
     mutationFn: async (params: { content: string }) => {
-      // Get the format prompt from i18n with content interpolation
-      const formatPrompt = i18n.t("editor.ai-format.prompt", { content: params.content });
-
-      const request = create(ChatRequestSchema, {
-        message: formatPrompt,
-        // history field removed - backend-driven context construction
-        agentType: 0, // Normal mode
-        geekMode: false,
-        evolutionMode: false,
+      const request = create(FormatRequestSchema, {
+        content: params.content,
       });
 
-      try {
-        const stream = aiServiceClient.chat(request);
-        let formattedContent = "";
-
-        for await (const response of stream) {
-          if (response.content) {
-            formattedContent += response.content;
-          }
-          if (response.eventType === "answer") {
-            formattedContent += response.eventData;
-          }
-          if (response.done === true) {
-            break;
-          }
-        }
-
-        return formattedContent.trim();
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error("[useFormatContent] Format failed:", error);
-        }
-        throw error;
-      }
+      const response = await aiServiceClient.format(request);
+      return response.formatted;
     },
   });
 }
