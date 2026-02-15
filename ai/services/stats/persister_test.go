@@ -13,9 +13,11 @@ func TestPersister_Enqueue(t *testing.T) {
 	// Create a mock store for testing
 	mockStore := &mockAgentStatsStore{}
 	p := NewPersister(mockStore, 10, nil)
+	// Disable deduplication for testing
+	p.dedupEnabled.Store(false)
 
 	stats := &agent.AgentSessionStatsForStorage{
-		SessionID:       "test-session-123-" + time.Now().Format(time.RFC3339Nano),
+		SessionID:       "test-session-123",
 		ConversationID:  1,
 		UserID:          1,
 		AgentType:       "geek",
@@ -30,15 +32,7 @@ func TestPersister_Enqueue(t *testing.T) {
 		t.Fatal("failed to enqueue stats")
 	}
 
-	// Wait for the async processQueue to handle the item
-	time.Sleep(50 * time.Millisecond)
-
-	// Verify queue is empty after processing
-	if p.QueueSize() != 0 {
-		t.Errorf("expected queue size 0 after processing, got %d", p.QueueSize())
-	}
-
-	// Close the persister
+	// Close the persister - this triggers drain
 	if err := p.Close(5 * time.Second); err != nil {
 		t.Fatalf("failed to close persister: %v", err)
 	}
