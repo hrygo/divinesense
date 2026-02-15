@@ -52,9 +52,20 @@ func NewOrchestrator(llmService llm.Service, registry ExpertRegistry, opts ...Op
 		opt(config)
 	}
 
+	// Create executor with or without handoff support based on config
+	var executor *Executor
+	if config.EnableHandoff {
+		// Create capability map and handoff handler
+		capabilityMap := NewCapabilityMap()
+		handoffHandler := NewHandoffHandler(capabilityMap, 2)
+		executor = NewExecutorWithHandoff(registry, config, handoffHandler)
+	} else {
+		executor = NewExecutor(registry, config)
+	}
+
 	return &Orchestrator{
 		decomposer: NewDecomposer(llmService, config),
-		executor:   NewExecutor(registry, config),
+		executor:   executor,
 		aggregator: NewAggregator(llmService, config),
 		config:     config,
 	}
@@ -76,6 +87,15 @@ func WithMaxParallelTasks(n int) Option {
 func WithAggregation(enabled bool) Option {
 	return func(c *OrchestratorConfig) {
 		c.EnableAggregation = enabled
+	}
+}
+
+// WithHandoff enables or disables expert handoff.
+// When enabled, if an expert cannot handle a task, the orchestrator will
+// attempt to find an alternative expert that can handle it.
+func WithHandoff(enabled bool) Option {
+	return func(c *OrchestratorConfig) {
+		c.EnableHandoff = enabled
 	}
 }
 

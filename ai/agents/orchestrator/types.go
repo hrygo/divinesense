@@ -150,6 +150,9 @@ type OrchestratorConfig struct {
 	// EnableAggregation determines whether to aggregate multi-agent results
 	EnableAggregation bool `json:"enable_aggregation"`
 
+	// EnableHandoff determines whether to enable expert handoff on capability mismatch
+	EnableHandoff bool `json:"enable_handoff"`
+
 	// DecompositionModel is the model to use for task decomposition
 	DecompositionModel string `json:"decomposition_model"`
 
@@ -162,6 +165,7 @@ func DefaultOrchestratorConfig() *OrchestratorConfig {
 	return &OrchestratorConfig{
 		MaxParallelTasks:   3,
 		EnableAggregation:  true,
+		EnableHandoff:      true, // Enable handoff by default for better expert coordination
 		DecompositionModel: "default",
 		AggregationModel:   "default",
 	}
