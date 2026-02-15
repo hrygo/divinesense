@@ -4,6 +4,7 @@
 - 文件：`snake_case.go`
 - 日志：`log/slog` 结构化
 - 错误：始终检查并处理
+- 注释：允许中文注释（项目面向中文用户）
 
 ## React/TypeScript
 - 组件：`PascalCase.tsx`
