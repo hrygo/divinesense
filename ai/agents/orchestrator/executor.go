@@ -116,52 +116,6 @@ func (e *Executor) ExecutePlan(ctx context.Context, plan *TaskPlan, callback Eve
 	return result
 }
 
-// executeParallel executes tasks in parallel using goroutines.
-func (e *Executor) executeParallel(ctx context.Context, tasks []*Task, callback EventCallback) {
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, e.config.MaxParallelTasks)
-
-	for i, task := range tasks {
-		// Check context before spawning more goroutines
-		select {
-		case <-ctx.Done():
-			// Mark remaining tasks as failed
-			for j := i; j < len(tasks); j++ {
-				tasks[j].Status = TaskStatusFailed
-				tasks[j].Error = ctx.Err().Error()
-			}
-			slog.Warn("executor: parallel execution cancelled", "failed_count", len(tasks)-i)
-			return
-		default:
-		}
-
-		wg.Add(1)
-		go func(idx int, t *Task) {
-			defer wg.Done()
-
-			// Acquire semaphore with context cancellation support
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-				e.executeTask(ctx, t, idx, callback)
-			case <-ctx.Done():
-				t.Status = TaskStatusFailed
-				t.Error = ctx.Err().Error()
-				slog.Warn("executor: task cancelled before execution", "index", idx)
-			}
-		}(i, task)
-	}
-
-	wg.Wait()
-}
-
-// executeSequential executes tasks one after another.
-func (e *Executor) executeSequential(ctx context.Context, tasks []*Task, callback EventCallback) {
-	for i, task := range tasks {
-		e.executeTask(ctx, task, i, callback)
-	}
-}
-
 // executeTask executes a single task.
 func (e *Executor) executeTask(ctx context.Context, task *Task, index int, callback EventCallback) error {
 	return e.executeTaskWithHandoff(ctx, task, index, callback, 0)
