@@ -267,3 +267,43 @@ func IsTransientError(err error) bool {
 	return errors.Is(err, ErrNetworkError) ||
 		errors.Is(err, ErrServiceUnavailable)
 }
+
+// MissingCapability represents an error when an expert lacks the required capability.
+type MissingCapability struct {
+	// Expert is the name of the expert that cannot handle the request.
+	Expert string
+	// MissingCapabilities lists the capabilities that the expert lacks.
+	MissingCapabilities []string
+	// OriginalError is the original error message from the expert.
+	OriginalError error
+	// Suggestion is an optional hint about which expert might help.
+	Suggestion string
+}
+
+// Error returns the error message.
+func (e *MissingCapability) Error() string {
+	if e.OriginalError != nil {
+		return e.OriginalError.Error()
+	}
+	return fmt.Sprintf("expert %s lacks required capabilities: %v", e.Expert, e.MissingCapabilities)
+}
+
+// Unwrap returns the original error for errors.Is/As.
+func (e *MissingCapability) Unwrap() error {
+	return e.OriginalError
+}
+
+// NewMissingCapability creates a new MissingCapability error.
+func NewMissingCapability(expert string, missingCaps []string, originalErr error) *MissingCapability {
+	return &MissingCapability{
+		Expert:              expert,
+		MissingCapabilities: missingCaps,
+		OriginalError:       originalErr,
+	}
+}
+
+// IsMissingCapability checks if an error is a MissingCapability error.
+func IsMissingCapability(err error) bool {
+	var missingCap *MissingCapability
+	return errors.As(err, &missingCap)
+}

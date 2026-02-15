@@ -240,6 +240,20 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 		}
 	}
 
+	// report_inability tool factory
+	// Allows experts to report when they cannot handle a task (Handoff mechanism)
+	factories["report_inability"] = func(userID int32) (agentpkg.ToolWithSchema, error) {
+		tool := tools.NewReportInabilityTool()
+		return agentpkg.ToolFromLegacy(
+			tool.Name(),
+			tool.Description(),
+			func(ctx context.Context, input string) (string, error) {
+				return tool.Run(ctx, input)
+			},
+			tool.InputType,
+		), nil
+	}
+
 	return factories
 }
 

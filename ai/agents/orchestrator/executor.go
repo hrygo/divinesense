@@ -116,8 +116,59 @@ func (e *Executor) ExecutePlan(ctx context.Context, plan *TaskPlan, callback Eve
 	return result
 }
 
-// executeSingleTask executes a single task. Used by DAGScheduler.
-func (e *Executor) executeSingleTask(ctx context.Context, task *Task, callback EventCallback) error {
+// executeParallel executes tasks in parallel using goroutines.
+func (e *Executor) executeParallel(ctx context.Context, tasks []*Task, callback EventCallback) {
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, e.config.MaxParallelTasks)
+
+	for i, task := range tasks {
+		// Check context before spawning more goroutines
+		select {
+		case <-ctx.Done():
+			// Mark remaining tasks as failed
+			for j := i; j < len(tasks); j++ {
+				tasks[j].Status = TaskStatusFailed
+				tasks[j].Error = ctx.Err().Error()
+			}
+			slog.Warn("executor: parallel execution cancelled", "failed_count", len(tasks)-i)
+			return
+		default:
+		}
+
+		wg.Add(1)
+		go func(idx int, t *Task) {
+			defer wg.Done()
+
+			// Acquire semaphore with context cancellation support
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+				e.executeTask(ctx, t, idx, callback)
+			case <-ctx.Done():
+				t.Status = TaskStatusFailed
+				t.Error = ctx.Err().Error()
+				slog.Warn("executor: task cancelled before execution", "index", idx)
+			}
+		}(i, task)
+	}
+
+	wg.Wait()
+}
+
+// executeSequential executes tasks one after another.
+func (e *Executor) executeSequential(ctx context.Context, tasks []*Task, callback EventCallback) {
+	for i, task := range tasks {
+		e.executeTask(ctx, task, i, callback)
+	}
+}
+
+// executeTask executes a single task.
+func (e *Executor) executeTask(ctx context.Context, task *Task, index int, callback EventCallback) error {
+	return e.executeTaskWithHandoff(ctx, task, index, callback, 0)
+}
+
+// executeTaskWithHandoff executes a single task with handoff depth tracking.
+func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index int, callback EventCallback, depth int) error {
 	startTime := time.Now()
 	task.Status = TaskStatusRunning
 
@@ -159,21 +210,23 @@ func (e *Executor) executeSingleTask(ctx context.Context, task *Task, callback E
 
 		// Try handoff if handler is available
 		if e.handoffHandler != nil {
-			handoffResult := e.handoffHandler.HandleTaskFailure(ctx, task, err, callback)
+			// Create handoff context with depth tracking
+			handOffCtx := NewHandoffContextWithDepth(depth, task.ID)
+			handoffResult := e.handoffHandler.HandleTaskFailure(ctx, task, err, callback, handOffCtx)
 			if handoffResult.Success && handoffResult.NewTask != nil {
 				slog.Info("executor: attempting handoff",
 					"task", task.ID,
 					"from", task.Agent,
-					"to", handoffResult.NewExpert)
+					"to", handoffResult.NewExpert,
+					"depth", handoffResult.Depth)
 
 				// Execute with new expert
 				task.Agent = handoffResult.NewExpert
 				task.Input = handoffResult.NewTask.Input
 				task.Status = TaskStatusPending
 
-				// Re-execute the task with new expert
-				e.executeTask(ctx, task, index, callback)
-				return
+				// Re-execute the task with new expert and updated context
+				return e.executeTaskWithHandoff(ctx, task, index, callback, handoffResult.Depth)
 			}
 		}
 
@@ -182,15 +235,6 @@ func (e *Executor) executeSingleTask(ctx context.Context, task *Task, callback E
 			e.sendTaskEndEvent(task, -1, callback)
 		}
 		return err
-	}
-
-	// Success
-	task.Status = TaskStatusCompleted
-	task.Result = resultCollector.getResult()
-	slog.Debug("executor: task completed",
-		"id", task.ID,
-		"agent", task.Agent,
-		"duration_ms", time.Since(startTime).Milliseconds())
 	}
 
 	// Success

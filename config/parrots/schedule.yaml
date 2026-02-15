@@ -19,6 +19,7 @@ tools:
   - schedule_query
   - schedule_update
   - find_free_time
+  - report_inability
 
 # System prompt for guiding LLM behavior
 system_prompt: |

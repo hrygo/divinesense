@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 
@@ -49,22 +50,96 @@ type ChatRouteResult struct {
 	Method             string        `json:"method"`
 	Confidence         float64       `json:"confidence"`
 	NeedsOrchestration bool          `json:"needs_orchestration"`
+	// Handoff indicates whether a handoff occurred during sticky route execution.
+	Handoff bool `json:"handoff"`
+	// HandoffResult contains the result of a handoff operation (if Handoff is true).
+	HandoffResult *HandoffResult `json:"handoff_result,omitempty"`
+	// ExecutionResult contains the result of expert execution (if not handoff).
+	ExecutionResult string `json:"execution_result,omitempty"`
+}
+
+// HandoffResult contains the result of a handoff operation from ChatRouter.
+type HandoffResult struct {
+	// Success indicates whether the handoff was successful.
+	Success bool `json:"success"`
+	// FromExpert is the original expert that could not handle the request.
+	FromExpert string `json:"from_expert"`
+	// ToExpert is the expert that took over (if successful).
+	ToExpert string `json:"to_expert,omitempty"`
+	// Error is the error message if handoff failed.
+	Error string `json:"error,omitempty"`
+	// FallbackMessage is a user-friendly message when handoff fails.
+	FallbackMessage string `json:"fallback_message,omitempty"`
+}
+
+// HandoffTask represents a task for handoff.
+type HandoffTask struct {
+	ID      string
+	Agent   string
+	Input   string
+	Purpose string
+}
+
+// CannotCompleteReason defines reasons why an expert cannot complete a task.
+type CannotCompleteReason struct {
+	MissingCapabilities []string
+	OriginalError       string
+	SuggestedExpert     string
+}
+
+// HandoffHandlerResult contains the result of a handoff operation.
+type HandoffHandlerResult struct {
+	Success         bool
+	NewExpert       string
+	NewTask         *HandoffTask
+	Error           string
+	FallbackMessage string
+}
+
+// HandoffHandlerInterface defines the interface for handling handoff between experts.
+type HandoffHandlerInterface interface {
+	HandleCannotComplete(ctx context.Context, task *HandoffTask, reason CannotCompleteReason) *HandoffHandlerResult
+}
+
+// ExpertRegistryInterface defines the interface for accessing expert agents.
+type ExpertRegistryInterface interface {
+	ExecuteExpert(ctx context.Context, expertName string, input string, callback func(eventType string, eventData string) error) error
 }
 
 // ChatRouter routes user input to the appropriate Parrot agent.
 // It is a thin adapter over routing.Service (three-layer routing).
 type ChatRouter struct {
-	routerService *routerpkg.Service // Three-layer router service (required)
+	routerService  *routerpkg.Service      // Three-layer router service (required)
+	handoffHandler HandoffHandlerInterface // For handoff support
+	expertRegistry ExpertRegistryInterface // For expert execution
 }
 
 // NewChatRouter creates a new chat router.
-// routerSvc is required and provides the three-layer routing (cache → rule → history → LLM).
+// routerSvc is required and provides the three-layer routing (cache -> rule -> history -> LLM).
 func NewChatRouter(routerSvc *routerpkg.Service) *ChatRouter {
 	if routerSvc == nil {
 		panic("routing.Service is required for ChatRouter")
 	}
 	return &ChatRouter{
 		routerService: routerSvc,
+	}
+}
+
+// NewChatRouterWithHandoff creates a new chat router with handoff support.
+// routerSvc is required and provides the three-layer routing.
+// handoffHandler is optional - when provided, enables handoff on MissingCapability errors.
+// expertRegistry is required when handoffHandler is provided.
+func NewChatRouterWithHandoff(routerSvc *routerpkg.Service, handoffHandler HandoffHandlerInterface, expertRegistry ExpertRegistryInterface) *ChatRouter {
+	if routerSvc == nil {
+		panic("routing.Service is required for ChatRouter")
+	}
+	if handoffHandler != nil && expertRegistry == nil {
+		panic("expertRegistry is required when handoffHandler is provided")
+	}
+	return &ChatRouter{
+		routerService:  routerSvc,
+		handoffHandler: handoffHandler,
+		expertRegistry: expertRegistry,
 	}
 }
 
@@ -121,6 +196,148 @@ func (r *ChatRouter) RouteWithContext(ctx context.Context, input string, session
 	}
 
 	return result, nil
+}
+
+// RouteAndExecute determines the appropriate Parrot agent and executes it for sticky routes.
+// This method is used when the user wants to execute the expert directly with handoff support.
+// It handles MissingCapability errors by triggering handoff to another expert.
+func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionCtx *ConversationContext) (*ChatRouteResult, error) {
+	// First, get the route decision
+	routeResult, err := r.RouteWithContext(ctx, input, sessionCtx)
+	if err != nil {
+		return routeResult, err
+	}
+
+	// If no handoff handler or expert registry, just return the route result
+	if r.handoffHandler == nil || r.expertRegistry == nil {
+		return routeResult, nil
+	}
+
+	// If not a sticky route (session_sticky), just return the route result
+	if routeResult.Method != "session_sticky" {
+		return routeResult, nil
+	}
+
+	// Execute the expert for sticky route with handoff support
+	expertName := r.routeTypeToExpertName(routeResult.Route)
+	if expertName == "" {
+		return routeResult, nil
+	}
+
+	slog.Debug("chatrouter: executing sticky route",
+		"expert", expertName,
+		"input", strutil.Truncate(input, 30))
+
+	// Execute the expert
+	resultChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		// Create a callback to collect results
+		var result strings.Builder
+		callback := func(eventType string, eventData string) error {
+			// Collect content events
+			if eventType == "content" || eventType == "text" || eventType == "response" {
+				result.WriteString(eventData)
+			}
+			return nil
+		}
+
+		err := r.expertRegistry.ExecuteExpert(ctx, expertName, input, callback)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- result.String()
+	}()
+
+	// Wait for result or error
+	select {
+	case result := <-resultChan:
+		routeResult.ExecutionResult = result
+		return routeResult, nil
+	case err := <-errChan:
+		// Check for MissingCapability error
+		var missingCap *MissingCapability
+		if errors.As(err, &missingCap) {
+			slog.Info("chatrouter: MissingCapability detected, triggering handoff",
+				"expert", expertName,
+				"missing", missingCap.MissingCapabilities)
+
+			// Create a task for handoff
+			task := &HandoffTask{
+				ID:      "task_" + strings.ReplaceAll(expertName, " ", "_"),
+				Agent:   expertName,
+				Input:   input,
+				Purpose: "user request",
+			}
+
+			// Convert MissingCapability to CannotCompleteReason
+			reason := CannotCompleteReason{
+				MissingCapabilities: missingCap.MissingCapabilities,
+				OriginalError:       err.Error(),
+				SuggestedExpert:     missingCap.Suggestion,
+			}
+
+			// Handle handoff
+			handoffResult := r.handoffHandler.HandleCannotComplete(ctx, task, reason)
+
+			// Convert HandoffHandlerResult to ChatRouter.HandoffResult
+			routeResult.Handoff = true
+			routeResult.HandoffResult = &HandoffResult{
+				Success:         handoffResult.Success,
+				FromExpert:      expertName,
+				ToExpert:        handoffResult.NewExpert,
+				Error:           handoffResult.Error,
+				FallbackMessage: handoffResult.FallbackMessage,
+			}
+
+			// If handoff succeeded, execute with the new expert
+			if handoffResult.Success && handoffResult.NewTask != nil {
+				slog.Info("chatrouter: handoff succeeded, executing with new expert",
+					"from", expertName,
+					"to", handoffResult.NewExpert)
+
+				// Execute with new expert
+				var newResult strings.Builder
+				newCallback := func(eventType string, eventData string) error {
+					if eventType == "content" || eventType == "text" || eventType == "response" {
+						newResult.WriteString(eventData)
+					}
+					return nil
+				}
+
+				newErr := r.expertRegistry.ExecuteExpert(ctx, handoffResult.NewExpert, handoffResult.NewTask.Input, newCallback)
+				if newErr != nil {
+					slog.Error("chatrouter: failed to execute with handoff expert", "error", newErr)
+					routeResult.ExecutionResult = handoffResult.FallbackMessage
+				} else {
+					routeResult.ExecutionResult = newResult.String()
+				}
+			} else {
+				// Handoff failed, use fallback message
+				routeResult.ExecutionResult = handoffResult.FallbackMessage
+			}
+
+			return routeResult, nil
+		}
+
+		// Not a MissingCapability error, just return the error
+		routeResult.ExecutionResult = "执行出错：" + err.Error()
+		return routeResult, nil
+	}
+}
+
+// routeTypeToExpertName converts a ChatRouteType to the expert name.
+func (r *ChatRouter) routeTypeToExpertName(routeType ChatRouteType) string {
+	switch routeType {
+	case RouteTypeMemo:
+		return "memo"
+	case RouteTypeSchedule:
+		return "schedule"
+	default:
+		return ""
+	}
 }
 
 // mapIntentToRouteType converts routing.Intent to ChatRouteType.

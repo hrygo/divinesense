@@ -161,7 +161,7 @@ func (s *DAGScheduler) executeTask(ctx context.Context, taskID string) error {
 	// For now kept nil to satisfy test mock which expects nil?
 	// Executor tests use mock executor? No, Executor struct.
 	// Let's rely on Executor logging/events.
-	err = s.executor.executeSingleTask(ctx, task, nil)
+	err = s.executor.executeTask(ctx, task, 0, nil)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -490,7 +490,7 @@ func (a *Agent) RunWithCallback(ctx context.Context, input string, callback Call
 }
 
 // shouldEarlyStop checks if the agent should stop early based on tool results.
-// Returns true if a schedule was successfully created or updated.
+// Returns true if a schedule was successfully created/updated or inability was reported.
 func shouldEarlyStop(toolResult string) bool {
 	if toolResult == "" {
 		return false
@@ -513,6 +513,12 @@ func shouldEarlyStop(toolResult string) bool {
 		if strings.Contains(toolResult, indicator) || strings.Contains(lowerResult, strings.ToLower(indicator)) {
 			return true
 		}
+	}
+
+	// Check for inability report (for Handoff mechanism)
+	// When an expert reports inability, the agent should stop and let Orchestrator handle handoff
+	if strings.Contains(toolResult, "INABILITY_REPORTED:") {
+		return true
 	}
 
 	return false

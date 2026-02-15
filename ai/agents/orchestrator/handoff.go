@@ -4,8 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
+	"time"
+)
+
+// Handoff configuration constants
+const (
+	// HandoffTimeout defines the maximum time allowed for a handoff operation.
+	HandoffTimeout = 30 * time.Second
+
+	// MaxHandoffDepth defines the maximum depth of nested handoffs.
+	MaxHandoffDepth = 3
 )
 
 // Handoff event types
@@ -16,6 +27,26 @@ const (
 	EventTypeHandoffStart = "handoff_start"
 	// EventTypeHandoffEnd indicates a handoff has completed.
 	EventTypeHandoffEnd = "handoff_end"
+	// EventTypeHandoffFail indicates a handoff has failed.
+	EventTypeHandoffFail = "handoff_fail"
+)
+
+// HandoffFailReason defines reasons why a handoff might fail.
+type HandoffFailReason string
+
+const (
+	// FailNoMatchingExpert indicates no expert found with required capabilities.
+	FailNoMatchingExpert HandoffFailReason = "no_matching_expert"
+	// FailTargetUnavailable indicates the target expert is unavailable.
+	FailTargetUnavailable HandoffFailReason = "target_unavailable"
+	// FailTargetExecution indicates the target expert failed to execute.
+	FailTargetExecution HandoffFailReason = "target_execution"
+	// FailMaxDepthExceeded indicates maximum handoff depth was exceeded.
+	FailMaxDepthExceeded HandoffFailReason = "max_depth_exceeded"
+	// FailTimeout indicates the handoff operation timed out.
+	FailTimeout HandoffFailReason = "timeout"
+	// FailContextLost indicates the context was lost during handoff.
+	FailContextLost HandoffFailReason = "context_lost"
 )
 
 // CannotCompleteReason defines reasons why an expert cannot complete a task.
@@ -38,8 +69,51 @@ type HandoffResult struct {
 	NewTask *Task `json:"new_task,omitempty"`
 	// Error is the error message if handoff failed.
 	Error string `json:"error,omitempty"`
+	// Reason is the failure reason if handoff failed.
+	Reason HandoffFailReason `json:"reason,omitempty"`
+	// FallbackMessage is a user-friendly message when handoff fails.
+	FallbackMessage string `json:"fallback_message,omitempty"`
 	// Attempts records the number of handoff attempts.
 	Attempts int `json:"attempts"`
+	// Depth records the current handoff depth.
+	Depth int `json:"depth"`
+}
+
+// HandoffContext holds the context for a handoff operation.
+type HandoffContext struct {
+	// Depth is the current handoff depth.
+	Depth int
+	// StartTime is when the handoff chain started.
+	StartTime time.Time
+	// ParentTaskID is the ID of the parent task that initiated this handoff.
+	ParentTaskID string
+}
+
+// NewHandoffContext creates a new HandoffContext.
+func NewHandoffContext() *HandoffContext {
+	return &HandoffContext{
+		Depth:     0,
+		StartTime: time.Now(),
+	}
+}
+
+// NewHandoffContextWithDepth creates a new HandoffContext with a given depth.
+func NewHandoffContextWithDepth(depth int, parentTaskID string) *HandoffContext {
+	return &HandoffContext{
+		Depth:        depth,
+		StartTime:    time.Now(),
+		ParentTaskID: parentTaskID,
+	}
+}
+
+// IsMaxDepthExceeded checks if the maximum handoff depth has been exceeded.
+func (c *HandoffContext) IsMaxDepthExceeded() bool {
+	return c.Depth >= MaxHandoffDepth
+}
+
+// IsTimeoutExceeded checks if the handoff operation has exceeded the timeout.
+func (c *HandoffContext) IsTimeoutExceeded() bool {
+	return time.Since(c.StartTime) > HandoffTimeout
 }
 
 // HandoffHandler handles the handoff of tasks between expert agents.
@@ -65,15 +139,51 @@ func (h *HandoffHandler) HandleCannotComplete(
 	task *Task,
 	reason CannotCompleteReason,
 	callback EventCallback,
+	handOffContext *HandoffContext,
 ) *HandoffResult {
 
 	slog.Info("handoff: processing cannot_complete",
 		"task_id", task.ID,
 		"agent", task.Agent,
-		"missing", reason.MissingCapabilities)
+		"missing", reason.MissingCapabilities,
+		"depth", handOffContext.Depth)
 
 	result := &HandoffResult{
 		Attempts: 1,
+		Depth:    handOffContext.Depth,
+	}
+
+	// Check timeout first
+	if handOffContext.IsTimeoutExceeded() {
+		slog.Warn("handoff: timeout exceeded",
+			"task_id", task.ID,
+			"elapsed", time.Since(handOffContext.StartTime))
+		result.Success = false
+		result.Error = "handoff operation timed out"
+		result.Reason = FailTimeout
+		result.FallbackMessage = h.buildFallbackResponse(task, FailTimeout)
+		// Send handoff_fail event
+		if callback != nil {
+			h.sendHandoffFailEvent(task, result, callback)
+		}
+		return result
+	}
+
+	// Check max depth
+	if handOffContext.IsMaxDepthExceeded() {
+		slog.Warn("handoff: max depth exceeded",
+			"task_id", task.ID,
+			"depth", handOffContext.Depth,
+			"max_depth", MaxHandoffDepth)
+		result.Success = false
+		result.Error = fmt.Sprintf("maximum handoff depth (%d) exceeded", MaxHandoffDepth)
+		result.Reason = FailMaxDepthExceeded
+		result.FallbackMessage = h.buildFallbackResponse(task, FailMaxDepthExceeded)
+		// Send handoff_fail event
+		if callback != nil {
+			h.sendHandoffFailEvent(task, result, callback)
+		}
+		return result
 	}
 
 	// Try to find an alternative expert for each missing capability
@@ -103,12 +213,19 @@ func (h *HandoffHandler) HandleCannotComplete(
 		)
 		if err != nil {
 			result.Error = err.Error()
+			result.Reason = FailTargetExecution
+			result.FallbackMessage = h.buildFallbackResponse(task, FailTargetExecution)
+			// Send handoff_fail event
+			if callback != nil {
+				h.sendHandoffFailEvent(task, result, callback)
+			}
 			return result
 		}
 
 		result.Success = true
 		result.NewExpert = selectedExpert.Name
 		result.NewTask = newTask
+		result.Depth = handOffContext.Depth + 1
 
 		slog.Info("handoff: created new task",
 			"original_task", task.ID,
@@ -123,8 +240,68 @@ func (h *HandoffHandler) HandleCannotComplete(
 		return result
 	}
 
+	result.Success = false
 	result.Error = "no suitable expert found for missing capabilities"
+	result.Reason = FailNoMatchingExpert
+	result.FallbackMessage = h.buildFallbackResponse(task, FailNoMatchingExpert)
+	// Send handoff_fail event
+	if callback != nil {
+		h.sendHandoffFailEvent(task, result, callback)
+	}
 	return result
+}
+
+// buildFallbackResponse generates a user-friendly fallback message when handoff fails.
+func (h *HandoffHandler) buildFallbackResponse(task *Task, reason HandoffFailReason) string {
+	var message string
+
+	switch reason {
+	case FailNoMatchingExpert:
+		message = fmt.Sprintf(
+			"抱歉，当前任务需要的能力超出了我可以协调的范围。\n\n任务内容：%s\n\n建议：您可以尝试重新描述任务，或明确指定需要的帮助类型（如「搜索笔记」或「创建日程」）。",
+			truncateString(task.Input, 100),
+		)
+	case FailTargetUnavailable:
+		message = fmt.Sprintf(
+			"抱歉，目标的专家代理暂时不可用。\n\n任务内容：%s\n\n建议：请稍后重试，或尝试修改任务描述。",
+			truncateString(task.Input, 100),
+		)
+	case FailTargetExecution:
+		message = fmt.Sprintf(
+			"抱歉，在将任务转交给合适的专家时遇到问题。\n\n任务内容：%s\n\n建议：请尝试重新描述您的需求。",
+			truncateString(task.Input, 100),
+		)
+	case FailMaxDepthExceeded:
+		message = fmt.Sprintf(
+			"抱歉，您的请求经过多次转接仍未找到合适的处理方式。\n\n任务内容：%s\n\n建议：请尝试将任务拆分成更简单的步骤，或直接说明您需要什么帮助。",
+			truncateString(task.Input, 100),
+		)
+	case FailTimeout:
+		message = fmt.Sprintf(
+			"抱歉，处理您的请求超时了。\n\n任务内容：%s\n\n建议：请尝试简化任务或稍后重试。",
+			truncateString(task.Input, 100),
+		)
+	case FailContextLost:
+		message = fmt.Sprintf(
+			"抱歉，处理您的请求时出现了连接问题。\n\n任务内容：%s\n\n建议：请重新提交您的请求。",
+			truncateString(task.Input, 100),
+		)
+	default:
+		message = fmt.Sprintf(
+			"抱歉，无法完成您的请求。\n\n任务内容：%s\n\n请尝试重新描述您的需求。",
+			truncateString(task.Input, 100),
+		)
+	}
+
+	return message
+}
+
+// truncateString truncates a string to a maximum length.
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // HandleTaskFailure handles task failure and determines if handoff is appropriate.
@@ -133,6 +310,7 @@ func (h *HandoffHandler) HandleTaskFailure(
 	task *Task,
 	err error,
 	callback EventCallback,
+	handOffContext *HandoffContext,
 ) *HandoffResult {
 
 	// Analyze the error to determine if handoff is appropriate
@@ -141,12 +319,14 @@ func (h *HandoffHandler) HandleTaskFailure(
 	// If no clear missing capabilities, return failure
 	if len(reason.MissingCapabilities) == 0 {
 		return &HandoffResult{
-			Success: false,
-			Error:   err.Error(),
+			Success:         false,
+			Error:           err.Error(),
+			FallbackMessage: h.buildFallbackResponse(task, FailTargetExecution),
+			Reason:          FailTargetExecution,
 		}
 	}
 
-	return h.HandleCannotComplete(ctx, task, reason, callback)
+	return h.HandleCannotComplete(ctx, task, reason, callback, handOffContext)
 }
 
 // analyzeFailureReason analyzes an error to determine missing capabilities.
@@ -235,6 +415,23 @@ func (h *HandoffHandler) sendHandoffEndEvent(
 		"error":         result.Error,
 	}
 	h.sendEvent(EventTypeHandoffEnd, event, callback)
+}
+
+// sendHandoffFailEvent sends a handoff_fail event to the frontend when handoff fails.
+func (h *HandoffHandler) sendHandoffFailEvent(
+	originalTask *Task,
+	result *HandoffResult,
+	callback EventCallback,
+) {
+	event := map[string]interface{}{
+		"original_task":    originalTask.ID,
+		"original_agent":   originalTask.Agent,
+		"success":          result.Success,
+		"error":            result.Error,
+		"reason":           string(result.Reason),
+		"fallback_message": result.FallbackMessage,
+	}
+	h.sendEvent(EventTypeHandoffFail, event, callback)
 }
 
 // sendEvent marshals and sends an event via the callback.

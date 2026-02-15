@@ -16,6 +16,7 @@ max_iterations: 10
 # Available tools
 tools:
   - memo_search
+  - report_inability
 
 # System prompt for guiding LLM behavior
 system_prompt: |
