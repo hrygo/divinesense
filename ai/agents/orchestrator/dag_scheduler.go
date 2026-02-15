@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// Task execution timeout - configurable via environment variable or config
+const defaultTaskTimeout = 120 * time.Second
+
 // DAGScheduler handles dependency-based task execution.
 // It implements Kahn's Algorithm for dynamic task dispatching.
 type DAGScheduler struct {
@@ -31,6 +34,9 @@ type DAGScheduler struct {
 
 	// Observability
 	traceID string
+
+	// Timeout
+	taskTimeout time.Duration
 }
 
 func NewDAGScheduler(executor *Executor, tasks []*Task, traceID string, dispatcher *EventDispatcher) (*DAGScheduler, error) {
@@ -44,6 +50,7 @@ func NewDAGScheduler(executor *Executor, tasks []*Task, traceID string, dispatch
 		injector:    NewContextInjector(),
 		traceID:     traceID,
 		dispatcher:  dispatcher,
+		taskTimeout: defaultTaskTimeout,
 	}
 
 	// Initialize state
@@ -72,7 +79,52 @@ func NewDAGScheduler(executor *Executor, tasks []*Task, traceID string, dispatch
 		}
 	}
 
+	// Detect cycles before returning
+	if err := s.detectCycle(); err != nil {
+		return nil, fmt.Errorf("cycle detected in task dependencies: %w", err)
+	}
+
 	return s, nil
+}
+
+// detectCycle uses DFS to detect if there is a cycle in the DAG.
+// Returns an error if a cycle is found, with the first node involved in the cycle.
+func (s *DAGScheduler) detectCycle() error {
+	// Use three-color DFS:
+	// 0 = unvisited, 1 = visiting (in current path), 2 = visited
+	color := make(map[string]int)
+
+	var dfs func(node string) error
+	dfs = func(node string) error {
+		color[node] = 1 // Mark as visiting
+
+		// Visit all downstream nodes
+		for _, downstream := range s.graph[node] {
+			if color[downstream] == 1 {
+				// Found a cycle
+				return fmt.Errorf("cycle at task %s -> %s", node, downstream)
+			}
+			if color[downstream] == 0 {
+				if err := dfs(downstream); err != nil {
+					return err
+				}
+			}
+		}
+
+		color[node] = 2 // Mark as visited
+		return nil
+	}
+
+	// Start DFS from all nodes
+	for node := range s.tasks {
+		if color[node] == 0 {
+			if err := dfs(node); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Run starts the scheduling loop.
@@ -94,8 +146,10 @@ func (s *DAGScheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			wg.Wait() // Wait for all running goroutines to complete
 			return ctx.Err()
 		case err := <-errChan:
+			wg.Wait() // Wait for all running goroutines to complete
 			return err
 		case taskID := <-s.readyQueue:
 			s.mu.Lock()
@@ -187,6 +241,7 @@ func (s *DAGScheduler) Run(ctx context.Context) error {
 				s.mu.Unlock()
 				// No active workers and ready queue is empty (implied by default case)
 				// This means we are stuck -> Cycle detected
+				wg.Wait() // Wait for all running goroutines to complete
 				return fmt.Errorf("cycle detected or deadlock: %d/%d tasks completed", completed, len(s.tasks))
 			}
 			s.mu.Unlock()
@@ -223,10 +278,21 @@ func (s *DAGScheduler) executeTask(ctx context.Context, taskID string) error {
 	// except here we are resolving it. Since only one worker processes this task, it's fine.
 	task.Input = resolvedInput
 
-	// 2. Execute
+	// 2. Execute with timeout
 	// Use the event dispatcher for safe event emission
 	taskIndex := s.taskIndices[taskID]
-	err = s.executor.executeTask(ctx, task, taskIndex, s.dispatcher, s.traceID)
+
+	// Create a context with timeout for task execution
+	taskCtx, cancel := context.WithTimeout(ctx, s.taskTimeout)
+	defer cancel()
+
+	err = s.executor.executeTask(taskCtx, task, taskIndex, s.dispatcher, s.traceID)
+
+	// Check if the task timed out
+	if err == nil && taskCtx.Err() == context.DeadlineExceeded {
+		err = fmt.Errorf("task execution timed out after %v", s.taskTimeout)
+		task.SetError(err.Error())
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
