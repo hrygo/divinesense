@@ -4005,10 +4005,6 @@ components:
             properties:
                 message:
                     type: string
-                history:
-                    type: array
-                    items:
-                        type: string
                 userTimezone:
                     type: string
                 scheduleQueryMode:

@@ -317,7 +317,6 @@ enum AgentType {
 // ChatRequest is the request for Chat.
 message ChatRequest {
   string message = 1 [(google.api.field_behavior) = REQUIRED];
-  repeated string history = 2; // conversation history
   string user_timezone = 3; // User's timezone in IANA format (e.g., "Asia/Shanghai"). Defaults to UTC if not provided.
   ScheduleQueryMode schedule_query_mode = 4; // Schedule query mode (optional, defaults to AUTO)
   AgentType agent_type = 5; // Agent type (optional, defaults to DEFAULT)

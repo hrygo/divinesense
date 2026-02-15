@@ -30,6 +30,7 @@ type ContextRequest struct {
 	RetrievalResults []*RetrievalItem
 	MaxTokens        int
 	UserID           int32
+	HistoryLength    int // Number of conversation turns for dynamic budget adjustment
 }
 
 // RetrievalItem represents a single retrieval result.

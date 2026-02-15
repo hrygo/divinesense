@@ -605,7 +605,6 @@ func (x *SuggestTagsResponse) GetTags() []string {
 type ChatRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Message            string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	History            []string               `protobuf:"bytes,2,rep,name=history,proto3" json:"history,omitempty"`                                                                                     // conversation history
 	UserTimezone       string                 `protobuf:"bytes,3,opt,name=user_timezone,json=userTimezone,proto3" json:"user_timezone,omitempty"`                                                       // User's timezone in IANA format (e.g., "Asia/Shanghai"). Defaults to UTC if not provided.
 	ScheduleQueryMode  ScheduleQueryMode      `protobuf:"varint,4,opt,name=schedule_query_mode,json=scheduleQueryMode,proto3,enum=memos.api.v1.ScheduleQueryMode" json:"schedule_query_mode,omitempty"` // Schedule query mode (optional, defaults to AUTO)
 	AgentType          AgentType              `protobuf:"varint,5,opt,name=agent_type,json=agentType,proto3,enum=memos.api.v1.AgentType" json:"agent_type,omitempty"`                                   // Agent type (optional, defaults to DEFAULT)
@@ -653,13 +652,6 @@ func (x *ChatRequest) GetMessage() string {
 		return x.Message
 	}
 	return ""
-}
-
-func (x *ChatRequest) GetHistory() []string {
-	if x != nil {
-		return x.History
-	}
-	return nil
 }
 
 func (x *ChatRequest) GetUserTimezone() string {
@@ -5964,10 +5956,9 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\acontent\x18\x01 \x01(\tB\x03\xe0A\x02R\acontent\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\")\n" +
 	"\x13SuggestTagsResponse\x12\x12\n" +
-	"\x04tags\x18\x01 \x03(\tR\x04tags\"\xba\x03\n" +
+	"\x04tags\x18\x01 \x03(\tR\x04tags\"\xa0\x03\n" +
 	"\vChatRequest\x12\x1d\n" +
-	"\amessage\x18\x01 \x01(\tB\x03\xe0A\x02R\amessage\x12\x18\n" +
-	"\ahistory\x18\x02 \x03(\tR\ahistory\x12#\n" +
+	"\amessage\x18\x01 \x01(\tB\x03\xe0A\x02R\amessage\x12#\n" +
 	"\ruser_timezone\x18\x03 \x01(\tR\fuserTimezone\x12O\n" +
 	"\x13schedule_query_mode\x18\x04 \x01(\x0e2\x1f.memos.api.v1.ScheduleQueryModeR\x11scheduleQueryMode\x126\n" +
 	"\n" +

@@ -119,8 +119,9 @@ func (s *Service) Build(ctx context.Context, req *ContextRequest) (*ContextResul
 	}
 
 	// Allocate token budget (Issue #93: profile-based allocation)
+	// Issue #211: Phase 3 - Dynamic adjustment based on conversation length
 	hasRetrieval := len(req.RetrievalResults) > 0
-	budget := s.allocator.AllocateForAgent(req.MaxTokens, hasRetrieval, req.AgentType)
+	budget := s.allocator.AllocateForAgentWithHistory(req.MaxTokens, hasRetrieval, req.AgentType, req.HistoryLength)
 
 	// Build context segments
 	var segments []*ContextSegment
@@ -313,6 +314,34 @@ func (s *Service) assembleResult(segments []*ContextSegment, budget *TokenBudget
 	result.UserPreferences = prefs.String()
 
 	return result
+}
+
+// GetHistoryLength returns the number of conversation turns (blocks) for a session.
+// Used for dynamic budget adjustment (Issue #211: Phase 3).
+func (s *Service) GetHistoryLength(ctx context.Context, sessionID string) (int, error) {
+	if s.messageProvider == nil {
+		return 0, nil
+	}
+
+	// Use a large limit to get all messages
+	messages, err := s.shortTerm.Extract(ctx, s.messageProvider, sessionID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Each block contains 2 messages (user + assistant), so divide by 2
+	// If odd number, round up to account for incomplete final block
+	turns := len(messages) / 2
+	if len(messages)%2 > 0 {
+		turns++
+	}
+
+	slog.Debug("GetHistoryLength",
+		"session_id", sessionID,
+		"messages_count", len(messages),
+		"turns", turns)
+
+	return turns, nil
 }
 
 // BuildHistory constructs history in []string format for ParrotAgent.Execute.
