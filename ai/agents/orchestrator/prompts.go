@@ -8,13 +8,12 @@ import (
 	"sync"
 
 	"github.com/hrygo/divinesense/ai/agents/universal"
-	"gopkg.in/yaml.v3"
+	"github.com/hrygo/divinesense/ai/configloader"
 )
 
-// Default config paths relative to project root
+// Config path for unified prompts
 const (
-	decomposerPromptsPath = "config/orchestrator/decomposer.yaml"
-	aggregatorPromptsPath = "config/orchestrator/aggregator.yaml"
+	promptsConfigPath = "config/orchestrator/prompts.yaml"
 )
 
 // PromptConfig holds the orchestrator prompt templates.
@@ -60,79 +59,33 @@ func SetConfigDir(dir string) {
 // LoadPromptConfig loads the prompt configuration from YAML files.
 func LoadPromptConfig() (*PromptConfig, error) {
 	promptConfigOnce.Do(func() {
-		decomposerPath := decomposerPromptsPath
-		aggregatorPath := aggregatorPromptsPath
+		loader := configloader.NewLoader(getBaseDir())
+		var cfg PromptConfig
+		err := loader.Load(promptsConfigPath, &cfg)
+		if err != nil {
+			promptConfigErr = fmt.Errorf("load prompts config: %w", err)
+			return
+		}
 
+		// Override with custom configDir if set
 		if configDir != "" {
-			decomposerPath = filepath.Join(configDir, "decomposer.yaml")
-			aggregatorPath = filepath.Join(configDir, "aggregator.yaml")
+			loader = configloader.NewLoader(configDir)
+			if err := loader.Load("prompts.yaml", &cfg); err != nil {
+				promptConfigErr = fmt.Errorf("load prompts config from custom dir: %w", err)
+				return
+			}
 		}
 
-		decomposer, err := loadDecomposerPrompts(decomposerPath)
-		if err != nil {
-			promptConfigErr = fmt.Errorf("load decomposer prompts: %w", err)
-			return
-		}
-
-		aggregator, err := loadAggregatorPrompts(aggregatorPath)
-		if err != nil {
-			promptConfigErr = fmt.Errorf("load aggregator prompts: %w", err)
-			return
-		}
-
-		promptConfig = &PromptConfig{
-			Decomposer: decomposer,
-			Aggregator: aggregator,
-		}
+		promptConfig = &cfg
 	})
 
 	return promptConfig, promptConfigErr
 }
 
-// loadDecomposerPrompts loads decomposer prompts from YAML file.
-func loadDecomposerPrompts(path string) (DecomposerPrompts, error) {
-	data, err := readFileWithFallback(path)
-	if err != nil {
-		return DecomposerPrompts{}, err
-	}
-
-	var prompts DecomposerPrompts
-	if err := yaml.Unmarshal(data, &prompts); err != nil {
-		return DecomposerPrompts{}, fmt.Errorf("parse YAML: %w", err)
-	}
-
-	return prompts, nil
-}
-
-// loadAggregatorPrompts loads aggregator prompts from YAML file.
-func loadAggregatorPrompts(path string) (AggregatorPrompts, error) {
-	data, err := readFileWithFallback(path)
-	if err != nil {
-		return AggregatorPrompts{}, err
-	}
-
-	var prompts AggregatorPrompts
-	if err := yaml.Unmarshal(data, &prompts); err != nil {
-		return AggregatorPrompts{}, fmt.Errorf("parse YAML: %w", err)
-	}
-
-	return prompts, nil
-}
-
-// readFileWithFallback tries to read file from path, then from executable directory.
-func readFileWithFallback(path string) ([]byte, error) {
-	data, err := os.ReadFile(path)
-	if err == nil {
-		return data, nil
-	}
-
-	// Try relative to executable for production builds
-	execPath, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	absPath := filepath.Join(filepath.Dir(execPath), path)
-	return os.ReadFile(absPath)
+// getBaseDir returns the base directory for config files.
+func getBaseDir() string {
+	execPath, _ := os.Executable()
+	return filepath.Dir(execPath)
 }
 
 // GetPromptConfig returns the global prompt config, loading if necessary.
