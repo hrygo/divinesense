@@ -183,17 +183,9 @@ func (s *AIService) Chat(req *v1pb.ChatRequest, stream v1pb.AIService_ChatServer
 		}
 	}
 
-	// Fallback to frontend-provided history if backend build failed
-	// This maintains backward compatibility during migration
-	if len(history) == 0 && len(req.History) > 0 {
-		slog.Default().Debug("Using frontend-provided history",
-			"conversation_id", chatReq.ConversationID,
-			"history_count", len(req.History),
-		)
-		history = req.History
-	}
-
-	chatReq.History = history
+	// Note: History field removed - backend-driven context construction (context-engineering.md Phase 1)
+	// History is now built by ContextBuilder in handler.go
+	// chatReq.History = history // Removed
 
 	// Create handler and process request
 	handler := s.createChatHandler()

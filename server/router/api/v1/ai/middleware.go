@@ -15,12 +15,12 @@ import (
 )
 
 // ChatRequest represents a chat request.
+// Note: History field removed - backend-driven context construction (context-engineering.md Phase 1)
 type ChatRequest struct {
 	Message            string
 	AgentType          AgentType
 	Timezone           string
 	DeviceContext      string
-	History            []string
 	UserID             int32
 	ConversationID     int32
 	IsTempConversation bool

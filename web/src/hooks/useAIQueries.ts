@@ -237,7 +237,7 @@ export function useChat() {
     ) => {
       const request = create(ChatRequestSchema, {
         message: params.message,
-        history: params.history ?? [],
+        // history field removed - backend-driven context construction (context-engineering.md Phase 1)
         agentType: params.agentType !== undefined ? parrotToProtoAgentType(params.agentType) : undefined,
         userTimezone: params.userTimezone,
         conversationId: params.conversationId,
@@ -999,7 +999,7 @@ export function useFormatContent() {
 
       const request = create(ChatRequestSchema, {
         message: formatPrompt,
-        history: [],
+        // history field removed - backend-driven context construction
         agentType: 0, // Normal mode
         geekMode: false,
         evolutionMode: false,
