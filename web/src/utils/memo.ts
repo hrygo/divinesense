@@ -11,16 +11,6 @@ export function getMemoId(memo: Memo): string {
   return memo.name.split("/").pop() || memo.name;
 }
 
-/**
- * Get edit path for a memo
- *
- * @param memo - Memo object
- * @returns Path string for editing the memo (format: "/m/{id}")
- */
-export function getMemoEditPath(memo: Memo): string {
-  return `/m/${getMemoId(memo)}`;
-}
-
 export const convertVisibilityFromString = (visibility: string) => {
   switch (visibility) {
     case "PUBLIC":

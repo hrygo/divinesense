@@ -105,7 +105,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
   const { profile } = useInstance();
   const { mutateAsync: updateMemo } = useUpdateMemo();
   const { mutateAsync: deleteMemo } = useDeleteMemo();
-  const { data: creator } = useUser(memo.creator);
+  const { data: creator, isLoading: creatorLoading } = useUser(memo.creator);
 
   const isInMemoDetailPage = location.pathname.startsWith(`/${memo.name}`);
   const hasCompletedTaskList = hasCompletedTasks(memo.content);
@@ -516,7 +516,9 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
           >
             {/* Header with close button */}
             <div className="sticky top-0 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b">
-              <span className="text-sm text-muted-foreground">{creator?.displayName || creator?.username || t("common.unknown")}</span>
+              <span className="text-sm text-muted-foreground">
+                {creatorLoading ? "..." : creator?.displayName || creator?.username || t("common.unknown")}
+              </span>
               <button
                 onClick={() => setIsReadingMode(false)}
                 className="p-2 rounded-lg hover:bg-accent transition-colors"
