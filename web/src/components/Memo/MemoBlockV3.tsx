@@ -135,6 +135,42 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
 
+  // Fullscreen API helpers with compatibility check
+  const isFullscreenSupported =
+    typeof document !== "undefined" &&
+    !!(document.fullscreenEnabled || (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (!cardRef.current || !isFullscreenSupported) {
+      // Fallback to modal if fullscreen not supported
+      setIsReadingMode((prev) => !prev);
+      return;
+    }
+
+    try {
+      if (!document.fullscreenElement) {
+        await cardRef.current.requestFullscreen();
+        setIsReadingMode(true);
+      } else {
+        await document.exitFullscreen();
+        setIsReadingMode(false);
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error);
+      // Fallback to modal on error
+      setIsReadingMode((prev) => !prev);
+    }
+  }, [isFullscreenSupported]);
+
+  // Listen for fullscreen changes (e.g., ESC key)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsReadingMode(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   // Refs for swipe detection and click-outside
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -479,7 +515,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
             onShare={handleShare}
             onToggleArchive={handleToggleArchive}
             onDelete={() => setDeleteDialogOpen(true)}
-            onToggleReadingMode={() => setIsReadingMode(!isReadingMode)}
+            onToggleReadingMode={toggleFullscreen}
             isArchived={isArchived}
             quickActions={quickActions}
             quickMenuOpen={quickMenuOpen}
@@ -504,11 +540,11 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
         confirmVariant="destructive"
       />
 
-      {/* Reading Mode Modal */}
-      {isReadingMode && (
+      {/* Reading Mode Modal - fallback when fullscreen not supported */}
+      {isReadingMode && !isFullscreenSupported && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center pt-16 animate-in fade-in duration-200"
-          onClick={() => setIsReadingMode(false)}
+          onClick={toggleFullscreen}
         >
           <div
             className="w-full max-w-3xl mx-4 max-h-[calc(100vh-8rem)] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
@@ -520,7 +556,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
                 {creatorLoading ? "..." : creator?.displayName || creator?.username || t("common.unknown")}
               </span>
               <button
-                onClick={() => setIsReadingMode(false)}
+                onClick={toggleFullscreen}
                 className="p-2 rounded-lg hover:bg-accent transition-colors"
                 aria-label={t("common.exit_fullscreen")}
               >
