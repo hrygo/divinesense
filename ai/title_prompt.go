@@ -138,7 +138,7 @@ AI 回复: {{.AIResponse}}
 		}{
 			MaxTokens:          50,
 			Temperature:        0.1,
-			TimeoutSeconds:     10,
+			TimeoutSeconds:     30,
 			InputTruncateChars: 500,
 			MaxRunes:           50,
 		},

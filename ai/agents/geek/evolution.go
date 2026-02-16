@@ -218,8 +218,33 @@ func (p *EvolutionParrot) Cancel() {
 
 // GetSessionStats returns the session statistics from the last execution.
 // GetSessionStats 返回上次执行的会话统计数据。
-func (p *EvolutionParrot) GetSessionStats() *agentpkg.SessionStats {
-	return p.runner.GetSessionStats()
+// Implements agentpkg.ParrotAgent interface.
+func (p *EvolutionParrot) GetSessionStats() *agentpkg.NormalSessionStats {
+	stats := p.runner.GetSessionStats()
+	if stats == nil {
+		return nil
+	}
+	// Convert runner.SessionStats to agent.NormalSessionStats
+	toolsUsed := make([]string, 0, len(stats.ToolsUsed))
+	for tool := range stats.ToolsUsed {
+		toolsUsed = append(toolsUsed, tool)
+	}
+	return &agentpkg.NormalSessionStats{
+		StartTime:            stats.StartTime,
+		EndTime:              time.Now(),
+		AgentType:            "evolution",
+		ModelUsed:            "",
+		PromptTokens:         int(stats.InputTokens),
+		CompletionTokens:     int(stats.OutputTokens),
+		TotalTokens:          int(stats.InputTokens + stats.OutputTokens),
+		CacheReadTokens:      int(stats.CacheReadTokens),
+		CacheWriteTokens:     int(stats.CacheWriteTokens),
+		ThinkingDurationMs:   stats.ThinkingDurationMs,
+		GenerationDurationMs: stats.GenerationDurationMs,
+		TotalDurationMs:      stats.TotalDurationMs,
+		ToolCallCount:        int(stats.ToolCallCount),
+		ToolsUsed:            toolsUsed,
+	}
 }
 
 // Compile-time interface compliance check.

@@ -332,6 +332,9 @@ type ParrotAgent interface {
 	Execute(ctx context.Context, userInput string, history []string, callback EventCallback) error
 	// SelfDescribe returns the parrot's metacognitive information.
 	SelfDescribe() *ParrotSelfCognition
+	// GetSessionStats returns the session statistics.
+	// Returns nil if stats are not available.
+	GetSessionStats() *NormalSessionStats
 }
 
 // ParrotSelfCognition represents the metacognitive information about a parrot agent.

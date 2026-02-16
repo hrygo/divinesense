@@ -979,26 +979,13 @@ func (h *ParrotHandler) executeAgent(
 	logger.Info("ai.session.summary.preparing",
 		slog.Int64("duration_ms", sessionTotalDuration))
 
-	// Try to get detailed stats from agent if available (GeekParrot/EvolutionParrot)
-	// 尝试从 agent 获取详细统计数据（如果可用，如 GeekParrot/EvolutionParrot）
-	var detailedStats *agentpkg.SessionStats
+	// Get session stats from agent via ParrotAgent interface
+	// All parrot agents now implement GetSessionStats() returning *agentpkg.NormalSessionStats
 	var normalStats *agentpkg.NormalSessionStats
-
-	// Check for SessionStatsProvider (GeekParrot/EvolutionParrot)
-	if statsProvider, ok := agent.(agentpkg.SessionStatsProvider); ok {
-		detailedStats = statsProvider.GetSessionStats()
-		logger.Info("ai.agent.stats.detailed")
-	} else {
-		logger.Info("ai.agent.stats.checking_normal")
-
-		// Check for NormalSessionStatsProvider (UniversalParrot-based agents)
-		// Use type assertion to check if agent has GetSessionStats method returning *NormalSessionStats
-		type normalStatsGetter interface {
-			GetSessionStats() *agentpkg.NormalSessionStats
-		}
-		if normalProvider, ok := agent.(normalStatsGetter); ok && normalProvider != nil {
-			normalStats = normalProvider.GetSessionStats()
-			// For tool-based agents, token stats are always zero - log tool metrics instead
+	if agent != nil {
+		normalStats = agent.GetSessionStats()
+		if normalStats != nil {
+			// For tool-based agents, token stats may be zero - log tool metrics instead
 			if normalStats.PromptTokens == 0 && normalStats.CompletionTokens == 0 {
 				logger.Info("ai.agent.stats.tool_based",
 					slog.Int("tool_calls", normalStats.ToolCallCount),
@@ -1036,38 +1023,15 @@ func (h *ParrotHandler) executeAgent(
 		TotalCostUsd:    totalCostUsd,
 	}
 
-	// Set SessionId from detailedStats (Geek/Evolution modes use real UUID session IDs)
-	// If no detailed stats available, fall back to conversation ID format for backward compatibility
-	if detailedStats != nil && detailedStats.SessionID != "" {
-		blockSummary.SessionId = detailedStats.SessionID
-	} else {
-		blockSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
-	}
+	// Set SessionId - use conversation ID as default
+	// Note: Only Geek/Evolution modes have real UUID session IDs
+	blockSummary.SessionId = fmt.Sprintf("conv_%d", req.ConversationID)
 
 	// NOTE: BlockSummary.Mode has been removed - Block.mode is the single source of truth.
 	// The mode is stored in the Block (currentBlock.mode) and should be read from there.
 
-	// Add detailed stats if available (from GeekParrot/EvolutionParrot or NormalSessionStats)
-	if detailedStats != nil {
-		blockSummary.TotalDurationMs = detailedStats.TotalDurationMs
-		blockSummary.ThinkingDurationMs = detailedStats.ThinkingDurationMs
-		blockSummary.ToolDurationMs = detailedStats.ToolDurationMs
-		blockSummary.GenerationDurationMs = detailedStats.GenerationDurationMs
-		blockSummary.TotalInputTokens = detailedStats.InputTokens
-		blockSummary.TotalOutputTokens = detailedStats.OutputTokens
-		blockSummary.TotalCacheWriteTokens = detailedStats.CacheWriteTokens
-		blockSummary.TotalCacheReadTokens = detailedStats.CacheReadTokens
-		blockSummary.ToolCallCount = detailedStats.ToolCallCount
-		if len(detailedStats.ToolsUsed) > 0 {
-			tools := make([]string, 0, len(detailedStats.ToolsUsed))
-			for tool := range detailedStats.ToolsUsed {
-				tools = append(tools, tool)
-			}
-			blockSummary.ToolsUsed = tools
-		}
-		blockSummary.FilesModified = detailedStats.FilesModified
-		blockSummary.FilePaths = detailedStats.FilePaths
-	} else if normalStats != nil {
+	// Add stats from normalStats (all parrot agents now return NormalSessionStats)
+	if normalStats != nil {
 		// P1-A006: Include NormalSessionStats in BlockSummary for normal mode agents
 		statsSnapshot := normalStats.GetStatsSnapshot()
 		blockSummary.TotalDurationMs = statsSnapshot.TotalDurationMs
