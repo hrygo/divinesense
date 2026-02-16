@@ -385,3 +385,68 @@ func (t *ScheduleUpdateTool) Run(ctx context.Context, inputJSON string) (string,
 
 	return fmt.Sprintf("Updated: %s", updated.Title), nil
 }
+
+// ScheduleDeleteTool deletes an existing schedule.
+type ScheduleDeleteTool struct {
+	service      schedsvc.Service
+	userIDGetter func(ctx context.Context) int32
+}
+
+// NewScheduleDeleteTool creates a new delete tool.
+func NewScheduleDeleteTool(service schedsvc.Service, userIDGetter func(ctx context.Context) int32) *ScheduleDeleteTool {
+	return &ScheduleDeleteTool{service: service, userIDGetter: userIDGetter}
+}
+
+func (t *ScheduleDeleteTool) Name() string { return "schedule_delete" }
+
+func (t *ScheduleDeleteTool) Description() string {
+	return `Delete an existing schedule.
+
+Input: {"id": 123}
+All fields except id are required.`
+}
+
+func (t *ScheduleDeleteTool) InputType() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{"type": "integer", "description": "Schedule ID to delete"},
+		},
+		"required": []string{"id"},
+	}
+}
+
+func (t *ScheduleDeleteTool) Run(ctx context.Context, inputJSON string) (string, error) {
+	raw, err := parseScheduleInput(inputJSON)
+	if err != nil {
+		return "", err
+	}
+
+	// Get schedule ID
+	var scheduleID int32
+	if v, ok := raw["id"]; ok {
+		switch id := v.(type) {
+		case float64:
+			scheduleID = int32(id)
+		case int32:
+			scheduleID = id
+		case int:
+			scheduleID = int32(id)
+		}
+	}
+	if scheduleID == 0 {
+		return "", fmt.Errorf("id is required")
+	}
+
+	userID := t.userIDGetter(ctx)
+	if userID == 0 {
+		return "", fmt.Errorf("unauthorized")
+	}
+
+	err = t.service.DeleteSchedule(ctx, userID, scheduleID)
+	if err != nil {
+		return "", fmt.Errorf("failed to delete: %w", err)
+	}
+
+	return fmt.Sprintf("Deleted schedule ID: %d", scheduleID), nil
+}

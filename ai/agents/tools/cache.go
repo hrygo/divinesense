@@ -103,6 +103,7 @@ func (c *ToolResultCache) SetDefaultTTLs() {
 		// 写操作工具 (Write operations) - 不缓存 (TTL = 0)
 		"schedule_add":    0,
 		"schedule_update": 0,
+		"schedule_delete": 0,
 	}
 }
 

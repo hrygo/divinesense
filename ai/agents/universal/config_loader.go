@@ -99,7 +99,7 @@ func DefaultScheduleParrotConfig() *ParrotConfig {
 		DisplayName: "Schedule Parrot",
 		Emoji:       "📅",
 		Strategy:    StrategyDirect,
-		Tools:       []string{"schedule_add", "schedule_query", "schedule_update", "find_free_time"},
+		Tools:       []string{"schedule_add", "schedule_query", "schedule_update", "schedule_delete", "find_free_time"},
 		SystemPrompt: `You are a helpful assistant for managing schedules and calendars.
 
 You can help users:
@@ -127,7 +127,7 @@ Be concise and helpful in your responses.`,
 			Title:        "Schedule Parrot",
 			Name:         "schedule",
 			Emoji:        "📅",
-			Capabilities: []string{"schedule_add", "schedule_query", "schedule_update", "find_free_time", "Schedule Management", "日程管理"},
+			Capabilities: []string{"schedule_add", "schedule_query", "schedule_update", "schedule_delete", "find_free_time", "Schedule Management", "日程管理"},
 			CapabilityTriggers: map[string][]string{
 				"Schedule Management": {"日程", "安排", "calendar", "schedule", "会议"},
 				"日程管理":                {"日程", "安排", "calendar", "schedule", "会议"},

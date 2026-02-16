@@ -223,6 +223,22 @@ func (f *AgentFactory) buildToolFactories() map[string]universal.ToolFactoryFunc
 			), nil
 		}
 
+		factories["schedule_delete"] = func(userID int32) (agents.ToolWithSchema, error) {
+			userIDGetter := func(ctx context.Context) int32 {
+				return userID
+			}
+			scheduleSvc := schedule.NewService(f.store)
+			tool := scheduletools.NewScheduleDeleteTool(scheduleSvc, userIDGetter)
+			return agents.ToolFromLegacy(
+				tool.Name(),
+				tool.Description(),
+				func(ctx context.Context, input string) (string, error) {
+					return tool.Run(ctx, input)
+				},
+				tool.InputType,
+			), nil
+		}
+
 		factories["find_free_time"] = func(userID int32) (agents.ToolWithSchema, error) {
 			userIDGetter := func(ctx context.Context) int32 {
 				return userID

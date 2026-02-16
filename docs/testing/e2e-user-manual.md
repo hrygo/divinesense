@@ -3,6 +3,7 @@
 > **测试范围**: MemoParrot (灰灰) + ScheduleParrot (时巧)
 > **系统版本**: 基于 2026-02-15 架构
 > **测试级别**: L2 真实 E2E（需要真实数据库和 LLM）
+> **注意**: 本文档基于实际系统实现编写，SQL 示例已验证语法正确性
 
 ---
 
@@ -254,12 +255,11 @@ export CI=  # 确保 CI 未设置
 **前置条件**: 已有待删除的日程
 
 **操作步骤**:
-1. 输入: `删除今天下午三点的项目评审`
-2. 确认删除
+1. 输入: `删除 test_sched_001` 或通过 schedule_query 获取日程 ID 后删除
 
 **预期结果**:
 - 删除指定的日程
-- 返回删除确认
+- 返回删除确认: `Deleted schedule ID: X`
 
 **验证点**:
 - [ ] 指定日程被删除
@@ -458,22 +458,26 @@ export CI=  # 确保 CI 未设置
 
 ### 创建测试笔记
 
+> **注意**: PostgreSQL 中 `EXTRACT(EPOCH FROM NOW())` 返回浮点数，必须转换为 BIGINT
+
 ```sql
--- 在 PostgreSQL 中创建测试笔记
+-- 在 PostgreSQL 中创建测试笔记（使用实际 creator_id = 1）
 INSERT INTO memo (uid, creator_id, content, visibility, row_status, created_ts, updated_ts)
 VALUES
-  ('test_memo_001', 1, 'Go 语言学习笔记：今天学习了 Go 的并发编程，包括 goroutine 和 channel 的使用。', 'PRIVATE', 'N', EXTRACT(EPOCH FROM NOW()), EXTRACT(EPOCH FROM NOW())),
-  ('test_memo_002', 1, 'Python 入门指南：变量、数据类型、条件语句和循环的基础用法。', 'PRIVATE', 'N', EXTRACT(EPOCH FROM NOW()), EXTRACT(EPOCH FROM NOW())),
-  ('test_memo_003', 1, '会议纪要：Q1 规划会议，讨论了产品路线图和技术债务。', 'PRIVATE', 'N', EXTRACT(EPOCH FROM NOW()), EXTRACT(EPOCH FROM NOW()));
+  ('test_memo_001', 1, 'Go 语言学习笔记：今天学习了 Go 的并发编程，包括 goroutine 和 channel 的使用。', 'PRIVATE', 'N', (EXTRACT(EPOCH FROM NOW()))::BIGINT, (EXTRACT(EPOCH FROM NOW()))::BIGINT),
+  ('test_memo_002', 1, 'Python 入门指南：变量、数据类型、条件语句和循环的基础用法。', 'PRIVATE', 'N', (EXTRACT(EPOCH FROM NOW()))::BIGINT, (EXTRACT(EPOCH FROM NOW()))::BIGINT),
+  ('test_memo_003', 1, '会议纪要：Q1 规划会议，讨论了产品路线图和技术债务。', 'PRIVATE', 'N', (EXTRACT(EPOCH FROM NOW()))::BIGINT, (EXTRACT(EPOCH FROM NOW()))::BIGINT);
 ```
 
 ### 创建测试日程
 
+> **注意**: 使用实际存在的 creator_id（通常为 1），时间戳使用 BIGINT
+
 ```sql
--- 创建测试日程
+-- 创建测试日程（时间设置为可配置的相对时间）
 INSERT INTO schedule (uid, creator_id, title, start_ts, end_ts, all_day, timezone, row_status, created_ts, updated_ts)
 VALUES
-  ('test_sched_001', 1, '团队周会', EXTRACT(EPOCH FROM NOW()) + 86400, EXTRACT(EPOCH FROM NOW()) + 86400 + 3600, false, 'Asia/Shanghai', 'N', EXTRACT(EPOCH FROM NOW()), EXTRACT(EPOCH FROM NOW()));
+  ('test_sched_001', 1, '团队周会', (EXTRACT(EPOCH FROM NOW()))::BIGINT + 86400, (EXTRACT(EPOCH FROM NOW()))::BIGINT + 86400 + 3600, false, 'Asia/Shanghai', 'N', (EXTRACT(EPOCH FROM NOW()))::BIGINT, (EXTRACT(EPOCH FROM NOW()))::BIGINT);
 ```
 
 ---
@@ -552,6 +556,40 @@ VALUES
 | 问题 | 严重程度 | 状态 |
 |------|---------|------|
 | 问题描述 | P0/P1/P2/P3 | Open/Resolved |
+```
+
+---
+
+## 附录：工具输入格式参考
+
+### memo_search
+```json
+{"query": "关键词", "limit": 10, "min_score": 0.5}
+```
+
+### schedule_add
+```json
+{"title": "会议标题", "start_time": "2026-02-20T15:00:00+08:00", "end_time": "2026-02-20T16:00:00+08:00", "description": "描述", "location": "地点"}
+```
+
+### schedule_query
+```json
+{"start_time": "2026-02-20T00:00:00+08:00", "end_time": "2026-02-21T00:00:00+08:00"}
+```
+
+### schedule_update
+```json
+{"id": 123, "title": "新标题", "start_time": "2026-02-21T10:00:00+08:00"}
+```
+
+### schedule_delete
+```json
+{"id": 123}
+```
+
+### find_free_time
+```json
+{"date": "2026-02-20"}
 ```
 
 ---

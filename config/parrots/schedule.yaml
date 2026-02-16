@@ -18,6 +18,7 @@ tools:
   - schedule_add
   - schedule_query
   - schedule_update
+  - schedule_delete
   - find_free_time
   - report_inability
 
