@@ -170,3 +170,30 @@ CREATE INDEX idx_schedule_creator_status ON schedule(creator_id, row_status);
 CREATE INDEX idx_schedule_start_ts ON schedule(start_ts);
 CREATE INDEX idx_schedule_uid ON schedule(uid);
 CREATE TRIGGER trigger_schedule_updated_ts AFTER UPDATE ON schedule FOR EACH ROW WHEN NEW.updated_ts <= OLD.updated_ts BEGIN UPDATE schedule SET updated_ts = strftime('%s', 'now') WHERE id = NEW.id; END;
+
+-- =============================================================================
+-- FTS5 Full-Text Search (V0.56.0)
+-- =============================================================================
+-- FTS5 virtual table with unicode61 tokenizer for Chinese text support
+CREATE VIRTUAL TABLE IF NOT EXISTS memo_fts USING fts5(
+    content,
+    content='memo',
+    content_rowid='id',
+    tokenize='unicode61'
+);
+
+-- Trigger for INSERT
+CREATE TRIGGER IF NOT EXISTS memo_fts_insert AFTER INSERT ON memo BEGIN
+    INSERT INTO memo_fts(rowid, content) VALUES (new.id, new.content);
+END;
+
+-- Trigger for DELETE
+CREATE TRIGGER IF NOT EXISTS memo_fts_delete AFTER DELETE ON memo BEGIN
+    INSERT INTO memo_fts(memo_fts, rowid, content) VALUES('delete', old.id, old.content);
+END;
+
+-- Trigger for UPDATE
+CREATE TRIGGER IF NOT EXISTS memo_fts_update AFTER UPDATE ON memo BEGIN
+    INSERT INTO memo_fts(memo_fts, rowid, content) VALUES('delete', old.id, old.content);
+    INSERT INTO memo_fts(rowid, content) VALUES (new.id, new.content);
+END;

@@ -804,7 +804,7 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 
 	// 处理错误
 	if vectorRes.err != nil && bm25Res.err != nil {
-		return nil, fmt.Errorf("both vector and BM25 search failed: vector=%w, bm25=%w", vectorRes.err, bm25Res.err)
+		return nil, fmt.Errorf("both vector and BM25 search failed: vector: %v, bm25: %v", vectorRes.err, bm25Res.err) //nolint:errorlint // Cannot use multiple %w
 	}
 
 	// 如果其中一个失败，使用另一个的结果
