@@ -19,7 +19,7 @@
 
 ## 🔑 Critical Context（必读）
 
-**详细内容**：`@docs/essentials/CRITICAL_CONTEXT.md`
+**详细内容**：`@docs/dev-guides/workflow/critical-context.md`
 
 ### 目录速览
 | 目录      | 说明                                    |
@@ -50,7 +50,7 @@
 
 ## 🧠 Agent 工作范式
 
-**工作协议**：`@docs/dev-guides/AGENT_WORKFLOW.md`
+**工作协议**：`@docs/dev-guides/agent/workflow.md`
 
 ### 思考协议
 ```
@@ -60,13 +60,13 @@
 ```
 
 ### 工具选择
-| 任务           | 工具            |
-| :------------- | :-------------- |
-| 理解代码库结构 | `Task(Explore)` |
-| 实现方案设计   | `Task(Plan)`    |
-| 查找具体文件   | `Glob`          |
-| 搜索代码内容   | `Grep`          |
-| 读取文件       | `Read`          |
+| 任务           | 工具             |
+| :------------- | :--------------- |
+| 理解代码库结构 | `Task(Explore)`  |
+| 实现方案设计   | `Task(Plan)`     |
+| 查找具体文件   | `Glob`           |
+| 搜索代码内容   | `Grep`           |
+| 读取文件       | `Read`           |
 | 编辑文件       | `Edit` / `Write` |
 
 > **文件编辑**：连续 3 次 Edit 失败时，改用 `Read 完整文件 → Write 整体重写`。详见 @.claude/rules/file-editing.md
@@ -75,7 +75,7 @@
 
 ## 🏗️ 架构速览
 
-**架构详情**：`@docs/dev-guides/ARCHITECTURE_SUMMARY.md`
+**架构详情**：`@docs/architecture/summary.md`
 
 ### Orchestrator-Workers 架构
 ```
@@ -99,16 +99,16 @@
 ```
 
 ### 专家代理 (Expert Agents)
-| 代理 | 角色 |
-|:-----|:-----|
-| MemoParrot (灰灰) | 笔记搜索 |
+| 代理                  | 角色     |
+| :-------------------- | :------- |
+| MemoParrot (灰灰)     | 笔记搜索 |
 | ScheduleParrot (时巧) | 日程管理 |
 
 ### 外部执行器 (External Executors)
-| 代理 | 角色 |
-|:-----|:-----|
-| GeekParrot (极客) | Claude Code CLI |
-| EvolutionParrot (进化) | 自我进化 |
+| 代理                   | 角色            |
+| :--------------------- | :-------------- |
+| GeekParrot (极客)      | Claude Code CLI |
+| EvolutionParrot (进化) | 自我进化        |
 
 > **注意**: AmazingParrot 已被 Orchestrator 替代，其职责由 Orchestrator 动态协调 Expert Agents 完成。
 
@@ -135,7 +135,7 @@
 
 ## 🔄 工作流
 
-**工作规范**：`@docs/dev-guides/WORKFLOW.md`
+**工作规范**：`@docs/dev-guides/workflow/general.md`
 
 ### 开发命令
 | 阶段   | 命令                          |
@@ -171,15 +171,15 @@ make check-all → feat/fix 分支 → PR → 合并
 
 ## 📚 文档导航
 
-| 任务       | 文档                                  |
-| :--------- | :------------------------------------ |
-| 理解架构   | `@docs/dev-guides/ARCHITECTURE.md`      |
-| Orchestrator 设计 | `@docs/research/orchestrator-workers-research.md` |
-| 后端开发   | `@docs/dev-guides/BACKEND_DB.md`        |
-| 前端开发   | `@docs/dev-guides/FRONTEND.md`          |
-| 部署       | `@docs/deployment/BINARY_DEPLOYMENT.md` |
-| 调试问题   | `@docs/research/DEBUG_LESSONS.md`       |
-| 数据库迁移 | `@store/migration/postgres/CLAUDE.md`   |
+| 任务              | 文档                                               |
+| :---------------- | :------------------------------------------------- |
+| 理解架构          | `@docs/architecture/overview.md`                   |
+| Orchestrator 设计 | `@docs/research/orchestrator-workers-research.md`  |
+| 后端开发          | `@docs/dev-guides/backend/database.md`             |
+| 前端开发          | `@docs/dev-guides/frontend/overview.md`            |
+| 部署              | `@docs/dev-guides/deployment/BINARY_DEPLOYMENT.md` |
+| 调试问题          | `@docs/research/DEBUG_LESSONS.md`                  |
+| 数据库迁移        | `@store/migration/postgres/CLAUDE.md`              |
 
 ---
 

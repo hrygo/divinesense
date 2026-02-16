@@ -8,14 +8,14 @@
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|:-----|:--------|:--------|
-| Go | >= 1.25 | `brew install go` |
-| Node.js | >= 20 | `fnm install 22` |
-| pnpm | >= 10 | `npm i -g pnpm` |
-| Docker | latest | Docker Desktop |
-| Make | any | built-in (macOS/Linux) |
-| GitHub CLI | latest | `brew install gh` |
+| Tool       | Version | Install                |
+| :--------- | :------ | :--------------------- |
+| Go         | >= 1.25 | `brew install go`      |
+| Node.js    | >= 20   | `fnm install 22`       |
+| pnpm       | >= 10   | `npm i -g pnpm`        |
+| Docker     | latest  | Docker Desktop         |
+| Make       | any     | built-in (macOS/Linux) |
+| GitHub CLI | latest  | `brew install gh`      |
 
 ### Setup
 
@@ -49,12 +49,12 @@ make status     # Check service status
 
 ## Tech Stack
 
-| Layer | Tech |
-|:------|:-----|
-| Backend | Go 1.25, Echo, Connect RPC, pgvector |
-| Frontend | React 18, Vite 7, TypeScript, Tailwind CSS 4 |
-| Database | PostgreSQL 16+ (prod), SQLite (dev) |
-| AI | GLM/DeepSeek (chat), SiliconFlow (embed/rerank) |
+| Layer    | Tech                                            |
+| :------- | :---------------------------------------------- |
+| Backend  | Go 1.25, Echo, Connect RPC, pgvector            |
+| Frontend | React 18, Vite 7, TypeScript, Tailwind CSS 4    |
+| Database | PostgreSQL 16+ (prod), SQLite (dev)             |
+| AI       | GLM/DeepSeek (chat), SiliconFlow (embed/rerank) |
 
 ---
 
@@ -85,12 +85,12 @@ User Input → Orchestrator → Task Decomposition → Expert Agents → Aggrega
          Cache → Rule → History → LLM (~400ms)
 ```
 
-| Component | File | Purpose |
-|:----------|:-----|:--------|
-| Orchestrator | `ai/agents/orchestrator/orchestrator.go` | Main coordinator |
-| Decomposer | `ai/agents/orchestrator/decomposer.go` | DAG task breakdown |
-| Executor | `ai/agents/orchestrator/executor.go` | Parallel execution |
-| Aggregator | `ai/agents/orchestrator/aggregator.go` | Result merging |
+| Component    | File                                     | Purpose            |
+| :----------- | :--------------------------------------- | :----------------- |
+| Orchestrator | `ai/agents/orchestrator/orchestrator.go` | Main coordinator   |
+| Decomposer   | `ai/agents/orchestrator/decomposer.go`   | DAG task breakdown |
+| Executor     | `ai/agents/orchestrator/executor.go`     | Parallel execution |
+| Aggregator   | `ai/agents/orchestrator/aggregator.go`   | Result merging     |
 
 **Expert Agents** (config-driven):
 - MemoParrot (memo search)
@@ -148,24 +148,24 @@ Issue → Branch → Develop → PR → Merge
 
 ### Branch Naming
 
-| Type | Format | Example |
-|:-----|:-------|:--------|
-| Feature | `feat/<id>-desc` | `feat/123-ai-router` |
-| Fix | `fix/<id>-desc` | `fix/456-session-bug` |
+| Type     | Format               | Example                |
+| :------- | :------------------- | :--------------------- |
+| Feature  | `feat/<id>-desc`     | `feat/123-ai-router`   |
+| Fix      | `fix/<id>-desc`      | `fix/456-session-bug`  |
 | Refactor | `refactor/<id>-desc` | `refactor/789-cleanup` |
 
 ### Commit Convention
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-| Type | Example |
-|:-----|:--------|
-| `feat` | `feat(ai): add intent router` |
-| `fix` | `fix(db): resolve race condition` |
-| `refactor` | `refactor(ui): extract hooks` |
-| `docs` | `docs: update README` |
-| `test` | `test(ai): add router tests` |
-| `chore` | `chore(deps): upgrade deps` |
+| Type       | Example                           |
+| :--------- | :-------------------------------- |
+| `feat`     | `feat(ai): add intent router`     |
+| `fix`      | `fix(db): resolve race condition` |
+| `refactor` | `refactor(ui): extract hooks`     |
+| `docs`     | `docs: update README`             |
+| `test`     | `test(ai): add router tests`      |
+| `chore`    | `chore(deps): upgrade deps`       |
 
 ### Create PR
 
@@ -198,27 +198,27 @@ EOF
 
 ## Commands
 
-| Command | Description |
-|:--------|:------------|
-| `make help` | Show all commands |
-| `make deps-all` | Install dependencies |
-| `make docker-up` | Start database |
-| `make start` | Start backend + frontend |
-| `make test` | Run backend tests |
-| `make check-all` | Full check |
-| `make check-i18n` | Verify i18n sync |
+| Command           | Description              |
+| :---------------- | :----------------------- |
+| `make help`       | Show all commands        |
+| `make deps-all`   | Install dependencies     |
+| `make docker-up`  | Start database           |
+| `make start`      | Start backend + frontend |
+| `make test`       | Run backend tests        |
+| `make check-all`  | Full check               |
+| `make check-i18n` | Verify i18n sync         |
 
 ---
 
 ## Resources
 
-| Resource | Path |
-|:---------|:-----|
-| Architecture | `docs/dev-guides/ARCHITECTURE.md` |
-| Backend Guide | `docs/dev-guides/BACKEND_DB.md` |
-| Frontend Guide | `docs/dev-guides/FRONTEND.md` |
-| Deployment | `docs/deployment/BINARY_DEPLOYMENT.md` |
-| Debug Lessons | `docs/research/DEBUG_LESSONS.md` |
+| Resource       | Path                                              |
+| :------------- | :------------------------------------------------ |
+| Architecture   | `docs/architecture/overview.md`                   |
+| Backend Guide  | `docs/dev-guides/backend/database.md`             |
+| Frontend Guide | `docs/dev-guides/frontend/overview.md`            |
+| Deployment     | `docs/dev-guides/deployment/BINARY_DEPLOYMENT.md` |
+| Debug Lessons  | `docs/research/DEBUG_LESSONS.md`                  |
 
 ---
 
