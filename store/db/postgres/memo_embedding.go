@@ -257,25 +257,25 @@ func (d *DB) FindMemosWithoutEmbedding(ctx context.Context, find *store.FindMemo
 }
 
 // BM25Search performs full-text search using PostgreSQL's ts_vector with BM25 ranking.
-// Uses the 'simple' text search configuration for better multilingual support.
+// Uses bilingual text search configuration for better Chinese and English support.
 func (d *DB) BM25Search(ctx context.Context, opts *store.BM25SearchOptions) ([]*store.BM25Result, error) {
 	limit := opts.Limit
 	if limit <= 0 {
 		limit = 10
 	}
 
-	// Use PostgreSQL's full-text search with ts_rank for BM25-like ranking
-	// The 'simple' configuration works well for Chinese and English mixed content
+	// Use PostgreSQL's full-text search with bilingual support
+	// The to_tsvector_chinese/to_tsquery_chinese functions auto-detect Chinese vs English
 	// Note: ts_rank with normalization (32) divides by document length for fairer scoring
 	query := `
 		SELECT
 			m.id, m.uid, m.creator_id, m.created_ts, m.updated_ts, m.row_status,
 			m.visibility, m.pinned, m.content, m.payload,
-			ts_rank(to_tsvector('simple', COALESCE(m.content, '')), plainto_tsquery('simple', ` + placeholder(1) + `), 32) AS score
+			ts_rank(to_tsvector_chinese(m.content), to_tsquery_chinese(` + placeholder(1) + `), 32) AS score
 		FROM memo m
 		WHERE m.creator_id = ` + placeholder(2) + `
-			AND m.row_status = 'NORMAL'
-			AND to_tsvector('simple', COALESCE(m.content, '')) @@ plainto_tsquery('simple', ` + placeholder(3) + `)
+			AND row_status = 'NORMAL'
+			AND to_tsvector_chinese(m.content) @@ to_tsquery_chinese(` + placeholder(3) + `)
 		ORDER BY score DESC, m.updated_ts DESC
 		LIMIT ` + placeholder(4)
 

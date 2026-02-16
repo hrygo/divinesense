@@ -235,9 +235,10 @@ type MemoSummary struct {
 // MemoSearchToolResult represents the structured result of memo search.
 // MemoSearchToolResult 表示笔记搜索的结构化结果。
 type MemoSearchToolResult struct {
-	Query string        `json:"query"`
-	Memos []MemoSummary `json:"memos"`
-	Count int           `json:"count"`
+	Query   string        `json:"query"`
+	Memos   []MemoSummary `json:"memos"`
+	Count   int           `json:"count"`
+	Quality string        `json:"quality,omitempty"` // "high", "medium", "low" - for frontend display decision
 }
 
 // RunWithStructuredResult executes the tool and returns a structured result.
@@ -307,9 +308,18 @@ func (t *MemoSearchTool) RunWithStructuredResult(ctx context.Context, input stri
 		}
 	}
 
+	// Determine quality level based on top score for frontend display decision
+	quality := "high"
+	if len(memos) > 0 && memos[0].Score < 0.70 {
+		quality = "low"
+	} else if len(memos) > 0 && memos[0].Score < 0.90 {
+		quality = "medium"
+	}
+
 	return &MemoSearchToolResult{
-		Query: searchInput.Query,
-		Memos: memos,
-		Count: len(memos),
+		Query:   searchInput.Query,
+		Memos:   memos,
+		Count:   len(memos),
+		Quality: quality,
 	}, nil
 }

@@ -438,6 +438,7 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 	)
 
 	// 根据质量决定是否扩展
+	// Phase 2 P1: 动态候选集扩展
 	if quality == MediumQuality && opts.Limit > 5 {
 		// 扩展到 Top 20 (with same time filter for consistency)
 		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
@@ -450,7 +451,26 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 		if err == nil {
 			// 合并结果
 			results = r.mergeResults(results, r.convertVectorResults(moreResults), opts.Limit)
-			opts.Logger.DebugContext(ctx, "Expanded results",
+			opts.Logger.DebugContext(ctx, "Expanded results for medium quality",
+				"request_id", opts.RequestID,
+				"new_count", len(results),
+			)
+		}
+	}
+
+	// LowQuality: 扩展到更多候选以供 BM25 fallback 和 Rerank 使用
+	if quality == LowQuality && opts.Limit > 0 {
+		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
+		// 扩展到 Top 50 给 LowQuality（更多选择）
+		moreResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
+			UserID:       opts.UserID,
+			Vector:       queryVector,
+			Limit:        50,
+			CreatedAfter: ninetyDaysAgo,
+		})
+		if err == nil {
+			results = r.mergeResults(results, r.convertVectorResults(moreResults), opts.Limit)
+			opts.Logger.DebugContext(ctx, "Expanded results for low quality",
 				"request_id", opts.RequestID,
 				"new_count", len(results),
 			)
@@ -502,6 +522,16 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 				"request_id", opts.RequestID,
 				"merged_count", len(results),
 			)
+		}
+
+		// 当质量为 Low 时，强制启用 Rerank 以提升排序质量
+		// 这是 Phase 1 P0 改进：确保非 High 质量的结果经过 Rerank 重排
+		if quality == LowQuality && r.rerankerService != nil && r.rerankerService.IsEnabled() && len(results) >= 3 {
+			opts.Logger.InfoContext(ctx, "Quality is Low, applying mandatory rerank",
+				"request_id", opts.RequestID,
+				"result_count", len(results),
+			)
+			results = r.applyRerank(ctx, opts, results)
 		}
 	}
 
@@ -561,6 +591,56 @@ func (r *AdaptiveRetriever) hybridWithTimeFilter(ctx context.Context, opts *Retr
 	}
 
 	return results, nil
+}
+
+// applyRerank 对检索结果进行 Rerank 重排序.
+// 返回重排序后的结果，如果失败则返回原始结果.
+func (r *AdaptiveRetriever) applyRerank(ctx context.Context, opts *RetrievalOptions, results []*SearchResult) []*SearchResult {
+	if len(results) < 3 {
+		return results
+	}
+
+	opts.Logger.InfoContext(ctx, "Applying reranker for quality improvement",
+		"request_id", opts.RequestID,
+		"result_count", len(results),
+	)
+
+	// 准备文档
+	documents := make([]string, 0, len(results))
+	for _, result := range results {
+		content := result.Content
+		if len(content) > 5000 {
+			content = content[:5000]
+		}
+		documents = append(documents, content)
+	}
+
+	// 调用 Reranker
+	rerankResults, err := r.rerankerService.Rerank(ctx, opts.Query, documents, opts.Limit)
+	if err != nil {
+		opts.Logger.WarnContext(ctx, "Reranker failed, using original results",
+			"request_id", opts.RequestID,
+			"error", err,
+		)
+		return results
+	}
+
+	// 重新排序
+	reordered := make([]*SearchResult, 0, len(rerankResults))
+	for _, rr := range rerankResults {
+		if rr.Index < len(results) {
+			result := results[rr.Index]
+			result.Score = rr.Score
+			reordered = append(reordered, result)
+		}
+	}
+
+	opts.Logger.InfoContext(ctx, "Reranker completed",
+		"request_id", opts.RequestID,
+		"result_count", len(reordered),
+	)
+
+	return reordered
 }
 
 // hybridStandard 标准混合检索（BM25 + 语义）.
@@ -743,6 +823,35 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 		return r.convertVectorResults(vectorRes.results), nil //nolint:nilerr // Intentional fallback
 	}
 
+	// Phase 2 P1 改进: 动态语义权重
+	// 根据向量检索结果的质量动态调整 semanticWeight
+	// High quality (≥0.90): trust vector more (0.8)
+	// Medium quality (≥0.70): balanced (0.5)
+	// Low quality (<0.70): trust BM25 more (0.3)
+	if len(vectorRes.results) > 0 {
+		topVectorScore := float64(vectorRes.results[0].Score)
+		if topVectorScore >= 0.90 {
+			semanticWeight = 0.8
+			opts.Logger.DebugContext(ctx, "Using high semantic weight (0.8) for high quality vector results",
+				"request_id", opts.RequestID,
+				"top_score", topVectorScore,
+			)
+		} else if topVectorScore >= 0.70 {
+			semanticWeight = 0.5 // balanced
+		} else {
+			semanticWeight = 0.3
+			opts.Logger.DebugContext(ctx, "Using low semantic weight (0.3) for low quality vector results",
+				"request_id", opts.RequestID,
+				"top_score", topVectorScore,
+			)
+		}
+	}
+
+	// Phase 2 P1 改进: 动态候选集扩展
+	// 当质量为 Low 时，扩展候选集以提供更多选择给 Reranker
+	// 当前默认检索 Top 20，低质量时保持但让 Rerank 发挥更大作用
+	// (注：实际扩展发生在 memo_semantic_only 的 fallback 路径)
+
 	// 使用 RRF 融合两个结果列表
 	results := r.rrfFusion(vectorRes.results, bm25Res.results, semanticWeight)
 
@@ -766,16 +875,51 @@ func (r *AdaptiveRetriever) convertVectorResults(results []*store.MemoWithScore)
 
 // convertBM25Results 转换 BM25 检索结果.
 func (r *AdaptiveRetriever) convertBM25Results(results []*store.BM25Result) []*SearchResult {
+	if len(results) == 0 {
+		return nil
+	}
+
+	// Find min and max scores for normalization
+	minScore := results[0].Score
+	maxScore := results[0].Score
+	for _, r := range results {
+		if r.Score < minScore {
+			minScore = r.Score
+		}
+		if r.Score > maxScore {
+			maxScore = r.Score
+		}
+	}
+
+	// Check if normalization is needed (only when scores vary)
+	scoreRange := maxScore - minScore
+	needsNormalization := scoreRange > 0.001 // Avoid division by near-zero
+
 	searchResults := make([]*SearchResult, len(results))
 	for i, r := range results {
+		normalizedScore := r.Score
+		if needsNormalization {
+			// Min-Max normalization to [0, 1]
+			normalizedScore = (r.Score - minScore) / scoreRange
+		}
 		searchResults[i] = &SearchResult{
 			ID:      int64(r.Memo.ID),
 			Type:    "memo",
-			Score:   r.Score,
+			Score:   normalizedScore,
 			Content: r.Memo.Content,
 			Memo:    r.Memo,
 		}
 	}
+
+	// Log normalization info for debugging
+	slog.Debug("BM25 score normalization",
+		"original_min", minScore,
+		"original_max", maxScore,
+		"range", scoreRange,
+		"normalized", needsNormalization,
+		"count", len(results),
+	)
+
 	return searchResults
 }
 
