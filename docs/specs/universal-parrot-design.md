@@ -34,12 +34,12 @@
 
 ### 预期收益
 
-| 指标 | 改进 |
-|:-----|:-----|
-| 代码重复率 | 从 ~70% → <10% |
+| 指标         | 改进                      |
+| :----------- | :------------------------ |
+| 代码重复率   | 从 ~70% → <10%            |
 | 新增鹦鹉成本 | 从 ~500行 → ~50行（配置） |
-| 测试覆盖 | 统一测试框架，覆盖率 >80% |
-| 性能 | 快速通道优化简单 CRUD |
+| 测试覆盖     | 统一测试框架，覆盖率 >80% |
+| 性能         | 快速通道优化简单 CRUD     |
 
 ---
 
@@ -231,17 +231,17 @@ const (
 
 **核心方法**：
 
-| 方法 | 说明 |
-|:-----|:-----|
-| `NewUniversalParrot(config)` | 构造函数，配置初始化 |
-| `ExecuteWithCallback(ctx, input, history, callback)` | 主入口 |
-| `executeReActLoop()` | ReAct 循环执行 |
-| `executeFastPath()` | 快速通道执行 |
-| `executeConcurrent()` | 并发工具执行 |
-| `buildSystemPrompt()` | 构建 Prompt |
-| `parseToolCall()` | 解析工具调用 |
-| `invokeTool()` | 调用工具 |
-| `cacheGet/ cacheSet` | 缓存管理 |
+| 方法                                                 | 说明                 |
+| :--------------------------------------------------- | :------------------- |
+| `NewUniversalParrot(config)`                         | 构造函数，配置初始化 |
+| `ExecuteWithCallback(ctx, input, history, callback)` | 主入口               |
+| `executeReActLoop()`                                 | ReAct 循环执行       |
+| `executeFastPath()`                                  | 快速通道执行         |
+| `executeConcurrent()`                                | 并发工具执行         |
+| `buildSystemPrompt()`                                | 构建 Prompt          |
+| `parseToolCall()`                                    | 解析工具调用         |
+| `invokeTool()`                                       | 调用工具             |
+| `cacheGet/ cacheSet`                                 | 缓存管理             |
 
 ### Phase 2: 工具集注册表
 
@@ -293,7 +293,7 @@ type ToolSetConfig struct {
 ### Phase 3: 三鹦鹉重构
 
 | 文件 | 变更类型 |
-|:-----|::--------|
+| :--- |::--------|
 | `ai/agent/memo_parrot.go` | 重写为 UniversalParrot 配置 |
 | `ai/agent/schedule_parrot_v2.go` | 重写为 UniversalParrot 配置 |
 | `ai/agent/amazing_parrot.go` | 重写为 UniversalParrot 配置 |
@@ -375,11 +375,11 @@ func TestUniversalParrot_ReActLoop(t *testing.T) {
 
 ### Phase 5: 调用方更新
 
-| 文件 | 变更 |
-|:-----|:-----|
+| 文件                      | 变更         |
+| :------------------------ | :----------- |
 | `ai/agent/chat_router.go` | 更新创建逻辑 |
-| `ai/agent/geek_parrot.go` | 如需更新 |
-| 测试文件 | 同步更新 |
+| `ai/agent/geek_parrot.go` | 如需更新     |
+| 测试文件                  | 同步更新     |
 
 ---
 
@@ -651,7 +651,7 @@ func (p *MemoParrot) ExecuteWithCallback(...) { /* 配置化调用 */ }
 ## 8. 风险与缓解
 
 | 风险 | 影响 | 缓解措施 |
-|:-----|::-----|:---------|
+| :--- |::-----|:---------|
 | **性能下降** | 高 | 快速通道优化简单 CRUD；基准测试验证 |
 | **回归 Bug** | 高 | 保留旧测试作为回归验证；灰度发布 |
 | **复杂度转移** | 中 | 工具集注册表简化配置；文档完善 |
@@ -666,7 +666,7 @@ func (p *MemoParrot) ExecuteWithCallback(...) { /* 配置化调用 */ }
 - [ ] 所有单元测试通过
 - [ ] 集成测试通过
 - [ ] 性能无明显下降（±5%）
-- [ ] 文档更新完成（ARCHITECTURE.md, FRONTEND.md）
+- [ ] 文档更新完成（architecture/overview.md, dev-guides/frontend/overview.md）
 - [ ] 代码审查通过
 
 ---
@@ -674,7 +674,7 @@ func (p *MemoParrot) ExecuteWithCallback(...) { /* 配置化调用 */ }
 ## 10. 参考资料
 
 - [Agent 设计模式调研报告 2026](../research/agent-design-patterns-2026.md)
-- [后端与数据库指南](../dev-guides/BACKEND_DB.md)
+- [后端与数据库指南](../dev-guides/backend/database.md)
 - [Issue #125 - 统一三鹦鹉架构重构](https://github.com/hrygo/divinesense/issues/125)
 
 ---

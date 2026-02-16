@@ -204,6 +204,6 @@ go test ./server/service/schedule/... -cover
 
 ## 🔗 相关文档
 
-- [架构文档](ARCHITECTURE.md) - AI 代理系统详情
-- [后端开发指南](BACKEND_DB.md) - 后端开发和数据库策略
-- [前端开发指南](FRONTEND.md) - 前端架构和布局模式
+- [架构文档](../../architecture/overview.md) - AI 代理系统详情
+- [后端开发指南](../backend/database.md) - 后端开发和数据库策略
+- [前端开发指南](../frontend/overview.md) - 前端架构和布局模式

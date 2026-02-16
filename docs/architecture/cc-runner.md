@@ -326,5 +326,5 @@ rm -rf ~/.claude/sessions/{session-id}
 ## 相关文档
 
 - [架构文档 - CC Runner](../archived/specs/20260207_archive/cc_runner_async_arch.md)
-- [部署指南 - Geek Mode](../deployment/BINARY_DEPLOYMENT.md#geek-mode-配置)
-- [ARCHITECTURE.md - CC Runner 章节](ARCHITECTURE.md#cc-runner-异步架构-geek-mode-核心)
+- [部署指南 - Geek Mode](../dev-guides/deployment/BINARY_DEPLOYMENT.md#geek-mode-配置)
+- [系统总览 - CC Runner 章节](overview.md#cc-runner-异步架构-geek-mode-核心)

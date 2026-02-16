@@ -466,14 +466,14 @@ Block #3 成本计算:
 
 ## 模式对比
 
-| 特性      | Normal Mode         | Geek Mode       | Evolution Mode  |
-| :-------- | :------------------ | :-------------- | :-------------- |
-| **Agent** | AUTO → 路由选择     | GeekParrot      | EvolutionParrot |
-| **LLM**   | 可配置提供商        | Claude Code CLI | Claude Code CLI |
-| **用途**  | 日常对话/搜索       | 代码执行        | 系统进化        |
-| **成本**  | 按 Token 计费       | 零 LLM 成本     | 零 LLM 成本     |
-| **产出**  | 对话回复            | 代码产物        | GitHub PR       |
-| **权限**  | 所有用户            | 所有用户        | 仅管理员        |
+| 特性      | Normal Mode     | Geek Mode       | Evolution Mode  |
+| :-------- | :-------------- | :-------------- | :-------------- |
+| **Agent** | AUTO → 路由选择 | GeekParrot      | EvolutionParrot |
+| **LLM**   | 可配置提供商    | Claude Code CLI | Claude Code CLI |
+| **用途**  | 日常对话/搜索   | 代码执行        | 系统进化        |
+| **成本**  | 按 Token 计费   | 零 LLM 成本     | 零 LLM 成本     |
+| **产出**  | 对话回复        | 代码产物        | GitHub PR       |
+| **权限**  | 所有用户        | 所有用户        | 仅管理员        |
 
 ---
 
@@ -482,6 +482,6 @@ Block #3 成本计算:
 | 文档                                                                          | 描述                   |
 | :---------------------------------------------------------------------------- | :--------------------- |
 | [Unified Block Model 规格](../specs/block-design/unified-block-model.md)      | Block 数据模型详细规格 |
-| [架构文档](ARCHITECTURE.md)                                               | 系统整体架构           |
-| [前端开发指南](FRONTEND.md)                                               | 前端组件和布局         |
+| [架构文档](../../architecture/overview.md)                                    | 系统整体架构           |
+| [前端开发指南](overview.md)                                                   | 前端组件和布局         |
 | [LLM Stats Collection](../specs/block-design/P1-A006-llm-stats-collection.md) | Token 统计实现         |

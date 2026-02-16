@@ -94,7 +94,15 @@ docs/
 │   │
 │   ├── testing/                   # 测试指南
 │   │   ├── coverage-plan.md       # 覆盖率计划
-│   │   └── e2e-cases.md           # E2E 测试用例
+│   │    ├── e2e-cases.md          # E2E 测试用例
+│   │    └── fixtures/             # 测试 Fixtures
+│   │
+│   ├── deployment/                # 部署指南
+│   │   └── BINARY_DEPLOYMENT.md
+│   │
+│   ├── user-manuals/              # 用户手册
+│   │   ├── manual.md              # 用户手册
+│   │   └── chat-apps.md           # Chat App 指南
 │   │
 │   └── workflow/                  # 工作流
 │       ├── general.md             # 通用工作流
@@ -105,11 +113,6 @@ docs/
 │   ├── overview.md                # 系统总览
 │   ├── summary.md                 # 架构摘要
 │   └── cc-runner.md               # CC Runner 架构
-│
-├── essentials/           # 核心上下文 (已迁移至 workflow)
-│
-├── deployment/           # 部署指南
-│   └── BINARY_DEPLOYMENT.md
 │
 ├── research/             # 研究文档
 │   └── DEBUG_LESSONS.md

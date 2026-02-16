@@ -389,6 +389,6 @@ go test ./ai/services/stats/ -bench=. -benchmem
 
 ## 相关文档
 
-- [成本管理表](BACKEND_DB.md#user_cost_settings-结构v0930)
-- [会话统计表](BACKEND_DB.md#agent_session_stats-结构v0930)
-- [AI 性能追踪](ARCHITECTURE.md#ai-服务-ai)
+- [成本管理表](backend/database.md#user_cost_settings-结构v0930)
+- [会话统计表](backend/database.md#agent_session_stats-结构v0930)
+- [AI 性能追踪](../architecture/overview.md#ai-服务-ai)

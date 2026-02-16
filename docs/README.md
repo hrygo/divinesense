@@ -20,12 +20,9 @@ docs/
 │   ├── frontend/                # 前端开发
 │   ├── agent/                   # Agent 开发
 │   ├── testing/                 # 测试指南
+│   ├── deployment/              # 部署指南
+│   ├── user-manuals/            # 用户手册 (开发参考)
 │   └── workflow/                # 工作流与工具
-├── user-guides/                 # 用户指南
-│   ├── manual.md                # 用户手册
-│   └── chat-apps.md             # Chat App 指南
-├── deployment/                  # 部署文档
-│   └── BINARY_DEPLOYMENT.md     # 二进制部署指南
 ├── research/                    # 研究文档 (活跃)
 │   ├── README.md                # 研究文档索引
 │   ├── BEST_PRACTICE_CLI_AGENT.md # CLI 最佳实践
@@ -52,12 +49,12 @@ docs/
 
 ## 🚀 快速开始
 
-| 角色         | 入口文档                                                | 说明             |
-| :----------- | :------------------------------------------------------ | :--------------- |
-| **新开发者** | [overview.md](architecture/overview.md)                 | 了解系统架构     |
-| **后端开发** | [database.md](dev-guides/backend/database.md)           | 数据库、API、AI  |
-| **前端开发** | [overview.md](dev-guides/frontend/overview.md)          | 布局、组件、样式 |
-| **运维部署** | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
+| 角色         | 入口文档                                                           | 说明             |
+| :----------- | :----------------------------------------------------------------- | :--------------- |
+| **新开发者** | [overview.md](architecture/overview.md)                            | 了解系统架构     |
+| **后端开发** | [database.md](dev-guides/backend/database.md)                      | 数据库、API、AI  |
+| **前端开发** | [overview.md](dev-guides/frontend/overview.md)                     | 布局、组件、样式 |
+| **运维部署** | [BINARY_DEPLOYMENT.md](dev-guides/deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
 
 ---
 
@@ -69,8 +66,6 @@ docs/
 | :------------------------------- | :----------- | :------- |
 | [`architecture/`](architecture/) | 系统架构     | ✅ 核心   |
 | [`dev-guides/`](dev-guides/)     | 开发指南     | ✅ 维护中 |
-| [`user-guides/`](user-guides/)   | 用户指南     | ✅ 维护中 |
-| [`deployment/`](deployment/)     | 部署文档     | ✅ 维护中 |
 | [`research/`](research/)         | 研究与路线图 | ✅ 维护中 |
 | [`specs/`](specs/)               | 实施规格     | ✅ 维护中 |
 
@@ -82,6 +77,7 @@ docs/
 | [`archived/design/`](archived/design/)                       | 历史设计方案       |
 | [`archived/plans/`](archived/plans/)                         | 历史实施计划       |
 | [`archived/reports/`](archived/reports/)                     | 历史分析报告       |
+| [`archived/operations/`](archived/operations/)               | 历史运维日志       |
 | [`archived/specs/`](archived/specs/)                         | 已完成/过期的规格  |
 
 ---
@@ -117,7 +113,8 @@ docs/
 
 | 类型     | 格式                             | 示例                       |
 | :------- | :------------------------------- | :------------------------- |
-| 开发指南 | `UPPER_CASE.md`                  | `ARCHITECTURE.md`          |
+| 开发指南 | `kebab-case.md`                  | `frontend/overview.md`     |
+| 架构文档 | `kebab-case.md`                  | `architecture/overview.md` |
 | 研究报告 | `{name}-research.md`             | `assistant-research.md`    |
 | 路线图   | `{name}-roadmap.md`              | `memo-roadmap.md`          |
 | 规格     | `P{Phase}-T{Team}{ID}-{name}.md` | `P1-A001-memory-system.md` |

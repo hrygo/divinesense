@@ -1168,7 +1168,7 @@ export function legacyMessageToBlock(
 - [Issue #57: 会话嵌套模型](https://github.com/hrygo/divinesense/issues/57)
 - [CC Runner 异步架构](../../archived/specs/20260207_archive/cc_runner_async_arch.md)
 - [统一 Block 模型调研](../../archived/research/20260207_archive/unified-block-model-research.md)
-- [前端开发指南](../../dev-guides/FRONTEND.md)
+- [前端开发指南](../../dev-guides/frontend/overview.md)
 
 ### B. 变更记录 (Change Log)
 

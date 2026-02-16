@@ -2,7 +2,7 @@
 
 > **创建日期**: 2026-02-06
 > **版本**: v1.0
-> **关联**: [AI Chat Interface Architecture](../../dev-guides/AI_CHAT_INTERFACE.md) | [Unified Block Model](./unified-block-model.md)
+> **关联**: [AI Chat Interface Architecture](../../dev-guides/frontend/ai-chat.md) | [Unified Block Model](./unified-block-model.md)
 
 ---
 
@@ -421,39 +421,39 @@ export function useForkBlock() {
 
 ### 2.1 文档与实现不一致
 
-| # | 文档描述 | 实际实现 | 影响 | 优先级 |
-|:--|:---------|:---------|:-----|:-------|
-| 1 | Mode Switcher 在 HEADER 区域 | Mode Switcher 在 INPUT AREA (ChatInput) | 文档误导 | P3 |
-| 2 | Header 显示 Session Info | 无此组件 | 缺失功能 | P2 |
-| 3 | Header 显示当前 Mode（冗余） | 无此冗余设计 | 设计优化 | P3 |
-| 4 | Block Header 完整实现 | 部分实现（见下表） | 功能缺失 | P1 |
-| 5 | Tool Calls 刷新后消失 | 实际已持久化（convertAIBlocksToMessageBlocks 正确提取） | 已修复 | - |
-| 6 | "Session Summary" | 应为 "Block Summary" | 命名混淆 | P2 |
+| #    | 文档描述                     | 实际实现                                                | 影响     | 优先级 |
+| :--- | :--------------------------- | :------------------------------------------------------ | :------- | :----- |
+| 1    | Mode Switcher 在 HEADER 区域 | Mode Switcher 在 INPUT AREA (ChatInput)                 | 文档误导 | P3     |
+| 2    | Header 显示 Session Info     | 无此组件                                                | 缺失功能 | P2     |
+| 3    | Header 显示当前 Mode（冗余） | 无此冗余设计                                            | 设计优化 | P3     |
+| 4    | Block Header 完整实现        | 部分实现（见下表）                                      | 功能缺失 | P1     |
+| 5    | Tool Calls 刷新后消失        | 实际已持久化（convertAIBlocksToMessageBlocks 正确提取） | 已修复   | -      |
+| 6    | "Session Summary"            | 应为 "Block Summary"                                    | 命名混淆 | P2     |
 
 ### 2.2 Block Header 实现差距
 
-| 元素 | 设计要求 | 当前实现 | 缺失原因 | 优先级 |
-|:-----|:---------|:---------|:---------|:-------|
-| 🌿 Branch Indicator | 显示分支路径（0/1/2） | BranchIndicator 组件存在但未显示完整数据 | 数据未从 Block 读取 | P1 |
-| 🤖 Parrot Routing | AUTO → MemoParrot | 无此显示 | 需要路由决策记录 | P2 |
-| ⏱ Duration | 显示处理时间（2.3s） | 无 | sessionStats 未在 Block Header 显示 | P1 |
-| 💰 Cost | 显示成本（$0.0087） | 仅 Geek/Evolution 模式 | Normal 模式无成本估算 | P1 |
-| 🔄 Regenerate | 重新生成按钮 | 有 | - | - |
-| 📋 Copy | 复制按钮 | 有 | - | - |
-| ✏️ Edit | 编辑用户输入按钮 | **无** | 未实现 | P0 |
-| 🗑️ Delete | 删除 Block 按钮 | 有（仅最新） | - | - |
+| 元素               | 设计要求              | 当前实现                                 | 缺失原因                            | 优先级 |
+| :----------------- | :-------------------- | :--------------------------------------- | :---------------------------------- | :----- |
+| 🌿 Branch Indicator | 显示分支路径（0/1/2） | BranchIndicator 组件存在但未显示完整数据 | 数据未从 Block 读取                 | P1     |
+| 🤖 Parrot Routing   | AUTO → MemoParrot     | 无此显示                                 | 需要路由决策记录                    | P2     |
+| ⏱ Duration         | 显示处理时间（2.3s）  | 无                                       | sessionStats 未在 Block Header 显示 | P1     |
+| 💰 Cost             | 显示成本（$0.0087）   | 仅 Geek/Evolution 模式                   | Normal 模式无成本估算               | P1     |
+| 🔄 Regenerate       | 重新生成按钮          | 有                                       | -                                   | -      |
+| 📋 Copy             | 复制按钮              | 有                                       | -                                   | -      |
+| ✏️ Edit             | 编辑用户输入按钮      | **无**                                   | 未实现                              | P0     |
+| 🗑️ Delete           | 删除 Block 按钮       | 有（仅最新）                             | -                                   | -      |
 
 ### 2.3 数据持久化差距
 
-| 数据 | 后端存储 | 前端读取 | 前端显示 | 状态 |
-|:-----|:---------|:---------|:---------|:-----|
-| user_inputs | ✅ user_inputs JSONB | ✅ Block.userInputs | ✅ UserInputsSection | 完成 |
-| assistant_content | ✅ assistant_content | ✅ Block.assistantContent | ✅ AnswerSection | 完成 |
-| event_stream | ✅ event_stream JSONB | ✅ Block.eventStream | ✅ ToolCallsSection | 完成 |
-| thinking_steps | ✅ event_stream (type: thinking) | ✅ extractThinkingSteps() | ✅ ThinkingSection | 完成 |
-| token_usage | ✅ token_usage JSONB | ✅ Block.tokenUsage | ❌ 未显示 | 缺失 |
-| session_stats | ✅ session_stats JSONB | ✅ Block.sessionStats | ⚠️ 仅 Geek/Evolution | 部分 |
-| cost_estimate | ❌ 无独立字段 | ❌ 无 | ⚠️ 从 sessionStats 计算 | 缺失 |
+| 数据              | 后端存储                        | 前端读取                 | 前端显示               | 状态 |
+| :---------------- | :------------------------------ | :----------------------- | :--------------------- | :--- |
+| user_inputs       | ✅ user_inputs JSONB             | ✅ Block.userInputs       | ✅ UserInputsSection    | 完成 |
+| assistant_content | ✅ assistant_content             | ✅ Block.assistantContent | ✅ AnswerSection        | 完成 |
+| event_stream      | ✅ event_stream JSONB            | ✅ Block.eventStream      | ✅ ToolCallsSection     | 完成 |
+| thinking_steps    | ✅ event_stream (type: thinking) | ✅ extractThinkingSteps() | ✅ ThinkingSection      | 完成 |
+| token_usage       | ✅ token_usage JSONB             | ✅ Block.tokenUsage       | ❌ 未显示               | 缺失 |
+| session_stats     | ✅ session_stats JSONB           | ✅ Block.sessionStats     | ⚠️ 仅 Geek/Evolution    | 部分 |
+| cost_estimate     | ❌ 无独立字段                    | ❌ 无                     | ⚠️ 从 sessionStats 计算 | 缺失 |
 
 ---
 
@@ -676,40 +676,40 @@ export function useForkBlock() {
 
 **职责**：快速识别 Block 内容和状态
 
-| 元素 | 移动端 | 桌面端 | 实现优先级 |
-|:-----|:-------|:-------|:-----------|
-| 用户头像 + 消息预览 | ✅ | ✅ | P0 |
-| 时间戳 | ✅ | ✅ | P0 |
-| 折叠/展开按钮 | ✅ | ✅ | P0 |
-| 状态徽章（thinking/error） | ✅ | ✅ | P0 |
-| 分支指示器（如有分支） | ⚠️ 图标 | ✅ 完整 | P1 |
-| **移除**：Parrot 名称 | - | - | - |
-| **移除**：Session 统计（移到 Body） | - | - | - |
+| 元素                                | 移动端 | 桌面端 | 实现优先级 |
+| :---------------------------------- | :----- | :----- | :--------- |
+| 用户头像 + 消息预览                 | ✅      | ✅      | P0         |
+| 时间戳                              | ✅      | ✅      | P0         |
+| 折叠/展开按钮                       | ✅      | ✅      | P0         |
+| 状态徽章（thinking/error）          | ✅      | ✅      | P0         |
+| 分支指示器（如有分支）              | ⚠️ 图标 | ✅ 完整 | P1         |
+| **移除**：Parrot 名称               | -      | -      | -          |
+| **移除**：Session 统计（移到 Body） | -      | -      | -          |
 
 #### 3.3.2 BlockBody（主体）
 
 **职责**：展示详细内容
 
-| 子组件 | 描述 | 实现状态 | 优先级 |
-|:-------|:-----|:---------|:-------|
-| UserInputsSection | 用户输入（支持多个） | ✅ | P0 |
-| ThinkingSection | 思考过程（可折叠） | ✅ | P0 |
-| ToolCallsSection | 工具调用列表 | ✅ | P0 |
-| AnswerSection | AI 回复内容 | ✅ | P0 |
-| **BlockSummarySection** | Token/Cost/时间统计 | ⚠️ 仅 Geek | P1 |
+| 子组件                  | 描述                 | 实现状态  | 优先级 |
+| :---------------------- | :------------------- | :-------- | :----- |
+| UserInputsSection       | 用户输入（支持多个） | ✅         | P0     |
+| ThinkingSection         | 思考过程（可折叠）   | ✅         | P0     |
+| ToolCallsSection        | 工具调用列表         | ✅         | P0     |
+| AnswerSection           | AI 回复内容          | ✅         | P0     |
+| **BlockSummarySection** | Token/Cost/时间统计  | ⚠️ 仅 Geek | P1     |
 
 #### 3.3.3 BlockFooter（操作栏）
 
 **职责**：提供操作入口
 
-| 操作 | 移动端 | 桌面端 | 实现状态 | 优先级 |
-|:-----|:-------|:-------|:---------|:-------|
-| 折叠/展开 | 文字 | 图标+文字 | ✅ | P0 |
-| 重新生成 | 🔄 图标 | 图标+文字 | ✅ | P0 |
-| 复制 | 📋 图标 | 图标+文字 | ✅ | P0 |
-| **编辑** | ❌ | ❌ | ❌ | **P0** |
-| 删除 | ❌ | ❌ | ⚠️ 仅最新 | P1 |
-| **Fork** | ❌ | ❌ | ❌ | P2 |
+| 操作      | 移动端 | 桌面端    | 实现状态 | 优先级 |
+| :-------- | :----- | :-------- | :------- | :----- |
+| 折叠/展开 | 文字   | 图标+文字 | ✅        | P0     |
+| 重新生成  | 🔄 图标 | 图标+文字 | ✅        | P0     |
+| 复制      | 📋 图标 | 图标+文字 | ✅        | P0     |
+| **编辑**  | ❌      | ❌         | ❌        | **P0** |
+| 删除      | ❌      | ❌         | ⚠️ 仅最新 | P1     |
+| **Fork**  | ❌      | ❌         | ❌        | P2     |
 
 ### 3.4 新增组件设计
 
@@ -1012,7 +1012,7 @@ func (h *Handler) finalizeBlock(ctx context.Context, blockID int64, content stri
 **目标**：修正文档中的 ASCII 图，与实际实现一致
 
 **修改文件**：
-- `docs/dev-guides/AI_CHAT_INTERFACE.md`
+- `docs/dev-guides/frontend/ai-chat.md`
 
 **修改内容**：
 1. Mode Switcher 位置：从 HEADER 移到 INPUT AREA
@@ -1141,28 +1141,28 @@ export function useForkBlock() {
 
 ### 5.1 Phase 1：核心功能修复（1-2 周）
 
-| 任务 | 文件 | 工作量 | 依赖 |
-|:-----|:-----|:-------|:-----|
-| 实现 Block 编辑 | BlockEditDialog.tsx | 2d | ForkBlock API |
-| 修复 Token/Cost 显示 | handler.go, UnifiedMessageBlock.tsx | 2d | 后端统计 |
-| 完善 BlockHeader 信息 | UnifiedMessageBlock.tsx | 1d | - |
-| 更新文档 | AI_CHAT_INTERFACE.md | 1d | - |
+| 任务                  | 文件                                | 工作量 | 依赖          |
+| :-------------------- | :---------------------------------- | :----- | :------------ |
+| 实现 Block 编辑       | BlockEditDialog.tsx                 | 2d     | ForkBlock API |
+| 修复 Token/Cost 显示  | handler.go, UnifiedMessageBlock.tsx | 2d     | 后端统计      |
+| 完善 BlockHeader 信息 | UnifiedMessageBlock.tsx             | 1d     | -             |
+| 更新文档              | AI_CHAT_INTERFACE.md                | 1d     | -             |
 
 ### 5.2 Phase 2：会话级功能（1 周）
 
-| 任务 | 文件 | 工作量 | 依赖 |
-|:-----|:-----|:-------|:-----|
-| 实现 SessionBar | SessionBar.tsx | 2d | - |
-| 聚合会话统计 | AIChat.tsx | 1d | - |
-| 添加折叠功能 | SessionBar.tsx | 1d | - |
+| 任务            | 文件           | 工作量 | 依赖 |
+| :-------------- | :------------- | :----- | :--- |
+| 实现 SessionBar | SessionBar.tsx | 2d     | -    |
+| 聚合会话统计    | AIChat.tsx     | 1d     | -    |
+| 添加折叠功能    | SessionBar.tsx | 1d     | -    |
 
 ### 5.3 Phase 3：分支功能（1-2 周）
 
-| 任务 | 文件 | 工作量 | 依赖 |
-|:-----|:-----|:-------|:-----|
-| 修复 BranchIndicator | BranchIndicator.tsx | 1d | - |
-| 实现分支选择对话框 | BranchSelectorDialog.tsx | 2d | - |
-| 集成分支切换逻辑 | AIChat.tsx | 2d | SwitchBranch API |
+| 任务                 | 文件                     | 工作量 | 依赖             |
+| :------------------- | :----------------------- | :----- | :--------------- |
+| 修复 BranchIndicator | BranchIndicator.tsx      | 1d     | -                |
+| 实现分支选择对话框   | BranchSelectorDialog.tsx | 2d     | -                |
+| 集成分支切换逻辑     | AIChat.tsx               | 2d     | SwitchBranch API |
 
 ---
 
@@ -1591,34 +1591,34 @@ export function useForkBlock() {
 
 ### A. 相关文件清单
 
-| 文件路径 | 用途 | 修改优先级 |
-|:---------|:-----|:-----------|
-| `docs/dev-guides/AI_CHAT_INTERFACE.md` | 界面架构文档 | P2 |
-| `web/src/pages/AIChat.tsx` | AI Chat 主页面 | P1 |
-| `web/src/components/AIChat/UnifiedMessageBlock.tsx` | Block 组件 | P0 |
-| `web/src/components/AIChat/ChatHeader.tsx` | 聊天头部 | P3 |
-| `web/src/components/AIChat/ChatInput.tsx` | 输入区域 | P3 |
-| `web/src/components/AIChat/BlockEditDialog.tsx` | 编辑对话框（新建） | P0 |
-| `web/src/components/AIChat/SessionBar.tsx` | 会话汇总栏（新建） | P1 |
-| `web/src/components/AIChat/BranchSelectorDialog.tsx` | 分支选择器（新建） | P2 |
-| `server/router/api/v1/ai/handler.go` | 聊天处理器 | P0 |
-| `server/router/api/v1/ai/block_manager.go` | Block 管理器 | P0 |
+| 文件路径                                             | 用途               | 修改优先级 |
+| :--------------------------------------------------- | :----------------- | :--------- |
+| `docs/dev-guides/frontend/ai-chat.md`                | 界面架构文档       | P2         |
+| `web/src/pages/AIChat.tsx`                           | AI Chat 主页面     | P1         |
+| `web/src/components/AIChat/UnifiedMessageBlock.tsx`  | Block 组件         | P0         |
+| `web/src/components/AIChat/ChatHeader.tsx`           | 聊天头部           | P3         |
+| `web/src/components/AIChat/ChatInput.tsx`            | 输入区域           | P3         |
+| `web/src/components/AIChat/BlockEditDialog.tsx`      | 编辑对话框（新建） | P0         |
+| `web/src/components/AIChat/SessionBar.tsx`           | 会话汇总栏（新建） | P1         |
+| `web/src/components/AIChat/BranchSelectorDialog.tsx` | 分支选择器（新建） | P2         |
+| `server/router/api/v1/ai/handler.go`                 | 聊天处理器         | P0         |
+| `server/router/api/v1/ai/block_manager.go`           | Block 管理器       | P0         |
 
 ### B. API 依赖清单
 
-| API | 状态 | 说明 |
-|:----|:----|:----|
-| `ListBlocks` | ✅ | 获取会话 Blocks |
-| `GetBlock` | ✅ | 获取单个 Block |
-| `CreateBlock` | ✅ | 创建新 Block |
-| `UpdateBlock` | ✅ | 更新 Block |
-| `DeleteBlock` | ✅ | 删除 Block |
-| `AppendEvent` | ✅ | 追加事件 |
-| `AppendUserInput` | ✅ | 追加用户输入 |
-| `ForkBlock` | ✅ | 创建分支 |
-| `ListBlockBranches` | ✅ | 列出分支 |
-| `SwitchBranch` | ✅ | 切换分支 |
-| `DeleteBranch` | ✅ | 删除分支 |
+| API                 | 状态 | 说明            |
+| :------------------ | :--- | :-------------- |
+| `ListBlocks`        | ✅    | 获取会话 Blocks |
+| `GetBlock`          | ✅    | 获取单个 Block  |
+| `CreateBlock`       | ✅    | 创建新 Block    |
+| `UpdateBlock`       | ✅    | 更新 Block      |
+| `DeleteBlock`       | ✅    | 删除 Block      |
+| `AppendEvent`       | ✅    | 追加事件        |
+| `AppendUserInput`   | ✅    | 追加用户输入    |
+| `ForkBlock`         | ✅    | 创建分支        |
+| `ListBlockBranches` | ✅    | 列出分支        |
+| `SwitchBranch`      | ✅    | 切换分支        |
+| `DeleteBranch`      | ✅    | 删除分支        |
 
 ### C. 测试清单
 

@@ -15,10 +15,10 @@
 
 ### 1.2 当前问题
 
-| 模式 | Session Summary 完整度 | 问题 |
-|:-----|:-----------------------|:-----|
-| **Geek/Evolution** | ✅ 完整 | 通过 CC Runner 获取详细统计 |
-| **Normal** | ❌ 不完整 | 仅显示基础 duration，缺少 token/tool 统计 |
+| 模式               | Session Summary 完整度 | 问题                                      |
+| :----------------- | :--------------------- | :---------------------------------------- |
+| **Geek/Evolution** | ✅ 完整                 | 通过 CC Runner 获取详细统计               |
+| **Normal**         | ❌ 不完整               | 仅显示基础 duration，缺少 token/tool 统计 |
 
 **根本原因**：
 - LLM 调用层已产生 `resp.Usage` 数据（Token 统计），但未返回给 Agent
@@ -101,11 +101,11 @@ type NormalSessionStats struct {
 
 ### 3.1 定价模型
 
-| LLM Provider | Input (¥/1M tokens) | Output (¥/1M tokens) |
-|:-------------|:-------------------|:--------------------|
-| Z.AI GLM | 1.0 | 2.0 |
-| SiliconFlow (Embedding) | 0.1 | - |
-| SiliconFlow (Reranker) | 0.1 | - |
+| LLM Provider            | Input (¥/1M tokens) | Output (¥/1M tokens) |
+| :---------------------- | :------------------ | :------------------- |
+| Z.AI GLM                | 1.0                 | 2.0                  |
+| SiliconFlow (Embedding) | 0.1                 | -                    |
+| SiliconFlow (Reranker)  | 0.1                 | -                    |
 
 ### 3.2 计算公式
 
@@ -133,11 +133,11 @@ func CalculateCost(stats *LLMCallStats, provider string) int64 {
 
 缓存命中可大幅降低成本：
 
-| 轮次 | Prompt Tokens | Cache Hit | 缓存率 | Input Cost |
-|:-----|:--------------|:---------|:-------|:-----------|
-| 第1轮 | 5000 | 0 | 0% | 100% |
-| 第2轮 | 6000 | 5000 | 83% | ~17% |
-| 第3轮 | 8000 | 5760 | 72% | ~28% |
+| 轮次  | Prompt Tokens | Cache Hit | 缓存率 | Input Cost |
+| :---- | :------------ | :-------- | :----- | :--------- |
+| 第1轮 | 5000          | 0         | 0%     | 100%       |
+| 第2轮 | 6000          | 5000      | 83%    | ~17%       |
+| 第3轮 | 8000          | 5760      | 72%    | ~28%       |
 
 ---
 
@@ -185,15 +185,15 @@ CREATE INDEX idx_session_stats_created ON agent_session_stats(created_ts DESC);
 
 ### 4.2 数据映射
 
-| Go 字段 | 数据库字段 | 类型 |
-|:--------|:----------|:-----|
-| `PromptTokens` | `prompt_tokens` | INTEGER |
-| `CompletionTokens` | `completion_tokens` | INTEGER |
-| `CacheReadTokens` | `cache_read_tokens` | INTEGER |
-| `CacheWriteTokens` | `cache_write_tokens` | INTEGER |
-| `TotalCostMilliCents` | `total_cost` | BIGINT |
-| `TotalDurationMs` | `latency_ms` | BIGINT |
-| `ToolCallCount` | `tool_calls` | INTEGER |
+| Go 字段               | 数据库字段           | 类型    |
+| :-------------------- | :------------------- | :------ |
+| `PromptTokens`        | `prompt_tokens`      | INTEGER |
+| `CompletionTokens`    | `completion_tokens`  | INTEGER |
+| `CacheReadTokens`     | `cache_read_tokens`  | INTEGER |
+| `CacheWriteTokens`    | `cache_write_tokens` | INTEGER |
+| `TotalCostMilliCents` | `total_cost`         | BIGINT  |
+| `TotalDurationMs`     | `latency_ms`         | BIGINT  |
+| `ToolCallCount`       | `tool_calls`         | INTEGER |
 
 ---
 
@@ -308,12 +308,12 @@ func (p *BaseParrot) trackLLMCall(stats *ai.LLMCallStats) {
 
 ### 6.3 关键代码路径
 
-| 文件路径 | 职责 | 修改类型 |
-|:---------|:-----|:---------|
-| `ai/llm.go` | 重构接口，返回 `LLMCallStats` | 🔧 重构 |
-| `ai/agent/base_parrot.go` | 实现统计聚合逻辑 | ➕ 新建 |
-| `ai/agent/memo_parrot.go` | 适配新接口 | 🔧 修改 |
-| `ai/agent/schedule_parrot_v2.go` | 适配新接口 | 🔧 修改 |
+| 文件路径                         | 职责                          | 修改类型 |
+| :------------------------------- | :---------------------------- | :------- |
+| `ai/llm.go`                      | 重构接口，返回 `LLMCallStats` | 🔧 重构   |
+| `ai/agent/base_parrot.go`        | 实现统计聚合逻辑              | ➕ 新建   |
+| `ai/agent/memo_parrot.go`        | 适配新接口                    | 🔧 修改   |
+| `ai/agent/schedule_parrot_v2.go` | 适配新接口                    | 🔧 修改   |
 
 ---
 
@@ -321,11 +321,11 @@ func (p *BaseParrot) trackLLMCall(stats *ai.LLMCallStats) {
 
 ### 7.1 阶段划分
 
-| 阶段 | 任务 | 投入 |
-|:-----|:-----|:-----|
-| **Phase 1** | 接口重构 | 1人天 |
+| 阶段        | 任务       | 投入    |
+| :---------- | :--------- | :------ |
+| **Phase 1** | 接口重构   | 1人天   |
 | **Phase 2** | Agent 适配 | 1.5人天 |
-| **Phase 3** | 测试验收 | 0.5人天 |
+| **Phase 3** | 测试验收   | 0.5人天 |
 
 ### 7.2 验收标准
 
@@ -339,11 +339,11 @@ func (p *BaseParrot) trackLLMCall(stats *ai.LLMCallStats) {
 
 ## 8. 相关文档
 
-| 文档 | 描述 |
-|:-----|:-----|
-| [Unified Block Model](./unified-block-model.md) | Block 数据模型 |
-| [架构文档](../../dev-guides/ARCHITECTURE.md) | AI 系统架构 |
-| [DeepSeek 上下文缓存](../../dev-guides/ARCHITECTURE.md#deepseek-上下文缓存) | 缓存优化说明 |
+| 文档                                                                      | 描述           |
+| :------------------------------------------------------------------------ | :------------- |
+| [Unified Block Model](./unified-block-model.md)                           | Block 数据模型 |
+| [架构文档](../../architecture/overview.md)                                | AI 系统架构    |
+| [DeepSeek 上下文缓存](../../architecture/overview.md#deepseek-上下文缓存) | 缓存优化说明   |
 
 ---
 

@@ -18,28 +18,28 @@ Block = 用户输入 + AI 响应 + 完整事件流 + 会话统计
 
 ### 1.2 设计目标
 
-| 目标 | 描述 |
-|:-----|:-----|
-| **统一数据模型** | 消除普通模式和 CC 模式的数据结构差异 |
-| **模式独立持久化** | 每个 Block 记录创建时的 mode，不受全局状态影响 |
-| **追加式输入支持** | 支持在 AI 回复前追加用户输入 |
-| **完整事件流持久化** | 保存 thinking/tool_use/answer 完整事件流 |
-| **CC 会话映射** | 与 Claude Code CLI 会话的确定性映射 |
+| 目标                 | 描述                                           |
+| :------------------- | :--------------------------------------------- |
+| **统一数据模型**     | 消除普通模式和 CC 模式的数据结构差异           |
+| **模式独立持久化**   | 每个 Block 记录创建时的 mode，不受全局状态影响 |
+| **追加式输入支持**   | 支持在 AI 回复前追加用户输入                   |
+| **完整事件流持久化** | 保存 thinking/tool_use/answer 完整事件流       |
+| **CC 会话映射**      | 与 Claude Code CLI 会话的确定性映射            |
 
 ### 1.3 Block 类型
 
-| BlockType | 说明 |
-|:----------|:-----|
-| `MESSAGE` | 用户-AI 对话回合 |
-| `CONTEXT_SEPARATOR` | 上下文分隔标记 |
+| BlockType           | 说明             |
+| :------------------ | :--------------- |
+| `MESSAGE`           | 用户-AI 对话回合 |
+| `CONTEXT_SEPARATOR` | 上下文分隔标记   |
 
 ### 1.4 Block 模式
 
-| BlockMode | 说明 | 主题色 |
-|:----------|:-----|:-------|
-| `NORMAL` | 普通 AI 模式 | 琥珀色 |
-| `GEEK` | 极客模式 (Claude Code CLI) | 石板蓝 |
-| `EVOLUTION` | 进化模式 (自我进化) | 翠绿 |
+| BlockMode   | 说明                       | 主题色 |
+| :---------- | :------------------------- | :----- |
+| `NORMAL`    | 普通 AI 模式               | 琥珀色 |
+| `GEEK`      | 极客模式 (Claude Code CLI) | 石板蓝 |
+| `EVOLUTION` | 进化模式 (自我进化)        | 翠绿   |
 
 ---
 
@@ -321,29 +321,29 @@ export interface AIBlock {
 
 ### 3.1 RPC 方法
 
-| RPC 方法 | 说明 |
-|:---------|:-----|
-| `ListBlocks` | 列出会话的所有 Blocks |
-| `GetBlock` | 获取单个 Block 详情 |
-| `CreateBlock` | 创建新 Block |
-| `UpdateBlock` | 更新 Block |
-| `DeleteBlock` | 删除 Block |
-| `AppendUserInput` | 追加用户输入 |
-| `AppendEvent` | 追加事件 |
-| `ForkBlock` | 分支 Block (Phase 3) |
+| RPC 方法          | 说明                  |
+| :---------------- | :-------------------- |
+| `ListBlocks`      | 列出会话的所有 Blocks |
+| `GetBlock`        | 获取单个 Block 详情   |
+| `CreateBlock`     | 创建新 Block          |
+| `UpdateBlock`     | 更新 Block            |
+| `DeleteBlock`     | 删除 Block            |
+| `AppendUserInput` | 追加用户输入          |
+| `AppendEvent`     | 追加事件              |
+| `ForkBlock`       | 分支 Block (Phase 3)  |
 
 ### 3.2 HTTP 端点
 
-| 操作 | 方法 | 路径 |
-|:-----|:-----|:-----|
-| 列出 Blocks | GET | `/api/v1/ai/conversations/{id}/blocks` |
-| 获取 Block | GET | `/api/v1/ai/blocks/{id}` |
-| 创建 Block | POST | `/api/v1/ai/conversations/{id}/blocks` |
-| 更新 Block | PATCH | `/api/v1/ai/blocks/{id}` |
-| 删除 Block | DELETE | `/api/v1/ai/blocks/{id}` |
-| 追加输入 | POST | `/api/v1/ai/blocks/{id}/inputs` |
-| 追加事件 | POST | `/api/v1/ai/blocks/{id}/events` |
-| 分支 Block | POST | `/api/v1/ai/blocks/{id}/fork` |
+| 操作        | 方法   | 路径                                   |
+| :---------- | :----- | :------------------------------------- |
+| 列出 Blocks | GET    | `/api/v1/ai/conversations/{id}/blocks` |
+| 获取 Block  | GET    | `/api/v1/ai/blocks/{id}`               |
+| 创建 Block  | POST   | `/api/v1/ai/conversations/{id}/blocks` |
+| 更新 Block  | PATCH  | `/api/v1/ai/blocks/{id}`               |
+| 删除 Block  | DELETE | `/api/v1/ai/blocks/{id}`               |
+| 追加输入    | POST   | `/api/v1/ai/blocks/{id}/inputs`        |
+| 追加事件    | POST   | `/api/v1/ai/blocks/{id}/events`        |
+| 分支 Block  | POST   | `/api/v1/ai/blocks/{id}/fork`          |
 
 ### 3.3 请求/响应示例
 
@@ -399,28 +399,28 @@ POST /api/v1/ai/blocks/456/events
 
 ### 4.1 后端实现
 
-| 文件 | 职责 |
-|:-----|:-----|
-| `store/block.go` | BlockStore 接口定义 |
-| `store/db/postgres/block.go` | PostgreSQL 实现 |
-| `server/service/block/block_service.go` | 业务逻辑层 |
-| `server/router/api/v1/ai/handler.go` | Chat Handler 集成 |
+| 文件                                    | 职责                |
+| :-------------------------------------- | :------------------ |
+| `store/block.go`                        | BlockStore 接口定义 |
+| `store/db/postgres/block.go`            | PostgreSQL 实现     |
+| `server/service/block/block_service.go` | 业务逻辑层          |
+| `server/router/api/v1/ai/handler.go`    | Chat Handler 集成   |
 
 ### 4.2 前端实现
 
-| 文件 | 职责 |
-|:-----|:-----|
-| `web/src/types/block.ts` | 类型定义 |
-| `web/src/hooks/useBlockQueries.ts` | React Query 集成 |
-| `web/src/components/AIChat/UnifiedMessageBlock.tsx` | Block 渲染组件 |
-| `web/src/contexts/AIChatContext.tsx` | 状态管理 |
+| 文件                                                | 职责             |
+| :-------------------------------------------------- | :--------------- |
+| `web/src/types/block.ts`                            | 类型定义         |
+| `web/src/hooks/useBlockQueries.ts`                  | React Query 集成 |
+| `web/src/components/AIChat/UnifiedMessageBlock.tsx` | Block 渲染组件   |
+| `web/src/contexts/AIChatContext.tsx`                | 状态管理         |
 
 ### 4.3 迁移文件
 
-| 文件 | 说明 |
-|:-----|:-----|
-| `store/migration/postgres/V0.60.x_create_ai_block.up.sql` | 表创建 |
-| `store/migration/postgres/schema/LATEST.sql` | 完整 Schema |
+| 文件                                                      | 说明        |
+| :-------------------------------------------------------- | :---------- |
+| `store/migration/postgres/V0.60.x_create_ai_block.up.sql` | 表创建      |
+| `store/migration/postgres/schema/LATEST.sql`              | 完整 Schema |
 
 ---
 
@@ -433,12 +433,12 @@ pending ──▶ streaming ──▶ completed
     └──▶ error
 ```
 
-| 状态 | 说明 | 触发条件 |
-|:-----|:-----|:---------|
-| `pending` | 等待 AI 响应 | Block 创建时 |
-| `streaming` | AI 正在响应 | 首个事件到达 |
-| `completed` | 响应完成 | AI 结束或用户停止 |
-| `error` | 发生错误 | 异常或超时 |
+| 状态        | 说明         | 触发条件          |
+| :---------- | :----------- | :---------------- |
+| `pending`   | 等待 AI 响应 | Block 创建时      |
+| `streaming` | AI 正在响应  | 首个事件到达      |
+| `completed` | 响应完成     | AI 结束或用户停止 |
+| `error`     | 发生错误     | 异常或超时        |
 
 ---
 
@@ -469,12 +469,12 @@ model_version TEXT,     -- LLM 版本
 
 ## 7. 相关文档
 
-| 文档 | 描述 |
-|:-----|:-----|
-| [Block Design Index](./block-design/INDEX.md) | Block 设计规格索引 |
-| [LLM 统计收集](./block-design/P1-A006-llm-stats-collection.md) | Token 统计规格 |
-| [树状分支](./block-design/tree-conversation-branching.md) | 分支功能设计 |
-| [架构文档](../dev-guides/ARCHITECTURE.md) | 完整系统架构 |
+| 文档                                                           | 描述               |
+| :------------------------------------------------------------- | :----------------- |
+| [Block Design Index](./block-design/INDEX.md)                  | Block 设计规格索引 |
+| [LLM 统计收集](./block-design/P1-A006-llm-stats-collection.md) | Token 统计规格     |
+| [树状分支](./block-design/tree-conversation-branching.md)      | 分支功能设计       |
+| [架构文档](../architecture/overview.md)                        | 完整系统架构       |
 
 ---
 

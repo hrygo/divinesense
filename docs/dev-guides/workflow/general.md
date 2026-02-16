@@ -206,10 +206,10 @@ cd web && rm -rf node_modules && pnpm install
 
 ## 相关文档
 
-- [系统架构](./ARCHITECTURE.md) | [架构摘要](./ARCHITECTURE_SUMMARY.md)
-- [后端开发](./BACKEND_DB.md)
-- [前端开发](./FRONTEND.md)
-- [Agent 工作流](./AGENT_WORKFLOW.md)
+- [系统架构](../../architecture/overview.md) | [架构摘要](../../architecture/summary.md)
+- [后端开发](../backend/database.md)
+- [前端开发](../frontend/overview.md)
+- [Agent 工作流](../agent/workflow.md)
 
 ---
 

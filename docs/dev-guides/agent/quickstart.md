@@ -486,10 +486,10 @@ echo $DIVINESENSE_PARROT_CONFIG_DIR
 
 | 文档                                                        | 描述                     |
 | :---------------------------------------------------------- | :----------------------- |
-| [架构文档](ARCHITECTURE.md)                                 | Agent 系统完整架构       |
+| [架构文档](../../architecture/overview.md)                  | Agent 系统完整架构       |
 | [UniversalParrot 设计](../specs/universal-parrot-design.md) | UniversalParrot 详细设计 |
-| [Agent 测试指南](AGENT_TESTING.md)                          | 测试方法和验证清单       |
-| [执行策略实现](../../ai/agents/universal/executor.go)       | 策略接口和实现           |
+| [Agent 测试指南](testing.md)                                | 测试方法和验证清单       |
+| [执行策略实现](../../../ai/agents/universal/executor.go)    | 策略接口和实现           |
 
 ---
 
