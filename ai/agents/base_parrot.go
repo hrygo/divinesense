@@ -36,8 +36,10 @@ type NormalSessionStats struct {
 	TotalDurationMs      int64 `json:"total_duration_ms"`      // Wall-clock time
 
 	// Tool usage
-	ToolCallCount int      `json:"tool_call_count"`
-	ToolsUsed     []string `json:"tools_used,omitempty"`
+	ToolCallCount  int      `json:"tool_call_count"`
+	ToolDurationMs int64    `json:"tool_duration_ms"`         // Total tool execution time
+	FilesModified  int32    `json:"files_modified,omitempty"` // Number of files modified
+	ToolsUsed      []string `json:"tools_used,omitempty"`
 
 	// Cost estimation (in milli-cents: 1/1000 of a US cent, or 1/100000 USD)
 	// For DeepSeek: $0.14/M input, $0.28/M output = 0.014¢/1K input, 0.028¢/1K output
@@ -91,6 +93,8 @@ func (s *NormalSessionStats) GetStatsSnapshot() *NormalSessionStats {
 		GenerationDurationMs: s.GenerationDurationMs,
 		TotalDurationMs:      s.TotalDurationMs,
 		ToolCallCount:        s.ToolCallCount,
+		ToolDurationMs:       s.ToolDurationMs,
+		FilesModified:        s.FilesModified,
 		ToolsUsed:            s.ToolsUsed,
 		TotalCostMilliCents:  s.TotalCostMilliCents,
 	}
@@ -251,6 +255,8 @@ func (b *BaseParrot) GetSessionStats() *NormalSessionStats {
 		GenerationDurationMs: b.stats.GenerationDurationMs,
 		TotalDurationMs:      b.stats.TotalDurationMs,
 		ToolCallCount:        b.stats.ToolCallCount,
+		ToolDurationMs:       b.stats.ToolDurationMs,
+		FilesModified:        b.stats.FilesModified,
 		ToolsUsed:            append([]string{}, b.stats.ToolsUsed...),
 		TotalCostMilliCents:  b.stats.TotalCostMilliCents,
 	}

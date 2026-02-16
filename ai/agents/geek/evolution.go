@@ -243,6 +243,8 @@ func (p *EvolutionParrot) GetSessionStats() *agentpkg.NormalSessionStats {
 		GenerationDurationMs: stats.GenerationDurationMs,
 		TotalDurationMs:      stats.TotalDurationMs,
 		ToolCallCount:        int(stats.ToolCallCount),
+		ToolDurationMs:       stats.ToolDurationMs,
+		FilesModified:        stats.FilesModified,
 		ToolsUsed:            toolsUsed,
 	}
 }

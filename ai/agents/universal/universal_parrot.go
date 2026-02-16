@@ -314,6 +314,7 @@ func (p *UniversalParrot) accumulateStats(execStats *ExecutionStats, startTime t
 	p.stats.CacheReadTokens += execStats.CacheReadTokens
 	p.stats.CacheWriteTokens += execStats.CacheWriteTokens
 	p.stats.ToolCallCount += execStats.ToolCalls
+	p.stats.ToolDurationMs += execStats.ToolDurationMs
 	p.stats.TotalDurationMs += duration.Milliseconds()
 }
 
