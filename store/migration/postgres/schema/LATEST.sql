@@ -864,6 +864,33 @@ COMMENT ON TABLE memo_tags IS 'Stores AI-generated tags for memos with confidenc
 COMMENT ON COLUMN memo_tags.source IS 'Tag source: llm, rules, statistics, user';
 
 -- =============================================================================
+-- Chinese Full-Text Search (V1.0.0)
+-- =============================================================================
+-- Text search configuration for Chinese support
+CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS chinese (
+    parser = default
+);
+
+ALTER TEXT SEARCH CONFIGURATION chinese
+    ADD MAPPING FOR word WITH simple;
+
+-- Helper function for tsvector
+CREATE OR REPLACE FUNCTION to_tsvector_chinese(text)
+RETURNS tsvector AS $$
+BEGIN
+    RETURN to_tsvector('simple', COALESCE($1, ''));
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Helper function for tsquery
+CREATE OR REPLACE FUNCTION to_tsquery_chinese(text)
+RETURNS tsquery AS $$
+BEGIN
+    RETURN plainto_tsquery('simple', $1);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- =============================================================================
 -- 版本记录
 -- =============================================================================
 INSERT INTO system_setting (name, value, description) VALUES
