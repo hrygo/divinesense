@@ -709,3 +709,34 @@ func (cm *CapabilityMap) GetAllExperts() []*ExpertInfo {
 func (cm *CapabilityMap) normalizeCapability(cap string) string {
 	return strings.ToLower(strings.TrimSpace(cap))
 }
+
+// GetKeywordsForExpert returns all trigger keywords associated with a specific expert.
+// This enables HILT feedback to adjust weights for specific keywords.
+// GetKeywordsForExpert 返回与指定专家关联的所有触发关键词，用于 HILT 反馈权重调整。
+func (cm *CapabilityMap) GetKeywordsForExpert(expertName string) []string {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.keywordIndex == nil {
+		return nil
+	}
+
+	expertLower := strings.ToLower(expertName)
+	var keywords []string
+	seen := make(map[string]bool)
+
+	// Reverse lookup: find all keywords that map to this expert
+	for kw, experts := range cm.keywordIndex.keywords {
+		for _, exp := range experts {
+			if strings.EqualFold(exp, expertLower) {
+				if !seen[kw] {
+					seen[kw] = true
+					keywords = append(keywords, kw)
+				}
+				break
+			}
+		}
+	}
+
+	return keywords
+}

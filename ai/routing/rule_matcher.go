@@ -215,12 +215,10 @@ func (m *RuleMatcher) GenericActionToIntent(action GenericAction, keywords []str
 	hasMemoHint := false
 	for _, kw := range keywords {
 		kwLower := strings.ToLower(kw)
-		if strings.Contains(kwLower, "日程") || strings.Contains(kwLower, "schedule") ||
-			strings.Contains(kwLower, "会议") || strings.Contains(kwLower, "提醒") {
+		if containsScheduleKeyword(kwLower) {
 			hasScheduleHint = true
 		}
-		if strings.Contains(kwLower, "笔记") || strings.Contains(kwLower, "memo") ||
-			strings.Contains(kwLower, "搜索") {
+		if containsMemoKeyword(kwLower) {
 			hasMemoHint = true
 		}
 	}
@@ -286,14 +284,11 @@ func (m *RuleMatcher) calculateDynamicScore(input string) (scheduleScore, memoSc
 	for _, cap := range capabilities {
 		capLower := strings.ToLower(cap)
 		// Check if this capability is schedule-related (name from config)
-		if strings.Contains(capLower, "日程") || strings.Contains(capLower, "schedule") ||
-			strings.Contains(capLower, "会议") || strings.Contains(capLower, "提醒") ||
-			strings.Contains(capLower, "批量") || strings.Contains(capLower, "创建") {
+		if containsScheduleKeyword(capLower) {
 			scheduleScore += 2
 		}
 		// Check if this capability is memo-related (name from config)
-		if strings.Contains(capLower, "笔记") || strings.Contains(capLower, "memo") ||
-			strings.Contains(capLower, "搜索") || strings.Contains(capLower, "记录") {
+		if containsMemoKeyword(capLower) {
 			memoScore += 2
 		}
 	}
@@ -359,17 +354,31 @@ func (m *RuleMatcher) capabilityMatchesCategory(capability, category string) boo
 
 	switch category {
 	case "schedule":
-		return strings.Contains(capLower, "日程") ||
-			strings.Contains(capLower, "schedule") ||
-			strings.Contains(capLower, "会议") ||
-			strings.Contains(capLower, "提醒")
+		return containsScheduleKeyword(capLower)
 	case "memo":
-		return strings.Contains(capLower, "笔记") ||
-			strings.Contains(capLower, "memo") ||
-			strings.Contains(capLower, "搜索") ||
-			strings.Contains(capLower, "记录")
+		return containsMemoKeyword(capLower)
 	}
 	return false
+}
+
+// containsScheduleKeyword checks if text contains any schedule-related keywords.
+// Extracted to eliminate DRY violation.
+func containsScheduleKeyword(text string) bool {
+	return strings.Contains(text, "日程") ||
+		strings.Contains(text, "schedule") ||
+		strings.Contains(text, "会议") ||
+		strings.Contains(text, "提醒") ||
+		strings.Contains(text, "批量") ||
+		strings.Contains(text, "创建")
+}
+
+// containsMemoKeyword checks if text contains any memo-related keywords.
+// Extracted to eliminate DRY violation.
+func containsMemoKeyword(text string) bool {
+	return strings.Contains(text, "笔记") ||
+		strings.Contains(text, "memo") ||
+		strings.Contains(text, "搜索") ||
+		strings.Contains(text, "记录")
 }
 
 // hasTimePattern checks if input contains time patterns.
@@ -446,12 +455,21 @@ func (m *RuleMatcher) GetCustomWeights(userID int32) map[string]map[string]int {
 	return nil
 }
 
+// KeywordExpertSource defines an interface for getting keywords associated with an expert.
+// This enables HILT feedback to adjust weights for specific keywords.
+// 避免循环导入：在 routing 包中定义接口，由 orchestrator.CapabilityMap 实现。
+type KeywordExpertSource interface {
+	GetKeywordsForExpert(expertName string) []string
+}
+
 // getKeywordsForCategory returns the list of keywords for a given category.
 // This is used by the feedback collector to identify which keywords to adjust.
-// Returns empty if no capabilityMap is set.
+// Returns keywords from capabilityMap if available, otherwise returns nil.
 func (m *RuleMatcher) getKeywordsForCategory(category string) []string {
-	// Keywords are now dynamically loaded from capabilityMap
-	// This method kept for API compatibility but returns empty
+	// Try to get keywords from capabilityMap if it implements KeywordExpertSource
+	if kes, ok := m.capabilityMap.(KeywordExpertSource); ok {
+		return kes.GetKeywordsForExpert(category)
+	}
 	return nil
 }
 
