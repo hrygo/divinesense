@@ -24,12 +24,14 @@ type Service struct {
 
 // Config contains the configuration for the router service.
 type Config struct {
-	EnableCache    bool                    // Enable routing result cache (default: true)
-	WeightStorage  RouterWeightStorage     // Storage for dynamic weights (optional)
-	EnableFeedback bool                    // Enable feedback-based weight adjustment (default: true)
-	Registry       *IntentRegistry         // Intent registry for OCP-compliant routing (DIP: inject instead of global)
-	ModelStrategy  ModelStrategy           // Model selection strategy (DIP: inject instead of constructor call)
-	CapabilityMap  KeywordCapabilitySource // Dynamic capability map for keyword loading (optional)
+	EnableCache     bool                    // Enable routing result cache (default: true)
+	WeightStorage   RouterWeightStorage     // Storage for dynamic weights (optional)
+	EnableFeedback  bool                    // Enable feedback-based weight adjustment (default: true)
+	Registry        *IntentRegistry         // Intent registry for OCP-compliant routing (DIP: inject instead of global)
+	ModelStrategy   ModelStrategy           // Model selection strategy (DIP: inject instead of constructor call)
+	CapabilityMap   KeywordCapabilitySource // Dynamic capability map for keyword loading (optional)
+	RoutingMatcher  RoutingMatcher          // Configuration-driven routing for Layer 2 (optional)
+	SemanticMatcher SemanticMatcher         // Semantic routing for Layer 3 (optional)
 }
 
 // DefaultConfig returns a Config with sensible defaults.
@@ -67,6 +69,16 @@ func NewService(cfg Config) *Service {
 	// Set capability map if provided
 	if cfg.CapabilityMap != nil {
 		svc.ruleMatcher.SetCapabilityMap(cfg.CapabilityMap)
+	}
+
+	// Set routing matcher for configuration-driven Layer 2 routing
+	if cfg.RoutingMatcher != nil {
+		svc.ruleMatcher.SetRoutingMatcher(cfg.RoutingMatcher)
+	}
+
+	// Set semantic matcher for Layer 3 semantic routing
+	if cfg.SemanticMatcher != nil {
+		svc.ruleMatcher.SetSemanticMatcher(cfg.SemanticMatcher)
 	}
 
 	// Enable cache by default for performance

@@ -110,13 +110,13 @@ curl -fsSL https://raw.githubusercontent.com/hrygo/divinesense/main/deploy/aliyu
 
 ### 命名约定
 
-| 类型 | 约定 | 示例 |
-|:-----|:-----|:-----|
-| Go 文件 | `snake_case.go` | `memo_embedding.go` |
-| 测试文件 | `*_test.go` | `universal_parrot_test.go` |
-| Go 包 | 简单小写 | `ai`（例如 `ai/agent`，非 `ai_service`） |
-| 脚本 | `kebab-case.sh` | `dev.sh` |
-| 常量 | `PascalCase` | `DefaultCacheTTL` |
+| 类型     | 约定            | 示例                                      |
+| :------- | :-------------- | :---------------------------------------- |
+| Go 文件  | `snake_case.go` | `memo_embedding.go`                       |
+| 测试文件 | `*_test.go`     | `universal_parrot_test.go`                |
+| Go 包    | 简单小写        | `ai`（例如 `ai/agents`，非 `ai_service`） |
+| 脚本     | `kebab-case.sh` | `dev.sh`                                  |
+| 常量     | `PascalCase`    | `DefaultCacheTTL`                         |
 
 ---
 
@@ -230,10 +230,10 @@ DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
 
 所有 AI 聊天逻辑通过 `ai/agents/` 中的 `ChatRouter` 路由：
 
-| 代理 | 配置文件 | 用途 | 工具 |
-|:-----|:---------|:-----|:-----|
-| **MemoParrot** | `config/parrots/memo.yaml` | 笔记搜索和检索 | `memo_search` |
-| **ScheduleParrot** | `config/parrots/schedule.yaml` | 日程管理 | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
+| 代理               | 配置文件                       | 用途           | 工具                                                                  |
+| :----------------- | :----------------------------- | :------------- | :-------------------------------------------------------------------- |
+| **MemoParrot**     | `config/parrots/memo.yaml`     | 笔记搜索和检索 | `memo_search`                                                         |
+| **ScheduleParrot** | `config/parrots/schedule.yaml` | 日程管理       | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
 
 > **Note**: AmazingParrot 已被 Orchestrator 替代。当用户请求涉及多领域时，Orchestrator 动态协调 Memo 和 Schedule Agents 并行处理。
 
@@ -273,34 +273,34 @@ DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
 
 ### 核心 AI 表
 
-| 表名 | 用途 | 版本 | 关键列 |
-|:-----|:-----|:-----|:-----|
-| `ai_conversation` | AI 对话会话 | v0.97.0 | `id`, `creator_id`, `title` |
-| `ai_block` | **统一块模型**：对话持久化 | v0.97.0 | `conversation_id`, `round_number`, `mode` |
-| `memo_embedding` | 语义搜索的向量嵌入 | v0.97.0 | `memo_id`、`embedding`（vector(1024)） |
-| `conversation_context` | 会话上下文（多渠道） | v0.97.0 | `session_id`、`channel_type`、`context_data`（JSONB） |
-| `episodic_memory` | 长期用户记忆 | - | `user_id`、`summary`、`importance` |
+| 表名                   | 用途                       | 版本    | 关键列                                                |
+| :--------------------- | :------------------------- | :------ | :---------------------------------------------------- |
+| `ai_conversation`      | AI 对话会话                | v0.97.0 | `id`, `creator_id`, `title`                           |
+| `ai_block`             | **统一块模型**：对话持久化 | v0.97.0 | `conversation_id`, `round_number`, `mode`             |
+| `memo_embedding`       | 语义搜索的向量嵌入         | v0.97.0 | `memo_id`、`embedding`（vector(1024)）                |
+| `conversation_context` | 会话上下文（多渠道）       | v0.97.0 | `session_id`、`channel_type`、`context_data`（JSONB） |
+| `episodic_memory`      | 长期用户记忆               | -       | `user_id`、`summary`、`importance`                    |
 
 ### 增强功能表
 
-| 表名 | 用途 | 版本 | 关键列 |
-|:-----|:-----|:-----|:-----|
-| `user_preferences` | 用户沟通偏好 | - | `user_id`、`preferences`（JSONB） |
-| `agent_session_stats` | 会话统计（成本追踪） | v0.97.0 | `session_id`、`token_usage`、`cost_estimate` |
-| `user_cost_settings` | 用户成本预算设置 | v0.97.0 | `user_id`、`daily_budget` |
-| `agent_security_audit` | 安全审计日志 | v0.97.0 | `user_id`、`risk_level`、`operation` |
+| 表名                   | 用途                 | 版本    | 关键列                                       |
+| :--------------------- | :------------------- | :------ | :------------------------------------------- |
+| `user_preferences`     | 用户沟通偏好         | -       | `user_id`、`preferences`（JSONB）            |
+| `agent_session_stats`  | 会话统计（成本追踪） | v0.97.0 | `session_id`、`token_usage`、`cost_estimate` |
+| `user_cost_settings`   | 用户成本预算设置     | v0.97.0 | `user_id`、`daily_budget`                    |
+| `agent_security_audit` | 安全审计日志         | v0.97.0 | `user_id`、`risk_level`、`operation`         |
 
 ### 智能路由表（v0.97.0 新增）
 
-| 表名 | 用途 | 关键列 |
-|:-----|:-----|:-----|
+| 表名              | 用途         | 关键列                                            |
+| :---------------- | :----------- | :------------------------------------------------ |
 | `router_feedback` | 路由反馈收集 | `predicted_intent`, `actual_intent`, `confidence` |
-| `router_weight` | 动态权重存储 | `user_id`, `keyword`, `weight` |
+| `router_weight`   | 动态权重存储 | `user_id`, `keyword`, `weight`                    |
 
 ### 集成表
 
-| 表名 | 用途 | 关键列 |
-|:-----|:-----|:-----|
+| 表名                  | 用途             | 关键列                                                             |
+| :-------------------- | :--------------- | :----------------------------------------------------------------- |
 | `chat_app_credential` | 聊天应用接入凭证 | `platform`、`platform_user_id`、`access_token`（AES-256-GCM 加密） |
 
 ---
@@ -525,20 +525,20 @@ CREATE UNIQUE INDEX idx_chat_app_credential_unique ON chat_app_credential(creato
 
 ## 目录结构
 
-| 路径 | 用途 |
-|:-----|:-----|
-| `cmd/divinesense/` | 主程序入口 |
-| `server/router/api/v1/` | REST/Connect RPC API 处理器 |
-| `server/service/` | 业务逻辑层 |
-| `ai/core/retrieval/` | 混合搜索（BM25 + 向量） |
-| `server/queryengine/` | 查询分析和路由 |
-| `ai/agents/` | AI 代理（MemoParrot、ScheduleParrot、Orchestrator） |
-| `ai/routing/` | 三层意图路由 |
-| `ai/vector/` | Embedding 服务 |
-| `plugin/chat_apps/` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
-| `store/` | 数据访问层接口 |
-| `store/db/postgres/` | PostgreSQL 实现 |
-| `store/migration/postgres/` | 数据库迁移 |
-| `proto/api/v1/` | Connect RPC 协议定义 |
-| `proto/store/` | Store 协议定义 |
-| `web/` | 前端（React + Vite） |
+| 路径                        | 用途                                                |
+| :-------------------------- | :-------------------------------------------------- |
+| `cmd/divinesense/`          | 主程序入口                                          |
+| `server/router/api/v1/`     | REST/Connect RPC API 处理器                         |
+| `server/service/`           | 业务逻辑层                                          |
+| `ai/core/retrieval/`        | 混合搜索（BM25 + 向量）                             |
+| `server/queryengine/`       | 查询分析和路由                                      |
+| `ai/agents/`                | AI 代理（MemoParrot、ScheduleParrot、Orchestrator） |
+| `ai/routing/`               | 三层意图路由                                        |
+| `ai/vector/`                | Embedding 服务                                      |
+| `plugin/chat_apps/`         | 聊天应用接入（Telegram/钉钉/WhatsApp）              |
+| `store/`                    | 数据访问层接口                                      |
+| `store/db/postgres/`        | PostgreSQL 实现                                     |
+| `store/migration/postgres/` | 数据库迁移                                          |
+| `proto/api/v1/`             | Connect RPC 协议定义                                |
+| `proto/store/`              | Store 协议定义                                      |
+| `web/`                      | 前端（React + Vite）                                |

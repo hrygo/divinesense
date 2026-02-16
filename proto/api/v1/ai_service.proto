@@ -107,6 +107,15 @@ service AIService {
     };
   }
 
+  // RecordRouterFeedback records user feedback for routing decisions.
+  // This enables HILT (Human-In-The-Loop) learning.
+  rpc RecordRouterFeedback(RecordRouterFeedbackRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/ai/routing/feedback"
+      body: "*"
+    };
+  }
+
   // GetReviewStats returns review statistics for the current user.
   rpc GetReviewStats(GetReviewStatsRequest) returns (GetReviewStatsResponse) {
     option (google.api.http) = {get: "/api/v1/ai/reviews/stats"};
@@ -678,6 +687,15 @@ message ReviewItem {
 message RecordReviewRequest {
   string memo_uid = 1 [(google.api.field_behavior) = REQUIRED];
   ReviewQuality quality = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// RecordRouterFeedbackRequest is the request for RecordRouterFeedback.
+message RecordRouterFeedbackRequest {
+  string input = 1 [(google.api.field_behavior) = REQUIRED];
+  string predicted = 2 [(google.api.field_behavior) = REQUIRED];
+  string actual = 3 [(google.api.field_behavior) = REQUIRED];
+  string feedback = 4 [(google.api.field_behavior) = REQUIRED];
+  // feedback: "positive" - no correction, "rephrase" - user rephrased, "switch" - user switched agent
 }
 
 // ReviewQuality represents the user's assessment of recall difficulty.

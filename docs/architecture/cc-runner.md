@@ -1,6 +1,6 @@
 # CC Runner 异步架构
 
-> **实现状态**: ✅ 完成 (v0.99.0) | **规格版本**: v1.2 | **位置**: `ai/agent/cc_runner/`
+> **实现状态**: ✅ 完成 (v0.99.0) | **规格版本**: v1.2 | **位置**: `ai/agents/runner/`
 
 ## 概述
 
@@ -8,11 +8,11 @@ CC Runner 是 Geek Mode 的核心异步架构，实现 Claude Code CLI 的全双
 
 ### 架构演进
 
-| 版本 | 特性 | 状态 |
-|:-----|:-----|:-----|
-| v1.0 | One-shot 执行 | 已废弃 |
-| v1.1 | 持久化会话 | 已废弃 |
-| v1.2 | 全双工流式 | **当前版本** |
+| 版本 | 特性          | 状态         |
+| :--- | :------------ | :----------- |
+| v1.0 | One-shot 执行 | 已废弃       |
+| v1.1 | 持久化会话    | 已废弃       |
+| v1.2 | 全双工流式    | **当前版本** |
 
 ---
 
@@ -186,22 +186,22 @@ func DeriveSessionID(conversationID int64) string {
 
 ### Client → Server (WebSocket Events)
 
-| Event | Payload | 描述 |
-|:-----|:--------|:-----|
-| `session.start` | `{config, mode}` | 启动新会话 |
-| `input.send` | `{text, sessionId}` | 发送用户输入 |
-| `session.stop` | `{sessionId}` | 强制停止 |
+| Event           | Payload             | 描述         |
+| :-------------- | :------------------ | :----------- |
+| `session.start` | `{config, mode}`    | 启动新会话   |
+| `input.send`    | `{text, sessionId}` | 发送用户输入 |
+| `session.stop`  | `{sessionId}`       | 强制停止     |
 
 ### Server → Client (Stream Events)
 
-| Event | Meta | 描述 |
-|:-----|:-----|:-----|
-| `thinking` | `{tokens, duration}` | 思考过程（增量） |
-| `tool_use` | `{name, input, toolId}` | 工具调用 |
-| `tool_result` | `{name, isError, output}` | 工具结果 |
-| `answer` | `{delta, done}` | 最终回答（增量） |
-| `error` | `{message, code}` | 系统级错误 |
-| `session.stats` | `{tokens, tools, duration}` | 会话统计 |
+| Event           | Meta                        | 描述             |
+| :-------------- | :-------------------------- | :--------------- |
+| `thinking`      | `{tokens, duration}`        | 思考过程（增量） |
+| `tool_use`      | `{name, input, toolId}`     | 工具调用         |
+| `tool_result`   | `{name, isError, output}`   | 工具结果         |
+| `answer`        | `{delta, done}`             | 最终回答（增量） |
+| `error`         | `{message, code}`           | 系统级错误       |
+| `session.stats` | `{tokens, tools, duration}` | 会话统计         |
 
 ---
 
@@ -252,30 +252,30 @@ func (sm *SessionManager) ensureGitRepo(workDir string) error {
 
 ### gRPC 服务
 
-| RPC | 方法 | 描述 |
-|:-----|:-----|:-----|
-| `ChatService` | `StreamChat` | 流式聊天（SSE） |
-| `ChatService` | `StopChat` | 停止会话（所有权验证） |
+| RPC           | 方法         | 描述                   |
+| :------------ | :----------- | :--------------------- |
+| `ChatService` | `StreamChat` | 流式聊天（SSE）        |
+| `ChatService` | `StopChat`   | 停止会话（所有权验证） |
 
 ### HTTP/WebSocket
 
-| 端点 | 方法 | 描述 |
-|:-----|:-----|:-----|
+| 端点                       | 方法      | 描述               |
+| :------------------------- | :-------- | :----------------- |
 | `/api/v1/chat/geek/stream` | WebSocket | Geek Mode 流式连接 |
-| `/api/v1/chat/geek/stop` | POST | 停止会话 |
+| `/api/v1/chat/geek/stop`   | POST      | 停止会话           |
 
 ---
 
 ## 配置选项
 
-| 环境变量 | 默认值 | 说明 |
-|:---------|:------|:-----|
-| `DIVINESENSE_CLAUDE_CODE_ENABLED` | `false` | 是否启用 Geek Mode |
-| `DIVINESENSE_CLAUDE_CODE_WORKDIR` | `~/.divinesense/claude` | 工作目录 |
-| `DIVINESENSE_CLAUDE_CODE_IDLE_TIMEOUT` | `30m` | 空闲超时 |
-| `DIVINESENSE_CLAUDE_CODE_MAX_SESSIONS` | `10` | 最大并发会话 |
-| `DIVINESENSE_EVOLUTION_ENABLED` | `false` | 是否启用 Evolution Mode |
-| `DIVINESENSE_EVOLUTION_ADMIN_ONLY` | `true` | 仅管理员可用 Evolution |
+| 环境变量                               | 默认值                  | 说明                    |
+| :------------------------------------- | :---------------------- | :---------------------- |
+| `DIVINESENSE_CLAUDE_CODE_ENABLED`      | `false`                 | 是否启用 Geek Mode      |
+| `DIVINESENSE_CLAUDE_CODE_WORKDIR`      | `~/.divinesense/claude` | 工作目录                |
+| `DIVINESENSE_CLAUDE_CODE_IDLE_TIMEOUT` | `30m`                   | 空闲超时                |
+| `DIVINESENSE_CLAUDE_CODE_MAX_SESSIONS` | `10`                    | 最大并发会话            |
+| `DIVINESENSE_EVOLUTION_ENABLED`        | `false`                 | 是否启用 Evolution Mode |
+| `DIVINESENSE_EVOLUTION_ADMIN_ONLY`     | `true`                  | 仅管理员可用 Evolution  |
 
 ---
 

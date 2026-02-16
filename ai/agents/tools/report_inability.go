@@ -4,22 +4,69 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"sync"
 )
 
-// ValidExpertAgents is the whitelist of valid expert agent names.
-// This prevents injection attacks via suggested_agent field.
-var ValidExpertAgents = map[string]bool{
-	"memo":     true,
-	"schedule": true,
+// ExpertResolver defines an interface for resolving agent names dynamically.
+// This enables configuration-driven expert validation instead of hardcoded whitelists.
+type ExpertResolver interface {
+	// IdentifyAgent resolves an agent name to its canonical ID.
+	// Returns empty string if not found.
+	IdentifyAgent(name string) string
+
+	// GetAllExpertNames returns all registered expert names.
+	GetAllExpertNames() []string
+}
+
+var (
+	// expertResolver is the dynamic expert resolver.
+	// It is set by SetExpertResolver during initialization.
+	expertResolver     ExpertResolver
+	expertResolverOnce sync.Once
+)
+
+// SetExpertResolver sets the expert resolver for dynamic validation.
+// This should be called during application initialization.
+func SetExpertResolver(resolver ExpertResolver) {
+	expertResolverOnce.Do(func() {
+		expertResolver = resolver
+	})
 }
 
 // isValidExpertAgent checks if the suggested agent name is valid.
+// Supports exact match and fuzzy match via ExpertResolver.
 func isValidExpertAgent(name string) bool {
 	if name == "" {
 		return true // Empty is allowed (optional field)
 	}
-	return ValidExpertAgents[strings.ToLower(name)]
+
+	// Use dynamic resolver if available
+	if expertResolver != nil {
+		resolved := expertResolver.IdentifyAgent(name)
+		return resolved != ""
+	}
+
+	// Fallback: no resolver available, allow all (fail-open for backward compatibility)
+	return true
+}
+
+// ResolveExpertAgent resolves an agent name to its canonical ID.
+// Returns the original name if no resolver is available.
+func ResolveExpertAgent(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	// Use dynamic resolver if available
+	if expertResolver != nil {
+		resolved := expertResolver.IdentifyAgent(name)
+		if resolved != "" {
+			return resolved
+		}
+	}
+
+	// Fallback: return original name
+	return name
 }
 
 // ReportInabilityInput represents the input for reporting inability to handle a task.
@@ -128,11 +175,15 @@ func (t *ReportInabilityTool) Run(ctx context.Context, input string) (string, er
 		return "", fmt.Errorf("invalid suggested_agent: %s is not a valid expert", reportInput.SuggestedAgent)
 	}
 
+	// Resolve suggested_agent to canonical name (supports fuzzy matching)
+	// e.g., "笔记助手" -> "memo"
+	resolvedAgent := ResolveExpertAgent(reportInput.SuggestedAgent)
+
 	// Return a special message that indicates inability
 	// This message format should match the early stopping logic in the agent
 	result := fmt.Sprintf("INABILITY_REPORTED: %s - %s", reportInput.Capability, reportInput.Reason)
-	if reportInput.SuggestedAgent != "" {
-		result += fmt.Sprintf(" (suggested_agent: %s)", reportInput.SuggestedAgent)
+	if resolvedAgent != "" {
+		result += fmt.Sprintf(" (suggested_agent: %s)", resolvedAgent)
 	}
 
 	return result, nil

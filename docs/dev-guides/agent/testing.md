@@ -191,10 +191,10 @@ make logs-follow-backend | grep -i "agent\|schedule"
 go test ./server/service/schedule/... -v
 
 # 测试工具层
-go test ./ai/agent/tools/... -v
+go test ./ai/agents/tools/... -v
 
 # 测试智能体
-go test ./ai/agent/... -v
+go test ./ai/agents/... -v
 
 # 查看覆盖率
 go test ./server/service/schedule/... -cover

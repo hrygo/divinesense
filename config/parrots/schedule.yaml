@@ -122,3 +122,34 @@ self_description:
   personality:
     - "严谨"
     - "周全"
+
+  # Routing configuration for Layer 2 rule-based matching
+  # This replaces hardcoded keyword matching in RuleMatcher
+  routing:
+    # Keywords that trigger routing to this agent
+    keywords:
+      - "日程"
+      - "schedule"
+      - "会议"
+      - "提醒"
+      - "安排"
+    # Regex patterns for more complex matching
+    patterns:
+      - "创建日程"
+      - "新建日程"
+      - "安排.*会议"
+      - "查看.*安排"
+    # Explicit exclusions - these patterns prevent routing to this agent
+    excludes:
+      - "搜索笔记"
+      - "找.*内容"
+    # Priority when multiple agents match (higher = preferred)
+    priority: 5
+    # Semantic examples for Layer 3 semantic routing
+    # These will be pre-computed as embedding vectors at startup
+    semantic_examples:
+      - "明天下午3点开产品会"
+      - "帮我安排一下这周的会议"
+      - "查看今天的日程"
+      - "下周有什么安排"
+      - "帮我找个空闲时间"

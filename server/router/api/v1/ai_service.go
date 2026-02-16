@@ -7,8 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	pluginai "github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/ai/agents/orchestrator"
+	"github.com/hrygo/divinesense/ai/agents/tools"
 	"github.com/hrygo/divinesense/ai/core/retrieval"
 	"github.com/hrygo/divinesense/ai/enrichment"
 	"github.com/hrygo/divinesense/ai/routing"
@@ -19,10 +22,33 @@ import (
 	"github.com/hrygo/divinesense/server/middleware"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
 	"github.com/hrygo/divinesense/store"
+	dbpostgres "github.com/hrygo/divinesense/store/db/postgres"
 )
 
 // Global AI rate limiter.
 var globalAILimiter = middleware.NewRateLimiter()
+
+// embeddingProviderAdapter adapts pluginai.EmbeddingService to routing.EmbeddingProvider.
+type embeddingProviderAdapter struct {
+	service pluginai.EmbeddingService
+}
+
+func (a *embeddingProviderAdapter) Embed(ctx context.Context, text string) ([]float32, error) {
+	return a.service.Embed(ctx, text)
+}
+
+// newWeightStorageAdapter creates a weight storage adapter from a store.
+func newWeightStorageAdapter(st *store.Store) routing.RouterWeightStorage {
+	// Try to get the postgres driver
+	if st != nil {
+		driver := st.GetDriver()
+		if db, ok := driver.(*dbpostgres.DB); ok {
+			return routing.NewPostgresWeightStorage(db)
+		}
+	}
+	// Fallback to in-memory storage
+	return routing.NewInMemoryWeightStorage()
+}
 
 // Default history retention count for router memory service.
 const DefaultHistoryRetention = 10
@@ -129,6 +155,8 @@ func (s *AIService) getRouterService() *routing.Service {
 
 	// Build config-driven capability map from expert registry
 	var capabilityMap routing.KeywordCapabilitySource
+	var routingMatcher routing.RoutingMatcher
+	var semanticMatcher routing.SemanticMatcher
 
 	if factory := s.getAgentFactory(); factory != nil {
 		// Get expert configurations from factory
@@ -136,21 +164,79 @@ func (s *AIService) getRouterService() *routing.Service {
 
 		if len(expertConfigs) > 0 {
 			// Build CapabilityMap from expert configs
-			capabilityMap = orchestrator.NewCapabilityMap()
-			if cm, ok := capabilityMap.(*orchestrator.CapabilityMap); ok {
-				cm.BuildFromConfigs(expertConfigs)
+			cm := orchestrator.NewCapabilityMap()
+			cm.BuildFromConfigs(expertConfigs)
+			// Build keyword index for Layer 2 rule-based routing
+			cm.BuildKeywordIndex(expertConfigs)
+
+			// Build semantic index for Layer 3 semantic routing (if embedding service available)
+			if s.EmbeddingService != nil {
+				provider := &embeddingProviderAdapter{service: s.EmbeddingService}
+				cm.BuildSemanticIndex(context.Background(), expertConfigs, provider)
+				semanticMatcher = cm // CapabilityMap implements SemanticMatcher interface
+				slog.Info("semantic index initialized for routing")
 			}
+
+			// Set expert resolver for HandoffHandler (supports fuzzy matching)
+			tools.SetExpertResolver(cm)
+
+			capabilityMap = cm
+			routingMatcher = cm // CapabilityMap implements RoutingMatcher interface
 		}
 	}
 
 	// FastRouter: cache -> rule (no LLM layer)
 	// Complex/low-confidence requests are handled by Orchestrator
+	weightStorage := newWeightStorageAdapter(s.Store)
 	s.routerService = routing.NewService(routing.Config{
-		EnableCache:   true,
-		CapabilityMap: capabilityMap,
+		EnableCache:     true,
+		WeightStorage:   weightStorage,
+		EnableFeedback:  true,
+		CapabilityMap:   capabilityMap,
+		RoutingMatcher:  routingMatcher,
+		SemanticMatcher: semanticMatcher,
 	})
 
 	return s.routerService
+}
+
+// RecordRouterFeedback records user feedback for routing decisions.
+// This enables HILT (Human-In-The-Loop) learning - the system learns from user corrections.
+func (s *AIService) RecordRouterFeedback(ctx context.Context, req *v1pb.RecordRouterFeedbackRequest) (*emptypb.Empty, error) {
+	routerSvc := s.getRouterService()
+	if routerSvc == nil {
+		return nil, fmt.Errorf("router service not available")
+	}
+
+	userID := auth.GetUserID(ctx)
+
+	// Convert string to routing.FeedbackType
+	var fbType routing.FeedbackType
+	switch req.Feedback {
+	case "positive":
+		fbType = routing.FeedbackPositive
+	case "rephrase":
+		fbType = routing.FeedbackRephrase
+	case "switch":
+		fbType = routing.FeedbackSwitch
+	default:
+		fbType = routing.FeedbackPositive
+	}
+
+	feedback := &routing.RouterFeedback{
+		UserID:    userID,
+		Input:     req.Input,
+		Predicted: routing.Intent(req.Predicted),
+		Actual:    routing.Intent(req.Actual),
+		Feedback:  fbType,
+		Timestamp: time.Now().Unix(),
+		Source:    "user_feedback",
+	}
+
+	if err := routerSvc.RecordFeedback(ctx, feedback); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 // getAgentFactory returns the agent factory, initializing it on first use.

@@ -101,27 +101,27 @@ self_description:
 
 #### 2.2 配置字段说明
 
-| 字段 | 类型 | 必填 | 说明 |
-|:-----|:-----|:-----|:-----|
-| `name` | string | ✅ | Agent 唯一标识符 |
-| `display_name` | string | ✅ | 显示名称 |
-| `emoji` | string | ❌ | 表情符号标识 |
-| `strategy` | StrategyType | ✅ | 执行策略：`react`/`direct`/`planning` |
-| `max_iterations` | int | ❌ | 最大迭代次数（默认 10） |
-| `tools` | []string | ✅ | 可用工具列表 |
-| `system_prompt` | string | ✅ | 系统提示词 |
-| `prompt_hints` | []string | ❌ | UI 建议 |
-| `enable_cache` | bool | ❌ | 启用缓存 |
-| `cache_ttl` | duration | ❌ | 缓存过期时间 |
-| `cache_size` | int | ❌ | 缓存大小 |
+| 字段             | 类型         | 必填 | 说明                                  |
+| :--------------- | :----------- | :--- | :------------------------------------ |
+| `name`           | string       | ✅    | Agent 唯一标识符                      |
+| `display_name`   | string       | ✅    | 显示名称                              |
+| `emoji`          | string       | ❌    | 表情符号标识                          |
+| `strategy`       | StrategyType | ✅    | 执行策略：`react`/`direct`/`planning` |
+| `max_iterations` | int          | ❌    | 最大迭代次数（默认 10）               |
+| `tools`          | []string     | ✅    | 可用工具列表                          |
+| `system_prompt`  | string       | ✅    | 系统提示词                            |
+| `prompt_hints`   | []string     | ❌    | UI 建议                               |
+| `enable_cache`   | bool         | ❌    | 启用缓存                              |
+| `cache_ttl`      | duration     | ❌    | 缓存过期时间                          |
+| `cache_size`     | int          | ❌    | 缓存大小                              |
 
 #### 2.3 执行策略选择
 
-| 策略 | 适用场景 | 特点 |
-|:-----|:---------|:-----|
-| **react** | 复杂多步任务 | 思考-行动循环，每个步骤都有推理 |
-| **direct** | 简单工具调用 | 原生 LLM 工具调用，更快 |
-| **planning** | 多工具协作 | 两阶段规划 + 并发执行 |
+| 策略         | 适用场景     | 特点                            |
+| :----------- | :----------- | :------------------------------ |
+| **react**    | 复杂多步任务 | 思考-行动循环，每个步骤都有推理 |
+| **direct**   | 简单工具调用 | 原生 LLM 工具调用，更快         |
+| **planning** | 多工具协作   | 两阶段规划 + 并发执行           |
 
 **推荐选择**：
 - 简单查询任务 → `direct`
@@ -133,7 +133,7 @@ self_description:
 对于需要复杂逻辑的 Agent，可以通过代码实现：
 
 ```go
-// ai/agent/my_agent.go
+// ai/agents/my_agent.go
 package agent
 
 import (
@@ -192,10 +192,10 @@ type Tool interface {
 
 ### 3.2 创建新工具
 
-在 `ai/agent/tools/` 目录下创建新工具：
+在 `ai/agents/tools/` 目录下创建新工具：
 
 ```go
-// ai/agent/tools/my_tool.go
+// ai/agents/tools/my_tool.go
 package tools
 
 import (
@@ -269,11 +269,11 @@ func (t *MyTool) Run(ctx context.Context, inputJSON string) (string, error) {
 在工具包的 `init()` 函数中注册：
 
 ```go
-// ai/agent/tools/register.go
+// ai/agents/tools/register.go
 package tools
 
 import (
-    "github.com/hrygo/divinesense/ai/agent/registry"
+    "github.com/hrygo/divinesense/ai/agents/registry"
 )
 
 func init() {
@@ -307,7 +307,7 @@ const (
 
 ### 4.1 单元测试
 
-创建测试文件 `ai/agent/tools/my_tool_test.go`：
+创建测试文件 `ai/agents/tools/my_tool_test.go`：
 
 ```go
 package tools_test
@@ -316,7 +316,7 @@ import (
     "context"
     "testing"
 
-    "github.com/hrygo/divinesense/ai/agent/tools"
+    "github.com/hrygo/divinesense/ai/agents/tools"
 )
 
 func TestMyTool_Run(t *testing.T) {
@@ -484,12 +484,12 @@ echo $DIVINESENSE_PARROT_CONFIG_DIR
 
 ## 7. 相关文档
 
-| 文档 | 描述 |
-|:-----|:-----|
-| [架构文档](ARCHITECTURE.md) | Agent 系统完整架构 |
+| 文档                                                        | 描述                     |
+| :---------------------------------------------------------- | :----------------------- |
+| [架构文档](ARCHITECTURE.md)                                 | Agent 系统完整架构       |
 | [UniversalParrot 设计](../specs/universal-parrot-design.md) | UniversalParrot 详细设计 |
-| [Agent 测试指南](AGENT_TESTING.md) | 测试方法和验证清单 |
-| [执行策略实现](../../ai/agent/universal/executor.go) | 策略接口和实现 |
+| [Agent 测试指南](AGENT_TESTING.md)                          | 测试方法和验证清单       |
+| [执行策略实现](../../ai/agents/universal/executor.go)       | 策略接口和实现           |
 
 ---
 

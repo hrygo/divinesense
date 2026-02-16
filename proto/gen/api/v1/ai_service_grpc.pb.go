@@ -34,6 +34,7 @@ const (
 	AIService_GetKnowledgeGraph_FullMethodName         = "/memos.api.v1.AIService/GetKnowledgeGraph"
 	AIService_GetDueReviews_FullMethodName             = "/memos.api.v1.AIService/GetDueReviews"
 	AIService_RecordReview_FullMethodName              = "/memos.api.v1.AIService/RecordReview"
+	AIService_RecordRouterFeedback_FullMethodName      = "/memos.api.v1.AIService/RecordRouterFeedback"
 	AIService_GetReviewStats_FullMethodName            = "/memos.api.v1.AIService/GetReviewStats"
 	AIService_ListAIConversations_FullMethodName       = "/memos.api.v1.AIService/ListAIConversations"
 	AIService_GetAIConversation_FullMethodName         = "/memos.api.v1.AIService/GetAIConversation"
@@ -96,6 +97,9 @@ type AIServiceClient interface {
 	GetDueReviews(ctx context.Context, in *GetDueReviewsRequest, opts ...grpc.CallOption) (*GetDueReviewsResponse, error)
 	// RecordReview records a review result and updates spaced repetition state.
 	RecordReview(ctx context.Context, in *RecordReviewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// RecordRouterFeedback records user feedback for routing decisions.
+	// This enables HILT (Human-In-The-Loop) learning.
+	RecordRouterFeedback(ctx context.Context, in *RecordRouterFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// GetReviewStats returns review statistics for the current user.
 	GetReviewStats(ctx context.Context, in *GetReviewStatsRequest, opts ...grpc.CallOption) (*GetReviewStatsResponse, error)
 	// ListAIConversations returns a list of AI conversations.
@@ -306,6 +310,16 @@ func (c *aIServiceClient) RecordReview(ctx context.Context, in *RecordReviewRequ
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, AIService_RecordReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aIServiceClient) RecordRouterFeedback(ctx context.Context, in *RecordRouterFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_RecordRouterFeedback_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -606,6 +620,9 @@ type AIServiceServer interface {
 	GetDueReviews(context.Context, *GetDueReviewsRequest) (*GetDueReviewsResponse, error)
 	// RecordReview records a review result and updates spaced repetition state.
 	RecordReview(context.Context, *RecordReviewRequest) (*emptypb.Empty, error)
+	// RecordRouterFeedback records user feedback for routing decisions.
+	// This enables HILT (Human-In-The-Loop) learning.
+	RecordRouterFeedback(context.Context, *RecordRouterFeedbackRequest) (*emptypb.Empty, error)
 	// GetReviewStats returns review statistics for the current user.
 	GetReviewStats(context.Context, *GetReviewStatsRequest) (*GetReviewStatsResponse, error)
 	// ListAIConversations returns a list of AI conversations.
@@ -714,6 +731,9 @@ func (UnimplementedAIServiceServer) GetDueReviews(context.Context, *GetDueReview
 }
 func (UnimplementedAIServiceServer) RecordReview(context.Context, *RecordReviewRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordReview not implemented")
+}
+func (UnimplementedAIServiceServer) RecordRouterFeedback(context.Context, *RecordRouterFeedbackRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordRouterFeedback not implemented")
 }
 func (UnimplementedAIServiceServer) GetReviewStats(context.Context, *GetReviewStatsRequest) (*GetReviewStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetReviewStats not implemented")
@@ -1055,6 +1075,24 @@ func _AIService_RecordReview_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AIServiceServer).RecordReview(ctx, req.(*RecordReviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AIService_RecordRouterFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordRouterFeedbackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).RecordRouterFeedback(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_RecordRouterFeedback_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).RecordRouterFeedback(ctx, req.(*RecordRouterFeedbackRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1585,6 +1623,10 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecordReview",
 			Handler:    _AIService_RecordReview_Handler,
+		},
+		{
+			MethodName: "RecordRouterFeedback",
+			Handler:    _AIService_RecordRouterFeedback_Handler,
 		},
 		{
 			MethodName: "GetReviewStats",

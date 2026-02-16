@@ -6,12 +6,12 @@
 
 DivineSense (神识) 是一款隐私优先、轻量级的 AI 驱动第二大脑。
 
-| 特性 | 描述 |
-|:-----|:-----|
-| **核心架构** | Go 后端 + React 前端 —— 单二进制分发 |
-| **AI 架构** | Orchestrator-Workers 多代理 |
+| 特性         | 描述                                      |
+| :----------- | :---------------------------------------- |
+| **核心架构** | Go 后端 + React 前端 —— 单二进制分发      |
+| **AI 架构**  | Orchestrator-Workers 多代理               |
 | **数据存储** | PostgreSQL（生产），SQLite（开发，无 AI） |
-| **端口** | 后端 28081，前端 25173，PostgreSQL 25432 |
+| **端口**     | 后端 28081，前端 25173，PostgreSQL 25432  |
 
 ## 技术栈
 
@@ -20,7 +20,7 @@ DivineSense (神识) 是一款隐私优先、轻量级的 AI 驱动第二大脑�
 | 后端   | Go 1.25, Echo, Connect RPC, pgvector                                                                 |
 | 前端   | React 18, Vite 7, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query                               |
 | 数据库 | PostgreSQL 16+（生产），SQLite（开发，**无 AI**）[#9](https://github.com/hrygo/divinesense/issues/9) |
-| AI     | **LLM 对话** + **向量 Embedding** + **意图分类** + **重排 Rerank**                              |
+| AI     | **LLM 对话** + **向量 Embedding** + **意图分类** + **重排 Rerank**                                   |
 
 ---
 
@@ -178,16 +178,16 @@ plugin/chat_apps/
 
 **数据库表**：`chat_app_credential`
 
-| 字段 | 类型 | 描述 |
-|:-----|:-----|:-----|
-| `id` | SERIAL | 主键 |
-| `user_id` | INTEGER | 所属用户（外键） |
-| `platform` | TEXT | 平台名称（telegram/whatsapp/dingtalk） |
-| `platform_user_id` | TEXT | 平台用户 ID |
-| `access_token` | TEXT | 加密存储的访问令牌 |
-| `app_secret` | TEXT | 加密存储的应用密钥（钉钉） |
-| `webhook_url` | TEXT | Webhook URL |
-| `enabled` | BOOLEAN | 启用状态 |
+| 字段               | 类型    | 描述                                   |
+| :----------------- | :------ | :------------------------------------- |
+| `id`               | SERIAL  | 主键                                   |
+| `user_id`          | INTEGER | 所属用户（外键）                       |
+| `platform`         | TEXT    | 平台名称（telegram/whatsapp/dingtalk） |
+| `platform_user_id` | TEXT    | 平台用户 ID                            |
+| `access_token`     | TEXT    | 加密存储的访问令牌                     |
+| `app_secret`       | TEXT    | 加密存储的应用密钥（钉钉）             |
+| `webhook_url`      | TEXT    | Webhook URL                            |
+| `enabled`          | BOOLEAN | 启用状态                               |
 
 **详细文档**：
 - [用户指南](../user-guides/CHAT_APPS.md)
@@ -214,20 +214,20 @@ plugin/chat_apps/
 
 > **保鲜状态**: ✅ 已验证 (2026-02-10) | **覆盖范围**: `proto/api/v1/*.proto` | **最后检查**: v0.97.0
 
-| 服务 | Proto 文件 | 描述 |
-|:-----|:-----------|:-----|
-| **ActivityService** | `activity_service.proto` | 用户活动记录 |
-| **AttachmentService** | `attachment_service.proto` | 附件管理 |
-| **AuthService** | `auth_service.proto` | 认证授权 |
-| **AIService** | `ai_service.proto` | AI 聊天、嵌入、检索（含 Unified Block Model） |
-| **ChatAppService** | `chat_app_service.proto` | 聊天应用接入（Telegram/钉钉/WhatsApp） |
-| **IdpService** | `idp_service.proto` | 身份提供商集成 |
-| **InstanceService** | `instance_service.proto` | 实例配置 |
-| **MemoService** | `memo_service.proto` | 笔记 CRUD |
-| **ScheduleService** | `schedule_service.proto` | 日程管理 |
-| **ShortcutService** | `shortcut_service.proto` | 快捷方式 |
-| **UserService** | `user_service.proto` | 用户管理 |
-| **Common** | `common.proto` | 通用类型定义 |
+| 服务                  | Proto 文件                 | 描述                                          |
+| :-------------------- | :------------------------- | :-------------------------------------------- |
+| **ActivityService**   | `activity_service.proto`   | 用户活动记录                                  |
+| **AttachmentService** | `attachment_service.proto` | 附件管理                                      |
+| **AuthService**       | `auth_service.proto`       | 认证授权                                      |
+| **AIService**         | `ai_service.proto`         | AI 聊天、嵌入、检索（含 Unified Block Model） |
+| **ChatAppService**    | `chat_app_service.proto`   | 聊天应用接入（Telegram/钉钉/WhatsApp）        |
+| **IdpService**        | `idp_service.proto`        | 身份提供商集成                                |
+| **InstanceService**   | `instance_service.proto`   | 实例配置                                      |
+| **MemoService**       | `memo_service.proto`       | 笔记 CRUD                                     |
+| **ScheduleService**   | `schedule_service.proto`   | 日程管理                                      |
+| **ShortcutService**   | `shortcut_service.proto`   | 快捷方式                                      |
+| **UserService**       | `user_service.proto`       | 用户管理                                      |
+| **Common**            | `common.proto`             | 通用类型定义                                  |
 
 ---
 
@@ -239,20 +239,20 @@ DivineSense 使用 **智能 pre-commit + pre-push** hooks，根据修改内容�
 
 ### 检查策略矩阵
 
-| 修改类型 | pre-commit (~2-10s) | pre-push (~10-60s) |
-|:---------|:---------------------|:-------------------|
+| 修改类型   | pre-commit (~2-10s) | pre-push (~10-60s)                          |
+| :--------- | :------------------ | :------------------------------------------ |
 | **仅后端** | `go fmt` + `go vet` | `go mod tidy` + `golangci-lint` + `go test` |
-| **仅前端** | `pnpm lint:fix` | `pnpm lint` + `pnpm build` |
-| **仅文档** | 跳过 | 跳过 |
-| **混合** | 按需检查 | 按需检查 |
+| **仅前端** | `pnpm lint:fix`     | `pnpm lint` + `pnpm build`                  |
+| **仅文档** | 跳过                | 跳过                                        |
+| **混合**   | 按需检查            | 按需检查                                    |
 
 ### 文件分类规则
 
-| 分类 | 匹配模式 |
-|:-----|:---------|
-| 后端 | `*.go`, `go.mod`, `go.sum` |
+| 分类 | 匹配模式                              |
+| :--- | :------------------------------------ |
+| 后端 | `*.go`, `go.mod`, `go.sum`            |
 | 前端 | `web/**`, `server/router/frontend/**` |
-| 文档 | `docs/**`, `*.md` (不匹配上述) |
+| 文档 | `docs/**`, `*.md` (不匹配上述)        |
 
 **注意**：Proto 文件变更会被归类为"后端"（因为修改后需要重新生成 Go 代码）。
 
@@ -300,13 +300,13 @@ git push --no-verify
 
 ### 代理类型 (`ai/agents/`)
 
-| AgentType | 名称 | 配置/文件 | 描述 |
-| :-------: | :--- | :-------- | :--- |
-| `AUTO` | — | — | 路由标记，由 Orchestrator 决定调用哪些 Expert |
-| `MEMO` | 灰灰 | `config/parrots/memo.yaml` | 笔记搜索专家 |
-| `SCHEDULE` | 时巧 | `config/parrots/schedule.yaml` | 日程管理专家 |
-| `GEEK` | 极客 | `geek_parrot.go` | Claude Code CLI 通信层 |
-| `EVOLUTION` | 进化 | `evolution_parrot.go` | 自我进化（源代码修改） |
+|  AgentType  | 名称 | 配置/文件                      | 描述                                          |
+| :---------: | :--- | :----------------------------- | :-------------------------------------------- |
+|   `AUTO`    | —    | —                              | 路由标记，由 Orchestrator 决定调用哪些 Expert |
+|   `MEMO`    | 灰灰 | `config/parrots/memo.yaml`     | 笔记搜索专家                                  |
+| `SCHEDULE`  | 时巧 | `config/parrots/schedule.yaml` | 日程管理专家                                  |
+|   `GEEK`    | 极客 | `geek_parrot.go`               | Claude Code CLI 通信层                        |
+| `EVOLUTION` | 进化 | `evolution_parrot.go`          | 自我进化（源代码修改）                        |
 
 > **Note**: AmazingParrot 已被 Orchestrator 替代。当用户请求涉及多领域时，Orchestrator 动态协调 Memo 和 Schedule Agents 并行处理。
 
@@ -318,27 +318,27 @@ git push --no-verify
 
 **配置目录**：`config/parrots/`
 
-| 配置文件 | 代理名称 | 执行策略 |
-|:--------|:--------|:---------|
-| `memo.yaml` | MemoParrot | ReAct 循环 |
+| 配置文件        | 代理名称       | 执行策略     |
+| :-------------- | :------------- | :----------- |
+| `memo.yaml`     | MemoParrot     | ReAct 循环   |
 | `schedule.yaml` | ScheduleParrot | 原生工具调用 |
 
 **核心组件**：
 
-| 组件 | 文件 | 描述 |
-|:-----|:-----|:-----|
-| **UniversalParrot** | `universal_parrot.go` | 配置驱动的通用代理实现 |
-| **ParrotFactory** | `parrot_factory.go` | 从配置创建代理的工厂 |
-| **ParrotConfig** | `parrot_config.go` | 配置加载和验证 |
-| **ExecutionStrategy** | `*_executor.go` | 执行策略接口 |
-| **ToolRegistry** | `registry/tool_registry.go` | 工具注册表 |
+| 组件                  | 文件                        | 描述                   |
+| :-------------------- | :-------------------------- | :--------------------- |
+| **UniversalParrot**   | `universal_parrot.go`       | 配置驱动的通用代理实现 |
+| **ParrotFactory**     | `parrot_factory.go`         | 从配置创建代理的工厂   |
+| **ParrotConfig**      | `parrot_config.go`          | 配置加载和验证         |
+| **ExecutionStrategy** | `*_executor.go`             | 执行策略接口           |
+| **ToolRegistry**      | `registry/tool_registry.go` | 工具注册表             |
 
 **执行策略**：
 
-| 策略 | 文件 | 特点 | 适用场景 |
-|:-----|:-----|:-----|:---------|
+| 策略               | 文件                 | 特点              | 适用场景     |
+| :----------------- | :------------------- | :---------------- | :----------- |
 | **DirectExecutor** | `direct_executor.go` | 原生 LLM 工具调用 | 简单工具调用 |
-| **ReActExecutor** | `react_executor.go` | 思考-行动循环 | 复杂多步任务 |
+| **ReActExecutor**  | `react_executor.go`  | 思考-行动循环     | 复杂多步任务 |
 
 ### 代理路由器
 
@@ -414,12 +414,12 @@ ChatRouter 实现**三层**意图分类系统：
 
 ### AI 模型策略总览
 
-| 功能 | 支持提供商 | 用途 |
-|:-----|:----------|:-----|
-| **对话 LLM** | 支持多提供商切换，通过环境变量配置 | 主对话生成 |
+| 功能               | 支持提供商                           | 用途       |
+| :----------------- | :----------------------------------- | :--------- |
+| **对话 LLM**       | 支持多提供商切换，通过环境变量配置   | 主对话生成 |
 | **向量 Embedding** | 向量嵌入服务，用于语义搜索（1024维） |
-| **意图分类** | 轻量级分类器，用于快速路由 |
-| **重排 Rerank** | 检索结果精炼，提升准确率 |
+| **意图分类**       | 轻量级分类器，用于快速路由           |
+| **重排 Rerank**    | 检索结果精炼，提升准确率             |
 
 
 **策略说明**：
@@ -452,13 +452,13 @@ ChatRouter 实现**三层**意图分类系统：
 
 **事件类型**：
 
-| 事件 | 描述 | 元数据 |
-|:-----|:-----|:-------|
-| `thinking` | 思考中 | tokens, duration |
-| `tool_use` | 工具调用 | toolName, input, toolId |
-| `tool_result` | 工具结果 | toolName, status, error |
+| 事件           | 描述     | 元数据                  |
+| :------------- | :------- | :---------------------- |
+| `thinking`     | 思考中   | tokens, duration        |
+| `tool_use`     | 工具调用 | toolName, input, toolId |
+| `tool_result`  | 工具结果 | toolName, status, error |
 | `phase_change` | 阶段切换 | currentStep, totalSteps |
-| `answer` | 最终回答 | — |
+| `answer`       | 最终回答 | —                       |
 
 **前端组件**：
 - `EventBadge` - 事件类型徽章
@@ -509,12 +509,12 @@ ChatRouter 实现**三层**意图分类系统：
 
 **位置**：`ai/agents/cc_runner/`
 
-| 组件 | 文件 | 描述 |
-|:-----|:-----|:-----|
-| **SessionManager** | `session_manager.go` | 会话生命周期管理（30min 空闲超时） |
-| **Streamer** | `streamer.go` | 双向流式转换（HTTP ⇄ CLI JSON Stream） |
-| **DangerDetector** | `danger_detector.go` | 危险命令检测（rm -rf, mkfs, etc.） |
-| **SessionStats** | `session_stats.go` | 实时指标收集（thinking, tokens, tools） |
+| 组件               | 文件                 | 描述                                    |
+| :----------------- | :------------------- | :-------------------------------------- |
+| **SessionManager** | `session_manager.go` | 会话生命周期管理（30min 空闲超时）      |
+| **Streamer**       | `streamer.go`        | 双向流式转换（HTTP ⇄ CLI JSON Stream）  |
+| **DangerDetector** | `danger_detector.go` | 危险命令检测（rm -rf, mkfs, etc.）      |
+| **SessionStats**   | `session_stats.go`   | 实时指标收集（thinking, tokens, tools） |
 
 ### 会话映射模型
 
@@ -537,21 +537,21 @@ Claude Code CLI Process
 
 **Client → Server (WebSocket Events)**:
 
-| Event | Payload | 描述 |
-|:-----|:--------|:-----|
-| `session.start` | `{config}` | 启动新会话 |
-| `input.send` | `{text}` | 发送用户输入 |
-| `session.stop` | `{}` | 强制停止 |
+| Event           | Payload    | 描述         |
+| :-------------- | :--------- | :----------- |
+| `session.start` | `{config}` | 启动新会话   |
+| `input.send`    | `{text}`   | 发送用户输入 |
+| `session.stop`  | `{}`       | 强制停止     |
 
 **Server → Client (Stream Events)**:
 
-| Event | Meta | 描述 |
-|:-----|:-----|:-----|
-| `thinking` | — | 思考过程（增量） |
-| `tool_use` | `{name, input, id}` | 工具调用 |
-| `tool_result` | `{is_error}` | 工具结果 |
-| `answer` | — | 最终回答（增量） |
-| `error` | — | 系统级错误 |
+| Event         | Meta                | 描述             |
+| :------------ | :------------------ | :--------------- |
+| `thinking`    | —                   | 思考过程（增量） |
+| `tool_use`    | `{name, input, id}` | 工具调用         |
+| `tool_result` | `{is_error}`        | 工具结果         |
+| `answer`      | —                   | 最终回答（增量） |
+| `error`       | —                   | 系统级错误       |
 
 ### 安全与风控
 
@@ -562,10 +562,10 @@ Claude Code CLI Process
 
 ### API 端点
 
-| RPC | 方法 | 描述 |
-|:-----|:-----|:-----|
-| `ChatService` | `StreamChat` | 流式聊天（SSE） |
-| `ChatService` | `StopChat` | 停止会话（所有权验证） |
+| RPC           | 方法         | 描述                   |
+| :------------ | :----------- | :--------------------- |
+| `ChatService` | `StreamChat` | 流式聊天（SSE）        |
+| `ChatService` | `StopChat`   | 停止会话（所有权验证） |
 
 ---
 
@@ -587,13 +587,13 @@ Claude Code CLI Process
 
 ### 新增 AI 模块 (v0.97.0)
 
-| 模块 | 功能 | 性能指标 |
-|:-----|:-----|:---------|
-| **ai/filter/** | 敏感信息过滤（手机号、身份证、邮箱、银行卡、IP） | <1ms 响应时间 |
-| **ai/preload/** | 基于用户行为模式的智能预加载 | 命中率 >60% |
-| **ai/stats/** | 告警持久化、指标存储 | 实时聚合 |
-| **ai/tracing/** | 分布式追踪（OpenTelemetry 兼容） | <5% 开销 |
-| **ai/agents/registry/** | 动态工具发现、执行策略注册 | 热加载 |
+| 模块                    | 功能                                             | 性能指标      |
+| :---------------------- | :----------------------------------------------- | :------------ |
+| **ai/filter/**          | 敏感信息过滤（手机号、身份证、邮箱、银行卡、IP） | <1ms 响应时间 |
+| **ai/preload/**         | 基于用户行为模式的智能预加载                     | 命中率 >60%   |
+| **ai/services/stats/**  | 告警持久化、指标存储                             | 实时聚合      |
+| **ai/tracing/**         | 分布式追踪（OpenTelemetry 兼容）                 | <5% 开销      |
+| **ai/agents/registry/** | 动态工具发现、执行策略注册                       | 热加载        |
 
 ### 会话服务 (`ai/session/`)
 
@@ -655,25 +655,25 @@ BAAI/bge-reranker-v2-m3 用于结果精炼（可通过策略配置）。
 
 > **保鲜状态**: ✅ 已更新 (2026-02-10) | **覆盖范围**: `web/src/pages/*.tsx` | **最后检查**: v0.97.0
 
-| 路径           | 组件              | 布局           | 用途                     |
-| :------------- | :---------------- | :------------- | :----------------------- |
-| `/`            | 重定向到 `/chat` | RootLayout | 默认入口                 |
-| `/auth/*`      | 认证页面组      | RootLayout | 登录/注册/OAuth 回调      |
-| `/memo`        | `Home.tsx`        | MemoLayout     | 主时间线 + 笔记编辑器    |
-| `/explore`      | `Explore.tsx`      | MemoLayout     | 搜索和探索内容           |
-| `/archived`     | `Archived.tsx`      | MemoLayout     | 已归档笔记               |
-| `/chat`         | `AIChat.tsx`       | AIChatLayout   | AI 聊天界面（多模式）     |
-| `/schedule`     | `Schedule.tsx`      | ScheduleLayout | 日历视图                   |
-| `/knowledge-graph` | `KnowledgeGraph.tsx` | GeneralLayout  | 知识图谱可视化           |
-| `/inbox`        | `Inboxes.tsx`      | GeneralLayout  | 收件箱                     |
-| `/attachments`   | `Attachments.tsx`  | GeneralLayout  | 附件管理                   |
-| `/review`       | `Review.tsx`       | GeneralLayout  | 每日回顾                  |
-| `/setting`      | `Setting.tsx`      | GeneralLayout  | 用户设置                   |
-| `/u/:username`  | `UserProfile.tsx`    | MemoLayout     | 公开用户资料               |
-| `/memos/:uid`   | `MemoDetail.tsx`    | GeneralLayout  | 笔记详情页                |
-| `/m/:uid`       | `MemoDetailRedirect` | GeneralLayout  | 笔记详情重定向            |
-| `/403`          | `PermissionDenied.tsx` | GeneralLayout  | 权限拒绝                  |
-| `/404`          | `NotFound.tsx`      | GeneralLayout  | 404 页面                   |
+| 路径               | 组件                   | 布局           | 用途                  |
+| :----------------- | :--------------------- | :------------- | :-------------------- |
+| `/`                | 重定向到 `/chat`       | RootLayout     | 默认入口              |
+| `/auth/*`          | 认证页面组             | RootLayout     | 登录/注册/OAuth 回调  |
+| `/memo`            | `Home.tsx`             | MemoLayout     | 主时间线 + 笔记编辑器 |
+| `/explore`         | `Explore.tsx`          | MemoLayout     | 搜索和探索内容        |
+| `/archived`        | `Archived.tsx`         | MemoLayout     | 已归档笔记            |
+| `/chat`            | `AIChat.tsx`           | AIChatLayout   | AI 聊天界面（多模式） |
+| `/schedule`        | `Schedule.tsx`         | ScheduleLayout | 日历视图              |
+| `/knowledge-graph` | `KnowledgeGraph.tsx`   | GeneralLayout  | 知识图谱可视化        |
+| `/inbox`           | `Inboxes.tsx`          | GeneralLayout  | 收件箱                |
+| `/attachments`     | `Attachments.tsx`      | GeneralLayout  | 附件管理              |
+| `/review`          | `Review.tsx`           | GeneralLayout  | 每日回顾              |
+| `/setting`         | `Setting.tsx`          | GeneralLayout  | 用户设置              |
+| `/u/:username`     | `UserProfile.tsx`      | MemoLayout     | 公开用户资料          |
+| `/memos/:uid`      | `MemoDetail.tsx`       | GeneralLayout  | 笔记详情页            |
+| `/m/:uid`          | `MemoDetailRedirect`   | GeneralLayout  | 笔记详情重定向        |
+| `/403`             | `PermissionDenied.tsx` | GeneralLayout  | 权限拒绝              |
+| `/404`             | `NotFound.tsx`         | GeneralLayout  | 404 页面              |
 
 ### 布局层级
 
@@ -785,31 +785,31 @@ RootLayout（全局导航 + 认证）
 
 ### 核心组件
 
-| 组件 | 位置 | 描述 |
-|:-----|:-----|:-----|
-| **BlockManager** | `server/router/api/v1/ai/block_manager.go` | Block 生命周期管理 |
-| **ChatMessages** | `web/src/components/AIChat/ChatMessages.tsx` | 前端 Block 渲染 |
-| **AIChatContext** | `web/src/contexts/AIChatContext.tsx` | Block 状态管理 |
-| **Block Queries** | `web/src/hooks/useBlockQueries.ts` | React Query 集成 |
+| 组件              | 位置                                         | 描述               |
+| :---------------- | :------------------------------------------- | :----------------- |
+| **BlockManager**  | `server/router/api/v1/ai/block_manager.go`   | Block 生命周期管理 |
+| **ChatMessages**  | `web/src/components/AIChat/ChatMessages.tsx` | 前端 Block 渲染    |
+| **AIChatContext** | `web/src/contexts/AIChatContext.tsx`         | Block 状态管理     |
+| **Block Queries** | `web/src/hooks/useBlockQueries.ts`           | React Query 集成   |
 
 ### 数据库表：`ai_block`
 
-| 字段 | 类型 | 描述 |
-|:-----|:-----|:-----|
-| `id` | BIGINT | 主键 |
-| `uid` | VARCHAR(64) | 唯一标识符 |
-| `conversation_id` | INTEGER | 所属会话（外键） |
-| `round_number` | INTEGER | 轮次号（会话内自增） |
-| `mode` | TEXT | 模式：normal/geek/evolution |
-| `user_inputs` | JSONB | 用户输入数组 |
-| `assistant_content` | TEXT | AI 回复内容 |
-| `event_stream` | JSONB | 流式事件数组 |
-| `session_stats` | JSONB | 会话统计信息 |
-| `cc_session_id` | VARCHAR(64) | CC Runner 会话 ID |
-| `status` | TEXT | 状态：pending/streaming/completed/error |
-| `metadata` | JSONB | 元数据 |
-| `created_ts` | BIGINT | 创建时间戳 |
-| `updated_ts` | BIGINT | 更新时间戳 |
+| 字段                | 类型        | 描述                                    |
+| :------------------ | :---------- | :-------------------------------------- |
+| `id`                | BIGINT      | 主键                                    |
+| `uid`               | VARCHAR(64) | 唯一标识符                              |
+| `conversation_id`   | INTEGER     | 所属会话（外键）                        |
+| `round_number`      | INTEGER     | 轮次号（会话内自增）                    |
+| `mode`              | TEXT        | 模式：normal/geek/evolution             |
+| `user_inputs`       | JSONB       | 用户输入数组                            |
+| `assistant_content` | TEXT        | AI 回复内容                             |
+| `event_stream`      | JSONB       | 流式事件数组                            |
+| `session_stats`     | JSONB       | 会话统计信息                            |
+| `cc_session_id`     | VARCHAR(64) | CC Runner 会话 ID                       |
+| `status`            | TEXT        | 状态：pending/streaming/completed/error |
+| `metadata`          | JSONB       | 元数据                                  |
+| `created_ts`        | BIGINT      | 创建时间戳                              |
+| `updated_ts`        | BIGINT      | 更新时间戳                              |
 
 **索引**：
 - `idx_ai_block_conversation`：`(conversation_id, round_number)`
@@ -830,23 +830,23 @@ pending ──▶ streaming ──▶ completed
 
 ### BlockMode 映射
 
-| BlockMode | AgentType | 用途 |
-|:----------|:----------|:-----|
-| `normal` | `AUTO` | 普通模式，由 Orchestrator 动态协调 Expert Agents |
-| `geek` | `GEEK` | 极客模式，Claude Code CLI 代码执行 |
-| `evolution` | `EVOLUTION` | 进化模式，系统自我进化 |
+| BlockMode   | AgentType   | 用途                                             |
+| :---------- | :---------- | :----------------------------------------------- |
+| `normal`    | `AUTO`      | 普通模式，由 Orchestrator 动态协调 Expert Agents |
+| `geek`      | `GEEK`      | 极客模式，Claude Code CLI 代码执行               |
+| `evolution` | `EVOLUTION` | 进化模式，系统自我进化                           |
 
 ### API 端点
 
-| RPC | 方法 | 描述 |
-|:-----|:-----|:-----|
-| `AIService` | `ListBlocks` | 列出会话的所有 Blocks |
-| `AIService` | `GetBlock` | 获取单个 Block 详情 |
-| `AIService` | `CreateBlock` | 创建新 Block |
-| `AIService` | `UpdateBlock` | 更新 Block |
-| `AIService` | `DeleteBlock` | 删除 Block |
-| `AIService` | `AppendEvent` | 追加事件到流 |
-| `AIService` | `AppendUserInput` | 追加用户输入 |
+| RPC         | 方法              | 描述                  |
+| :---------- | :---------------- | :-------------------- |
+| `AIService` | `ListBlocks`      | 列出会话的所有 Blocks |
+| `AIService` | `GetBlock`        | 获取单个 Block 详情   |
+| `AIService` | `CreateBlock`     | 创建新 Block          |
+| `AIService` | `UpdateBlock`     | 更新 Block            |
+| `AIService` | `DeleteBlock`     | 删除 Block            |
+| `AIService` | `AppendEvent`     | 追加事件到流          |
+| `AIService` | `AppendUserInput` | 追加用户输入          |
 
 **详细规格**：[Unified Block Model 规格](../specs/block-design/unified-block-model.md)
 
@@ -858,29 +858,29 @@ pending ──▶ streaming ──▶ completed
 
 ### 核心表
 
-| 表名                   | 用途                                      | 版本    |
-| :--------------------- | :---------------------------------------- | :------ |
-| `ai_conversation`     | AI 对话会话                              | v0.97.0 |
-| `ai_block`            | **统一块模型**：对话持久化 (#71)     | v0.97.0 |
-| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索           | v0.97.0 |
-| `conversation_context` | 会话持久化（多渠道支持）                  | v0.97.0 |
-| `episodic_memory`      | 长期用户记忆和学习                        | -       |
+| 表名                   | 用途                             | 版本    |
+| :--------------------- | :------------------------------- | :------ |
+| `ai_conversation`      | AI 对话会话                      | v0.97.0 |
+| `ai_block`             | **统一块模型**：对话持久化 (#71) | v0.97.0 |
+| `memo_embedding`       | 向量嵌入（1024 维）用于语义搜索  | v0.97.0 |
+| `conversation_context` | 会话持久化（多渠道支持）         | v0.97.0 |
+| `episodic_memory`      | 长期用户记忆和学习               | -       |
 
 ### 增强功能表
 
-| 表名                   | 用途                                      | 版本    |
-| :--------------------- | :---------------------------------------- | :------ |
-| `user_preferences`     | 用户沟通偏好                              | -       |
-| `agent_session_stats`  | 会话统计（成本追踪）                       | v0.97.0 |
-| `user_cost_settings`   | 用户成本预算设置                          | v0.97.0 |
-| `agent_security_audit` | 安全审计日志（高风险操作记录）                 | v0.97.0 |
+| 表名                   | 用途                           | 版本    |
+| :--------------------- | :----------------------------- | :------ |
+| `user_preferences`     | 用户沟通偏好                   | -       |
+| `agent_session_stats`  | 会话统计（成本追踪）           | v0.97.0 |
+| `user_cost_settings`   | 用户成本预算设置               | v0.97.0 |
+| `agent_security_audit` | 安全审计日志（高风险操作记录） | v0.97.0 |
 
 ### 智能路由表（v0.97.0 新增）
 
-| 表名                   | 用途                                      | 功能     |
-| :--------------------- | :---------------------------------------- | :------- |
-| `router_feedback`      | 路由反馈收集                              | 意图分类优化 |
-| `router_weight`        | 动态权重存储                              | 个性化路由 |
+| 表名              | 用途         | 功能         |
+| :---------------- | :----------- | :----------- |
+| `router_feedback` | 路由反馈收集 | 意图分类优化 |
+| `router_weight`   | 动态权重存储 | 个性化路由   |
 
 ---
 

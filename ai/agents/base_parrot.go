@@ -343,6 +343,31 @@ type ParrotAgent interface {
 	GetSessionStats() *NormalSessionStats
 }
 
+// RoutingConfig represents routing configuration for an expert agent.
+// RoutingConfig 表示专家代理的路由配置，用于 Layer 2 规则匹配。
+type RoutingConfig struct {
+	// Keywords are simple keyword triggers.
+	// 简单关键词触发器。
+	Keywords []string `json:"keywords,omitempty" yaml:"keywords,omitempty"`
+
+	// Patterns are regex patterns for more complex matching.
+	// 正则表达式模式，用于更复杂的匹配。
+	Patterns []string `json:"patterns,omitempty" yaml:"patterns,omitempty"`
+
+	// Excludes are patterns that should NOT route to this agent.
+	// 排除规则：匹配这些模式时不路由到此代理。
+	Excludes []string `json:"excludes,omitempty" yaml:"excludes,omitempty"`
+
+	// Priority determines routing priority when multiple agents match.
+	// 优先级：多个代理匹配时的优先级（数值越大优先级越高）。
+	Priority int `json:"priority,omitempty" yaml:"priority,omitempty"`
+
+	// SemanticExamples are example sentences for Layer 3 semantic routing.
+	// 这些示例会在启动时预计算为 embedding 向量。
+	// 当 Layer 2 规则匹配失败时，使用向量相似度进行匹配。
+	SemanticExamples []string `json:"semantic_examples,omitempty" yaml:"semantic_examples,omitempty"`
+}
+
 // ParrotSelfCognition represents the metacognitive information about a parrot agent.
 // ParrotSelfCognition 表示鹦鹉代理的元认知信息。
 type ParrotSelfCognition struct {
@@ -354,6 +379,10 @@ type ParrotSelfCognition struct {
 	CapabilityTriggers map[string][]string `json:"capability_triggers,omitempty"` // Capability -> Triggers/Keywords
 	Limitations        []string            `json:"limitations"`
 	WorkingStyle       string              `json:"working_style"`
+
+	// Routing configuration for Layer 2 rule matching.
+	// 路由配置，用于 Layer 2 规则匹配。
+	Routing *RoutingConfig `json:"routing,omitempty" yaml:"routing,omitempty"`
 }
 
 // ParrotError represents an error that occurred during parrot execution.

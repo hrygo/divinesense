@@ -3,6 +3,11 @@
 package orchestrator
 
 import (
+	"context"
+	"log/slog"
+	"math"
+	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
@@ -22,6 +27,61 @@ type ExpertInfo struct {
 	Capabilities []string `json:"capabilities"`
 }
 
+// KeywordIndex provides fast keyword-based routing.
+// KeywordIndex 提供快速的基于关键词的路由，用于 Layer 2 规则匹配。
+type KeywordIndex struct {
+	// keyword -> expert names
+	keywords map[string][]string
+	// compiled regex -> expert names
+	patterns map[*regexp.Regexp][]string
+	// exclude patterns (compiled)
+	excludes []*regexp.Regexp
+	// expert name -> priority
+	priorities map[string]int
+	// expert name -> title (for fuzzy matching)
+	titles map[string]string
+}
+
+// EmbeddingProvider defines an interface for generating embeddings.
+// This enables lazy initialization of semantic index without circular dependencies.
+type EmbeddingProvider interface {
+	// Embed generates an embedding vector for the given text.
+	Embed(ctx context.Context, text string) ([]float32, error)
+}
+
+// SemanticIndex provides semantic-based routing using embeddings.
+// SemanticIndex 提供基于向量的语义路由，用于 Layer 3 匹配。
+type SemanticIndex struct {
+	initialized bool
+	// expert name -> example embeddings (averaged)
+	expertEmbeddings map[string][]float32
+	// expert name -> original examples (for debugging)
+	expertExamples map[string][]string
+	// similarity threshold for routing
+	threshold float32
+}
+
+// NewSemanticIndex creates a new SemanticIndex.
+func NewSemanticIndex() *SemanticIndex {
+	return &SemanticIndex{
+		initialized:      false,
+		expertEmbeddings: make(map[string][]float32),
+		expertExamples:   make(map[string][]string),
+		threshold:        0.5, // Default threshold for cosine similarity
+	}
+}
+
+// NewKeywordIndex creates an empty KeywordIndex.
+func NewKeywordIndex() *KeywordIndex {
+	return &KeywordIndex{
+		keywords:   make(map[string][]string),
+		patterns:   make(map[*regexp.Regexp][]string),
+		excludes:   make([]*regexp.Regexp, 0),
+		priorities: make(map[string]int),
+		titles:     make(map[string]string),
+	}
+}
+
 // CapabilityMap provides a thread-safe mapping from capabilities to expert agents.
 // It is used at runtime to build the capability-to-expert mapping.
 type CapabilityMap struct {
@@ -29,6 +89,13 @@ type CapabilityMap struct {
 	capabilityToExperts   map[Capability][]*ExpertInfo
 	keywordToCapabilities map[string][]Capability
 	experts               map[string]*ExpertInfo
+
+	// Keyword-based routing index for Layer 2 rule matching
+	keywordIndex *KeywordIndex
+	// Semantic-based routing index for Layer 3 matching
+	semanticIndex *SemanticIndex
+	// Embedding provider for semantic matching
+	embeddingProvider EmbeddingProvider
 }
 
 // NewCapabilityMap creates an empty CapabilityMap.
@@ -98,6 +165,399 @@ func (cm *CapabilityMap) BuildFromConfigs(configs []*agents.ParrotSelfCognition)
 			}
 		}
 	}
+}
+
+// BuildKeywordIndex builds the keyword index from routing configs.
+// This enables fast Layer 2 rule-based routing without LLM.
+// BuildKeywordIndex 从路由配置构建关键词索引，用于 Layer 2 规则匹配。
+func (cm *CapabilityMap) BuildKeywordIndex(configs []*agents.ParrotSelfCognition) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	cm.keywordIndex = NewKeywordIndex()
+
+	for _, config := range configs {
+		if config == nil {
+			continue
+		}
+
+		expertName := config.Name
+		if expertName == "" {
+			continue
+		}
+
+		// Store title for fuzzy matching
+		if config.Title != "" {
+			cm.keywordIndex.titles[expertName] = config.Title
+		}
+
+		// If no routing config, skip indexing
+		if config.Routing == nil {
+			continue
+		}
+
+		routing := config.Routing
+
+		// Index keywords
+		for _, kw := range routing.Keywords {
+			kwLower := strings.ToLower(kw)
+			if kwLower == "" {
+				continue
+			}
+			cm.keywordIndex.keywords[kwLower] = append(
+				cm.keywordIndex.keywords[kwLower], expertName,
+			)
+		}
+
+		// Compile and index patterns
+		for _, pat := range routing.Patterns {
+			if pat == "" {
+				continue
+			}
+			re, err := regexp.Compile(pat)
+			if err != nil {
+				slog.Warn("invalid routing pattern",
+					"expert", expertName,
+					"pattern", pat,
+					"error", err)
+				continue
+			}
+			cm.keywordIndex.patterns[re] = append(cm.keywordIndex.patterns[re], expertName)
+		}
+
+		// Compile exclude patterns
+		for _, ex := range routing.Excludes {
+			if ex == "" {
+				continue
+			}
+			re, err := regexp.Compile(ex)
+			if err != nil {
+				slog.Warn("invalid exclude pattern",
+					"expert", expertName,
+					"pattern", ex,
+					"error", err)
+				continue
+			}
+			cm.keywordIndex.excludes = append(cm.keywordIndex.excludes, re)
+		}
+
+		// Set priority
+		cm.keywordIndex.priorities[expertName] = routing.Priority
+	}
+}
+
+// BuildSemanticIndex builds the semantic index from routing configs.
+// This pre-computes embeddings for semantic_examples at startup.
+// It requires an EmbeddingProvider to generate embeddings.
+// BuildSemanticIndex 从路由配置构建语义索引，在启动时预计算示例的 embedding 向量。
+func (cm *CapabilityMap) BuildSemanticIndex(ctx context.Context, configs []*agents.ParrotSelfCognition, provider EmbeddingProvider) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	// Store embedding provider for semantic matching
+	cm.embeddingProvider = provider
+
+	// Initialize semantic index
+	semanticIndex := NewSemanticIndex()
+
+	for _, config := range configs {
+		if config == nil {
+			continue
+		}
+
+		expertName := config.Name
+		if expertName == "" {
+			continue
+		}
+
+		// If no routing config, skip
+		if config.Routing == nil {
+			continue
+		}
+
+		examples := config.Routing.SemanticExamples
+		if len(examples) == 0 {
+			continue
+		}
+
+		// Store examples for debugging
+		semanticIndex.expertExamples[expertName] = examples
+
+		// Generate embeddings for all examples
+		var embeddings [][]float32
+		for _, example := range examples {
+			if example == "" {
+				continue
+			}
+			emb, err := provider.Embed(ctx, example)
+			if err != nil {
+				slog.Warn("failed to embed semantic example",
+					"expert", expertName,
+					"example", example,
+					"error", err)
+				continue
+			}
+			embeddings = append(embeddings, emb)
+		}
+
+		if len(embeddings) == 0 {
+			continue
+		}
+
+		// Average pool embeddings
+		avgEmbedding := averageEmbeddings(embeddings)
+		semanticIndex.expertEmbeddings[expertName] = avgEmbedding
+		slog.Debug("semantic index built for expert",
+			"expert", expertName,
+			"examples", len(embeddings),
+			"embedding_dim", len(avgEmbedding))
+	}
+
+	// Store semantic index
+	cm.semanticIndex = semanticIndex
+	semanticIndex.initialized = true
+	slog.Info("semantic index built successfully", "experts", len(semanticIndex.expertEmbeddings))
+}
+
+// averageEmbeddings computes the element-wise average of multiple embeddings.
+func averageEmbeddings(embeddings [][]float32) []float32 {
+	if len(embeddings) == 0 {
+		return nil
+	}
+
+	// All embeddings should have the same dimension
+	n := len(embeddings[0])
+	if n == 0 {
+		return nil
+	}
+
+	result := make([]float32, n)
+
+	// Sum all embeddings
+	for _, emb := range embeddings {
+		for i := 0; i < n; i++ {
+			result[i] += emb[i]
+		}
+	}
+
+	// Divide by count
+	count := float32(len(embeddings))
+	for i := 0; i < n; i++ {
+		result[i] /= count
+	}
+
+	return result
+}
+
+// cosineSimilarity computes the cosine similarity between two vectors.
+func cosineSimilarity(a, b []float32) float32 {
+	if len(a) != len(b) || len(a) == 0 {
+		return 0
+	}
+
+	var dotProduct float32
+	var normA, normB float32
+
+	for i := 0; i < len(a); i++ {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+
+	if normA == 0 || normB == 0 {
+		return 0
+	}
+
+	return dotProduct / (float32(math.Sqrt(float64(normA))) * float32(math.Sqrt(float64(normB))))
+}
+
+// MatchInput matches input against the keyword index.
+// Returns sorted expert names (by priority) and match confidence.
+// MatchInput 将输入与关键词索引匹配，返回排序后的专家名称和置信度。
+func (cm *CapabilityMap) MatchInput(input string) ([]string, float64) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.keywordIndex == nil {
+		return nil, 0
+	}
+
+	inputLower := strings.ToLower(input)
+	matchedExperts := make(map[string]int) // expert -> match score
+
+	// Check exclude patterns first
+	for _, ex := range cm.keywordIndex.excludes {
+		if ex.MatchString(input) {
+			return nil, 0 // Excluded
+		}
+	}
+
+	// Match keywords (each keyword = 1 point)
+	for kw, experts := range cm.keywordIndex.keywords {
+		if strings.Contains(inputLower, kw) {
+			for _, exp := range experts {
+				matchedExperts[exp]++
+			}
+		}
+	}
+
+	// Match patterns (each pattern = 2 points, higher weight)
+	for pat, experts := range cm.keywordIndex.patterns {
+		if pat.MatchString(input) {
+			for _, exp := range experts {
+				matchedExperts[exp] += 2
+			}
+		}
+	}
+
+	if len(matchedExperts) == 0 {
+		return nil, 0
+	}
+
+	// Sort by score, then by priority
+	var results []string
+	for exp := range matchedExperts {
+		results = append(results, exp)
+	}
+	sort.Slice(results, func(i, j int) bool {
+		expI, expJ := results[i], results[j]
+		if matchedExperts[expI] != matchedExperts[expJ] {
+			return matchedExperts[expI] > matchedExperts[expJ] // Higher score first
+		}
+		// Then by priority
+		prioI := cm.keywordIndex.priorities[expI]
+		prioJ := cm.keywordIndex.priorities[expJ]
+		return prioI > prioJ
+	})
+
+	// Calculate confidence (normalize by max possible score)
+	maxScore := 0
+	for _, score := range matchedExperts {
+		if score > maxScore {
+			maxScore = score
+		}
+	}
+	confidence := float64(maxScore) / 5.0 // Normalize: assume 5 is high score
+	if confidence > 1.0 {
+		confidence = 1.0
+	}
+	if confidence < 0.3 {
+		return nil, 0 // Too low confidence
+	}
+
+	return results, confidence
+}
+
+// MatchSemantic matches input against the semantic index using embeddings.
+// This is used for Layer 3 semantic routing when Layer 2 rule matching fails.
+// MatchSemantic 使用 embedding 与语义索引匹配，用于 Layer 3 语义路由。
+func (cm *CapabilityMap) MatchSemantic(ctx context.Context, input string) ([]string, float64) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.semanticIndex == nil || !cm.semanticIndex.initialized {
+		return nil, 0
+	}
+
+	if cm.embeddingProvider == nil {
+		slog.Warn("no embedding provider available for semantic matching")
+		return nil, 0
+	}
+
+	// Generate embedding for input
+	inputEmbedding, err := cm.embeddingProvider.Embed(ctx, input)
+	if err != nil {
+		slog.Warn("failed to embed input for semantic matching",
+			"input", input,
+			"error", err)
+		return nil, 0
+	}
+
+	// Calculate similarity with each expert's embedding
+	bestExpert := ""
+	bestSimilarity := float32(0)
+
+	for expertName, expertEmbedding := range cm.semanticIndex.expertEmbeddings {
+		similarity := cosineSimilarity(inputEmbedding, expertEmbedding)
+		if similarity > bestSimilarity {
+			bestSimilarity = similarity
+			bestExpert = expertName
+		}
+	}
+
+	// Check threshold
+	if bestSimilarity < cm.semanticIndex.threshold {
+		return nil, 0
+	}
+
+	return []string{bestExpert}, float64(bestSimilarity)
+}
+
+// IdentifyAgent resolves an agent name to its canonical ID.
+// Supports exact match, fuzzy match (partial match), and title-based match.
+// This is used by HandoffHandler to validate and normalize agent names.
+// IdentifyAgent 将代理名称解析为规范 ID，支持精确匹配、模糊匹配和标题匹配。
+func (cm *CapabilityMap) IdentifyAgent(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.keywordIndex == nil {
+		// Fallback: check experts map directly
+		nameLower := strings.ToLower(name)
+		for expertName := range cm.experts {
+			if strings.EqualFold(expertName, nameLower) {
+				return expertName
+			}
+		}
+		return ""
+	}
+
+	nameLower := strings.ToLower(name)
+
+	// 1. Exact match on name
+	if _, ok := cm.keywordIndex.priorities[nameLower]; ok {
+		return nameLower
+	}
+
+	// 2. Fuzzy match: partial match (e.g., "memo" matches "memo")
+	// or title contains the name
+	for expertName := range cm.keywordIndex.priorities {
+		expertLower := strings.ToLower(expertName)
+		if strings.Contains(expertLower, nameLower) || strings.Contains(nameLower, expertLower) {
+			return expertName
+		}
+		// Also check title
+		if title, ok := cm.keywordIndex.titles[expertName]; ok {
+			if strings.Contains(strings.ToLower(title), nameLower) {
+				return expertName
+			}
+		}
+	}
+
+	// 3. Fallback to experts map
+	for expertName := range cm.experts {
+		if strings.EqualFold(expertName, nameLower) {
+			return expertName
+		}
+	}
+
+	return ""
+}
+
+// GetAllExpertNames returns all registered expert names.
+func (cm *CapabilityMap) GetAllExpertNames() []string {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	names := make([]string, 0, len(cm.experts))
+	for name := range cm.experts {
+		names = append(names, name)
+	}
+	return names
 }
 
 // FindExpertsByCapability returns all experts that provide the given capability.

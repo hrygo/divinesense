@@ -1,6 +1,6 @@
 # 统计与告警系统
 
-> **实现状态**: ✅ 完成 (v0.99.0) | **位置**: `ai/stats/`
+> **实现状态**: ✅ 完成 (v0.99.0) | **位置**: `ai/services/stats/`
 
 ## 概述
 
@@ -8,13 +8,13 @@
 
 ### 核心功能
 
-| 功能 | 描述 |
-|:-----|:-----|
+| 功能         | 描述                                  |
+| :----------- | :------------------------------------ |
 | **指标收集** | 实时收集 Token 使用、成本、延迟等指标 |
-| **持久化** | 将统计数据持久化到数据库 |
-| **告警检测** | 基于阈值的智能告警 |
-| **成本追踪** | 用户级别的成本预算管理 |
-| **性能分析** | A/B 测试支持 |
+| **持久化**   | 将统计数据持久化到数据库              |
+| **告警检测** | 基于阈值的智能告警                    |
+| **成本追踪** | 用户级别的成本预算管理                |
+| **性能分析** | A/B 测试支持                          |
 
 ---
 
@@ -205,20 +205,20 @@ CREATE TABLE user_cost_settings (
 
 ### 成本告警
 
-| 条件 | 级别 | 动作 |
-|:-----|:-----|:-----|
-| 达到日预算的 80% | Warning | 通知用户 |
+| 条件              | 级别     | 动作     |
+| :---------------- | :------- | :------- |
+| 达到日预算的 80%  | Warning  | 通知用户 |
 | 达到日预算的 100% | Critical | 暂停服务 |
-| 单次请求成本 > $1 | Warning | 记录日志 |
+| 单次请求成本 > $1 | Warning  | 记录日志 |
 
 ### 性能告警
 
-| 条件 | 级别 | 动作 |
-|:-----|:-----|:-----|
-| 延迟 > 5s | Warning | 记录日志 |
-| 延迟 > 10s | Critical | 告警 |
-| 错误率 > 10% | Warning | 记录日志 |
-| 错误率 > 30% | Critical | 告警 |
+| 条件         | 级别     | 动作     |
+| :----------- | :------- | :------- |
+| 延迟 > 5s    | Warning  | 记录日志 |
+| 延迟 > 10s   | Critical | 告警     |
+| 错误率 > 10% | Warning  | 记录日志 |
+| 错误率 > 30% | Critical | 告警     |
 
 ---
 
@@ -227,7 +227,7 @@ CREATE TABLE user_cost_settings (
 ### 基本使用
 
 ```go
-import "divinesense/ai/stats"
+import "divinesense/ai/services/stats"
 
 // 创建收集器
 collector := stats.NewMetricsCollector(db)
@@ -326,13 +326,13 @@ func (p *Parrot) checkBudget(ctx context.Context, userID int) error {
 
 ## 配置选项
 
-| 环境变量 | 默认值 | 说明 |
-|:---------|:------|:-----|
-| `DIVINESENSE_STATS_ENABLED` | `true` | 是否启用统计 |
-| `DIVINESENSE_STATS_PERSIST_INTERVAL` | `30s` | 持久化间隔 |
-| `DIVINESENSE_STATS_BUFFER_SIZE` | `1000` | 缓冲区大小 |
-| `DIVINESENSE_ALERTS_ENABLED` | `true` | 是否启用告警 |
-| `DIVINESENSE_DEFAULT_DAILY_BUDGET` | `100000` | 默认日预算（毫美分） |
+| 环境变量                             | 默认值   | 说明                 |
+| :----------------------------------- | :------- | :------------------- |
+| `DIVINESENSE_STATS_ENABLED`          | `true`   | 是否启用统计         |
+| `DIVINESENSE_STATS_PERSIST_INTERVAL` | `30s`    | 持久化间隔           |
+| `DIVINESENSE_STATS_BUFFER_SIZE`      | `1000`   | 缓冲区大小           |
+| `DIVINESENSE_ALERTS_ENABLED`         | `true`   | 是否启用告警         |
+| `DIVINESENSE_DEFAULT_DAILY_BUDGET`   | `100000` | 默认日预算（毫美分） |
 
 ---
 
@@ -379,10 +379,10 @@ sum by (agent_type) (ai_tokens_used_total{token_type="total"})
 
 ```bash
 # 运行统计系统测试
-go test ./ai/stats/ -v
+go test ./ai/services/stats/ -v
 
 # 性能基准测试
-go test ./ai/stats/ -bench=. -benchmem
+go test ./ai/services/stats/ -bench=. -benchmem
 ```
 
 ---

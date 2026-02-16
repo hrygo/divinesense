@@ -10,14 +10,20 @@
 ```
 docs/
 ├── README.md                    # 本文件 - 文档总入口
+├── architecture/                # 系统架构 (核心)
+│   ├── overview.md              # 系统总览
+│   ├── summary.md               # 架构摘要
+│   └── cc-runner.md             # CC Runner 架构
 ├── dev-guides/                  # 开发指南 (活跃)
-│   ├── ARCHITECTURE.md          # 系统架构
-│   ├── BACKEND_DB.md            # 后端与数据库
-│   ├── FRONTEND.md              # 前端开发
-│   ├── AI_CHAT_INTERFACE.md     # AI Chat 界面架构
-│   ├── COMMON_TASKS.md          # 常见开发任务
-│   ├── PROJECT_PATHS.md         # 项目路径速查
-│   └── UNEXPOSED_FEATURES.md    # 未暴露功能
+│   ├── README.md                # 开发指南索引
+│   ├── backend/                 # 后端开发
+│   ├── frontend/                # 前端开发
+│   ├── agent/                   # Agent 开发
+│   ├── testing/                 # 测试指南
+│   └── workflow/                # 工作流与工具
+├── user-guides/                 # 用户指南
+│   ├── manual.md                # 用户手册
+│   └── chat-apps.md             # Chat App 指南
 ├── deployment/                  # 部署文档
 │   └── BINARY_DEPLOYMENT.md     # 二进制部署指南
 ├── research/                    # 研究文档 (活跃)
@@ -29,28 +35,29 @@ docs/
 │   ├── SPEC_TEMPLATE.md         # 规格模板
 │   ├── block-design/            # 统一 Block 模型设计 (重要)
 │   └── evolution/               # 进化模式规格
-├── prompts/                     # AI 提示词
-│   └── 202601301323.md
 ├── images/                      # 图片资源
 └── archived/                    # 历史归档
-    ├── specs/                   # 规格文档归档
-    ├── research/                # 研究文档归档
-    ├── projects/                # 项目专题归档 (Parrot 等)
-    ├── reviews/                 # 代码评审与审计
-    ├── refactor-plans/          # 重构与集成计划
-    └── misc/                    # 启动计划与 ROI 分析
+    ├── agent-engineering/       # Agent 工程归档
+    ├── design/                  # 设计文档归档
+    ├── operations/              # 运维文档归档
+    ├── plans/                   # 计划文档归档
+    ├── prompts/                 # 提示词归档
+    ├── refactoring/             # 重构文档归档
+    ├── release/                 # 发布文档归档
+    ├── reports/                 # 报告归档
+    └── ...                      # 其他历史归档
 ```
 
 ---
 
 ## 🚀 快速开始
 
-| 角色           | 入口文档                                                | 说明             |
-| :------------- | :------------------------------------------------------ | :--------------- |
-| **新开发者**   | [ARCHITECTURE.md](dev-guides/ARCHITECTURE.md)       | 了解系统架构     |
-| **后端开发**   | [BACKEND_DB.md](dev-guides/BACKEND_DB.md)           | 数据库、API、AI  |
-| **前端开发**   | [FRONTEND.md](dev-guides/FRONTEND.md)               | 布局、组件、样式 |
-| **运维部署**   | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
+| 角色         | 入口文档                                                | 说明             |
+| :----------- | :------------------------------------------------------ | :--------------- |
+| **新开发者** | [overview.md](architecture/overview.md)                 | 了解系统架构     |
+| **后端开发** | [database.md](dev-guides/backend/database.md)           | 数据库、API、AI  |
+| **前端开发** | [overview.md](dev-guides/frontend/overview.md)          | 布局、组件、样式 |
+| **运维部署** | [BINARY_DEPLOYMENT.md](deployment/BINARY_DEPLOYMENT.md) | 部署与运维       |
 
 ---
 
@@ -58,24 +65,24 @@ docs/
 
 ### 活跃文档 (Active)
 
-| 目录                         | 用途         | 状态     |
-| :--------------------------- | :----------- | :------- |
-| [`dev-guides/`](dev-guides/) | 开发指南     | ✅ 维护中 |
-| [`deployment/`](deployment/) | 部署文档     | ✅ 维护中 |
-| [`research/`](research/)     | 研究与路线图 | ✅ 维护中 |
-| [`specs/`](specs/)           | 实施规格     | ✅ 维护中 |
+| 目录                             | 用途         | 状态     |
+| :------------------------------- | :----------- | :------- |
+| [`architecture/`](architecture/) | 系统架构     | ✅ 核心   |
+| [`dev-guides/`](dev-guides/)     | 开发指南     | ✅ 维护中 |
+| [`user-guides/`](user-guides/)   | 用户指南     | ✅ 维护中 |
+| [`deployment/`](deployment/)     | 部署文档     | ✅ 维护中 |
+| [`research/`](research/)         | 研究与路线图 | ✅ 维护中 |
+| [`specs/`](specs/)               | 实施规格     | ✅ 维护中 |
 
 ### 归档文档 (Archived)
 
-| 目录                                                                         | 归档时间   | 内容                     |
-| :--------------------------------------------------------------------------- | :--------- | :----------------------- |
-| [`archived/specs/20260207_archive/`](archived/specs/20260207_archive/)       | 2026-02-07 | Sprint 0/Phase 2/3 规格  |
-| [`archived/research/20260207_archive/`](archived/research/20260207_archive/) | 2026-02-07 | 历史研究报告 (Agent/UBM) |
-| [`archived/research/20260131_archive/`](archived/research/20260131_archive/) | 2026-01-31 | 历史报告、方法论         |
-| [`archived/projects/parrot/`](archived/projects/parrot/)                     | 2026-01-29 | Parrot 专题文档          |
-| [`archived/reviews/`](archived/reviews/)                                     | -          | 代码评审、审计报告       |
-| [`archived/refactor-plans/`](archived/refactor-plans/)                       | -          | 重构计划、集成设计       |
-| [`archived/specs/20260207_archive/`](archived/specs/20260207_archive/)     | 2026-02-07 | Phase 1/2/3 已完成规格   |
+| 目录                                                         | 内容               |
+| :----------------------------------------------------------- | :----------------- |
+| [`archived/agent-engineering/`](archived/agent-engineering/) | Agent 工程历史文档 |
+| [`archived/design/`](archived/design/)                       | 历史设计方案       |
+| [`archived/plans/`](archived/plans/)                         | 历史实施计划       |
+| [`archived/reports/`](archived/reports/)                     | 历史分析报告       |
+| [`archived/specs/`](archived/specs/)                         | 已完成/过期的规格  |
 
 ---
 
@@ -85,16 +92,15 @@ docs/
 
 根据文档类型选择目录：
 
-1. **开发指南** → `dev-guides/`
-2. **规格文档** → `specs/phase-{1,2,3}/team-{a,b,c}/`
-3. **研究报告** → `research/`
-4. **部署文档** → `deployment/`
+1. **架构设计** → `architecture/`
+2. **开发指南** → `dev-guides/{category}/`
+3. **规格文档** → `specs/phase-{1,2,3}/team-{a,b,c}/`
+4. **研究报告** → `research/`
 
 ### Q: 如何归档旧文档？
 
-1. 在 `archived/` 下创建带日期的目录
-2. 移动文件并添加 `README.md` 说明
-3. 更新原目录的索引文件
+1. 移动文件到 `archived/` 下的对应分类目录
+2. 如果是成批归档，可以创建日期目录，如 `archived/research/20260216_archive/`
 
 ### Q: 历史规格在哪里？
 

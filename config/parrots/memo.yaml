@@ -124,3 +124,34 @@ self_description:
   personality:
     - "精准"
     - "高效"
+
+  # Routing configuration for Layer 2 rule-based matching
+  # This replaces hardcoded keyword matching in RuleMatcher
+  routing:
+    # Keywords that trigger routing to this agent
+    keywords:
+      - "笔记"
+      - "memo"
+      - "搜索"
+      - "找"
+      - "记录"
+    # Regex patterns for more complex matching
+    patterns:
+      - "查看.*笔记"
+      - "搜索.*内容"
+      - "找一下.*"
+      - "我之前.*记过"
+    # Explicit exclusions - these patterns prevent routing to this agent
+    excludes:
+      - "创建日程"
+      - "新建日程"
+    # Priority when multiple agents match (higher = preferred)
+    priority: 10
+    # Semantic examples for Layer 3 semantic routing
+    # These will be pre-computed as embedding vectors at startup
+    semantic_examples:
+      - "我之前好像记过关于数据库的配置"
+      - "帮我找一下上周的会议记录"
+      - "知识库里有没有关于 Golang 的文章"
+      - "查看最近的笔记"
+      - "我有记过 something 吗"

@@ -598,6 +598,17 @@ func (s *ConnectServiceHandler) RecordReview(ctx context.Context, req *connect.R
 	return connect.NewResponse(resp), nil
 }
 
+func (s *ConnectServiceHandler) RecordRouterFeedback(ctx context.Context, req *connect.Request[v1pb.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil || !s.AIService.IsEnabled() {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	_, err := s.AIService.RecordRouterFeedback(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
 func (s *ConnectServiceHandler) GetReviewStats(ctx context.Context, req *connect.Request[v1pb.GetReviewStatsRequest]) (*connect.Response[v1pb.GetReviewStatsResponse], error) {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))

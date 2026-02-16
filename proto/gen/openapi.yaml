@@ -995,6 +995,30 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/ai/routing/feedback:
+        post:
+            tags:
+                - AIService
+            description: |-
+                RecordRouterFeedback records user feedback for routing decisions.
+                 This enables HILT (Human-In-The-Loop) learning.
+            operationId: AIService_RecordRouterFeedback
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RecordRouterFeedbackRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/ai/search:
         post:
             tags:
@@ -5447,6 +5471,23 @@ components:
                     type: string
                     format: enum
             description: RecordReviewRequest is the request for RecordReview.
+        RecordRouterFeedbackRequest:
+            required:
+                - input
+                - predicted
+                - actual
+                - feedback
+            type: object
+            properties:
+                input:
+                    type: string
+                predicted:
+                    type: string
+                actual:
+                    type: string
+                feedback:
+                    type: string
+            description: RecordRouterFeedbackRequest is the request for RecordRouterFeedback.
         RefreshTokenRequest:
             type: object
             properties: {}

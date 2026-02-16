@@ -67,6 +67,9 @@ const (
 	AIServiceGetDueReviewsProcedure = "/memos.api.v1.AIService/GetDueReviews"
 	// AIServiceRecordReviewProcedure is the fully-qualified name of the AIService's RecordReview RPC.
 	AIServiceRecordReviewProcedure = "/memos.api.v1.AIService/RecordReview"
+	// AIServiceRecordRouterFeedbackProcedure is the fully-qualified name of the AIService's
+	// RecordRouterFeedback RPC.
+	AIServiceRecordRouterFeedbackProcedure = "/memos.api.v1.AIService/RecordRouterFeedback"
 	// AIServiceGetReviewStatsProcedure is the fully-qualified name of the AIService's GetReviewStats
 	// RPC.
 	AIServiceGetReviewStatsProcedure = "/memos.api.v1.AIService/GetReviewStats"
@@ -166,6 +169,9 @@ type AIServiceClient interface {
 	GetDueReviews(context.Context, *connect.Request[v1.GetDueReviewsRequest]) (*connect.Response[v1.GetDueReviewsResponse], error)
 	// RecordReview records a review result and updates spaced repetition state.
 	RecordReview(context.Context, *connect.Request[v1.RecordReviewRequest]) (*connect.Response[emptypb.Empty], error)
+	// RecordRouterFeedback records user feedback for routing decisions.
+	// This enables HILT (Human-In-The-Loop) learning.
+	RecordRouterFeedback(context.Context, *connect.Request[v1.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error)
 	// GetReviewStats returns review statistics for the current user.
 	GetReviewStats(context.Context, *connect.Request[v1.GetReviewStatsRequest]) (*connect.Response[v1.GetReviewStatsResponse], error)
 	// ListAIConversations returns a list of AI conversations.
@@ -318,6 +324,12 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			httpClient,
 			baseURL+AIServiceRecordReviewProcedure,
 			connect.WithSchema(aIServiceMethods.ByName("RecordReview")),
+			connect.WithClientOptions(opts...),
+		),
+		recordRouterFeedback: connect.NewClient[v1.RecordRouterFeedbackRequest, emptypb.Empty](
+			httpClient,
+			baseURL+AIServiceRecordRouterFeedbackProcedure,
+			connect.WithSchema(aIServiceMethods.ByName("RecordRouterFeedback")),
 			connect.WithClientOptions(opts...),
 		),
 		getReviewStats: connect.NewClient[v1.GetReviewStatsRequest, v1.GetReviewStatsResponse](
@@ -495,6 +507,7 @@ type aIServiceClient struct {
 	getKnowledgeGraph         *connect.Client[v1.GetKnowledgeGraphRequest, v1.GetKnowledgeGraphResponse]
 	getDueReviews             *connect.Client[v1.GetDueReviewsRequest, v1.GetDueReviewsResponse]
 	recordReview              *connect.Client[v1.RecordReviewRequest, emptypb.Empty]
+	recordRouterFeedback      *connect.Client[v1.RecordRouterFeedbackRequest, emptypb.Empty]
 	getReviewStats            *connect.Client[v1.GetReviewStatsRequest, v1.GetReviewStatsResponse]
 	listAIConversations       *connect.Client[v1.ListAIConversationsRequest, v1.ListAIConversationsResponse]
 	getAIConversation         *connect.Client[v1.GetAIConversationRequest, v1.AIConversation]
@@ -591,6 +604,11 @@ func (c *aIServiceClient) GetDueReviews(ctx context.Context, req *connect.Reques
 // RecordReview calls memos.api.v1.AIService.RecordReview.
 func (c *aIServiceClient) RecordReview(ctx context.Context, req *connect.Request[v1.RecordReviewRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.recordReview.CallUnary(ctx, req)
+}
+
+// RecordRouterFeedback calls memos.api.v1.AIService.RecordRouterFeedback.
+func (c *aIServiceClient) RecordRouterFeedback(ctx context.Context, req *connect.Request[v1.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.recordRouterFeedback.CallUnary(ctx, req)
 }
 
 // GetReviewStats calls memos.api.v1.AIService.GetReviewStats.
@@ -753,6 +771,9 @@ type AIServiceHandler interface {
 	GetDueReviews(context.Context, *connect.Request[v1.GetDueReviewsRequest]) (*connect.Response[v1.GetDueReviewsResponse], error)
 	// RecordReview records a review result and updates spaced repetition state.
 	RecordReview(context.Context, *connect.Request[v1.RecordReviewRequest]) (*connect.Response[emptypb.Empty], error)
+	// RecordRouterFeedback records user feedback for routing decisions.
+	// This enables HILT (Human-In-The-Loop) learning.
+	RecordRouterFeedback(context.Context, *connect.Request[v1.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error)
 	// GetReviewStats returns review statistics for the current user.
 	GetReviewStats(context.Context, *connect.Request[v1.GetReviewStatsRequest]) (*connect.Response[v1.GetReviewStatsResponse], error)
 	// ListAIConversations returns a list of AI conversations.
@@ -901,6 +922,12 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		AIServiceRecordReviewProcedure,
 		svc.RecordReview,
 		connect.WithSchema(aIServiceMethods.ByName("RecordReview")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIServiceRecordRouterFeedbackHandler := connect.NewUnaryHandler(
+		AIServiceRecordRouterFeedbackProcedure,
+		svc.RecordRouterFeedback,
+		connect.WithSchema(aIServiceMethods.ByName("RecordRouterFeedback")),
 		connect.WithHandlerOptions(opts...),
 	)
 	aIServiceGetReviewStatsHandler := connect.NewUnaryHandler(
@@ -1089,6 +1116,8 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceGetDueReviewsHandler.ServeHTTP(w, r)
 		case AIServiceRecordReviewProcedure:
 			aIServiceRecordReviewHandler.ServeHTTP(w, r)
+		case AIServiceRecordRouterFeedbackProcedure:
+			aIServiceRecordRouterFeedbackHandler.ServeHTTP(w, r)
 		case AIServiceGetReviewStatsProcedure:
 			aIServiceGetReviewStatsHandler.ServeHTTP(w, r)
 		case AIServiceListAIConversationsProcedure:
@@ -1204,6 +1233,10 @@ func (UnimplementedAIServiceHandler) GetDueReviews(context.Context, *connect.Req
 
 func (UnimplementedAIServiceHandler) RecordReview(context.Context, *connect.Request[v1.RecordReviewRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.RecordReview is not implemented"))
+}
+
+func (UnimplementedAIServiceHandler) RecordRouterFeedback(context.Context, *connect.Request[v1.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.RecordRouterFeedback is not implemented"))
 }
 
 func (UnimplementedAIServiceHandler) GetReviewStats(context.Context, *connect.Request[v1.GetReviewStatsRequest]) (*connect.Response[v1.GetReviewStatsResponse], error) {
