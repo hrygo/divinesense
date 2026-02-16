@@ -412,7 +412,7 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
         ref={cardRef}
         className={cn(
           // Base card styles
-          "group relative rounded-lg overflow-hidden",
+          "group relative rounded-lg overflow-y-auto",
           // Sticky note background
           colorClasses.bg,
           "border",
