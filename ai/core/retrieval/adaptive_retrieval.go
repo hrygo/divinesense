@@ -42,6 +42,7 @@ type RetrievalOptions struct {
 	TimeRange         *queryengine.TimeRange
 	Logger            *slog.Logger
 	Query             string
+	OriginalQuery     string // 原始查询词（不含 LLM 扩展），用于 BM25 fallback
 	Strategy          string
 	RequestID         string
 	Limit             int
@@ -463,8 +464,32 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 			"semantic_count", len(results),
 		)
 
-		// 使用原始查询（不含 LLM 扩展）执行 BM25 搜索
-		bm25Results, err := r.memoBM25Only(ctx, opts)
+		// 执行 BM25 搜索
+		// 优先使用 OriginalQuery（如果提供），否则使用 Query
+		bm25Opts := *opts
+		queryToUse := opts.Query
+		if opts.OriginalQuery != "" {
+			queryToUse = opts.OriginalQuery
+		}
+		bm25Opts.Query = queryToUse
+
+		bm25Results, err := r.memoBM25Only(ctx, &bm25Opts)
+
+		// 如果 BM25 返回 0 结果，尝试使用更简单的查询（只用第一个词）
+		if err == nil && len(bm25Results) == 0 && len(queryToUse) > 5 {
+			// 提取第一个关键词（空格分隔的第一个词）
+			simpleQuery := strings.Split(queryToUse, " ")[0]
+			if len(simpleQuery) > 1 && simpleQuery != queryToUse {
+				opts.Logger.InfoContext(ctx, "BM25 no results, trying simplified query",
+					"request_id", opts.RequestID,
+					"original_query", queryToUse,
+					"simplified_query", simpleQuery,
+				)
+				bm25Opts.Query = simpleQuery
+				bm25Results, err = r.memoBM25Only(ctx, &bm25Opts)
+			}
+		}
+
 		if err == nil && len(bm25Results) > 0 {
 			opts.Logger.InfoContext(ctx, "BM25 fallback returned results",
 				"request_id", opts.RequestID,
