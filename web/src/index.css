@@ -606,3 +606,24 @@
 .dark .bg-orange-950\/30 .sticky-note-corner {
   border-color: transparent rgb(253 186 116 / 0.2) transparent transparent;
 }
+
+/* Memo search result table column widths */
+.memo-result-table th:nth-child(1),
+.memo-result-table td:nth-child(1) {
+  width: 5%;
+}
+
+.memo-result-table th:nth-child(2),
+.memo-result-table td:nth-child(2) {
+  width: 50%;
+}
+
+.memo-result-table th:nth-child(3),
+.memo-result-table td:nth-child(3) {
+  width: 10%;
+}
+
+.memo-result-table th:nth-child(4),
+.memo-result-table td:nth-child(4) {
+  width: 35%;
+}

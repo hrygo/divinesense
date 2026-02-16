@@ -420,6 +420,11 @@ build-sqlite-vec-all: ## 构建所有平台的 sqlite-vec 静态库
 
 build-web: ## 构建前端
 	@echo "Building frontend..."
+	@# 自动检查并安装前端依赖（如果 node_modules 不存在）
+	@if [ ! -d "$(WEB_DIR)/node_modules" ]; then \
+		echo "前端依赖未安装，正在安装..."; \
+		cd $(WEB_DIR) && pnpm install; \
+	fi
 	@cd $(WEB_DIR) && pnpm build
 
 build-all: build build-web ## 构建前后端

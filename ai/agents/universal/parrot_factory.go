@@ -182,8 +182,15 @@ func (f *ParrotFactory) LoadConfigs() error {
 			}
 
 			f.configs[config.Name] = config
+			slog.Info("loaded parrot config", "name", config.Name, "path", entry.Name(), "has_system_prompt", len(config.SystemPrompt) > 0)
 		}
 	}
+
+	names := make([]string, 0, len(f.configs))
+	for name := range f.configs {
+		names = append(names, name)
+	}
+	slog.Info("parrot configs loaded", "count", len(f.configs), "names", names)
 
 	return nil
 }

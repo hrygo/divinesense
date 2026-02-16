@@ -80,29 +80,50 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
     return codeBlockCount % 2 !== 0;
   }, [content]);
 
+  // 表格组件样式
+  const tableComponents = {
+    table: (props: React.HTMLAttributes<HTMLTableElement>) => (
+      <table {...props} className="w-full border-collapse my-3 text-sm table-fixed memo-result-table" />
+    ),
+    thead: (props: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead {...props} className="bg-slate-100 dark:bg-slate-700" />
+    ),
+    tbody: (props: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <tbody {...props} className="divide-y divide-slate-200 dark:divide-slate-600" />
+    ),
+    tr: (props: React.HTMLAttributes<HTMLTableRowElement>) => <tr {...props} />,
+    th: (props: React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
+      <th
+        {...props}
+        className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-500 whitespace-nowrap"
+      />
+    ),
+    td: (props: React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
+      <td {...props} className="px-3 py-2 text-slate-600 dark:text-slate-300 align-top w-auto" style={{ width: "40%" }} />
+    ),
+    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
+    ),
+    p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p {...props} className="mb-1 last:mb-0" />,
+    pre: (props: React.HTMLAttributes<HTMLPreElement>) => <CodeBlock {...props} hideCopy={true} />,
+    code: ({ className, children, inline, ...props }: CodeComponentProps) => {
+      return inline ? (
+        <code className={cn("px-1.5 py-0.5 rounded-md bg-muted text-xs", className)} {...props}>
+          {children}
+        </code>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+  };
+
   // 如果在代码块中，直接渲染全部内容
   if (isInCodeBlock) {
     return (
       <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkBreaks]}
-          components={{
-            a: ({ node, ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
-            p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0" />,
-            pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
-            code: ({ className, children, inline, ...props }: CodeComponentProps) => {
-              return inline ? (
-                <code className={cn("px-1.5 py-0.5 rounded-md bg-muted text-xs", className)} {...props}>
-                  {children}
-                </code>
-              ) : (
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-        >
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={tableComponents}>
           {content}
         </ReactMarkdown>
       </div>
@@ -113,25 +134,7 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
     <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
       {/* 完整部分 - 静态渲染 */}
       {completePart && (
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkBreaks]}
-          components={{
-            a: ({ node, ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
-            p: ({ node, ...props }) => <p {...props} className="mb-1 last:mb-0" />,
-            pre: ({ node, ...props }) => <CodeBlock {...props} hideCopy={true} />,
-            code: ({ className, children, inline, ...props }: CodeComponentProps) => {
-              return inline ? (
-                <code className={cn("px-1.5 py-0.5 rounded-md bg-muted text-xs", className)} {...props}>
-                  {children}
-                </code>
-              ) : (
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-        >
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={tableComponents}>
           {completePart}
         </ReactMarkdown>
       )}

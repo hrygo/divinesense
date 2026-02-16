@@ -210,10 +210,18 @@ func (p *UniversalParrot) buildMessages(history []string) []ai.Message {
 	if p.config.SystemPrompt != "" {
 		timeContext := p.buildTimeContext()
 		systemContent := p.enhanceSystemPromptWithDate(p.config.SystemPrompt, timeContext)
+		// Debug: log first 200 chars of system prompt to verify config loading
+		previewLen := 200
+		if len(systemContent) < previewLen {
+			previewLen = len(systemContent)
+		}
+		slog.Debug("using system prompt", "parrot", p.config.Name, "prompt_preview", systemContent[:previewLen])
 		messages = append(messages, ai.Message{
 			Role:    "system",
 			Content: systemContent,
 		})
+	} else {
+		slog.Warn("no system prompt configured, using fallback", "parrot", p.config.Name)
 	}
 
 	// Add conversation history
