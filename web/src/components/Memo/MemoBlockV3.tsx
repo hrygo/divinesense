@@ -20,6 +20,7 @@
  * - 200-char smart preview (折叠时)
  */
 
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { useQueryClient } from "@tanstack/react-query";
 import copy from "copy-to-clipboard";
 import {
@@ -64,8 +65,7 @@ import { generatePreview } from "@/utils/text";
 
 export interface MemoBlockV3Props {
   memo: Memo;
-  isLatest?: boolean;
-  onEdit?: (memo: Memo) => void;
+  onEdit?: (memoName: string) => void;
   className?: string;
 }
 
@@ -94,7 +94,7 @@ function formatRelativeTime(timestamp: number, t: (key: string, options?: Record
 // Main Component
 // ============================================================================
 
-export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, onEdit, className }: MemoBlockV3Props) {
+export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }: MemoBlockV3Props) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigateTo = useNavigateTo();
@@ -111,10 +111,20 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
   // Get color scheme based on tags
   const colorClasses = useMemo(() => getMemoColorClasses(tags), [tags]);
 
-  // States
+  // States - initialize from localStorage or use default based on content length
   const [isExpanded, setIsExpanded] = useState(() => {
+    const memoId = memo.name.split("/").pop() || memo.name;
+    try {
+      const saved = localStorage.getItem(`memo-block-collapsed-${memoId}`);
+      if (saved !== null) {
+        return saved === "false"; // saved value is "collapsed" state, so false = expanded
+      }
+    } catch {
+      // localStorage unavailable, use default
+    }
+    // Default: expand short content
     const contentLength = memo.content.length;
-    return contentLength < 300 || isLatest;
+    return contentLength < 300;
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(null);
@@ -186,8 +196,8 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
   const handleToggle = useCallback(() => setIsExpanded((prev) => !prev), []);
 
   const handleEdit = useCallback(() => {
-    onEdit?.(memo);
-  }, [memo, onEdit]);
+    onEdit?.(memo.name);
+  }, [memo.name, onEdit]);
 
   const handleTogglePin = useCallback(async () => {
     try {
@@ -308,8 +318,8 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
   }, [memo.content]);
 
   const relativeTime = useMemo(() => {
-    const timestamp = memo.displayTime ? Number(memo.displayTime) : Date.now();
-    return formatRelativeTime(timestamp, t);
+    const date = memo.displayTime ? timestampDate(memo.displayTime) : new Date();
+    return formatRelativeTime(date.getTime(), t);
   }, [memo.displayTime, t]);
 
   const visibilityLabel = useMemo(() => {
@@ -426,12 +436,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, isLatest = false, o
               <div className="border-t border-current/10 pt-4">
                 <MemoView
                   memo={memo}
+                  showCreator={true}
                   showVisibility={false}
                   showPinned={false}
                   hideActionMenu={true}
-                  hideInteractionButtons={false}
+                  hideInteractionButtons={true}
                   compact={false}
-                  className="!border-0 !bg-transparent !shadow-none !p-0"
+                  className="border-0 bg-transparent shadow-none p-0"
                 />
               </div>
 

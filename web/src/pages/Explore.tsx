@@ -5,9 +5,7 @@ import { ExploreHeroSection } from "@/components/Memo/ExploreHeroSection";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
-import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
-import { getMemoEditPath } from "@/utils/memo";
 
 const Explore = () => {
   const currentUser = useCurrentUser();
@@ -33,8 +31,9 @@ const Explore = () => {
 
   // Handle memo edit - other actions are handled by MemoBlock
   const handleEdit = useCallback(
-    (memo: Memo) => {
-      navigate(getMemoEditPath(memo));
+    (memoName: string) => {
+      const memoId = memoName.split("/").pop() || memoName;
+      navigate(`/m/${memoId}`);
     },
     [navigate],
   );

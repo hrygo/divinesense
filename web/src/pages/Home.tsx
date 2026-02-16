@@ -6,7 +6,6 @@ import { FixedEditor } from "@/components/Memo/FixedEditor";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
-import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 
 const Home = () => {
   const { t } = useTranslation();
@@ -28,8 +27,8 @@ const Home = () => {
 
   // Handle memo edit
   const handleEdit = useCallback(
-    (memo: Memo) => {
-      const memoId = memo.name.split("/").pop() || memo.name;
+    (memoName: string) => {
+      const memoId = memoName.split("/").pop() || memoName;
       navigate(`/m/${memoId}`);
     },
     [navigate],

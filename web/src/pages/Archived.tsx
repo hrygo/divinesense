@@ -4,8 +4,6 @@ import { MemoListV3 } from "@/components/Memo";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { State } from "@/types/proto/api/v1/common_pb";
-import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
-import { getMemoEditPath } from "@/utils/memo";
 
 const Archived = () => {
   const user = useCurrentUser();
@@ -26,8 +24,9 @@ const Archived = () => {
 
   // Handle memo edit - other actions are handled by MemoBlock
   const handleEdit = useCallback(
-    (memo: Memo) => {
-      navigate(getMemoEditPath(memo));
+    (memoName: string) => {
+      const memoId = memoName.split("/").pop() || memoName;
+      navigate(`/m/${memoId}`);
     },
     [navigate],
   );

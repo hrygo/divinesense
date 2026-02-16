@@ -22,7 +22,6 @@ import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { cn } from "@/lib/utils";
 import { State } from "@/types/proto/api/v1/common_pb";
-import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 
 // ============================================================================
 // Types
@@ -33,7 +32,7 @@ export interface MemoListV3Props {
   orderBy?: string;
   filter?: string;
   pageSize?: number;
-  onEdit?: (memo: Memo) => void;
+  onEdit?: (memoName: string) => void;
   className?: string;
 }
 
@@ -351,8 +350,8 @@ export const MemoListV3 = memo(function MemoListV3({
 
   // Handle edit action
   const handleEdit = useCallback(
-    (memo: Memo) => {
-      onEdit?.(memo);
+    (memoName: string) => {
+      onEdit?.(memoName);
     },
     [onEdit],
   );
