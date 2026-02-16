@@ -780,7 +780,9 @@
     "just-now": "Just now",
     "now": "now",
     "minutes-ago": "{{count}}m ago",
-    "hours-ago": "{{count}}h ago"
+    "hours-ago": "{{count}}h ago",
+    "fullscreen": "Fullscreen",
+    "exit_fullscreen": "Exit fullscreen"
   },
   "greeting": {
     "morning": "Good morning",
