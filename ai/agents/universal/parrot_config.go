@@ -32,6 +32,9 @@ type ParrotConfig struct {
 	CacheTTL    time.Duration `json:"cache_ttl" yaml:"cache_ttl"`
 	CacheSize   int           `json:"cache_size" yaml:"cache_size"`
 
+	// Runtime (not from YAML, injected at runtime)
+	BaseURL string `json:"-" yaml:"-"`
+
 	// Metadata
 	SelfDescription *agent.ParrotSelfCognition `json:"self_description" yaml:"self_description"`
 }

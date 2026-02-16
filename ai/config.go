@@ -2,6 +2,7 @@ package ai
 
 import (
 	"errors"
+	"os"
 
 	"github.com/hrygo/divinesense/internal/profile"
 )
@@ -59,6 +60,7 @@ type UniversalParrotConfig struct {
 	Enabled      bool   // Enable UniversalParrot for creating parrots from YAML configs
 	ConfigDir    string // Path to parrot YAML configs (default: ./config/parrots)
 	FallbackMode string // "legacy" | "error" when config load fails (default: legacy)
+	BaseURL      string // Frontend base URL for generating links in prompts
 }
 
 // NewConfigFromProfile creates AI config from profile.
@@ -110,10 +112,16 @@ func NewConfigFromProfile(p *profile.Profile) *Config {
 	}
 
 	// UniversalParrot configuration
+	// BaseURL can be set via DIVINESENSE_FRONTEND_URL env var, defaults to localhost:25173
+	baseURL := os.Getenv("DIVINESENSE_FRONTEND_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:25173"
+	}
 	cfg.UniversalParrot = UniversalParrotConfig{
 		Enabled:      true,
 		ConfigDir:    "./config/parrots",
 		FallbackMode: "legacy",
+		BaseURL:      baseURL,
 	}
 
 	return cfg

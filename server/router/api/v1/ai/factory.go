@@ -117,6 +117,7 @@ func (f *AgentFactory) Initialize(cfg *ai.UniversalParrotConfig) error {
 		universal.WithLLM(f.llm),
 		universal.WithConfigDir(configDir),
 		universal.WithToolFactories(toolFactories),
+		universal.WithBaseURL(cfg.BaseURL),
 	)
 	if err != nil {
 		return fmt.Errorf("initialize parrot factory: %w", err)

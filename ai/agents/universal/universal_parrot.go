@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -254,15 +255,14 @@ func (p *UniversalParrot) buildTimeContext() *TimeContext {
 }
 
 // enhanceSystemPromptWithDate injects structured current date context into the system prompt.
-// The JSON format is more reliably parsed by LLMs than free-form text (20%+ accuracy boost).
+// Also replaces {{.BaseURL}} placeholder with the configured base URL.
 func (p *UniversalParrot) enhanceSystemPromptWithDate(basePrompt string, tc *TimeContext) string {
 	// If no timeContext provided, build one
 	if tc == nil {
 		tc = p.buildTimeContext()
 	}
 
-	// Minimal instruction: JSON context + one-line pattern guide
-	// Based on 2025 research:简洁优于复杂，LLM可从结构化数据推断规则
+	// Build time context
 	dateContext := fmt.Sprintf(`
 
 <time_context>
@@ -274,7 +274,14 @@ Use the JSON above for time calculations. Output format: ISO8601 (YYYY-MM-DDTHH:
 		tc.FormatAsJSONBlock(),
 	)
 
-	return basePrompt + dateContext
+	result := basePrompt + dateContext
+
+	// Replace {{.BaseURL}} placeholder with configured base URL
+	if p.config.BaseURL != "" {
+		result = strings.ReplaceAll(result, "{{.BaseURL}}", p.config.BaseURL)
+	}
+
+	return result
 }
 
 // resolveTools resolves tool names to ToolWithSchema instances.

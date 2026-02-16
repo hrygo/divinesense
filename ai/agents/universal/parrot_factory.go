@@ -22,6 +22,7 @@ type ParrotFactory struct {
 	configs          map[string]*ParrotConfig
 	configDir        string
 	llm              ai.LLMService
+	baseURL          string                     // Frontend base URL for generating links
 	toolFactories    map[string]ToolFactoryFunc // Dynamic tool creation
 	retrieverFactory func() any                 // Retriever factory
 	scheduleFactory  func() any                 // Schedule service factory
@@ -116,6 +117,14 @@ func WithRetriever(retrieverFactory func() any) FactoryOption {
 func WithScheduleService(scheduleFactory func() any) FactoryOption {
 	return func(f *ParrotFactory) error {
 		f.scheduleFactory = scheduleFactory
+		return nil
+	}
+}
+
+// WithBaseURL sets the frontend base URL for generating links in prompts.
+func WithBaseURL(baseURL string) FactoryOption {
+	return func(f *ParrotFactory) error {
+		f.baseURL = baseURL
 		return nil
 	}
 }
@@ -225,6 +234,11 @@ func (f *ParrotFactory) CreateParrot(name string, userID int32) (agent.ParrotAge
 
 // CreateParrotFromConfig creates a parrot from a configuration.
 func (f *ParrotFactory) CreateParrotFromConfig(config *ParrotConfig, userID int32) (agent.ParrotAgent, error) {
+	// Inject baseURL from factory if not already set in config
+	if config.BaseURL == "" && f.baseURL != "" {
+		config.BaseURL = f.baseURL
+	}
+
 	// Resolve tools from factory functions
 	tools := make(map[string]agent.ToolWithSchema)
 	for _, toolName := range config.Tools {
