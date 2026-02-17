@@ -45,6 +45,7 @@ func NewSimpleTaskLLMService(p *profile.Profile, mainLLM LLMService) LLMService 
 		if err != nil {
 			slog.Warn("Failed to create simple task LLM service, falling back to main LLM",
 				"provider", cfg.Provider,
+				"model", cfg.Model,
 				"error", err,
 			)
 			return mainLLM

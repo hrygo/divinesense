@@ -89,7 +89,7 @@ var intentKeywords = map[string][]string{
 	// General LLM task intents
 	"general_task": {
 		// Core keywords (from general.yaml routing.keywords)
-		"总结", "摘要", "翻译", "改写", "润色", "解释", "说明",
+		"总结", "摘要", "翻译", "改写", "润色", "解释", "说明", "什么意思", "重写",
 		"summarize", "summary", "translate", "rewrite", "polish", "explain",
 	},
 }

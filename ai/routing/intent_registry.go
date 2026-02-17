@@ -201,6 +201,9 @@ func (r *IntentRegistry) actionToIntent(action GenericAction, agentType AgentTyp
 		case ActionBatch:
 			return IntentBatchSchedule
 		}
+	case AgentTypeGeneral:
+		// General agent handles pure LLM tasks without action distinction
+		return IntentGeneralTask
 	}
 	// Default
 	return IntentUnknown
@@ -374,6 +377,15 @@ func (r *IntentRegistry) RegisterDefaults() {
 		Keywords:  []string{"记录", "写笔记", "添加笔记", "新建笔记"},
 		Priority:  90,
 		RouteType: "memo",
+	})
+
+	// General intents - pure LLM tasks without tools
+	r.Register(IntentConfig{
+		Intent:    IntentGeneralTask,
+		AgentType: AgentTypeGeneral,
+		Keywords:  []string{"总结", "摘要", "翻译", "改写", "润色", "解释", "说明", "什么意思", "重写", "summarize", "summary", "translate", "rewrite", "polish", "explain"},
+		Priority:  50, // Lower priority than specialists
+		RouteType: "general",
 	})
 }
 
