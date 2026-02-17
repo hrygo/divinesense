@@ -403,6 +403,7 @@ func (m *BlockManager) UpdateBlockStatus(
 		ID:               blockID,
 		Status:           &status,
 		AssistantContent: &assistantContent,
+		AssistantTs:      &now, // Set assistant timestamp for context building
 		UpdatedTs:        &now,
 	}
 

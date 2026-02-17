@@ -369,6 +369,9 @@ func (d *DB) UpdateAIBlock(ctx context.Context, update *store.UpdateAIBlock) (*s
 	if update.AssistantContent != nil {
 		set, args = append(set, "assistant_content = "+placeholder(len(args)+1)), append(args, *update.AssistantContent)
 	}
+	if update.AssistantTs != nil {
+		set, args = append(set, "assistant_timestamp = "+placeholder(len(args)+1)), append(args, *update.AssistantTs)
+	}
 	if update.EventStream != nil {
 		eventStreamJSON, err := json.Marshal(*update.EventStream)
 		if err != nil {

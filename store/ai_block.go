@@ -133,6 +133,7 @@ type UpdateAIBlock struct {
 	ID               int64
 	UserInputs       *[]UserInput   // Replace user inputs
 	AssistantContent *string        // Update AI response
+	AssistantTs      *int64         // Update AI response timestamp
 	EventStream      *[]BlockEvent  // Replace event stream
 	SessionStats     *SessionStats  // Update session stats
 	CCSessionID      *string        // Update CC session ID
