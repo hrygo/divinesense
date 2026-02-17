@@ -59,6 +59,7 @@ type AIService struct {
 	RerankerService          pluginai.RerankerService
 	EmbeddingService         pluginai.EmbeddingService
 	LLMService               pluginai.LLMService
+	IntentLLMService         pluginai.LLMService // Simple tasks: title, summary, tags
 	conversationService      *aichat.ConversationService
 	AdaptiveRetriever        *retrieval.AdaptiveRetriever
 	IntentClassifierConfig   *pluginai.IntentClassifierConfig
@@ -305,20 +306,27 @@ func (s *AIService) getEnrichmentTrigger() *enrichment.Trigger {
 	// Create enrichers
 	var enrichers []enrichment.Enricher
 
-	// Add summary enricher if LLM is available
-	if s.LLMService != nil {
-		enrichers = append(enrichers, enrichment.NewSummaryEnricher(s.LLMService))
+	// Use IntentLLMService for simple tasks (summary, tags, title)
+	// Falls back to LLMService if IntentLLMService is not configured
+	llmForEnrichment := s.IntentLLMService
+	if llmForEnrichment == nil {
+		llmForEnrichment = s.LLMService
 	}
 
-	// Add tags enricher if store is available
-	if s.Store != nil {
-		suggester := tags.NewTagSuggester(s.Store, s.LLMService, nil)
+	// Add summary enricher if LLM is available
+	if llmForEnrichment != nil {
+		enrichers = append(enrichers, enrichment.NewSummaryEnricher(llmForEnrichment))
+	}
+
+	// Add tags enricher if store AND LLM are available
+	if s.Store != nil && llmForEnrichment != nil {
+		suggester := tags.NewTagSuggester(s.Store, llmForEnrichment, nil)
 		enrichers = append(enrichers, enrichment.NewTagsEnricher(suggester))
 	}
 
 	// Add title enricher if LLM is available
-	if s.LLMService != nil {
-		enrichers = append(enrichers, enrichment.NewTitleEnricher(s.LLMService))
+	if llmForEnrichment != nil {
+		enrichers = append(enrichers, enrichment.NewTitleEnricher(llmForEnrichment))
 	}
 
 	// Create pipeline and trigger

@@ -106,11 +106,15 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 				// 创建 session stats 持久化器
 				persister := aistats.NewPersister(store.AgentStatsStore, 100, slog.Default())
 
-				// 创建会话标题生成器（使用已有 LLMService）
+				// 创建简单任务 LLM 服务（标题生成、摘要、标签等）
+				// 使用 Intent 配置 (siliconflow)，未配置时回退到主 LLM
+				intentLLMService := ai.NewSimpleTaskLLMService(profile, llmService)
+
+				// 创建会话标题生成器（使用简单任务 LLM 服务）
 				var titleGenerator *ai.TitleGenerator
-				if llmService != nil {
-					titleGenerator = ai.NewTitleGeneratorWithLLM(llmService)
-					slog.Info("Title generator initialized with shared LLM service")
+				if intentLLMService != nil {
+					titleGenerator = ai.NewTitleGeneratorWithLLM(intentLLMService)
+					slog.Info("Title generator initialized with simple task LLM service")
 				}
 
 				service.AIService = &AIService{
@@ -119,6 +123,7 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					EmbeddingModel:         aiConfig.Embedding.Model,
 					RerankerService:        rerankerService,
 					LLMService:             llmService,
+					IntentLLMService:       intentLLMService,
 					AdaptiveRetriever:      adaptiveRetriever,
 					IntentClassifierConfig: &aiConfig.IntentClassifier,
 					UniversalParrotConfig:  &aiConfig.UniversalParrot, // Phase 2: Config-driven parrots
