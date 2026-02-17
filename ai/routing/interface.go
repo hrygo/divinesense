@@ -112,6 +112,8 @@ const (
 	IntentScheduleCreate Intent = "schedule_create"
 	IntentScheduleUpdate Intent = "schedule_update"
 	IntentBatchSchedule  Intent = "batch_schedule"
+	// IntentGeneralTask handles pure LLM tasks: summarization, translation, rewriting, Q&A
+	IntentGeneralTask Intent = "general_task"
 	// Note: IntentAmazing removed - Orchestrator handles complex/ambiguous requests
 	IntentUnknown Intent = "unknown"
 )

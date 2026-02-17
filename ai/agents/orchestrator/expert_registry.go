@@ -62,6 +62,8 @@ func (r *ParrotExpertRegistry) GetExpertDescription(name string) string {
 			return "笔记搜索专家。搜索用户记录的笔记、文档、想法。适用：查找之前记录的信息。"
 		case "schedule":
 			return "日程管理专家。创建、查询、更新日程。适用：时间管理、会议安排、查找空闲时间。"
+		case "general":
+			return "通用智能代理。处理文本总结、翻译、改写、问答等不需要特定工具的任务。适用：总结内容、翻译文本、解释说明。"
 		default:
 			return fmt.Sprintf("专家代理: %s", name)
 		}
@@ -225,6 +227,8 @@ func (r *ParrotExpertRegistry) mapExpertToIntent(expertName string) string {
 		return "memo_search"
 	case "schedule":
 		return "schedule_manage"
+	case "general":
+		return "general_task"
 	default:
 		return ""
 	}
@@ -235,6 +239,7 @@ func getDefaultIntentKeywords() map[string][]string {
 	return map[string][]string{
 		"memo_search":     {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
 		"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting", "event", "calendar"},
+		"general_task":    {"总结", "翻译", "改写", "解释", "summarize", "translate", "rewrite", "explain"},
 	}
 }
 

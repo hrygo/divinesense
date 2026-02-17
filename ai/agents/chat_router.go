@@ -31,6 +31,11 @@ const (
 	// Implemented by UniversalParrot with schedule.yaml configuration.
 	RouteTypeSchedule ChatRouteType = "schedule"
 
+	// RouteTypeGeneral routes to General Parrot for pure LLM tasks.
+	// Implemented by UniversalParrot with general.yaml configuration.
+	// Use for: summarization, translation, rewriting, Q&A without tools.
+	RouteTypeGeneral ChatRouteType = "general"
+
 	// Note: RouteTypeAmazing removed - Orchestrator handles complex/ambiguous requests
 )
 
@@ -80,6 +85,13 @@ var intentKeywords = map[string][]string{
 	"delete_event":   {"删除", "日程", "会议", "schedule", "meeting", "delete", "remove", "cancel"},
 	"query_schedule": {"日程", "会议", "查看", "查询", "schedule", "meeting", "query", "check", "show"},
 	"update_event":   {"修改", "更新", "调整", "日程", "schedule", "edit", "update", "modify", "change"},
+
+	// General LLM task intents
+	"general_task": {
+		// Core keywords (from general.yaml routing.keywords)
+		"总结", "摘要", "翻译", "改写", "润色", "解释", "说明",
+		"summarize", "summary", "translate", "rewrite", "polish", "explain",
+	},
 }
 
 // isRelatedToLastIntent checks if the input is semantically related to the last intent.
