@@ -119,7 +119,12 @@ func (d *Decomposer) parseTaskPlan(response string, validAgents []string) (*Task
 		return nil, fmt.Errorf("parse JSON: %w", err)
 	}
 
-	// Validate and set defaults
+	// Handle direct response case - no tasks needed
+	if plan.DirectResponse {
+		return &plan, nil
+	}
+
+	// Validate and set defaults for normal cases
 	if len(plan.Tasks) == 0 {
 		return nil, fmt.Errorf("no tasks in plan")
 	}

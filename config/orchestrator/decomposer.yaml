@@ -186,3 +186,33 @@ few_shot_examples:
           purpose: "搜索用户记录的上海相关旅游信息"
       parallel: true
       aggregate: true
+
+  - scenario: "直接响应"
+    user_input: "总结这些笔记"
+    reasoning: "用户请求总结笔记内容，这是通用 LLM 能力（总结、归纳），无需专家代理"
+    output:
+      analysis: "用户希望对已有内容进行总结，这是 LLM 擅长的通用能力，不需要调用专家"
+      tasks: []
+      direct_response: true
+      response: "根据上下文内容，这里是通用 LLM 能力的总结回复。请提供需要总结的具体内容。"
+      aggregate: false
+
+  - scenario: "直接响应-翻译"
+    user_input: "把上面这段话翻译成英文"
+    reasoning: "翻译是 LLM 基础能力，无需专家代理"
+    output:
+      analysis: "用户需要进行语言翻译，这是 LLM 擅长的通用能力"
+      tasks: []
+      direct_response: true
+      response: "Here is the English translation of the text above."
+      aggregate: false
+
+  - scenario: "直接响应-简单问答"
+    user_input: "今天星期几"
+    reasoning: "简单问答无需专家代理"
+    output:
+      analysis: "用户询问日期信息，可以直接回答"
+      tasks: []
+      direct_response: true
+      response: "今天是2026年2月17日，星期二。"
+      aggregate: false

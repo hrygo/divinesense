@@ -186,6 +186,16 @@ type TaskPlan struct {
 
 	// Aggregate indicates whether results need to be aggregated
 	Aggregate bool `json:"aggregate"`
+
+	// DirectResponse indicates that the task can be handled directly by LLM
+	// without needing to call any expert agents. This is used for simple tasks
+	// like summarization, translation, simple Q&A, etc.
+	DirectResponse bool `json:"direct_response"`
+
+	// Response is the LLM-generated response when DirectResponse is true.
+	// This field is populated by the Decomposer when it determines the task
+	// can be handled directly without expert agents.
+	Response string `json:"response,omitempty"`
 }
 
 // ExecutionResult represents the result of executing a task plan.

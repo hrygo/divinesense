@@ -61,6 +61,15 @@ func (e *Executor) ExecutePlan(ctx context.Context, plan *TaskPlan, callback Eve
 
 	startTime := time.Now()
 
+	// Handle direct response case - no expert agents needed
+	if plan.DirectResponse && plan.Response != "" {
+		slog.Info("executor: direct response mode", "trace_id", traceID)
+		result.FinalResponse = plan.Response
+		result.IsAggregated = false
+		result.TokenUsage = TokenUsage{}
+		return result
+	}
+
 	// Initialize EventDispatcher
 	dispatcher := NewEventDispatcher(traceID, callback)
 	defer dispatcher.Close()
