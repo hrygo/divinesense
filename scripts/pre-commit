@@ -97,11 +97,11 @@ if [ "$HAS_FRONTEND" -gt 0 ]; then
             CHECKS_FAILED=true
         else
             echo "    ${GREEN}✓${NC} pnpm lint:fix"
-            # Stage any auto-fixed files
-            git diff --name-only | grep '^web/' | xargs git add >/dev/null 2>&1 || true
         fi
 
         cd ..
+        # Stage any auto-fixed files (must be in git root for correct paths)
+        git diff --name-only | grep '^web/' | xargs -r git add 2>/dev/null || true
     fi
     echo ""
 fi
