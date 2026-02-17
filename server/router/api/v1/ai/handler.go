@@ -692,36 +692,44 @@ func (h *ParrotHandler) executeWithOrchestrator(
 
 		// CRITICAL FIX: Persist tool_use and tool_result events to database
 		// Without this, frontend cannot display tool call status (always shows "pending")
-		if currentBlock != nil && h.blockManager != nil && (eventType == "tool_use" || eventType == "tool_result") {
-			// Build metadata for block event (same as non-orchestrator mode)
-			var eventMetaForBlock map[string]any
-			if eventMeta != nil {
-				eventMetaForBlock = map[string]any{
-					"duration_ms":       eventMeta.DurationMs,
-					"total_duration_ms": eventMeta.TotalDurationMs,
-					"tool_name":         eventMeta.ToolName,
-					"tool_id":           eventMeta.ToolId,
-					"status":            eventMeta.Status,
-					"error_msg":         eventMeta.ErrorMsg,
-					"input_tokens":      eventMeta.InputTokens,
-					"output_tokens":     eventMeta.OutputTokens,
-					"input_summary":     eventMeta.InputSummary,
-					"output_summary":    eventMeta.OutputSummary,
-					"file_path":         eventMeta.FilePath,
-					"line_count":        eventMeta.LineCount,
-					// Frontend compatibility fields (extractToolCalls expects these)
-					"is_error":  eventMeta.Status == "error",
-					"duration":  eventMeta.DurationMs,
-					"exit_code": 0,
-				}
-			}
-
-			// Append event to database
-			if err := h.blockManager.AppendEvent(ctx, currentBlock.ID, eventType, finalData, eventMetaForBlock); err != nil {
-				logger.Warn("orchestrator: failed to persist event",
+		if eventType == "tool_use" || eventType == "tool_result" {
+			if currentBlock == nil || h.blockManager == nil {
+				// Log warning when tool events cannot be persisted - this affects frontend display
+				logger.Warn("orchestrator: cannot persist tool event - block or manager unavailable",
 					slog.String("event_type", eventType),
-					slog.Int64("block_id", currentBlock.ID),
-					slog.String("error", err.Error()))
+					slog.Bool("has_block", currentBlock != nil),
+					slog.Bool("has_manager", h.blockManager != nil))
+			} else {
+				// Build metadata for block event (same as non-orchestrator mode)
+				var eventMetaForBlock map[string]any
+				if eventMeta != nil {
+					eventMetaForBlock = map[string]any{
+						"duration_ms":       eventMeta.DurationMs,
+						"total_duration_ms": eventMeta.TotalDurationMs,
+						"tool_name":         eventMeta.ToolName,
+						"tool_id":           eventMeta.ToolId,
+						"status":            eventMeta.Status,
+						"error_msg":         eventMeta.ErrorMsg,
+						"input_tokens":      eventMeta.InputTokens,
+						"output_tokens":     eventMeta.OutputTokens,
+						"input_summary":     eventMeta.InputSummary,
+						"output_summary":    eventMeta.OutputSummary,
+						"file_path":         eventMeta.FilePath,
+						"line_count":        eventMeta.LineCount,
+						// Frontend compatibility fields (extractToolCalls expects these)
+						"is_error":  eventMeta.Status == "error",
+						"duration":  eventMeta.DurationMs,
+						"exit_code": 0,
+					}
+				}
+
+				// Append event to database
+				if err := h.blockManager.AppendEvent(ctx, currentBlock.ID, eventType, finalData, eventMetaForBlock); err != nil {
+					logger.Warn("orchestrator: failed to persist event",
+						slog.String("event_type", eventType),
+						slog.Int64("block_id", currentBlock.ID),
+						slog.String("error", err.Error()))
+				}
 			}
 		}
 	}

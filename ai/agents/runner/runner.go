@@ -846,11 +846,16 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			durationMs := stats.RecordToolResult()
 
 			// Extract tool ID and name from content blocks for matching with tool_use
+			// tool_result blocks use tool_use_id to reference the corresponding tool_use
 			var toolID string
 			var toolName string
 			for _, block := range msg.GetContentBlocks() {
 				if block.Type == "tool_result" {
-					toolID = block.ID
+					// Prefer ToolUseID (standard field) over ID for matching
+					toolID = block.ToolUseID
+					if toolID == "" {
+						toolID = block.ID // Fallback to ID if tool_use_id is not present
+					}
 					toolName = block.Name // Tool name from content block
 					break
 				}
