@@ -3,9 +3,11 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	agents "github.com/hrygo/divinesense/ai/agents"
+	agentpkg "github.com/hrygo/divinesense/ai/agents/runner"
 	"github.com/hrygo/divinesense/ai/agents/universal"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
 )
@@ -124,7 +126,15 @@ func (r *ParrotExpertRegistry) GetExpertConfig(name string) *agents.ParrotSelfCo
 }
 
 // ExecuteExpert executes a task with the specified expert agent.
+// history is automatically extracted from context via GetHistory.
 func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName string, input string, callback EventCallback) error {
+	// Extract history from context for context-aware sub-agent execution
+	history := ctxpkg.GetHistory(ctx)
+	if len(history) > 0 {
+		slog.Debug("expert: using conversation history for sub-agent",
+			"expert", expertName,
+			"history_len", len(history))
+	}
 	// Extract userID from context first, fallback to registry's default userID
 	// This enables per-request userID override without changing registry initialization
 	userID := r.userID
@@ -149,8 +159,11 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 				eventDataStr = v
 			case []byte:
 				eventDataStr = string(v)
+			case *agentpkg.EventWithMeta:
+				// Extract EventData from EventWithMeta struct
+				eventDataStr = v.EventData
 			default:
-				// For other types, just pass empty string or marshal if needed
+				// For other types, use JSON marshal to avoid pointer address output
 				eventDataStr = fmt.Sprintf("%v", v)
 			}
 			callback(eventType, eventDataStr)
@@ -158,8 +171,8 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 		return nil
 	}
 
-	// Execute with callback
-	return parrot.Execute(ctx, input, nil, agentCallback)
+	// Execute with callback and history
+	return parrot.Execute(ctx, input, history, agentCallback)
 }
 
 // GetIntentKeywords returns a map of intent names to their related keywords from expert configurations.

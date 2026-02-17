@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hrygo/divinesense/ai/agents/universal"
+	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	"github.com/hrygo/divinesense/ai/core/llm"
 )
 
@@ -49,8 +50,9 @@ func (d *Decomposer) Decompose(ctx context.Context, userInput string, registry E
 	// Build time context for relative date resolution (e.g., "下周五")
 	timeContext := universal.BuildTimeContext(time.Now().Location())
 
-	// Build the decomposition prompt with time context
-	prompt := d.buildDecompositionPrompt(userInput, expertDescriptions, timeContext)
+	// Build the decomposition prompt with time context and history
+	history := ctxpkg.GetHistory(ctx)
+	prompt := d.buildDecompositionPrompt(userInput, expertDescriptions, timeContext, history)
 
 	// Call LLM for decomposition
 	messages := []llm.Message{
@@ -100,8 +102,8 @@ func (d *Decomposer) buildExpertDescriptions(experts []string, registry ExpertRe
 }
 
 // buildDecompositionPrompt creates the prompt for task decomposition.
-func (d *Decomposer) buildDecompositionPrompt(userInput, expertDescriptions string, timeContext *universal.TimeContext) string {
-	return d.promptConfig.BuildDecomposerPrompt(userInput, expertDescriptions, timeContext)
+func (d *Decomposer) buildDecompositionPrompt(userInput, expertDescriptions string, timeContext *universal.TimeContext, history []string) string {
+	return d.promptConfig.BuildDecomposerPrompt(userInput, expertDescriptions, timeContext, history)
 }
 
 // parseTaskPlan parses the LLM response into a TaskPlan.
@@ -131,9 +133,13 @@ func (d *Decomposer) parseTaskPlan(response string, validAgents []string) (*Task
 	}
 
 	// Validate agent names and initialize task status
-	for _, task := range plan.Tasks {
+	for i, task := range plan.Tasks {
 		if !validSet[task.Agent] {
 			return nil, fmt.Errorf("invalid agent: %s (valid: %v)", task.Agent, validAgents)
+		}
+		// Generate ID if empty (LLM may not always return id field)
+		if task.ID == "" {
+			task.ID = fmt.Sprintf("t%d", i+1)
 		}
 		task.SetStatus(TaskStatusPending)
 	}
@@ -173,6 +179,7 @@ func (d *Decomposer) fallbackPlan(userInput string, availableExperts []string) *
 	return &TaskPlan{
 		Analysis: "Direct routing to expert agent",
 		Tasks: []*Task{{
+			ID:      "t1",
 			Agent:   expert,
 			Input:   userInput,
 			Purpose: "Handle user request",

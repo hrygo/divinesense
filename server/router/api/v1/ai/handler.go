@@ -532,6 +532,7 @@ func (h *ParrotHandler) executeWithOrchestrator(
 ) error {
 	// Create logger for this request
 	logger := observability.NewRequestContext(slog.Default(), "orchestrator", req.UserID)
+	startTime := time.Now()
 
 	// ========== Phase 1: Build conversation history ==========
 	var history []string
@@ -591,6 +592,10 @@ func (h *ParrotHandler) executeWithOrchestrator(
 		}
 	}
 
+	// Variable to collect AI response content
+	var assistantContent strings.Builder
+	var assistantContentMu sync.Mutex
+
 	// ========== Phase 3: Inject orchestrator context ==========
 	// Pass request-level data through the call chain without modifying function signatures
 	orchCtx := &ctxpkg.OrchestratorContext{
@@ -604,8 +609,18 @@ func (h *ParrotHandler) executeWithOrchestrator(
 	ctx = ctxpkg.WithOrchestratorContext(ctx, orchCtx)
 
 	// Create callback adapter for streaming events
+	// Phase 4 fix: Include BlockId in all orchestrator events for frontend optimistic block creation
 	callback := func(eventType string, eventData string) {
+		// Collect AI response content for block persistence
+		// Note: Orchestrator sends "answer" and "aggregation" events (not "content" or "text")
+		if eventType == "answer" || eventType == "content" || eventType == "aggregation" {
+			assistantContentMu.Lock()
+			assistantContent.WriteString(eventData)
+			assistantContentMu.Unlock()
+		}
+
 		if err := stream.Send(&v1pb.ChatResponse{
+			BlockId:   blockID,
 			EventType: eventType,
 			EventData: eventData,
 		}); err != nil {
@@ -621,16 +636,72 @@ func (h *ParrotHandler) executeWithOrchestrator(
 	}
 
 	// Send completion event
+	// Phase 4 fix: Include BlockId in done event
+	durationMs := time.Since(startTime).Milliseconds()
+
+	// Determine status from errors
+	status := "completed"
+	if len(result.Errors) > 0 {
+		status = "error"
+	}
+
+	// Collect tools used from task plan
+	var toolsUsed []string
+	var toolCallCount int
+	if result.Plan != nil && len(result.Plan.Tasks) > 0 {
+		seen := make(map[string]bool)
+		for _, task := range result.Plan.Tasks {
+			if task.Agent != "" && !seen[task.Agent] {
+				toolsUsed = append(toolsUsed, task.Agent)
+				seen[task.Agent] = true
+			}
+			// Each task counts as at least one tool execution
+			if task.Status == orchestrator.TaskStatusCompleted {
+				toolCallCount++
+			}
+		}
+	}
+
 	stream.Send(&v1pb.ChatResponse{
-		Done: true,
+		BlockId: blockID,
+		Done:    true,
 		BlockSummary: &v1pb.BlockSummary{
-			TotalDurationMs:       int64(result.TokenUsage.InputTokens + result.TokenUsage.OutputTokens),
+			TotalDurationMs:       durationMs,
+			Status:                status,
+			ToolCallCount:         int32(toolCallCount),
+			ToolsUsed:             toolsUsed,
 			TotalInputTokens:      result.TokenUsage.InputTokens,
 			TotalOutputTokens:     result.TokenUsage.OutputTokens,
 			TotalCacheWriteTokens: result.TokenUsage.CacheWriteTokens,
 			TotalCacheReadTokens:  result.TokenUsage.CacheReadTokens,
 		},
 	})
+
+	// ========== Phase 5: Persist block to database ==========
+	// Complete the block with AI response content and session stats
+	if currentBlock != nil && h.blockManager != nil {
+		assistantContentMu.Lock()
+		finalContent := assistantContent.String()
+		assistantContentMu.Unlock()
+
+		// Build session stats from orchestrator result
+		blockSessionStats := &store.SessionStats{
+			SessionID:        fmt.Sprintf("conv_%d", req.ConversationID),
+			UserID:           req.UserID,
+			AgentType:        string(req.AgentType),
+			TotalDurationMs:  durationMs,
+			InputTokens:      int(result.TokenUsage.InputTokens),
+			OutputTokens:     int(result.TokenUsage.OutputTokens),
+			CacheWriteTokens: int(result.TokenUsage.CacheWriteTokens),
+			CacheReadTokens:  int(result.TokenUsage.CacheReadTokens),
+			ToolCallCount:    toolCallCount,
+		}
+
+		if completeErr := h.blockManager.CompleteBlock(ctx, currentBlock.ID, finalContent, blockSessionStats); completeErr != nil {
+			logger.Warn("Failed to complete orchestrator block",
+				slog.String("error", completeErr.Error()))
+		}
+	}
 
 	logger.Info("ai.chat.completed",
 		slog.String("mode", "orchestrator"),

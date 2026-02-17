@@ -152,7 +152,7 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 	)
 
 	// Send task_start event
-	e.sendTaskStartEvent(task, -1, dispatcher)
+	e.sendTaskStartEvent(task, index, dispatcher)
 
 	slog.Debug("executor: executing task",
 		"trace_id", traceID,
@@ -177,6 +177,7 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 
 	for i := 0; i <= maxRetries; i++ {
 		// Use resultCollector.onEvent as callback
+		// Note: history is automatically extracted from context in ExecuteExpert via GetHistory
 		err = e.registry.ExecuteExpert(ctx, task.Agent, task.Input, resultCollector.onEvent)
 		if err == nil {
 			break
@@ -248,7 +249,7 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 		}
 
 		// Send task_end event with error
-		e.sendTaskEndEvent(task, -1, dispatcher)
+		e.sendTaskEndEvent(task, index, dispatcher)
 		return err
 	}
 
@@ -265,7 +266,7 @@ func (e *Executor) executeTaskWithHandoff(ctx context.Context, task *Task, index
 	)
 
 	// Send task_end event
-	e.sendTaskEndEvent(task, -1, dispatcher)
+	e.sendTaskEndEvent(task, index, dispatcher)
 	return nil
 }
 

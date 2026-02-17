@@ -56,15 +56,16 @@ decomposer:
           "dependencies": []
         }
       ],
-      "parallel": true,
       "aggregate": true
     }
     ```
 
     ### 字段说明
     - **id**: 任务唯一标识（task_1, task_2...），用于依赖引用
-    - **dependencies**: 此任务依赖的前置任务 ID 列表，空数组表示无依赖
-    - **parallel**: 所有任务无依赖时可并行；有依赖时必须 serial 执行
+    - **dependencies**: 依赖的前置任务 ID 列表。
+      - **含义 1 (控制流)**: 当前任务必须等待这些前置任务执行完毕才能开始。
+      - **含义 2 (数据流)**: 当前任务的 prompt 将自动包含这些前置任务的输出结果作为上下文。
+      - **无依赖**: 空数组 `[]` 表示该任务可以立即开始（与其他无依赖任务并行）。
 
     ### 示例 1：单意图请求
     用户："帮我找一下关于 PostgreSQL 优化的笔记"
@@ -80,7 +81,6 @@ decomposer:
           "dependencies": []
         }
       ],
-      "parallel": false,
       "aggregate": false
     }
     ```
@@ -106,16 +106,15 @@ decomposer:
           "dependencies": []
         }
       ],
-      "parallel": true,
       "aggregate": true
     }
     ```
 
-    ### 示例 3：依赖任务（串行）
+    ### 示例 3：依赖任务（串行 DAG）
     用户："找到昨天关于 DB Bug 的笔记，并安排明天的评审会"
     ```json
     {
-      "analysis": "用户需要先搜索笔记，再根据笔记内容安排评审会议",
+      "analysis": "核心意图：搜索笔记 -> 安排会议。Task 2 (安排会议) 的内容依赖于 Task 1 (搜索) 的结果，必须串行执行。",
       "tasks": [
         {
           "id": "task_1",
@@ -127,12 +126,11 @@ decomposer:
         {
           "id": "task_2",
           "agent": "schedule",
-          "input": "安排明天的 DB Bug 评审会，时长 1 小时，参考 task_1 的笔记内容",
+          "input": "基于前置任务 (task_1) 搜索到的笔记内容，安排明天的 DB Bug 评审会，时长 1 小时",
           "purpose": "创建 DB Bug 评审会议",
           "dependencies": ["task_1"]
         }
       ],
-      "parallel": false,
       "aggregate": true
     }
     ```
@@ -146,10 +144,10 @@ decomposer:
     2. **能力边界**：确保任务在该专家的能力范围内
     3. **最小集合**：用最少的专家完成任务
 
-    ### 并行/串行规则
-    1. **并行 (parallel=true)**：任务间无数据依赖，可同时执行
-    2. **串行 (parallel=false)**：后置任务依赖前置任务结果，需顺序执行
-    3. **单任务默认**：只有单个任务时，parallel=false
+    ### 并行策略 (DAG 逻辑)
+    1. **默认并行**：只要任务间没有逻辑依赖，`dependencies` 设为空数组 `[]`，系统会自动并行执行。
+    2. **按需串行**：只有当后置任务确实需要前置任务的数据（如“根据搜索结果...”）时，才设置依赖。
+    3. **混合编排**：允许部分任务并行，部分任务串行（例如 A, B 并行 -> C 依赖 A, B）。
 
     ### 聚合规则
     1. **需要聚合 (aggregate=true)**：多专家结果需要融合为统一回复
@@ -159,6 +157,29 @@ decomposer:
     1. **具体明确**：避免模糊描述，提供可执行的具体输入
     2. **关键词优化**：为搜索类任务提供精准关键词
     3. **上下文完整**：包含必要的限定条件（时间、范围等）
+
+    ### 指代词处理（重要！）
+    当用户使用以下指代词时，必须识别并引用前置任务结果：
+    - "这些"、"那个"、"刚才"、"上次"、"之前的"
+    - 例如用户说"总结这些笔记"，应理解为"总结上一轮检索到的笔记"
+
+    **引用语法**：使用 `{{task_id.result}}` 占位符引用前置任务输出
+    ```json
+    {
+      "id": "task_1",
+      "agent": "memo",
+      "input": "搜索 PostgreSQL 相关笔记",
+      "purpose": "查找用户记录的 PostgreSQL 内容",
+      "dependencies": []
+    },
+    {
+      "id": "task_2",
+      "agent": "memo",
+      "input": "基于 {{task_1.result}} 总结要点",
+      "purpose": "根据搜索结果生成摘要",
+      "dependencies": ["task_1"]
+    }
+    ```
 
     ### 错误避免
     - ❌ 不要编造不存在的专家
@@ -180,33 +201,63 @@ decomposer:
 
   # Few-shot examples for complex scenarios
   examples: |
-    ## Complex Scenarios Examples
+    ## Complex Scenarios Examples (DAG Logic)
 
-    ### Scenario: 跨领域查询
+    ### Scenario 1: 跨领域并行查询 (Parallel DAG)
     **User Input**: "我下周要去上海出差，帮我看看周三有什么安排，顺便查一下上海有什么好玩的地方记录过"
-    **Reasoning**: 需要查询日程（周三安排）+ 搜索笔记（上海旅游），两个任务独立可并行
+    **Reasoning**: 两个任务（日程查询 vs 笔记搜索）无数据依赖，互不影响。因此 Parallel=true。
 
     **Output**:
     ```json
     {
-      "analysis": "用户需要查询下周三的日程安排，并搜索关于上海旅游的笔记记录",
+      "analysis": "用户有两个独立意图：查询下周三日程 + 搜索上海旅游笔记。无依赖，可并行。",
       "tasks": [
         {
+          "id": "task_1",
           "agent": "schedule",
           "input": "查询下周三（全天）的日程安排",
           "purpose": "获取出差当天的日程信息",
-          "id": "task_1",
           "dependencies": []
         },
         {
+          "id": "task_2",
           "agent": "memo",
           "input": "上海 旅游 景点 美食 攻略",
           "purpose": "搜索用户记录的上海相关旅游信息",
-          "id": "task_2",
           "dependencies": []
         }
       ],
-      "parallel": true,
+      "aggregate": true
+    }
+    ```
+
+    ### Scenario 2: 基于上下文的串行任务 (Sequential DAG)
+    **User Input**: "把昨天会议记录里提到的所有待办项，都加到明天的日程里"
+    **Reasoning**: 这是一个典型的链式依赖 (Chain)。
+    1. 搜索笔记 (Search Reference)
+    2. 创建日程 (Action based on Reference)
+    Task 2 必须等待 Task 1 的结果才能知道要加什么待办项。由于存在数据依赖，必须设置 dependencies。
+
+    **Output**:
+    ```json
+    {
+      "analysis": "依赖链：搜索会议记录 -> 创建日程。后置任务 (task_2) 严重依赖前置任务 (task_1) 的数据输出。",
+      "tasks": [
+        {
+          "id": "task_1",
+          "agent": "memo",
+          "input": "昨天 会议记录 待办 todo", 
+          "purpose": "获取包含待办项的原始笔记",
+          "dependencies": []
+        },
+        {
+          "id": "task_2",
+          "agent": "schedule", 
+          "input": "基于前置任务 (task_1) 找到的待办事项内容，在明天创建对应的日程/提醒",
+          "purpose": "将非结构化笔记转化为日程安排",
+          "dependencies": ["task_1"]
+        }
+      ],
       "aggregate": true
     }
     ```
