@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -41,6 +42,7 @@ type ParrotHandler struct {
 	chatRouter             *agentpkg.ChatRouter
 	chatRouterWithMetadata *agentpkg.ChatRouterWithMetadata // P0 fix: sticky routing with metadata
 	orchestrator           *orchestrator.Orchestrator       // Orchestrator for complex/multi-intent requests
+	capabilityMap          *orchestrator.CapabilityMap      // CapabilityMap for handoff expert lookup
 	persister              *aistats.Persister               // session stats persister
 	blockManager           *BlockManager                    // Phase 5: Unified Block Model support
 	titleGenerator         *ai.TitleGenerator               // Title generator for auto-naming conversations
@@ -79,6 +81,12 @@ func (h *ParrotHandler) SetChatRouterWithMetadata(router *agentpkg.ChatRouterWit
 // SetOrchestrator configures the orchestrator for complex/multi-intent requests.
 func (h *ParrotHandler) SetOrchestrator(orch *orchestrator.Orchestrator) {
 	h.orchestrator = orch
+}
+
+// SetCapabilityMap configures the capability map for handoff expert lookup.
+// Orchestrator uses this to find alternative experts when an expert reports inability.
+func (h *ParrotHandler) SetCapabilityMap(cm *orchestrator.CapabilityMap) {
+	h.capabilityMap = cm
 }
 
 // SetMetadataManager configures the metadata manager for context engineering.
@@ -524,12 +532,76 @@ func (h *ParrotHandler) executeWithOrchestrator(
 ) error {
 	// Create logger for this request
 	logger := observability.NewRequestContext(slog.Default(), "orchestrator", req.UserID)
+
+	// ========== Phase 1: Build conversation history ==========
+	var history []string
+	var historyCount int
+	if h.contextBuilder != nil && req.ConversationID > 0 {
+		sessionID := fmt.Sprintf("conv_%d", req.ConversationID)
+
+		// Get conversation length for dynamic budget adjustment
+		historyLength := 0
+		if historyLen, err := h.contextBuilder.GetHistoryLength(ctx, sessionID); err == nil {
+			historyLength = historyLen
+		}
+
+		ctxReq := &ctxpkg.ContextRequest{
+			SessionID:     sessionID,
+			CurrentQuery:  req.Message,
+			AgentType:     "orchestrator",
+			UserID:        req.UserID,
+			HistoryLength: historyLength,
+		}
+		builtHistory, err := h.contextBuilder.BuildHistory(ctx, ctxReq)
+		if err != nil {
+			logger.Error("Failed to build history for orchestrator", err)
+			return status.Error(codes.Internal, "failed to build context")
+		}
+		if builtHistory == nil {
+			builtHistory = []string{}
+		}
+		history = builtHistory
+		historyCount = len(history)
+	}
+
 	logger.Info("ai.chat.started",
 		slog.String("mode", "orchestrator"),
 		slog.String("user_input", req.Message),
 		slog.Int(observability.LogFieldMessageLen, len(req.Message)),
-		slog.Int("history_count", 0), // History now built by backend (context-engineering.md Phase 1)
+		slog.Int("history_count", historyCount),
 	)
+
+	// ========== Phase 2: Create Block for this chat round ==========
+	var currentBlock *store.AIBlock
+	var blockID int64
+	if h.blockManager != nil && req.ConversationID > 0 && !req.IsTempConversation {
+		var createErr error
+		currentBlock, createErr = h.blockManager.CreateBlockForChat(
+			ctx,
+			req.ConversationID,
+			req.Message,
+			req.AgentType,
+			h.determineBlockMode(req),
+		)
+		if createErr != nil {
+			logger.Warn("Failed to create block for orchestrator",
+				slog.String("error", createErr.Error()))
+		} else if currentBlock != nil {
+			blockID = currentBlock.ID
+		}
+	}
+
+	// ========== Phase 3: Inject orchestrator context ==========
+	// Pass request-level data through the call chain without modifying function signatures
+	orchCtx := &ctxpkg.OrchestratorContext{
+		UserID:         req.UserID,
+		ConversationID: req.ConversationID,
+		BlockID:        blockID,
+		History:        history,
+		AgentType:      string(req.AgentType),
+		SessionID:      fmt.Sprintf("conv_%d", req.ConversationID),
+	}
+	ctx = ctxpkg.WithOrchestratorContext(ctx, orchCtx)
 
 	// Create callback adapter for streaming events
 	callback := func(eventType string, eventData string) {
@@ -566,6 +638,18 @@ func (h *ParrotHandler) executeWithOrchestrator(
 	)
 
 	return nil
+}
+
+// determineBlockMode determines the block mode from the chat request.
+// determineBlockMode 根据聊天请求确定 Block 模式。
+func (h *ParrotHandler) determineBlockMode(req *ChatRequest) BlockMode {
+	if req.EvolutionMode {
+		return BlockModeEvolution
+	}
+	if req.GeekMode {
+		return BlockModeGeek
+	}
+	return BlockModeNormal
 }
 
 // getSourceDir returns the DivineSense source code directory.
@@ -661,6 +745,15 @@ func (h *ParrotHandler) executeAgent(
 	// Track assistant content for block completion
 	var assistantContent strings.Builder
 	var assistantContentMu sync.Mutex
+
+	// Track inability report for handoff mechanism
+	// Expert reports what it CANNOT do. Orchestrator finds the appropriate expert via CapabilityMap.
+	var inabilityReport struct {
+		detected   bool
+		capability string
+		reason     string
+	}
+	var inabilityMu sync.Mutex
 
 	// Create stream adapter
 	streamAdapter := agentpkg.NewParrotStreamAdapter(func(eventType string, eventData any) error {
@@ -839,6 +932,21 @@ func (h *ParrotHandler) executeAgent(
 					slog.String("error", err.Error()))
 			}
 
+			// Detect INABILITY_REPORTED for handoff mechanism
+			// Expert reports what it CANNOT do. Orchestrator finds the appropriate expert via CapabilityMap.
+			if eventType == "tool_result" && strings.Contains(dataStr, "INABILITY_REPORTED:") {
+				inabilityMu.Lock()
+				inabilityReport.detected = true
+				// Parse the inability report: "INABILITY_REPORTED: <capability> - <reason>"
+				inabilityReport.capability, inabilityReport.reason = parseInabilityReport(dataStr)
+				cap := inabilityReport.capability
+				reason := inabilityReport.reason
+				inabilityMu.Unlock()
+				logger.Info("handoff: inability reported by expert",
+					slog.String("capability", cap),
+					slog.String("reason", reason))
+			}
+
 			// Collect assistant content for block completion
 			if eventType == "answer" || eventType == "content" {
 				assistantContentMu.Lock()
@@ -970,6 +1078,150 @@ func (h *ParrotHandler) executeAgent(
 	if execErr != nil {
 		logger.Error("Agent execution failed", execErr)
 		// Don't return here, continue to send session summary
+	}
+
+	// Handle handoff if inability was reported
+	// Expert reports what it CANNOT do. Orchestrator uses CapabilityMap to find the appropriate expert.
+	inabilityMu.Lock()
+	shouldHandoff := inabilityReport.detected
+	handoffCapability := inabilityReport.capability
+	handoffReason := inabilityReport.reason
+	inabilityMu.Unlock()
+
+	if shouldHandoff && handoffCapability != "" && h.capabilityMap != nil {
+		// Use CapabilityMap to find alternative experts that can handle the missing capability
+		alternatives := h.capabilityMap.FindAlternativeExperts(handoffCapability, agent.Name())
+
+		if len(alternatives) == 0 {
+			logger.Warn("handoff: no alternative expert found for capability",
+				slog.String("capability", handoffCapability),
+				slog.String("from_agent", agent.Name()))
+		} else {
+			// Use the first alternative expert
+			targetExpert := alternatives[0]
+			handoffAgent := targetExpert.Name
+
+			logger.Info("handoff: executing handoff to alternative expert",
+				slog.String("from_agent", agent.Name()),
+				slog.String("to_agent", handoffAgent),
+				slog.String("capability", handoffCapability),
+				slog.String("reason", handoffReason))
+
+			// Send handoff event to frontend
+			streamMu.Lock()
+			var blockIdForEvent int64
+			if currentBlock != nil {
+				blockIdForEvent = currentBlock.ID
+			}
+			// Use json.Marshal to properly escape special characters
+			handoffStartData, _ := json.Marshal(map[string]string{
+				"from":       agent.Name(),
+				"to":         handoffAgent,
+				"capability": handoffCapability,
+				"reason":     handoffReason,
+			})
+			stream.Send(&v1pb.ChatResponse{
+				EventType: "handoff_start",
+				EventData: string(handoffStartData),
+				BlockId:   blockIdForEvent,
+			})
+			streamMu.Unlock()
+
+			// Map expert name to AgentType (internal system convention)
+			var handoffAgentType AgentType
+			switch handoffAgent {
+			case "schedule":
+				handoffAgentType = AgentTypeSchedule
+			case "memo":
+				handoffAgentType = AgentTypeMemo
+			default:
+				// Unknown agent type
+				logger.Warn("handoff: unknown agent type",
+					slog.String("agent", handoffAgent))
+				handoffAgentType = AgentTypeMemo // Default fallback
+			}
+
+			// Create the handoff expert using factory
+			handoffExpert, handoffCreateErr := h.factory.Create(ctx, &CreateConfig{
+				Type:     handoffAgentType,
+				UserID:   req.UserID,
+				Timezone: req.Timezone,
+			})
+
+			if handoffCreateErr != nil {
+				logger.Error("handoff: failed to create expert", handoffCreateErr)
+				failData, _ := json.Marshal(map[string]string{"error": "failed to create expert: " + handoffCreateErr.Error()})
+				streamMu.Lock()
+				stream.Send(&v1pb.ChatResponse{
+					EventType: "handoff_fail",
+					EventData: string(failData),
+					BlockId:   blockIdForEvent,
+				})
+				streamMu.Unlock()
+			} else {
+				// Create callback for handoff execution
+				handoffCallback := func(eventType string, eventData any) error {
+					streamMu.Lock()
+					var blockId int64
+					if currentBlock != nil {
+						blockId = currentBlock.ID
+					}
+
+					// Convert eventData to string
+					var dataStr string
+					switch v := eventData.(type) {
+					case string:
+						dataStr = v
+					case []byte:
+						dataStr = string(v)
+					default:
+						dataStr = fmt.Sprintf("%v", v)
+					}
+
+					stream.Send(&v1pb.ChatResponse{
+						EventType: eventType,
+						EventData: dataStr,
+						BlockId:   blockId,
+					})
+					streamMu.Unlock()
+
+					// Collect handoff content
+					if eventType == "answer" || eventType == "content" {
+						assistantContentMu.Lock()
+						assistantContent.WriteString(dataStr)
+						assistantContentMu.Unlock()
+					}
+					return nil
+				}
+
+				// Execute handoff expert
+				handoffErr := handoffExpert.Execute(ctx, req.Message, history, handoffCallback)
+				if handoffErr != nil {
+					logger.Error("handoff: execution failed", handoffErr)
+					execFailData, _ := json.Marshal(map[string]string{"error": handoffErr.Error()})
+					streamMu.Lock()
+					stream.Send(&v1pb.ChatResponse{
+						EventType: "handoff_fail",
+						EventData: string(execFailData),
+						BlockId:   blockIdForEvent,
+					})
+					streamMu.Unlock()
+				} else {
+					logger.Info("handoff: completed successfully",
+						slog.String("to_agent", handoffAgent))
+
+					// Send handoff success event
+					endData, _ := json.Marshal(map[string]string{"to": handoffAgent})
+					streamMu.Lock()
+					stream.Send(&v1pb.ChatResponse{
+						EventType: "handoff_end",
+						EventData: string(endData),
+						BlockId:   blockIdForEvent,
+					})
+					streamMu.Unlock()
+				}
+			}
+		}
 	}
 
 	// Prepare session summary
@@ -1286,4 +1538,26 @@ func extractIntentFromRoute(route string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// parseInabilityReport parses the INABILITY_REPORTED message to extract capability and reason.
+// Format: "INABILITY_REPORTED: <capability> - <reason>"
+// Note: Expert only reports what it CANNOT do. Orchestrator determines the appropriate expert.
+func parseInabilityReport(report string) (capability, reason string) {
+	prefix := "INABILITY_REPORTED:"
+	if !strings.HasPrefix(report, prefix) {
+		return "", ""
+	}
+
+	content := strings.TrimPrefix(report, prefix)
+	content = strings.TrimSpace(content)
+
+	// Split by " - " to separate capability and reason
+	if idx := strings.Index(content, " - "); idx != -1 {
+		capability = strings.TrimSpace(content[:idx])
+		reason = strings.TrimSpace(content[idx+3:])
+		return capability, reason
+	}
+
+	return content, ""
 }

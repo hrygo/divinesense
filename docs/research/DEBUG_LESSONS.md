@@ -2,7 +2,7 @@
 
 > 记录 DivineSense 开发过程中遇到的典型问题和解决方案，避免重复踩坑。
 >
-> **保鲜状态**: ✅ 2026-02-08
+> **保鲜状态**: ✅ 2026-02-17
 
 ---
 
@@ -20,6 +20,7 @@
 | **[后端](#后端问题)** | [调试日志管理规范](#调试日志管理规范) | ⚠️ 规范 |
 | **[AI](#ai-问题)** | [Evolution Mode 路由失败](#evolution-mode-路由失败) | ✅ 已解决 |
 | **[AI](#ai-问题)** | [AI Token 统计与缓存指标](#ai-token-统计与缓存指标) | ✅ 已解决 |
+| **[AI](#ai-问题)** | [Orchestrator 模式多轮对话问题](#orchestrator-模式多轮对话问题) | ✅ 已解决 |
 | **[部署](#部署问题)** | [二进制部署运维权限](#二进制部署运维权限问题) | ✅ 已解决 |
 | **[开发流程](#开发流程问题)** | [环境意识不足](#环境意识不足导致的重复错误) | ✅ 已解决 |
 
@@ -228,6 +229,87 @@ if (params.evolutionMode && request.evolutionMode === undefined) {
 **问题**：日志显示 `content_length=451`，数据库 `LENGTH(content)=163`
 
 **根本原因**：UTF-8 编码差异，中文字符占用 3 字节
+
+---
+
+### Orchestrator 模式多轮对话问题
+
+**问题**：多轮对话（"最近记了什么笔记" → "总结这些笔记"）出现 5 个关联 bug：
+
+1. **Block 未创建** - 第二轮无 block_id
+2. **UserID 丢失** - `user_id=0` 导致 BM25 搜索失败
+3. **粘性路由失效** - 非确认词输入未复用粘性
+4. **标题重复生成** - 非首轮仍触发标题生成
+5. **上下文未复用** - 第二轮重新搜索，结果为 0
+
+**根本原因**：
+
+| 问题 | 根因 |
+|------|------|
+| Block 未创建 | `executeWithOrchestrator` 绕过了 `executeAgent` 中的 block 创建逻辑 |
+| UserID 丢失 | `ParrotExpertRegistry` 创建时硬编码 `user_id=0`，未从 context 获取 |
+| 粘性路由失效 | 粘性检查仅对简短确认词（好/ok/是的）生效 |
+| 标题重复生成 | 依赖问题1：未创建 block 导致 `len(blocks)==1` 判断错误 |
+| 上下文未复用 | `executeWithOrchestrator` 未构建历史，`history=nil` |
+
+**代码定位**：
+
+```
+Block 创建: handler.go:628-643 (executeAgent) vs handler.go:526-577 (executeWithOrchestrator 缺少)
+UserID 传递: ai_service_chat.go:286 (硬编码0) → expert_registry.go:128 (使用固定值)
+粘性检查: chat_router_metadata.go:46-63 (仅对确认词)
+上下文构建: handler.go:553 (Orchestrator 缺少 BuildHistory 调用)
+```
+
+**修复方案**：
+
+```go
+// 1. executeWithOrchestrator 中添加 block 创建
+var currentBlock *store.AIBlock
+if h.blockManager != nil && req.ConversationID > 0 {
+    currentBlock, _ = h.blockManager.CreateBlockForChat(ctx, req.ConversationID, req.Message,
+        AgentTypeOrchestrator, BlockModeNormal)
+}
+
+// 2. ExpertRegistry 从 context 获取 user_id
+func (r *ParrotExpertRegistry) getUserIDFromContext(ctx context.Context) int32 {
+    if userID, ok := ctx.Value("user_id").(int32); ok {
+        return userID
+    }
+    return 0
+}
+
+// 3. 放宽粘性路由条件
+if isSticky, meta := r.metadataMgr.IsStickyValid(ctx, conversationID); isSticky {
+    if isShortConfirmation(input) || isRelatedToLastIntent(input, meta.LastIntent) {
+        return stickyRoute
+    }
+}
+
+// 4. executeWithOrchestrator 中构建历史
+history, _ = h.contextBuilder.BuildHistory(ctx, &ctxpkg.ContextRequest{...})
+```
+
+**依赖关系**：问题1(Block未创建) → 问题4(标题重复)；问题1 → 问题5(上下文持久化)
+
+**修复状态**（2026-02-17）：
+
+采用面向未来的架构：通过 `OrchestratorContext` 在 context 中传递 userID、history 等参数。
+
+| 问题 | 修复方式 | 关键文件 |
+|------|----------|----------|
+| Block 未创建 | 在 `executeWithOrchestrator` 中添加 block 创建逻辑 | `handler.go:executeWithOrchestrator` |
+| UserID 丢失 | 通过 `ctxpkg.WithOrchestratorContext` 注入 userID，`ExecuteExpert` 从 ctx 提取 | `handler.go`, `expert_registry.go` |
+| 粘性路由失效 | 添加 `isRelatedToLastIntent` 函数，检查输入是否与上一意图相关 | `chat_router.go`, `chat_router_metadata.go` |
+| 标题重复生成 | 随问题1修复自动解决 | - |
+| 上下文未复用 | 在 `executeWithOrchestrator` 中构建 history 并注入 context | `handler.go` |
+
+**新增文件**：
+- `ai/context/orchestrator.go` - OrchestratorContext 定义和 helper 函数
+
+**架构优势**：
+- 未来添加新参数只需修改 context，无需改接口签名
+- 解耦各层之间的参数传递
 
 ---
 

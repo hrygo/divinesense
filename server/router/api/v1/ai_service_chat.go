@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
@@ -262,6 +263,38 @@ func (s *AIService) createChatHandler() aichat.Handler {
 
 	parrotHandler.SetContextBuilder(contextBuilder)
 	slog.Info("Backend-driven context construction enabled")
+
+	// P0-3: Create and inject Orchestrator for handoff support
+	// Orchestrator handles: (1) needs_orchestration=true requests, (2) expert handoff when report_inability is called
+	// This enables seamless expert switching when the initial expert cannot handle the task.
+	if s.LLMService != nil && factory.GetParrotFactory() != nil {
+		// Get expert configurations from factory
+		expertConfigs := factory.GetSelfCognitionConfigs()
+
+		// Build CapabilityMap for handoff expert lookup
+		// CapabilityMap knows all experts' capabilities, used to find alternative experts
+		if len(expertConfigs) > 0 {
+			cm := orchestrator.NewCapabilityMap()
+			cm.BuildFromConfigs(expertConfigs)
+			cm.BuildKeywordIndex(expertConfigs)
+			parrotHandler.SetCapabilityMap(cm)
+			slog.Info("CapabilityMap initialized for handoff support")
+		}
+
+		// Create ExpertRegistry from ParrotFactory
+		// Note: userID is set per-request in ExecuteExpert, so we use 0 here as placeholder
+		expertRegistry := orchestrator.NewParrotExpertRegistry(factory.GetParrotFactory(), 0)
+
+		// Create Orchestrator with handoff enabled
+		orch := orchestrator.NewOrchestrator(
+			s.LLMService,
+			expertRegistry,
+			orchestrator.WithHandoff(true),
+			orchestrator.WithAggregation(true),
+		)
+		parrotHandler.SetOrchestrator(orch)
+		slog.Info("Orchestrator enabled with handoff support")
+	}
 
 	return aichat.NewRoutingHandler(parrotHandler)
 }

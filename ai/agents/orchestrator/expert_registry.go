@@ -7,6 +7,7 @@ import (
 
 	agents "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/universal"
+	ctxpkg "github.com/hrygo/divinesense/ai/context"
 )
 
 // ParrotExpertRegistry implements ExpertRegistry using ParrotFactory.
@@ -124,8 +125,15 @@ func (r *ParrotExpertRegistry) GetExpertConfig(name string) *agents.ParrotSelfCo
 
 // ExecuteExpert executes a task with the specified expert agent.
 func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName string, input string, callback EventCallback) error {
+	// Extract userID from context first, fallback to registry's default userID
+	// This enables per-request userID override without changing registry initialization
+	userID := r.userID
+	if ctxUserID, ok := ctxpkg.GetUserID(ctx); ok {
+		userID = ctxUserID
+	}
+
 	// Create the expert agent
-	parrot, err := r.factory.CreateParrot(expertName, r.userID)
+	parrot, err := r.factory.CreateParrot(expertName, userID)
 	if err != nil {
 		return fmt.Errorf("create expert %s: %w", expertName, err)
 	}

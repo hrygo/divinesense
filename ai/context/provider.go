@@ -77,16 +77,29 @@ func (p *BlockStoreMessageProvider) GetRecentMessages(
 	// Convert blocks to messages
 	messages := p.blocksToMessages(blocks)
 
-	// Apply limit (most recent)
-	if len(messages) > limit {
-		messages = messages[len(messages)-limit:]
-	}
-
-	slog.Debug("BlockStoreMessageProvider.GetRecentMessages",
+	// Log for debugging context building
+	slog.Debug("context.GetRecentMessages",
 		"conversation_id", conversationID,
 		"blocks_count", len(blocks),
 		"messages_count", len(messages),
 		"limit", limit)
+
+	// Log block details for debugging
+	for i, b := range blocks {
+		hasAssistantContent := b.AssistantContent != ""
+		slog.Debug("context.GetRecentMessages.block",
+			"index", i,
+			"block_id", b.ID,
+			"round", b.RoundNumber,
+			"has_assistant_content", hasAssistantContent,
+			"assistant_content_len", len(b.AssistantContent),
+			"user_inputs_count", len(b.UserInputs))
+	}
+
+	// Apply limit (most recent)
+	if len(messages) > limit {
+		messages = messages[len(messages)-limit:]
+	}
 
 	return messages, nil
 }

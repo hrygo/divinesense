@@ -33,23 +33,6 @@ func SetExpertResolver(resolver ExpertResolver) {
 	})
 }
 
-// isValidExpertAgent checks if the suggested agent name is valid.
-// Supports exact match and fuzzy match via ExpertResolver.
-func isValidExpertAgent(name string) bool {
-	if name == "" {
-		return true // Empty is allowed (optional field)
-	}
-
-	// Use dynamic resolver if available
-	if expertResolver != nil {
-		resolved := expertResolver.IdentifyAgent(name)
-		return resolved != ""
-	}
-
-	// Fallback: no resolver available, allow all (fail-open for backward compatibility)
-	return true
-}
-
 // ResolveExpertAgent resolves an agent name to its canonical ID.
 // Returns the original name if no resolver is available.
 func ResolveExpertAgent(name string) string {
@@ -71,10 +54,10 @@ func ResolveExpertAgent(name string) string {
 
 // ReportInabilityInput represents the input for reporting inability to handle a task.
 // 当专家发现自己无法完成任务时使用此输入。
+// Note: Expert only reports what it CANNOT do. Orchestrator determines the appropriate agent.
 type ReportInabilityInput struct {
-	Capability     string `json:"capability" jsonschema_description:"缺失的能力"`
-	Reason         string `json:"reason" jsonschema_description:"为什么无法完成"`
-	SuggestedAgent string `json:"suggested_agent,omitempty" jsonschema_description:"建议转交的专家"`
+	Capability string `json:"capability" jsonschema_description:"缺失的能力"`
+	Reason     string `json:"reason" jsonschema_description:"为什么无法完成"`
 }
 
 // Error returns a human-readable error message.
@@ -105,16 +88,15 @@ func (t *ReportInabilityTool) Description() string {
 This tool is used when:
 - The user request is outside the expert's capabilities
 - The task requires another expert's domain knowledge
-- The expert needs to handoff to a more suitable agent
 
 INPUT FORMAT:
-{"capability": "capability_name", "reason": "why cannot handle", "suggested_agent": "expert_name"}
+{"capability": "capability_name", "reason": "why cannot handle"}
 
 OUTPUT:
 - Success: "INABILITY_REPORTED: <capability> - <reason>"
 - Error: "Error: <error message>"
 
-The Orchestrator will use this information to route to the appropriate expert.`
+Note: Expert only reports what it CANNOT do. Orchestrator will use CapabilityMap to find the appropriate expert.`
 }
 
 // InputType returns the JSON schema for the tool's input parameters.
@@ -129,10 +111,6 @@ func (t *ReportInabilityTool) InputType() map[string]interface{} {
 			"reason": map[string]interface{}{
 				"type":        "string",
 				"description": "Why this capability cannot be handled",
-			},
-			"suggested_agent": map[string]interface{}{
-				"type":        "string",
-				"description": "Optional: suggested expert agent name to handle this capability",
 			},
 		},
 		"required": []string{"capability", "reason"},
@@ -166,25 +144,10 @@ func (t *ReportInabilityTool) Run(ctx context.Context, input string) (string, er
 	if len(reportInput.Reason) > MaxInputLength {
 		return "", fmt.Errorf("reason exceeds maximum length of %d", MaxInputLength)
 	}
-	if len(reportInput.SuggestedAgent) > MaxInputLength {
-		return "", fmt.Errorf("suggested_agent exceeds maximum length of %d", MaxInputLength)
-	}
-
-	// Validate suggested_agent against whitelist to prevent injection
-	if !isValidExpertAgent(reportInput.SuggestedAgent) {
-		return "", fmt.Errorf("invalid suggested_agent: %s is not a valid expert", reportInput.SuggestedAgent)
-	}
-
-	// Resolve suggested_agent to canonical name (supports fuzzy matching)
-	// e.g., "笔记助手" -> "memo"
-	resolvedAgent := ResolveExpertAgent(reportInput.SuggestedAgent)
 
 	// Return a special message that indicates inability
-	// This message format should match the early stopping logic in the agent
+	// Orchestrator will use CapabilityMap to find the appropriate expert
 	result := fmt.Sprintf("INABILITY_REPORTED: %s - %s", reportInput.Capability, reportInput.Reason)
-	if resolvedAgent != "" {
-		result += fmt.Sprintf(" (suggested_agent: %s)", resolvedAgent)
-	}
 
 	return result, nil
 }

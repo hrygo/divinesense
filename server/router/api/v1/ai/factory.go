@@ -333,3 +333,11 @@ func (f *AgentFactory) GetSelfCognitionConfigs() []*agents.ParrotSelfCognition {
 	}
 	return configs
 }
+
+// GetParrotFactory returns the underlying ParrotFactory.
+// This is used by Orchestrator to create expert agents.
+func (f *AgentFactory) GetParrotFactory() *universal.ParrotFactory {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.parrotFactory
+}

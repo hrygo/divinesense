@@ -21,9 +21,9 @@ func TestReportInabilityTool_Run(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid input with suggested agent",
-			input:   `{"capability": "schedule_event", "reason": "outside my domain", "suggested_agent": "schedule"}`,
-			want:    "INABILITY_REPORTED: schedule_event - outside my domain (suggested_agent: schedule)",
+			name:    "valid input for schedule event",
+			input:   `{"capability": "schedule_event", "reason": "outside my domain"}`,
+			want:    "INABILITY_REPORTED: schedule_event - outside my domain",
 			wantErr: false,
 		},
 		{
@@ -114,15 +114,16 @@ func TestReportInabilityTool_InputType(t *testing.T) {
 		return
 	}
 
-	// Check required fields
+	// Check required fields (only capability and reason, no suggested_agent)
 	if _, ok := props["capability"]; !ok {
 		t.Error("expected capability field")
 	}
 	if _, ok := props["reason"]; !ok {
 		t.Error("expected reason field")
 	}
-	if _, ok := props["suggested_agent"]; !ok {
-		t.Error("expected suggested_agent field")
+	// suggested_agent should NOT exist (expert only reports what it CANNOT do)
+	if _, ok := props["suggested_agent"]; ok {
+		t.Error("suggested_agent field should NOT exist - Orchestrator determines the appropriate expert")
 	}
 }
 

@@ -46,6 +46,56 @@ func isShortConfirmation(input string) bool {
 	return shortConfirmations[normalized]
 }
 
+// intentKeywords maps intent names to their related keywords for sticky routing.
+// This enables sticky routing for inputs that are semantically related to the last intent.
+var intentKeywords = map[string][]string{
+	// Memo-related intents
+	"memo_search":  {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
+	"search_notes": {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
+	"create_note":  {"记", "记录", "写", "创建", "note", "record", "create", "write"},
+	"delete_note":  {"删除", "笔记", "note", "delete", "remove"},
+	"update_note":  {"修改", "更新", "编辑", "笔记", "note", "edit", "update", "modify"},
+
+	// Schedule-related intents
+	"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting", "event", "calendar"},
+	"create_event":    {"日程", "会议", "安排", "创建", "schedule", "meeting", "event", "create", "add"},
+	"delete_event":    {"删除", "日程", "会议", "schedule", "meeting", "delete", "remove", "cancel"},
+	"query_schedule":  {"日程", "会议", "查看", "查询", "schedule", "meeting", "query", "check", "show"},
+	"update_event":    {"修改", "更新", "调整", "日程", "schedule", "edit", "update", "modify", "change"},
+}
+
+// isRelatedToLastIntent checks if the input is semantically related to the last intent.
+// This enables sticky routing for follow-up questions that don't use confirmation words.
+func isRelatedToLastIntent(input string, lastIntent string) bool {
+	if lastIntent == "" {
+		return false
+	}
+
+	normalized := strings.ToLower(strings.TrimSpace(input))
+
+	// Get keywords for the last intent
+	keywords, exists := intentKeywords[lastIntent]
+	if !exists {
+		// Fallback: check if any keyword contains the intent name
+		lowerIntent := strings.ToLower(lastIntent)
+		for key, kws := range intentKeywords {
+			if strings.Contains(lowerIntent, key) || strings.Contains(key, lowerIntent) {
+				keywords = kws
+				break
+			}
+		}
+	}
+
+	// Check if input contains any of the keywords
+	for _, kw := range keywords {
+		if strings.Contains(normalized, kw) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // ChatRouteResult represents the routing classification result.
 type ChatRouteResult struct {
 	Route              ChatRouteType `json:"route"`

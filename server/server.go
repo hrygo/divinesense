@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -39,6 +40,16 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	s := &Server{
 		Store:   store,
 		Profile: profile,
+	}
+
+	// Set log level based on mode
+	// Dev/Demo mode: Debug level for detailed logging
+	// Prod mode: Info level for production
+	if profile.IsDev() {
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		logger := slog.New(slog.NewTextHandler(os.Stderr, opts))
+		slog.SetDefault(logger)
+		slog.Debug("Log level set to DEBUG (development mode)")
 	}
 
 	echoServer := echo.New()

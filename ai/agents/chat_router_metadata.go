@@ -45,11 +45,12 @@ func (r *ChatRouterWithMetadata) RouteWithContextWithMetadata(
 	// Layer 0: Check metadata-based sticky state first
 	if r.metadataMgr != nil && conversationID > 0 {
 		if isSticky, meta := r.metadataMgr.IsStickyValid(ctx, conversationID); isSticky && meta != nil {
-			// Check if input is a short confirmation
-			if isShortConfirmation(input) {
+			// Check if input is a short confirmation OR related to last intent
+			if isShortConfirmation(input) || isRelatedToLastIntent(input, meta.LastIntent) {
 				slog.Debug("route reused from metadata sticky",
 					"input", strutil.Truncate(input, 30),
 					"route", meta.LastAgent,
+					"intent", meta.LastIntent,
 					"confidence", meta.LastIntentConfidence,
 					"method", "metadata_sticky")
 				return &ChatRouteResult{
