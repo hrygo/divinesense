@@ -345,7 +345,8 @@ func (rc *resultCollector) onEvent(eventType string, eventData string) {
 	}
 
 	// Collect text/content events as results with size limit
-	if eventType == "content" || eventType == "text" || eventType == "response" {
+	// Note: Expert agents send "answer" events, aggregator sends "aggregation" events
+	if eventType == "answer" || eventType == "content" || eventType == "text" || eventType == "response" || eventType == "aggregation" {
 		rc.mu.Lock()
 		if rc.result.Len()+len(eventData) <= maxResultSize {
 			rc.result.WriteString(eventData)
