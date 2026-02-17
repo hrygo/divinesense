@@ -69,6 +69,14 @@ func (m *MockExpertRegistryForTest) GetExpertConfig(name string) *agents.ParrotS
 	}
 }
 
+// GetIntentKeywords returns a map of intent names to their related keywords.
+func (m *MockExpertRegistryForTest) GetIntentKeywords() map[string][]string {
+	return map[string][]string{
+		"memo_search":     {"笔记", "搜索", "查找", "note", "search"},
+		"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting"},
+	}
+}
+
 // ExecuteExpert executes a task with the specified expert agent.
 func (m *MockExpertRegistryForTest) ExecuteExpert(ctx context.Context, expertName string, input string, callback EventCallback) error {
 	// Use custom execute function if set

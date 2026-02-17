@@ -12,6 +12,13 @@ import (
 	routerpkg "github.com/hrygo/divinesense/ai/routing"
 )
 
+// IntentKeywordProvider defines the interface for providing intent keywords for sticky routing.
+// This enables dynamic loading of keywords from expert configurations.
+type IntentKeywordProvider interface {
+	// GetIntentKeywords returns a map of intent names to their related keywords.
+	GetIntentKeywords() map[string][]string
+}
+
 // ChatRouteType represents the type of chat routing.
 type ChatRouteType string
 
@@ -65,22 +72,33 @@ var intentKeywords = map[string][]string{
 
 // isRelatedToLastIntent checks if the input is semantically related to the last intent.
 // This enables sticky routing for follow-up questions that don't use confirmation words.
-func isRelatedToLastIntent(input string, lastIntent string) bool {
+// If provider is nil, falls back to hardcoded intentKeywords map.
+func isRelatedToLastIntentWithProvider(input string, lastIntent string, provider IntentKeywordProvider) bool {
 	if lastIntent == "" {
 		return false
 	}
 
 	normalized := strings.ToLower(strings.TrimSpace(input))
 
-	// Get keywords for the last intent
-	keywords, exists := intentKeywords[lastIntent]
-	if !exists {
-		// Fallback: check if any keyword contains the intent name
-		lowerIntent := strings.ToLower(lastIntent)
-		for key, kws := range intentKeywords {
-			if strings.Contains(lowerIntent, key) || strings.Contains(key, lowerIntent) {
-				keywords = kws
-				break
+	// Try to get keywords from provider first, fallback to hardcoded
+	var keywords []string
+	var exists bool
+
+	if provider != nil {
+		keywords, exists = provider.GetIntentKeywords()[lastIntent]
+	}
+
+	// Fallback to hardcoded keywords if provider doesn't have them
+	if !exists || len(keywords) == 0 {
+		keywords, exists = intentKeywords[lastIntent]
+		if !exists {
+			// Fallback: check if any keyword contains the intent name
+			lowerIntent := strings.ToLower(lastIntent)
+			for key, kws := range intentKeywords {
+				if strings.Contains(lowerIntent, key) || strings.Contains(key, lowerIntent) {
+					keywords = kws
+					break
+				}
 			}
 		}
 	}
@@ -330,7 +348,7 @@ func (r *ChatRouter) RouteAndExecute(ctx context.Context, input string, sessionC
 				"result_preview", result[:min(len(result), 100)])
 
 			// Parse the inability report to extract capability and reason
-			capability, reason := parseInabilityReport(result)
+			capability, reason := ParseInabilityReport(result)
 
 			// Create a simplified handoff request
 			req := SimpleHandoffRequest{
@@ -477,9 +495,10 @@ func mapIntentToRouteType(intent routerpkg.Intent) ChatRouteType {
 	}
 }
 
-// parseInabilityReport parses the INABILITY_REPORTED message to extract capability and reason.
-func parseInabilityReport(report string) (capability, reason string) {
-	// Format: "INABILITY_REPORTED: <capability> - <reason> (suggested_agent: <agent>)"
+// ParseInabilityReport parses the INABILITY_REPORTED message to extract capability and reason.
+// This is a public function to avoid DRY violation between packages.
+// Format: "INABILITY_REPORTED: <capability> - <reason> (suggested_agent: <agent>)"
+func ParseInabilityReport(report string) (capability, reason string) {
 	prefix := "INABILITY_REPORTED:"
 	if !strings.HasPrefix(report, prefix) {
 		return "", report

@@ -938,7 +938,7 @@ func (h *ParrotHandler) executeAgent(
 				inabilityMu.Lock()
 				inabilityReport.detected = true
 				// Parse the inability report: "INABILITY_REPORTED: <capability> - <reason>"
-				inabilityReport.capability, inabilityReport.reason = parseInabilityReport(dataStr)
+				inabilityReport.capability, inabilityReport.reason = agentpkg.ParseInabilityReport(dataStr)
 				cap := inabilityReport.capability
 				reason := inabilityReport.reason
 				inabilityMu.Unlock()
@@ -1526,25 +1526,4 @@ func formatToolsList(tools []string) string {
 		return "none"
 	}
 	return strings.Join(tools, ", ")
-}
-
-// parseInabilityReport parses the INABILITY_REPORTED message to extract capability and reason.
-// Format: "INABILITY_REPORTED: <capability> - <reason>"
-// Note: Expert only reports what it CANNOT do. Orchestrator determines the appropriate expert.
-func parseInabilityReport(report string) (capability, reason string) {
-	prefix := "INABILITY_REPORTED:"
-	if !strings.HasPrefix(report, prefix) {
-		return "", ""
-	}
-
-	content := strings.TrimPrefix(report, prefix)
-	content = strings.TrimSpace(content)
-
-	// Split by " - " to separate capability and reason
-	before, after, found := strings.Cut(content, " - ")
-	if found {
-		return strings.TrimSpace(before), strings.TrimSpace(after)
-	}
-
-	return content, ""
 }

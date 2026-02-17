@@ -269,6 +269,10 @@ type ExpertRegistry interface {
 
 	// ExecuteExpert executes a task with the specified expert agent
 	ExecuteExpert(ctx context.Context, expertName string, input string, callback EventCallback) error
+
+	// GetIntentKeywords returns a map of intent names to their related keywords.
+	// This enables sticky routing to dynamically load keywords from expert configurations.
+	GetIntentKeywords() map[string][]string
 }
 
 // EventCallback is the callback function for streaming events to the frontend.

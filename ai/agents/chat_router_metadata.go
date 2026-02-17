@@ -13,8 +13,9 @@ import (
 // routing decisions are based on persisted database state (AIBlock.Metadata),
 // not just in-memory session state.
 type ChatRouterWithMetadata struct {
-	*ChatRouter // Embed original router
-	metadataMgr *ctxpkg.MetadataManager
+	*ChatRouter     // Embed original router
+	metadataMgr     *ctxpkg.MetadataManager
+	keywordProvider IntentKeywordProvider // Optional: for dynamic keyword loading
 }
 
 // NewChatRouterWithMetadata creates a new chat router with metadata support.
@@ -29,6 +30,23 @@ func NewChatRouterWithMetadata(
 		ChatRouter:  baseRouter,
 		metadataMgr: metadataMgr,
 	}
+}
+
+// NewChatRouterWithMetadataAndKeywords creates a new chat router with metadata and keyword provider.
+func NewChatRouterWithMetadataAndKeywords(
+	baseRouter *ChatRouter,
+	metadataMgr *ctxpkg.MetadataManager,
+	keywordProvider IntentKeywordProvider,
+) *ChatRouterWithMetadata {
+	if baseRouter == nil {
+		panic("ChatRouter is required")
+	}
+	r := &ChatRouterWithMetadata{
+		ChatRouter:      baseRouter,
+		metadataMgr:     metadataMgr,
+		keywordProvider: keywordProvider,
+	}
+	return r
 }
 
 // RouteWithContextWithMetadata routes with metadata-based sticky routing.
@@ -46,7 +64,7 @@ func (r *ChatRouterWithMetadata) RouteWithContextWithMetadata(
 	if r.metadataMgr != nil && conversationID > 0 {
 		if isSticky, meta := r.metadataMgr.IsStickyValid(ctx, conversationID); isSticky && meta != nil {
 			// Check if input is a short confirmation OR related to last intent
-			if isShortConfirmation(input) || isRelatedToLastIntent(input, meta.LastIntent) {
+			if isShortConfirmation(input) || isRelatedToLastIntentWithProvider(input, meta.LastIntent, r.keywordProvider) {
 				slog.Debug("route reused from metadata sticky",
 					"input", strutil.Truncate(input, 30),
 					"route", meta.LastAgent,

@@ -40,6 +40,14 @@ func (m *MockRegistry) GetExpertConfig(name string) *agents.ParrotSelfCognition 
 	return args.Get(0).(*agents.ParrotSelfCognition)
 }
 
+func (m *MockRegistry) GetIntentKeywords() map[string][]string {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(map[string][]string)
+}
+
 // Helper to create a task
 func createTask(id, agent, input string, deps []string) *Task {
 	return &Task{

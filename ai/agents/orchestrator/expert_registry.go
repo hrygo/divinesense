@@ -162,5 +162,52 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 	return parrot.Execute(ctx, input, nil, agentCallback)
 }
 
+// GetIntentKeywords returns a map of intent names to their related keywords from expert configurations.
+// This enables sticky routing to dynamically load keywords instead of hardcoding them.
+func (r *ParrotExpertRegistry) GetIntentKeywords() map[string][]string {
+	keywords := make(map[string][]string)
+
+	// Get all expert configs and extract routing keywords
+	for _, expertName := range r.GetAvailableExperts() {
+		config := r.GetExpertConfig(expertName)
+		if config == nil || config.Routing == nil {
+			continue
+		}
+
+		// Map expert name to intent name
+		intent := r.mapExpertToIntent(expertName)
+		if intent != "" && len(config.Routing.Keywords) > 0 {
+			keywords[intent] = config.Routing.Keywords
+		}
+	}
+
+	// Ensure at least some defaults if empty
+	if len(keywords) == 0 {
+		keywords = getDefaultIntentKeywords()
+	}
+
+	return keywords
+}
+
+// mapExpertToIntent maps expert name to intent name for sticky routing.
+func (r *ParrotExpertRegistry) mapExpertToIntent(expertName string) string {
+	switch expertName {
+	case "memo":
+		return "memo_search"
+	case "schedule":
+		return "schedule_manage"
+	default:
+		return ""
+	}
+}
+
+// getDefaultIntentKeywords returns default intent keywords as fallback.
+func getDefaultIntentKeywords() map[string][]string {
+	return map[string][]string{
+		"memo_search":     {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
+		"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting", "event", "calendar"},
+	}
+}
+
 // Ensure ParrotExpertRegistry implements ExpertRegistry
 var _ ExpertRegistry = (*ParrotExpertRegistry)(nil)
