@@ -2,7 +2,7 @@
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 >
-> **保鲜状态**: ✅ 2026-02-14 v0.99.0 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
+> **保鲜状态**: ✅ 2026-02-17 v0.99.1 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
 
 ---
 
@@ -31,12 +31,15 @@
 | `proto/`  | Protobuf 定义（修改后需重新生成）       |
 
 ### 关键配置
-| 配置              | 值                         |
-| :---------------- | :------------------------- |
-| PostgreSQL 容器名 | `divinesense-postgres-dev` |
-| 前端端口          | 25173                      |
-| 后端端口          | 28081                      |
-| 数据库端口        | 25432                      |
+| 配置              | 值                                    |
+| :---------------- | :------------------------------------ |
+| GitHub 仓库       | `hrygo/divinesense`                   |
+| PostgreSQL 容器名 | `divinesense-postgres-dev`            |
+| 前端端口          | 25173                                 |
+| 后端端口          | 28081                                 |
+| 数据库端口        | 25432                                 |
+
+> **⚠️ 注意**：执行 `gh` 命令或 GitHub MCP 工具前，先通过 `git remote -v | head -1` 确认仓库名称。当前仓库：`hrygo/divinesense`
 
 ### 常见陷阱
 | 陷阱                | 说明                                           |
