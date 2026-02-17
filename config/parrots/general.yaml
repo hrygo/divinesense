@@ -91,8 +91,7 @@ self_description:
       - "解释.*意思"
       - "概括.*内容"
     # Priority when multiple agents match
-    # Higher than schedule (5), lower than memo (10) to avoid stealing search intent
-    priority: 8
+    priority: 2
     # Semantic examples for Layer 3 semantic routing
     semantic_examples:
       - "帮我总结一下这些内容"

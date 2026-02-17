@@ -163,7 +163,7 @@ self_description:
       - "创建日程"
       - "新建日程"
     # Priority when multiple agents match (higher = preferred)
-    priority: 10
+    priority: 1
     # Semantic examples for Layer 3 semantic routing
     # These will be pre-computed as embedding vectors at startup
     semantic_examples:
