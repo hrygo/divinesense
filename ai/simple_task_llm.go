@@ -10,6 +10,7 @@ import (
 const (
 	SimpleTaskMaxTokens   = 1024 // Simple tasks don't need many tokens
 	SimpleTaskTemperature = 0.3  // Lower temperature for deterministic output
+	SimpleTaskTimeout     = 30   // Shorter timeout for simple tasks (seconds)
 )
 
 // NewSimpleTaskLLMService creates an LLM service for simple tasks.
@@ -18,7 +19,16 @@ const (
 // Priority:
 // 1. If AIIntentAPIKey is configured, use Intent provider (siliconflow by default)
 // 2. Otherwise, fallback to main LLM service
+//
+// Returns nil if both Intent service creation fails and mainLLM is nil.
+// Callers must check for nil return value.
 func NewSimpleTaskLLMService(p *profile.Profile, mainLLM LLMService) LLMService {
+	// Guard against nil profile
+	if p == nil {
+		slog.Warn("Profile is nil, returning main LLM service for simple tasks")
+		return mainLLM
+	}
+
 	// If Intent API key is configured, create dedicated service
 	if p.AIIntentAPIKey != "" {
 		cfg := &LLMConfig{
@@ -28,6 +38,7 @@ func NewSimpleTaskLLMService(p *profile.Profile, mainLLM LLMService) LLMService 
 			BaseURL:     p.AIIntentBaseURL,
 			MaxTokens:   SimpleTaskMaxTokens,
 			Temperature: SimpleTaskTemperature,
+			Timeout:     SimpleTaskTimeout,
 		}
 
 		svc, err := NewLLMService(cfg)

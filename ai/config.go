@@ -151,5 +151,10 @@ func (c *Config) Validate() error {
 		return errors.New("LLM API key is required")
 	}
 
+	// Intent Classifier validation (only when explicitly enabled)
+	if c.IntentClassifier.Enabled && c.IntentClassifier.Provider != "ollama" && c.IntentClassifier.APIKey == "" {
+		return errors.New("intent classifier API key is required for non-ollama providers")
+	}
+
 	return nil
 }
