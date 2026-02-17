@@ -161,18 +161,13 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 			case []byte:
 				eventDataStr = string(v)
 			case *agentpkg.EventWithMeta:
-				// If Meta exists, marshal it along with EventData for frontend to parse tool_name, etc.
+				// If Meta exists, include it as JSON in event_data for handler to parse
+				// Format: {"data": "...", "meta": {...}}
 				if v.Meta != nil {
 					metaJSON, err := json.Marshal(v.Meta)
 					if err == nil {
-						// Format: {"event_data": "...", "meta": {...}}
-						eventDataJSON, err := json.Marshal(v.EventData)
-						if err == nil {
-							combined := fmt.Sprintf(`{"event_data":%s,"meta":%s}`, string(eventDataJSON), string(metaJSON))
-							eventDataStr = combined
-						} else {
-							eventDataStr = v.EventData
-						}
+						combined := fmt.Sprintf(`{"data":%q,"meta":%s}`, v.EventData, string(metaJSON))
+						eventDataStr = combined
 					} else {
 						eventDataStr = v.EventData
 					}

@@ -611,18 +611,81 @@ func (h *ParrotHandler) executeWithOrchestrator(
 	// Create callback adapter for streaming events
 	// Phase 4 fix: Include BlockId in all orchestrator events for frontend optimistic block creation
 	callback := func(eventType string, eventData string) {
+		// Parse event data for tool_use and tool_result events
+		// Format from expert_registry: {"data": "...", "meta": {...}}
+		var finalData string
+		var eventMeta *v1pb.EventMetadata
+
+		if (eventType == "tool_use" || eventType == "tool_result") && strings.HasPrefix(eventData, `{"data":`) {
+			var parsed struct {
+				Data string         `json:"data"`
+				Meta map[string]any `json:"meta"`
+			}
+			if err := json.Unmarshal([]byte(eventData), &parsed); err == nil {
+				finalData = parsed.Data
+				if parsed.Meta != nil {
+					// Extract meta fields
+					getString := func(key string) string {
+						if v, ok := parsed.Meta[key]; ok {
+							if s, ok := v.(string); ok {
+								return s
+							}
+						}
+						return ""
+					}
+					getInt64 := func(key string) int64 {
+						if v, ok := parsed.Meta[key]; ok {
+							if n, ok := v.(float64); ok {
+								return int64(n)
+							}
+						}
+						return 0
+					}
+					getInt32 := func(key string) int32 {
+						if v, ok := parsed.Meta[key]; ok {
+							if n, ok := v.(float64); ok {
+								return int32(n)
+							}
+						}
+						return 0
+					}
+
+					toolName := getString("tool_name")
+					if toolName != "" || getString("status") != "" {
+						eventMeta = &v1pb.EventMetadata{
+							DurationMs:      getInt64("duration_ms"),
+							TotalDurationMs: getInt64("total_duration_ms"),
+							ToolName:        toolName,
+							ToolId:          getString("tool_id"),
+							Status:          getString("status"),
+							ErrorMsg:        getString("error_msg"),
+							InputSummary:    getString("input_summary"),
+							OutputSummary:   getString("output_summary"),
+							FilePath:        getString("file_path"),
+							LineCount:       getInt32("line_count"),
+						}
+					}
+				}
+			} else {
+				finalData = eventData
+			}
+		} else {
+			finalData = eventData
+		}
+
 		// Collect AI response content for block persistence
 		// Note: Orchestrator sends "answer" and "aggregation" events (not "content" or "text")
 		if eventType == "answer" || eventType == "content" || eventType == "aggregation" {
 			assistantContentMu.Lock()
-			assistantContent.WriteString(eventData)
+			assistantContent.WriteString(finalData)
 			assistantContentMu.Unlock()
 		}
 
 		if err := stream.Send(&v1pb.ChatResponse{
 			BlockId:   blockID,
 			EventType: eventType,
-			EventData: eventData,
+			EventData: finalData,
+			EventMeta: eventMeta,
 		}); err != nil {
 			slog.Warn("failed to send orchestrator event", "error", err, "event_type", eventType)
 		}
