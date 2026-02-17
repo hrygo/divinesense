@@ -127,12 +127,23 @@ self_description:
   # This replaces hardcoded keyword matching in RuleMatcher
   routing:
     # Keywords that trigger routing to this agent
+    # Note: These keywords are also used for sticky routing (isRelatedToLastIntent)
     keywords:
+      # Core keywords for initial routing
       - "日程"
       - "schedule"
       - "会议"
       - "提醒"
       - "安排"
+      # Sticky routing keywords (follow-up to previous schedule intent)
+      - "修改"
+      - "取消"
+      - "时间"
+      - "地点"
+      - "参会"
+      - "meeting"
+      - "event"
+      - "calendar"
     # Regex patterns for more complex matching
     patterns:
       - "创建日程"

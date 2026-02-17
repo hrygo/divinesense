@@ -55,19 +55,31 @@ func isShortConfirmation(input string) bool {
 
 // intentKeywords maps intent names to their related keywords for sticky routing.
 // This enables sticky routing for inputs that are semantically related to the last intent.
+// Note: These keywords should match the routing.keywords in expert config files (memo.yaml, schedule.yaml).
+// The actual values are loaded from config at runtime via IntentKeywordProvider.
 var intentKeywords = map[string][]string{
 	// Memo-related intents
-	"memo_search": {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
+	"memo_search": {
+		// Core keywords (from memo.yaml routing.keywords)
+		"笔记", "搜索", "找", "记录", "memo",
+		// Sticky routing: follow-up to previous memo search
+		"总结", "详细内容", "相关", "这条", "note", "search", "find", "look",
+	},
 	"create_note": {"记", "记录", "写", "创建", "note", "record", "create", "write"},
 	"delete_note": {"删除", "笔记", "note", "delete", "remove"},
 	"update_note": {"修改", "更新", "编辑", "笔记", "note", "edit", "update", "modify"},
 
 	// Schedule-related intents
-	"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting", "event", "calendar"},
-	"create_event":    {"日程", "会议", "安排", "创建", "schedule", "meeting", "event", "create", "add"},
-	"delete_event":    {"删除", "日程", "会议", "schedule", "meeting", "delete", "remove", "cancel"},
-	"query_schedule":  {"日程", "会议", "查看", "查询", "schedule", "meeting", "query", "check", "show"},
-	"update_event":    {"修改", "更新", "调整", "日程", "schedule", "edit", "update", "modify", "change"},
+	"schedule_manage": {
+		// Core keywords (from schedule.yaml routing.keywords)
+		"日程", "会议", "提醒", "安排", "schedule",
+		// Sticky routing: follow-up to previous schedule management
+		"修改", "取消", "时间", "地点", "参会", "meeting", "event", "calendar",
+	},
+	"create_event":   {"日程", "会议", "安排", "创建", "schedule", "meeting", "event", "create", "add"},
+	"delete_event":   {"删除", "日程", "会议", "schedule", "meeting", "delete", "remove", "cancel"},
+	"query_schedule": {"日程", "会议", "查看", "查询", "schedule", "meeting", "query", "check", "show"},
+	"update_event":   {"修改", "更新", "调整", "日程", "schedule", "edit", "update", "modify", "change"},
 }
 
 // isRelatedToLastIntent checks if the input is semantically related to the last intent.
