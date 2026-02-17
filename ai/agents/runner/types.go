@@ -89,13 +89,14 @@ type AssistantMessage struct {
 // ContentBlock represents a content block in stream-json format.
 // ContentBlock 表示 stream-json 格式中的内容块。
 type ContentBlock struct {
-	Type    string         `json:"type"`
-	Text    string         `json:"text,omitempty"`
-	Name    string         `json:"name,omitempty"`
-	ID      string         `json:"id,omitempty"`
-	Input   map[string]any `json:"input,omitempty"`
-	Content string         `json:"content,omitempty"`
-	IsError bool           `json:"is_error,omitempty"`
+	Type      string         `json:"type"`
+	Text      string         `json:"text,omitempty"`
+	Name      string         `json:"name,omitempty"`
+	ID        string         `json:"id,omitempty"`
+	ToolUseID string         `json:"tool_use_id,omitempty"` // For tool_result blocks to reference tool_use
+	Input     map[string]any `json:"input,omitempty"`
+	Content   string         `json:"content,omitempty"`
+	IsError   bool           `json:"is_error,omitempty"`
 }
 
 // Config defines mode-specific configuration for CCRunner execution.
