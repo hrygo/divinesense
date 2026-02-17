@@ -326,7 +326,7 @@ func (h *ParrotHandler) Handle(ctx context.Context, req *ChatRequest, stream Cha
 					h.metadataMgr.UpdateCacheOnly(
 						req.ConversationID,
 						string(routeResult.Route),
-						extractIntentFromRoute(string(routeResult.Route)),
+						agentpkg.ExtractIntent(routeResult.Route),
 						float32(routeResult.Confidence),
 					)
 				}
@@ -1389,7 +1389,7 @@ func (h *ParrotHandler) executeAgent(
 						currentBlock.ConversationID,
 						currentBlock.ID,
 						req.RouteResult.Route,
-						extractIntentFromRoute(req.RouteResult.Route),
+						agentpkg.ExtractIntent(agentpkg.ChatRouteType(req.RouteResult.Route)),
 						float32(req.RouteResult.Confidence),
 					); err != nil {
 						logger.Warn("Failed to persist routing metadata",
@@ -1528,18 +1528,6 @@ func formatToolsList(tools []string) string {
 	return strings.Join(tools, ", ")
 }
 
-// extractIntentFromRoute extracts the intent from a route type for metadata storage.
-func extractIntentFromRoute(route string) string {
-	switch route {
-	case string(agentpkg.RouteTypeMemo):
-		return "memo_search"
-	case string(agentpkg.RouteTypeSchedule):
-		return "schedule_manage"
-	default:
-		return "unknown"
-	}
-}
-
 // parseInabilityReport parses the INABILITY_REPORTED message to extract capability and reason.
 // Format: "INABILITY_REPORTED: <capability> - <reason>"
 // Note: Expert only reports what it CANNOT do. Orchestrator determines the appropriate expert.
@@ -1553,10 +1541,9 @@ func parseInabilityReport(report string) (capability, reason string) {
 	content = strings.TrimSpace(content)
 
 	// Split by " - " to separate capability and reason
-	if idx := strings.Index(content, " - "); idx != -1 {
-		capability = strings.TrimSpace(content[:idx])
-		reason = strings.TrimSpace(content[idx+3:])
-		return capability, reason
+	before, after, found := strings.Cut(content, " - ")
+	if found {
+		return strings.TrimSpace(before), strings.TrimSpace(after)
 	}
 
 	return content, ""

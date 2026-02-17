@@ -72,7 +72,7 @@ func (r *ChatRouterWithMetadata) RouteWithContextWithMetadata(
 	// Layer 2: Persist routing result to metadata (if successful)
 	if r.metadataMgr != nil && conversationID > 0 && blockID > 0 {
 		if result.Route != "" && !result.NeedsOrchestration {
-			intent := r.extractIntent(result.Route)
+			intent := ExtractIntent(result.Route)
 			if err := r.metadataMgr.SetCurrentAgent(
 				ctx,
 				conversationID,
@@ -90,18 +90,6 @@ func (r *ChatRouterWithMetadata) RouteWithContextWithMetadata(
 	}
 
 	return result, nil
-}
-
-// extractIntent extracts the intent from route type for metadata storage.
-func (r *ChatRouterWithMetadata) extractIntent(route ChatRouteType) string {
-	switch route {
-	case RouteTypeMemo:
-		return "memo_search"
-	case RouteTypeSchedule:
-		return "schedule_manage"
-	default:
-		return "unknown"
-	}
 }
 
 // InvalidateStickyCache invalidates the sticky cache for a conversation.

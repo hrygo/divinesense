@@ -89,15 +89,15 @@ func GetBlockID(ctx context.Context) (int64, bool) {
 }
 
 // GetHistory extracts conversation history from orchestrator context.
-// Returns nil if not set.
+// Returns an empty slice if not set.
 func GetHistory(ctx context.Context) []string {
 	v := ctx.Value(KeyHistory)
 	if v == nil {
-		return nil
+		return []string{}
 	}
 	history, ok := v.([]string)
 	if !ok {
-		return nil
+		return []string{}
 	}
 	return history
 }

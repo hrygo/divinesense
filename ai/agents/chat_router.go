@@ -50,11 +50,10 @@ func isShortConfirmation(input string) bool {
 // This enables sticky routing for inputs that are semantically related to the last intent.
 var intentKeywords = map[string][]string{
 	// Memo-related intents
-	"memo_search":  {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
-	"search_notes": {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
-	"create_note":  {"记", "记录", "写", "创建", "note", "record", "create", "write"},
-	"delete_note":  {"删除", "笔记", "note", "delete", "remove"},
-	"update_note":  {"修改", "更新", "编辑", "笔记", "note", "edit", "update", "modify"},
+	"memo_search": {"笔记", "搜索", "查找", "找", "记录", "note", "search", "find", "look"},
+	"create_note": {"记", "记录", "写", "创建", "note", "record", "create", "write"},
+	"delete_note": {"删除", "笔记", "note", "delete", "remove"},
+	"update_note": {"修改", "更新", "编辑", "笔记", "note", "edit", "update", "modify"},
 
 	// Schedule-related intents
 	"schedule_manage": {"日程", "会议", "安排", "schedule", "meeting", "event", "calendar"},
@@ -94,6 +93,19 @@ func isRelatedToLastIntent(input string, lastIntent string) bool {
 	}
 
 	return false
+}
+
+// ExtractIntent extracts the intent from route type for metadata storage.
+// This is a standalone function to avoid DRY violation between packages.
+func ExtractIntent(route ChatRouteType) string {
+	switch route {
+	case RouteTypeMemo:
+		return "memo_search"
+	case RouteTypeSchedule:
+		return "schedule_manage"
+	default:
+		return "unknown"
+	}
 }
 
 // ChatRouteResult represents the routing classification result.
@@ -477,12 +489,13 @@ func parseInabilityReport(report string) (capability, reason string) {
 	content = strings.TrimSpace(content)
 
 	// Split by " - " to separate capability and reason
-	if idx := strings.Index(content, " - "); idx != -1 {
-		capability = strings.TrimSpace(content[:idx])
-		reason = strings.TrimSpace(content[idx+3:])
+	before, after, found := strings.Cut(content, " - ")
+	if found {
+		capability = strings.TrimSpace(before)
+		reason = strings.TrimSpace(after)
 		// Remove suggested_agent part if present
-		if idx := strings.Index(reason, " (suggested_agent:"); idx != -1 {
-			reason = strings.TrimSpace(reason[:idx])
+		if before, _, found := strings.Cut(reason, " (suggested_agent:"); found {
+			reason = strings.TrimSpace(before)
 		}
 		return capability, reason
 	}
