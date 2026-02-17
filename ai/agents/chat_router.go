@@ -145,6 +145,8 @@ func ExtractIntent(route ChatRouteType) string {
 		return "memo_search"
 	case RouteTypeSchedule:
 		return "schedule_manage"
+	case RouteTypeGeneral:
+		return "general_task"
 	default:
 		return "unknown"
 	}
@@ -501,6 +503,8 @@ func (r *ChatRouter) routeTypeToExpertName(routeType ChatRouteType) string {
 		return "memo"
 	case RouteTypeSchedule:
 		return "schedule"
+	case RouteTypeGeneral:
+		return "general"
 	default:
 		return ""
 	}
@@ -514,6 +518,8 @@ func mapIntentToRouteType(intent routerpkg.Intent) ChatRouteType {
 		return RouteTypeMemo
 	case routerpkg.AgentTypeSchedule:
 		return RouteTypeSchedule
+	case routerpkg.AgentTypeGeneral:
+		return RouteTypeGeneral
 	default:
 		return "" // Empty indicates unknown - needs orchestration
 	}

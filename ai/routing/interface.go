@@ -58,6 +58,7 @@ type AgentType string
 const (
 	AgentTypeMemo     AgentType = "memo"
 	AgentTypeSchedule AgentType = "schedule"
+	AgentTypeGeneral  AgentType = "general"
 	AgentTypeUnknown  AgentType = "unknown"
 	// Note: AgentTypeAmazing removed - Orchestrator handles complex/ambiguous requests
 )
