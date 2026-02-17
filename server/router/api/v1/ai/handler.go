@@ -813,6 +813,12 @@ func (h *ParrotHandler) executeWithOrchestrator(
 				slog.Int64("block_id", currentBlock.ID),
 				slog.Int("content_length", len(finalContent)),
 			)
+
+			// Auto-generate conversation title after first successful block
+			// Only if title_source is "default" (never been auto-generated or user-edited)
+			if h.titleGenerator != nil && currentBlock.ConversationID > 0 {
+				h.maybeGenerateConversationTitle(ctx, currentBlock.ConversationID, currentBlock)
+			}
 		}
 	}
 
