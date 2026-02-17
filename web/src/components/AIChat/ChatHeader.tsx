@@ -115,16 +115,16 @@ function getModeStyle(mode: AIMode, t: (key: string) => string) {
         thinking: theme.text,
       };
     default:
-      // Normal mode - use amber theme
+      // Normal mode - use zinc theme (neutral gray, distinct from GEEK's slate)
       return {
-        border: "border-amber-200 dark:border-amber-700",
+        border: "border-zinc-200 dark:border-zinc-600",
         bg: PARROT_THEMES.NORMAL.headerBg,
         text: PARROT_THEMES.NORMAL.text,
         name: "",
         avatarBorder: "",
         avatarBg: "",
         statusText: PARROT_THEMES.NORMAL.text,
-        statusDot: "bg-amber-500",
+        statusDot: "bg-zinc-500",
         statusPrefix: "",
         thinking: PARROT_THEMES.NORMAL.text,
       };
@@ -171,15 +171,27 @@ export function ChatHeader({
           className={cn("rounded-lg", modeStyle.avatarBorder, modeStyle.avatarBg)}
         />
         <div className="flex flex-col">
-          <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>{assistantName}</h1>
+          <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>
+            {assistantName}
+          </h1>
           {/* Status */}
           {actionDescription ? (
             <span className={cn("text-xs flex items-center gap-1.5", modeStyle.statusText)}>
-              {currentMode !== "normal" && <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", modeStyle.statusDot)} />}
+              {currentMode !== "normal" && (
+                <span
+                  className={cn("w-1.5 h-1.5 rounded-full animate-pulse", modeStyle.statusDot)}
+                />
+              )}
               {actionDescription}
             </span>
           ) : (
-            <span className={cn("text-xs text-muted-foreground", modeStyle.name, currentMode !== "normal" && "font-medium")}>
+            <span
+              className={cn(
+                "text-xs text-muted-foreground",
+                modeStyle.name,
+                currentMode !== "normal" && "font-medium",
+              )}
+            >
               {modeStyle.statusPrefix || t("ai.ready")}
             </span>
           )}

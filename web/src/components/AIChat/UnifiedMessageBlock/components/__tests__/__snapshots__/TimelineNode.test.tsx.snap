@@ -3,7 +3,7 @@
 exports[`TimelineNode > Snapshot Tests > should match snapshot for answer node 1`] = `
 <div
   aria-label="answer node"
-  class="w-6 h-6 border-2 rounded-full bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"
+  class="w-6 h-6 border-2 rounded-full bg-zinc-50 dark:bg-zinc-800/40 border-zinc-500 text-zinc-600 dark:text-zinc-400 flex items-center justify-center shrink-0"
 >
   <svg
     class="w-3.5 h-3.5"

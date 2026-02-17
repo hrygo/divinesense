@@ -56,9 +56,9 @@ describe("TimelineNode", () => {
       const { container } = render(<TimelineNode type="answer" />);
 
       const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass("bg-amber-50");
-      expect(node).toHaveClass("border-amber-500");
-      expect(node).toHaveClass("text-amber-600");
+      expect(node).toHaveClass("bg-zinc-50");
+      expect(node).toHaveClass("border-zinc-500");
+      expect(node).toHaveClass("text-zinc-600");
     });
 
     it("should render error node with correct styling", () => {
@@ -151,7 +151,9 @@ describe("TimelineNode", () => {
     });
 
     it("should merge custom className with base classes", () => {
-      const { container } = render(<TimelineNode type="user" className="custom-class another-class" />);
+      const { container } = render(
+        <TimelineNode type="user" className="custom-class another-class" />,
+      );
 
       const node = container.firstChild as HTMLElement;
       expect(node).toHaveClass("w-6"); // base class
@@ -228,8 +230,8 @@ describe("TimelineNode", () => {
       const { container } = render(<TimelineNode type="answer" />);
 
       const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass("dark:bg-amber-900/20");
-      expect(node).toHaveClass("dark:text-amber-400");
+      expect(node).toHaveClass("dark:bg-zinc-800/40");
+      expect(node).toHaveClass("dark:text-zinc-400");
     });
 
     it("should include dark mode classes for error node", () => {
@@ -293,7 +295,16 @@ describe("TimelineNode", () => {
       const customIcon = <span data-testid="icon">X</span>;
       const handleClick = vi.fn();
 
-      expect(() => render(<TimelineNode type="user" icon={customIcon} className="test-class" onClick={handleClick} />)).not.toThrow();
+      expect(() =>
+        render(
+          <TimelineNode
+            type="user"
+            icon={customIcon}
+            className="test-class"
+            onClick={handleClick}
+          />,
+        ),
+      ).not.toThrow();
     });
 
     it("should handle rapid onClick calls", () => {

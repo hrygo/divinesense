@@ -17,13 +17,26 @@ export enum ParrotAgentType {
  * Default pinned agents in the sidebar
  * 侧边栏默认固定的鹦鹉代理
  */
-export const PINNED_PARROT_AGENTS = [ParrotAgentType.MEMO, ParrotAgentType.SCHEDULE, ParrotAgentType.AMAZING];
+export const PINNED_PARROT_AGENTS = [
+  ParrotAgentType.MEMO,
+  ParrotAgentType.SCHEDULE,
+  ParrotAgentType.AMAZING,
+];
 
 /**
  * Emotional state of a parrot
  * 鹦鹉的情感状态
  */
-export type EmotionalState = "focused" | "curious" | "excited" | "thoughtful" | "confused" | "happy" | "delighted" | "helpful" | "alert";
+export type EmotionalState =
+  | "focused"
+  | "curious"
+  | "excited"
+  | "thoughtful"
+  | "confused"
+  | "happy"
+  | "delighted"
+  | "helpful"
+  | "alert";
 
 /**
  * Parrot cognition configuration from backend
@@ -214,7 +227,11 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Note assistant for searching, summarizing, and managing memos",
     color: "blue",
     available: true,
-    examplePrompts: ["Search for programming notes", "Summarize recent work memos", "Find project management notes"],
+    examplePrompts: [
+      "Search for programming notes",
+      "Summarize recent work memos",
+      "Find project management notes",
+    ],
     backgroundImage: "/images/parrots/memo_parrot_bg.webp",
   },
   [ParrotAgentType.SCHEDULE]: {
@@ -225,7 +242,11 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Schedule assistant for creating, querying, and managing schedules",
     color: "orange",
     available: true,
-    examplePrompts: ["What's on my schedule today", "Am I free tomorrow afternoon", "Create a meeting reminder for next week"],
+    examplePrompts: [
+      "What's on my schedule today",
+      "Am I free tomorrow afternoon",
+      "Create a meeting reminder for next week",
+    ],
     backgroundImage: "/images/parrots/schedule_bg.webp",
   },
   [ParrotAgentType.AMAZING]: {
@@ -236,7 +257,11 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Comprehensive assistant combining memo and schedule features",
     color: "indigo",
     available: true,
-    examplePrompts: ["Summarize today's memos and schedule", "Help me plan next week's work", "Search recent project-related content"],
+    examplePrompts: [
+      "Summarize today's memos and schedule",
+      "Help me plan next week's work",
+      "Search recent project-related content",
+    ],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
   [ParrotAgentType.GEEK]: {
@@ -247,7 +272,11 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Claude Code CLI integration for coding tasks",
     color: "sky",
     available: true,
-    examplePrompts: ["Help me write a React component", "Debug this function", "Refactor this code"],
+    examplePrompts: [
+      "Help me write a React component",
+      "Debug this function",
+      "Refactor this code",
+    ],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
   [ParrotAgentType.EVOLUTION]: {
@@ -258,7 +287,11 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "System self-improvement mode for code evolution",
     color: "emerald",
     available: true,
-    examplePrompts: ["Optimize the database queries", "Add error handling", "Improve the test coverage"],
+    examplePrompts: [
+      "Optimize the database queries",
+      "Add error handling",
+      "Improve the test coverage",
+    ],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
 };
@@ -628,25 +661,26 @@ export const PARROT_THEMES = {
     footerBg: "bg-indigo-200/80 dark:bg-indigo-800/50",
     ringColor: "ring-indigo-500",
   },
-  // Normal Mode - 琥珀色 (闪念如琥珀般珍贵保存)
+  // Normal Mode - 中性灰 (智慧沉稳，如墨砚般深沉)
+  // Zinc 纯灰色系：中性、专业，与 GEEK(slate蓝灰) 和 EVOLUTION(emerald翠绿) 明显区分
   NORMAL: {
-    bubbleUser: "bg-amber-600 dark:bg-amber-500 text-white",
-    bubbleBg: "bg-amber-50 dark:bg-amber-900/20",
-    bubbleBorder: "border-amber-200 dark:border-amber-700",
-    text: "text-amber-800 dark:text-amber-100",
-    textSecondary: "text-amber-600 dark:text-amber-200",
-    iconBg: "bg-amber-100 dark:bg-amber-900",
-    iconText: "text-amber-700 dark:text-amber-300",
-    inputBg: "bg-amber-50 dark:bg-amber-950",
-    inputBorder: "border-amber-200 dark:border-amber-700",
-    inputFocus: "focus:ring-amber-500 focus:border-amber-500",
+    bubbleUser: "bg-zinc-600 dark:bg-zinc-500 text-white",
+    bubbleBg: "bg-zinc-50 dark:bg-zinc-800/60",
+    bubbleBorder: "border-zinc-200 dark:border-zinc-600",
+    text: "text-zinc-800 dark:text-zinc-100",
+    textSecondary: "text-zinc-600 dark:text-zinc-400",
+    iconBg: "bg-zinc-100 dark:bg-zinc-700",
+    iconText: "text-zinc-700 dark:text-zinc-300",
+    inputBg: "bg-zinc-50 dark:bg-zinc-900",
+    inputBorder: "border-zinc-200 dark:border-zinc-700",
+    inputFocus: "focus:ring-zinc-500 focus:border-zinc-500",
     cardBg: "bg-white dark:bg-zinc-800",
-    cardBorder: "border-amber-200 dark:border-amber-700",
-    accent: "bg-amber-500",
+    cardBorder: "border-zinc-200 dark:border-zinc-700",
+    accent: "bg-zinc-500",
     accentText: "text-white",
-    headerBg: "bg-amber-50 dark:bg-amber-900/20",
-    footerBg: "bg-amber-200/80 dark:bg-amber-800/50",
-    ringColor: "ring-amber-500",
+    headerBg: "bg-zinc-50 dark:bg-zinc-800/40",
+    footerBg: "bg-zinc-100/80 dark:bg-zinc-800/50",
+    ringColor: "ring-zinc-500",
   },
   // 极客 - Geek Mode (Claude Code CLI) - 石板蓝 (代码如石板般精确)
   GEEK: {
