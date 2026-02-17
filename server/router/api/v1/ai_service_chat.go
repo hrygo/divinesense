@@ -223,13 +223,7 @@ func (s *AIService) createChatHandler() aichat.Handler {
 	// Orchestrator handles LLM-based task decomposition when needed.
 	routerSvc := s.getRouterService()
 	chatRouter := aichat.NewChatRouter(routerSvc)
-	if s.IntentClassifierConfig != nil && s.IntentClassifierConfig.Enabled {
-		slog.Info("Chat router enabled with cache + rule routing",
-			"model", s.IntentClassifierConfig.Model,
-		)
-	} else {
-		slog.Info("Chat router enabled with rule-based routing (no LLM fallback)")
-	}
+	slog.Info("Chat router enabled with cache + rule routing")
 
 	// P0 fix: Enable metadata-based sticky routing (context-engineering.md Phase 2)
 	// This allows routing decisions to be based on persisted database state (AIBlock.Metadata),

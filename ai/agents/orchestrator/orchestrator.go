@@ -31,6 +31,7 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -123,6 +124,11 @@ func (o *Orchestrator) Process(ctx context.Context, userInput string, callback E
 		"trace_id", traceID,
 		"input_length", len(userInput))
 
+	// Send decompose_start event for UX feedback
+	if callback != nil {
+		callback("decompose_start", `{"status":"analyzing"}`)
+	}
+
 	// Step 1: Decompose the request into tasks
 	plan, err := o.decomposer.Decompose(ctx, userInput, o.executor.registry, traceID)
 	if err != nil {
@@ -130,6 +136,12 @@ func (o *Orchestrator) Process(ctx context.Context, userInput string, callback E
 			"trace_id", traceID,
 			"error", err)
 		return nil, err
+	}
+
+	// Send decompose_end event with task count
+	if callback != nil {
+		taskInfo := fmt.Sprintf(`{"task_count":%d,"analysis":"%s"}`, len(plan.Tasks), plan.Analysis)
+		callback("decompose_end", taskInfo)
 	}
 
 	// Step 2: Execute the tasks

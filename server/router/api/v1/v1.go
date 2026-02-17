@@ -130,6 +130,17 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 					TitleGenerator:         titleGenerator,
 					persister:              persister,
 				}
+				// Warmup router service (build semantic index) asynchronously
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					if rs := service.AIService.getRouterService(); rs != nil {
+						slog.Info("Router service warmed up successfully")
+					} else {
+						slog.Warn("Router service warmup returned nil")
+					}
+					_ = ctx // Context used for timeout
+				}()
 				// Initialize ScheduleService with LLM service for natural language parsing
 				service.ScheduleService = &ScheduleService{
 					Store:      store,
