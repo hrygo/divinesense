@@ -39,6 +39,7 @@ type NormalSessionStats struct {
 	ToolCallCount  int      `json:"tool_call_count"`
 	ToolDurationMs int64    `json:"tool_duration_ms"`         // Total tool execution time
 	FilesModified  int32    `json:"files_modified,omitempty"` // Number of files modified
+	FilePaths      []string `json:"file_paths,omitempty"`     // List of file paths modified
 	ToolsUsed      []string `json:"tools_used,omitempty"`
 
 	// Cost estimation (in milli-cents: 1/1000 of a US cent, or 1/100000 USD)

@@ -134,6 +134,18 @@ func ExecuteToolWithEvents(
 	stats.ToolCalls++
 	stats.ToolDurationMs += toolDuration
 
+	// Track unique tool names
+	hasTool := false
+	for _, t := range stats.ToolsUsed {
+		if t == toolName {
+			hasTool = true
+			break
+		}
+	}
+	if !hasTool {
+		stats.ToolsUsed = append(stats.ToolsUsed, toolName)
+	}
+
 	return result, toolDuration, nil
 }
 

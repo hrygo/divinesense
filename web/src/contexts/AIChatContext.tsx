@@ -150,6 +150,13 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
           return translated || "New Chat";
         }
 
+        // Handle "chat.default.*" format (e.g., "chat.default.auto", "chat.default.memo")
+        const defaultMatch = titleKey.match(/^chat\.default\.(.+)$/);
+        if (defaultMatch) {
+          const translated = t(titleKey);
+          return translated || titleKey; // Fallback to key if translation is empty
+        }
+
         // Handle other "chat.*.title" format (e.g., "chat.memo.title")
         if (titleKey.endsWith(".title")) {
           const translated = t(titleKey);

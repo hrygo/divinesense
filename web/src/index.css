@@ -606,19 +606,3 @@
 .dark .bg-orange-950\/30 .sticky-note-corner {
   border-color: transparent rgb(253 186 116 / 0.2) transparent transparent;
 }
-
-/* Memo search result table column widths: # (fixed 48px), Title & Summary share remaining */
-.memo-result-table th:nth-child(1),
-.memo-result-table td:nth-child(1) {
-  width: 48px;
-}
-
-.memo-result-table th:nth-child(2),
-.memo-result-table td:nth-child(2) {
-  width: calc(50% - 24px);
-}
-
-.memo-result-table th:nth-child(3),
-.memo-result-table td:nth-child(3) {
-  width: calc(50% - 24px);
-}

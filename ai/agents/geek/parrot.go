@@ -213,6 +213,7 @@ func (p *GeekParrot) GetSessionStats() *agentpkg.NormalSessionStats {
 		ToolCallCount:        int(stats.ToolCallCount),
 		ToolDurationMs:       stats.ToolDurationMs,
 		FilesModified:        stats.FilesModified,
+		FilePaths:            stats.FilePaths,
 		ToolsUsed:            toolsUsed,
 	}
 }

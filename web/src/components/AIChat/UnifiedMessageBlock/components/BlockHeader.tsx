@@ -176,7 +176,7 @@ export const BlockHeader = memo(function BlockHeader({
     // Tool calls (show if > 0)
     if (blockSummary.toolCallCount && blockSummary.toolCallCount > 0) {
       stats.push({
-        value: `${blockSummary.toolCallCount} ${t("ai.stats.tool_calls_short")}`,
+        value: `${blockSummary.toolCallCount}`,
         icon: "wrench",
         title: t("ai.stats.tool_calls"),
       });

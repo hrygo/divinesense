@@ -964,9 +964,49 @@ func (h *ParrotHandler) executeAgent(
 			return nil
 		} else {
 			// Handle legacy event types (string, error)
+			// Also handle JSON format from orchestrator: {"data": "...", "meta": {...}}
 			switch v := eventData.(type) {
 			case string:
 				dataStr = v
+				// Try to parse JSON format to extract metadata (for tool_use/tool_result events)
+				// This handles events from orchestrator that were converted to JSON format
+				if (eventType == "tool_use" || eventType == "tool_result") && strings.HasPrefix(v, "{\"data\":") {
+					var parsed struct {
+						Data string         `json:"data"`
+						Meta map[string]any `json:"meta"`
+					}
+					if err := json.Unmarshal([]byte(v), &parsed); err == nil && parsed.Data != "" {
+						dataStr = parsed.Data
+						// Extract metadata from JSON
+						if parsed.Meta != nil {
+							getString := func(key string) string {
+								if val, ok := parsed.Meta[key]; ok {
+									if s, ok := val.(string); ok {
+										return s
+									}
+								}
+								return ""
+							}
+							getInt64 := func(key string) int64 {
+								if val, ok := parsed.Meta[key]; ok {
+									if n, ok := val.(float64); ok {
+										return int64(n)
+									}
+								}
+								return 0
+							}
+							eventMeta = &v1pb.EventMetadata{
+								ToolName:      getString("tool_name"),
+								ToolId:        getString("tool_id"),
+								Status:        getString("status"),
+								ErrorMsg:      getString("error_msg"),
+								InputSummary:  getString("input_summary"),
+								OutputSummary: getString("output_summary"),
+								DurationMs:    getInt64("duration_ms"),
+							}
+						}
+					}
+				}
 			case error:
 				dataStr = v.Error()
 			default:
@@ -1430,6 +1470,10 @@ func (h *ParrotHandler) executeAgent(
 		blockSummary.ToolCallCount = int32(statsSnapshot.ToolCallCount)
 		if len(statsSnapshot.ToolsUsed) > 0 {
 			blockSummary.ToolsUsed = statsSnapshot.ToolsUsed
+		}
+		if len(statsSnapshot.FilePaths) > 0 {
+			blockSummary.FilePaths = statsSnapshot.FilePaths
+			blockSummary.FilesModified = int32(len(statsSnapshot.FilePaths))
 		}
 		// Convert milli-cents to USD (1 USD = 100000 milli-cents)
 		if statsSnapshot.TotalCostMilliCents > 0 {

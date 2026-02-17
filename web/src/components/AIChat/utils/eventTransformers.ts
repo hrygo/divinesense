@@ -45,7 +45,40 @@ export function normalizeTimestamp(timestamp: bigint | number | undefined): numb
 }
 
 /**
+ * Parse event content that may be in JSON format.
+ * JSON format: {"data": "...", "meta": {...}}
+ *
+ * @param content - Raw event content string
+ * @returns Parsed content and optional meta object
+ */
+function parseEventContent(content: string): { data: string; meta?: Record<string, unknown> } {
+  const trimmed = content.trim();
+
+  // Try to parse as JSON if it starts with '{'
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object") {
+        return {
+          data: typeof parsed.data === "string" ? parsed.data : "",
+          meta: parsed.meta as Record<string, unknown> | undefined,
+        };
+      }
+    } catch {
+      // Not valid JSON, return as-is
+    }
+  }
+
+  // Plain text content
+  return { data: trimmed };
+}
+
+/**
  * Extract thinking steps from Block event stream
+ *
+ * Handles two content formats:
+ * 1. Plain text: "thinking content..."
+ * 2. JSON format (from orchestrator): {"data": "...", "meta": {...}}
  *
  * @param eventStream - Array of BlockEvent objects
  * @returns Array of ThinkingStep objects
@@ -59,12 +92,21 @@ export function extractThinkingSteps(eventStream: BlockEvent[] | undefined): Thi
 
   for (const event of eventStream) {
     if (event.type === "thinking" && event.content) {
-      // Parse meta to get round number (if available)
+      // Parse content (handle JSON format)
+      const { data: content, meta } = parseEventContent(event.content);
+
+      // Skip empty content
+      if (!content) {
+        continue;
+      }
+
+      // Parse round from meta (prefer event-level meta, fallback to content meta)
       let round = 0;
-      if (event.meta) {
+      const metaToParse = event.meta || meta;
+      if (metaToParse) {
         try {
-          const meta = JSON.parse(event.meta);
-          round = typeof meta.round === "number" ? meta.round : 0;
+          const parsed = typeof metaToParse === "string" ? JSON.parse(metaToParse) : metaToParse;
+          round = typeof parsed.round === "number" ? parsed.round : 0;
         } catch {
           // Invalid JSON, use default round
           round = 0;
@@ -72,7 +114,7 @@ export function extractThinkingSteps(eventStream: BlockEvent[] | undefined): Thi
       }
 
       steps.push({
-        content: event.content,
+        content,
         timestamp: normalizeTimestamp(event.timestamp),
         round,
       });
@@ -123,15 +165,34 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
 
   for (const event of eventStream) {
     if (event.type === "tool_use") {
-      // Parse tool_use event
+      // Parse tool_use event - handle JSON format in content
+      // JSON format: {"data": "...", "meta": {...}}
       let meta: Record<string, unknown> | undefined;
-      try {
-        meta = event.meta ? JSON.parse(event.meta) : undefined;
-      } catch {
-        meta = undefined;
+      let contentData = event.content;
+
+      // First try to parse content as JSON to extract meta
+      if (event.content.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(event.content);
+          if (parsed && typeof parsed === "object") {
+            contentData = typeof parsed.data === "string" ? parsed.data : event.content;
+            meta = parsed.meta as Record<string, unknown> | undefined;
+          }
+        } catch {
+          // Not valid JSON, fall through to regular meta parsing
+        }
       }
 
-      const toolName = asString(meta?.tool_name) || asString(meta?.name) || event.content || "unknown";
+      // If meta not from JSON content, try event.meta
+      if (!meta && event.meta) {
+        try {
+          meta = JSON.parse(event.meta);
+        } catch {
+          meta = undefined;
+        }
+      }
+
+      const toolName = asString(meta?.tool_name) || asString(meta?.name) || contentData || "unknown";
       const toolId = asString(meta?.tool_id);
       const occurrence = asNumber(meta?.occurrence) ?? 0;
 
@@ -143,19 +204,37 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
       const toolCall: ToolCall = {
         name: toolName,
         toolId,
-        // Prefer meta.input_summary (contains parameters) over event.content (may be just tool name for CCRunner)
-        inputSummary: asString(meta?.input_summary) || event.content,
+        // Prefer meta.input_summary over contentData
+        inputSummary: asString(meta?.input_summary) || contentData,
       };
 
       // Store tool call with its occurrence
       toolCallsMap.set(dedupeKey, { toolCall, occurrence });
     } else if (event.type === "tool_result") {
-      // Parse tool_result event
+      // Parse tool_result event - handle JSON format in content
       let meta: Record<string, unknown> | undefined;
-      try {
-        meta = event.meta ? JSON.parse(event.meta) : undefined;
-      } catch {
-        meta = undefined;
+      let contentData = event.content;
+
+      // First try to parse content as JSON to extract meta
+      if (event.content.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(event.content);
+          if (parsed && typeof parsed === "object") {
+            contentData = typeof parsed.data === "string" ? parsed.data : event.content;
+            meta = parsed.meta as Record<string, unknown> | undefined;
+          }
+        } catch {
+          // Not valid JSON, fall through to regular meta parsing
+        }
+      }
+
+      // If meta not from JSON content, try event.meta
+      if (!meta && event.meta) {
+        try {
+          meta = JSON.parse(event.meta);
+        } catch {
+          meta = undefined;
+        }
       }
 
       const toolId = asString(meta?.tool_id);
@@ -169,7 +248,7 @@ export function extractToolCalls(eventStream: BlockEvent[] | undefined): ToolCal
       if (toolCallsMap.has(resultKey)) {
         // Update existing tool call with result
         const existing = toolCallsMap.get(resultKey)!.toolCall;
-        existing.outputSummary = event.content || asString(meta?.output_summary);
+        existing.outputSummary = contentData || asString(meta?.output_summary);
         existing.isError = asBool(meta?.is_error);
         existing.duration = asNumber(meta?.duration);
         existing.exitCode = asNumber(meta?.exit_code);

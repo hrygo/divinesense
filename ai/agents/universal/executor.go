@@ -66,6 +66,7 @@ type ExecutionStats struct {
 
 	// Tool metrics
 	ToolCalls int
+	ToolsUsed []string // List of unique tool names used
 
 	// Timing (milliseconds)
 	TotalDurationMs  int64
@@ -82,6 +83,8 @@ func (s *ExecutionStats) AccumulateLLM(llmStats *ai.LLMCallStats) {
 	s.TotalTokens += llmStats.TotalTokens
 	s.CacheReadTokens += llmStats.CacheReadTokens
 	s.CacheWriteTokens += llmStats.CacheWriteTokens
+	// Track thinking duration (TTFT - Time To First Token)
+	s.ThinkingDuration += llmStats.ThinkingDurationMs
 }
 
 // StrategyType defines the supported execution strategies.

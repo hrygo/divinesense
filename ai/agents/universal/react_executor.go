@@ -169,16 +169,31 @@ func (e *ReActExecutor) Execute(
 
 			// Execute the tool
 			toolResult, toolErr := executeTool(ctx, tools, toolName, toolInput)
+			toolDuration := time.Since(toolStart).Milliseconds()
 			status := "success"
 			if toolErr != nil {
 				status = "error"
 				toolResult = fmt.Sprintf("Error: %v", toolErr)
 			}
 
+			// Update stats: tool count, duration, and unique tool names
+			stats.ToolCalls++
+			stats.ToolDurationMs += toolDuration
+			hasTool := false
+			for _, t := range stats.ToolsUsed {
+				if t == toolName {
+					hasTool = true
+					break
+				}
+			}
+			if !hasTool {
+				stats.ToolsUsed = append(stats.ToolsUsed, toolName)
+			}
+
 			slog.Info("react: tool execution completed",
 				"tool", toolName,
 				"status", status,
-				"duration_ms", time.Since(toolStart).Milliseconds(),
+				"duration_ms", toolDuration,
 			)
 
 			// Notify callback of result with structured EventWithMeta
@@ -187,7 +202,7 @@ func (e *ReActExecutor) Execute(
 					ToolName:      toolName,
 					Status:        status,
 					OutputSummary: toolResult,
-					DurationMs:    time.Since(toolStart).Milliseconds(),
+					DurationMs:    toolDuration,
 				}
 				safeCallback(agent.EventTypeToolResult, &agent.EventWithMeta{
 					EventType: agent.EventTypeToolResult,

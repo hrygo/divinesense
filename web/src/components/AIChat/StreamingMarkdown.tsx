@@ -83,7 +83,7 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
   // 表格组件样式
   const tableComponents = {
     table: (props: React.HTMLAttributes<HTMLTableElement>) => (
-      <table {...props} className="w-full border-collapse my-3 text-sm table-fixed memo-result-table" />
+      <table {...props} className="w-full border-collapse my-3 text-sm table-auto" />
     ),
     thead: (props: React.HTMLAttributes<HTMLTableSectionElement>) => <thead {...props} className="bg-slate-100 dark:bg-slate-700" />,
     tbody: (props: React.HTMLAttributes<HTMLTableSectionElement>) => (

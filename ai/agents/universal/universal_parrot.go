@@ -20,6 +20,11 @@ import (
 const (
 	// DefaultTimezone is the default timezone for time context calculations.
 	DefaultTimezone = "Asia/Shanghai"
+
+	// Default model pricing (per 1M tokens)
+	// Using SiliconFlow/DeepSeek pricing as default
+	defaultInputCostPerMillion  = 0.27
+	defaultOutputCostPerMillion = 2.25
 )
 
 // UniversalParrot is a configuration-driven parrot that can
@@ -323,7 +328,29 @@ func (p *UniversalParrot) accumulateStats(execStats *ExecutionStats, startTime t
 	p.stats.CacheWriteTokens += execStats.CacheWriteTokens
 	p.stats.ToolCallCount += execStats.ToolCalls
 	p.stats.ToolDurationMs += execStats.ToolDurationMs
+	p.stats.ThinkingDurationMs += execStats.ThinkingDuration
 	p.stats.TotalDurationMs += duration.Milliseconds()
+
+	// Calculate cost (in milli-cents: 1/100000 USD)
+	// Cost = (input_tokens * input_price + output_tokens * output_price) / 1M * 100000
+	inputCost := float64(execStats.PromptTokens) * defaultInputCostPerMillion
+	outputCost := float64(execStats.CompletionTokens) * defaultOutputCostPerMillion
+	totalCost := (inputCost + outputCost) / 1_000_000 * 100000
+	p.stats.TotalCostMilliCents += int64(totalCost)
+
+	// Merge unique tool names
+	for _, tool := range execStats.ToolsUsed {
+		hasTool := false
+		for _, existing := range p.stats.ToolsUsed {
+			if existing == tool {
+				hasTool = true
+				break
+			}
+		}
+		if !hasTool {
+			p.stats.ToolsUsed = append(p.stats.ToolsUsed, tool)
+		}
+	}
 }
 
 // generateCacheKey generates a cache key for the input.

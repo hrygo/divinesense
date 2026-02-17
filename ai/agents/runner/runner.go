@@ -845,13 +845,26 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 		if msg.Output != "" {
 			durationMs := stats.RecordToolResult()
 
+			// Extract tool ID and name from content blocks for matching with tool_use
+			var toolID string
+			var toolName string
+			for _, block := range msg.GetContentBlocks() {
+				if block.Type == "tool_result" {
+					toolID = block.ID
+					toolName = block.Name // Tool name from content block
+					break
+				}
+			}
+
 			meta := &EventMeta{
+				ToolName:        toolName,
+				ToolID:          toolID,
 				Status:          "success",
 				DurationMs:      durationMs,
 				TotalDurationMs: totalDuration,
 				OutputSummary:   TruncateString(msg.Output, 500),
 			}
-			r.logger.Debug("CCRunner: sending tool_result event", "output_length", len(msg.Output), "duration_ms", durationMs)
+			r.logger.Debug("CCRunner: sending tool_result event", "tool_name", toolName, "tool_id", toolID, "output_length", len(msg.Output), "duration_ms", durationMs)
 			if err := callback("tool_result", &EventWithMeta{EventType: "tool_result", EventData: msg.Output, Meta: meta}); err != nil {
 				return err
 			}

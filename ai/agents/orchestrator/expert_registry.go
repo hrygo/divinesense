@@ -151,8 +151,12 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 
 	// Convert orchestrator.EventCallback to agent.EventCallback
 	// agent.EventCallback signature: func(eventType string, eventData any) error
+	//
+	// IMPORTANT: Include both EventData and Meta in JSON format.
+	// The handler (server/router/api/v1/ai/handler.go) already parses this format
+	// for tool_use/tool_result events to extract tool_name from meta.
+	// Format: {"data": "...", "meta": {"tool_name": "xxx", ...}}
 	agentCallback := func(eventType string, eventData any) error {
-		// Forward to orchestrator callback (convert eventData to string)
 		if callback != nil {
 			var eventDataStr string
 			switch v := eventData.(type) {
@@ -161,11 +165,12 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 			case []byte:
 				eventDataStr = string(v)
 			case *agentpkg.EventWithMeta:
-				// If Meta exists, include it as JSON in event_data for handler to parse
-				// Format: {"data": "...", "meta": {...}}
+				// If Meta exists, include it as JSON for handler to parse tool_name etc.
+				// This ensures handler can extract Meta fields like tool_name, status, etc.
 				if v.Meta != nil {
 					metaJSON, err := json.Marshal(v.Meta)
 					if err == nil {
+						// Use consistent format: {"data": "...", "meta": {...}}
 						combined := fmt.Sprintf(`{"data":%q,"meta":%s}`, v.EventData, string(metaJSON))
 						eventDataStr = combined
 					} else {
@@ -175,7 +180,6 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 					eventDataStr = v.EventData
 				}
 			default:
-				// For other types, use JSON marshal to avoid pointer address output
 				eventDataStr = fmt.Sprintf("%v", v)
 			}
 			callback(eventType, eventDataStr)
