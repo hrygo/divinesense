@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -160,8 +161,24 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 			case []byte:
 				eventDataStr = string(v)
 			case *agentpkg.EventWithMeta:
-				// Extract EventData from EventWithMeta struct
-				eventDataStr = v.EventData
+				// If Meta exists, marshal it along with EventData for frontend to parse tool_name, etc.
+				if v.Meta != nil {
+					metaJSON, err := json.Marshal(v.Meta)
+					if err == nil {
+						// Format: {"event_data": "...", "meta": {...}}
+						eventDataJSON, err := json.Marshal(v.EventData)
+						if err == nil {
+							combined := fmt.Sprintf(`{"event_data":%s,"meta":%s}`, string(eventDataJSON), string(metaJSON))
+							eventDataStr = combined
+						} else {
+							eventDataStr = v.EventData
+						}
+					} else {
+						eventDataStr = v.EventData
+					}
+				} else {
+					eventDataStr = v.EventData
+				}
 			default:
 				// For other types, use JSON marshal to avoid pointer address output
 				eventDataStr = fmt.Sprintf("%v", v)
