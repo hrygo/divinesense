@@ -445,6 +445,39 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     }
   }, []);
 
+  // scheduleTitleRefresh schedules a delayed refresh to fetch the auto-generated title.
+  // The backend generates titles asynchronously in generateTitleAsync, which takes ~2-5 seconds.
+  // This method should be called after Block 0 completes to fetch the generated title.
+  const scheduleTitleRefresh = useCallback((conversationId: string) => {
+    // Delay 3 seconds to allow backend async title generation to complete
+    setTimeout(async () => {
+      try {
+        const response = await aiServiceClient.listAIConversations({});
+        const updatedConv = response.conversations.find((c) => String(c.id) === conversationId);
+        if (updatedConv) {
+          setState((prev) => ({
+            ...prev,
+            conversations: prev.conversations.map((c) => {
+              if (c.id === conversationId) {
+                return {
+                  ...c,
+                  title: updatedConv.title,
+                  updatedAt: Number(updatedConv.updatedTs) * 1000,
+                };
+              }
+              return c;
+            }),
+          }));
+        }
+      } catch (error) {
+        // Silently fail - title refresh is best-effort
+        if (import.meta.env.DEV) {
+          console.debug("[AI Chat] Title refresh failed (non-critical):", error);
+        }
+      }
+    }, 3000);
+  }, []);
+
   // Phase 4: Removed addMessage, updateMessage, deleteMessage - Block API handles this
   // Message actions
   const clearMessages = useCallback((conversationId: string) => {
@@ -836,6 +869,7 @@ export function AIChatProvider({ children, initialState }: AIChatProviderProps) 
     selectConversation,
     updateConversationTitle,
     generateConversationTitle,
+    scheduleTitleRefresh,
     refreshConversations,
     // Phase 4: Removed addMessage, updateMessage, deleteMessage - Block API handles this
     clearMessages,

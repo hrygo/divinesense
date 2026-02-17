@@ -140,7 +140,7 @@ func (o *Orchestrator) Process(ctx context.Context, userInput string, callback E
 
 	// Send decompose_end event with task count
 	if callback != nil {
-		taskInfo := fmt.Sprintf(`{"task_count":%d,"analysis":"%s"}`, len(plan.Tasks), plan.Analysis)
+		taskInfo := fmt.Sprintf(`{"task_count":%d,"analysis":%q}`, len(plan.Tasks), plan.Analysis)
 		callback("decompose_end", taskInfo)
 	}
 

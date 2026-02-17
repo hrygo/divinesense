@@ -171,27 +171,15 @@ export function ChatHeader({
           className={cn("rounded-lg", modeStyle.avatarBorder, modeStyle.avatarBg)}
         />
         <div className="flex flex-col">
-          <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>
-            {assistantName}
-          </h1>
+          <h1 className={cn("font-semibold text-foreground text-sm leading-tight", modeStyle.name)}>{assistantName}</h1>
           {/* Status */}
           {actionDescription ? (
             <span className={cn("text-xs flex items-center gap-1.5", modeStyle.statusText)}>
-              {currentMode !== "normal" && (
-                <span
-                  className={cn("w-1.5 h-1.5 rounded-full animate-pulse", modeStyle.statusDot)}
-                />
-              )}
+              {currentMode !== "normal" && <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", modeStyle.statusDot)} />}
               {actionDescription}
             </span>
           ) : (
-            <span
-              className={cn(
-                "text-xs text-muted-foreground",
-                modeStyle.name,
-                currentMode !== "normal" && "font-medium",
-              )}
-            >
+            <span className={cn("text-xs text-muted-foreground", modeStyle.name, currentMode !== "normal" && "font-medium")}>
               {modeStyle.statusPrefix || t("ai.ready")}
             </span>
           )}

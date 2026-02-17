@@ -17,26 +17,13 @@ export enum ParrotAgentType {
  * Default pinned agents in the sidebar
  * 侧边栏默认固定的鹦鹉代理
  */
-export const PINNED_PARROT_AGENTS = [
-  ParrotAgentType.MEMO,
-  ParrotAgentType.SCHEDULE,
-  ParrotAgentType.AMAZING,
-];
+export const PINNED_PARROT_AGENTS = [ParrotAgentType.MEMO, ParrotAgentType.SCHEDULE, ParrotAgentType.AMAZING];
 
 /**
  * Emotional state of a parrot
  * 鹦鹉的情感状态
  */
-export type EmotionalState =
-  | "focused"
-  | "curious"
-  | "excited"
-  | "thoughtful"
-  | "confused"
-  | "happy"
-  | "delighted"
-  | "helpful"
-  | "alert";
+export type EmotionalState = "focused" | "curious" | "excited" | "thoughtful" | "confused" | "happy" | "delighted" | "helpful" | "alert";
 
 /**
  * Parrot cognition configuration from backend
@@ -227,11 +214,7 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Note assistant for searching, summarizing, and managing memos",
     color: "blue",
     available: true,
-    examplePrompts: [
-      "Search for programming notes",
-      "Summarize recent work memos",
-      "Find project management notes",
-    ],
+    examplePrompts: ["Search for programming notes", "Summarize recent work memos", "Find project management notes"],
     backgroundImage: "/images/parrots/memo_parrot_bg.webp",
   },
   [ParrotAgentType.SCHEDULE]: {
@@ -242,11 +225,7 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Schedule assistant for creating, querying, and managing schedules",
     color: "orange",
     available: true,
-    examplePrompts: [
-      "What's on my schedule today",
-      "Am I free tomorrow afternoon",
-      "Create a meeting reminder for next week",
-    ],
+    examplePrompts: ["What's on my schedule today", "Am I free tomorrow afternoon", "Create a meeting reminder for next week"],
     backgroundImage: "/images/parrots/schedule_bg.webp",
   },
   [ParrotAgentType.AMAZING]: {
@@ -257,11 +236,7 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Comprehensive assistant combining memo and schedule features",
     color: "indigo",
     available: true,
-    examplePrompts: [
-      "Summarize today's memos and schedule",
-      "Help me plan next week's work",
-      "Search recent project-related content",
-    ],
+    examplePrompts: ["Summarize today's memos and schedule", "Help me plan next week's work", "Search recent project-related content"],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
   [ParrotAgentType.GEEK]: {
@@ -272,11 +247,7 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "Claude Code CLI integration for coding tasks",
     color: "sky",
     available: true,
-    examplePrompts: [
-      "Help me write a React component",
-      "Debug this function",
-      "Refactor this code",
-    ],
+    examplePrompts: ["Help me write a React component", "Debug this function", "Refactor this code"],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
   [ParrotAgentType.EVOLUTION]: {
@@ -287,11 +258,7 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     description: "System self-improvement mode for code evolution",
     color: "emerald",
     available: true,
-    examplePrompts: [
-      "Optimize the database queries",
-      "Add error handling",
-      "Improve the test coverage",
-    ],
+    examplePrompts: ["Optimize the database queries", "Add error handling", "Improve the test coverage"],
     backgroundImage: "/images/parrots/amazing_bg.webp",
   },
 };
@@ -488,6 +455,9 @@ export enum ParrotEventType {
   PLAN = "plan",
   TASK_START = "task_start",
   TASK_END = "task_end",
+  // Decompose progress events
+  DECOMPOSE_START = "decompose_start",
+  DECOMPOSE_END = "decompose_end",
 }
 
 /**

@@ -151,9 +151,7 @@ describe("TimelineNode", () => {
     });
 
     it("should merge custom className with base classes", () => {
-      const { container } = render(
-        <TimelineNode type="user" className="custom-class another-class" />,
-      );
+      const { container } = render(<TimelineNode type="user" className="custom-class another-class" />);
 
       const node = container.firstChild as HTMLElement;
       expect(node).toHaveClass("w-6"); // base class
@@ -295,16 +293,7 @@ describe("TimelineNode", () => {
       const customIcon = <span data-testid="icon">X</span>;
       const handleClick = vi.fn();
 
-      expect(() =>
-        render(
-          <TimelineNode
-            type="user"
-            icon={customIcon}
-            className="test-class"
-            onClick={handleClick}
-          />,
-        ),
-      ).not.toThrow();
+      expect(() => render(<TimelineNode type="user" icon={customIcon} className="test-class" onClick={handleClick} />)).not.toThrow();
     });
 
     it("should handle rapid onClick calls", () => {

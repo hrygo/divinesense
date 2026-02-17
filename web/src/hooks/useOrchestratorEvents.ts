@@ -112,7 +112,10 @@ export function useOrchestratorEvents() {
             return { ...prev, tasks: newTasks };
           });
         } catch (e) {
-          setState((prev) => ({ ...prev, ...handleParseError("Failed to parse task_start event", e) }));
+          setState((prev) => ({
+            ...prev,
+            ...handleParseError("Failed to parse task_start event", e),
+          }));
         }
         break;
       }
@@ -141,7 +144,10 @@ export function useOrchestratorEvents() {
             };
           });
         } catch (e) {
-          setState((prev) => ({ ...prev, ...handleParseError("Failed to parse task_end event", e) }));
+          setState((prev) => ({
+            ...prev,
+            ...handleParseError("Failed to parse task_end event", e),
+          }));
         }
         break;
       }
@@ -152,6 +158,41 @@ export function useOrchestratorEvents() {
           phase: "error",
           error: eventData,
         }));
+        break;
+      }
+
+      case ParrotEventType.DECOMPOSE_START: {
+        // Show analyzing state during task decomposition
+        setState((prev) => ({
+          ...prev,
+          phase: "planning",
+          error: null,
+        }));
+        break;
+      }
+
+      case ParrotEventType.DECOMPOSE_END: {
+        // Decomposition complete, show task preview if available
+        try {
+          const data = JSON.parse(eventData);
+          if (data.task_count) {
+            // Pre-allocate tasks array for visual feedback
+            setState((prev) => ({
+              ...prev,
+              tasks: Array(data.task_count)
+                .fill(null)
+                .map((_, i) => ({
+                  id: `pending-${i}`,
+                  agent: "",
+                  input: "",
+                  purpose: "",
+                  status: "pending" as TaskStatus,
+                })),
+            }));
+          }
+        } catch {
+          // Ignore parse errors for decompose_end
+        }
         break;
       }
 

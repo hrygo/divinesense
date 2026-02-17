@@ -54,22 +54,11 @@
  * - useStreamingProgress: 流式进度计算
  */
 
-import {
-  AlertCircle,
-  BarChart3,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Loader2,
-} from "lucide-react";
+import { AlertCircle, BarChart3, ChevronDown, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
-import {
-  ROUND_TIMESTAMP_MULTIPLIER,
-  TOOL_CALL_OFFSET_US,
-  USER_INPUTS_EXPAND_THRESHOLD,
-} from "@/components/AIChat/constants";
+import { ROUND_TIMESTAMP_MULTIPLIER, TOOL_CALL_OFFSET_US, USER_INPUTS_EXPAND_THRESHOLD } from "@/components/AIChat/constants";
 import { ExpandedSessionSummary } from "@/components/AIChat/ExpandedSessionSummary";
 import { QuickReplies } from "@/components/AIChat/QuickReplies";
 import StreamingMarkdown from "@/components/AIChat/StreamingMarkdown";
@@ -148,9 +137,7 @@ function CompactToolCall({
   isOutputError,
 }: CompactToolCallProps) {
   const { t } = useTranslation();
-  const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) =>
-    displayName.toLowerCase().includes(k),
-  );
+  const isWriteOp = ["write", "edit", "bash", "run_command"].some((k) => displayName.toLowerCase().includes(k));
 
   // Interactive expand/collapse state with localStorage persistence
   // Storage key format: tool-expanded-{displayName}-{hash of inputSummary or displayName}
@@ -247,9 +234,7 @@ function CompactToolCall({
         "bg-card hover:shadow-sm",
         // Add cursor pointer when expandable
         hasExpandableContent && "cursor-pointer",
-        isWriteOp
-          ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10"
-          : "border-border/50",
+        isWriteOp ? "border-purple-200/50 dark:border-purple-800/30 bg-purple-50/10" : "border-border/50",
       )}
       onClick={hasExpandableContent ? handleToggle : undefined}
       role={hasExpandableContent ? "button" : undefined}
@@ -262,12 +247,7 @@ function CompactToolCall({
       {/* Line 1: Tool Name + Status + Duration */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={cn(
-              "font-semibold text-sm",
-              isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground",
-            )}
-          >
+          <span className={cn("font-semibold text-sm", isWriteOp ? "text-purple-700 dark:text-purple-300" : "text-foreground")}>
             {displayName}
           </span>
           {/* Status Indicator - priority: running > done > error > pending */}
@@ -281,9 +261,7 @@ function CompactToolCall({
                 <AlertCircle className="w-3 h-3" /> {t("ai.events.error")}
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
-                ✓ {t("ai.events.done")}
-              </span>
+              <span className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">✓ {t("ai.events.done")}</span>
             )
           ) : (
             <span className="text-[11px] text-muted-foreground">{t("ai.events.pending")}</span>
@@ -312,10 +290,7 @@ function CompactToolCall({
               {inputSummary}
             </code>
           ) : filePath ? (
-            <code
-              className="text-xs font-mono text-muted-foreground/70 truncate block"
-              title={filePath}
-            >
+            <code className="text-xs font-mono text-muted-foreground/70 truncate block" title={filePath}>
               {filePath}
             </code>
           ) : fullCall !== displayName ? (
@@ -357,9 +332,7 @@ function CompactToolCall({
               <pre
                 className={cn(
                   "text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words max-h-48 overflow-y-auto p-3 rounded border",
-                  isOutputError
-                    ? "text-red-600/90 bg-red-50/50 border-red-200/50"
-                    : "text-muted-foreground bg-muted/30 border-border/50",
+                  isOutputError ? "text-red-600/90 bg-red-50/50 border-red-200/50" : "text-muted-foreground bg-muted/30 border-border/50",
                 )}
               >
                 {output}
@@ -516,11 +489,7 @@ const EXPAND_LATEST_COUNT = 5;
  * Keeps the latest N blocks expanded, older ones collapsed.
  * Streaming blocks are always expanded.
  */
-function getDefaultCollapseState(
-  blockIndex: number,
-  totalBlocks: number,
-  isStreaming: boolean,
-): boolean {
+function getDefaultCollapseState(blockIndex: number, totalBlocks: number, isStreaming: boolean): boolean {
   if (isStreaming) return false;
   // Keep latest N blocks expanded
   return blockIndex < totalBlocks - EXPAND_LATEST_COUNT;
@@ -541,18 +510,11 @@ interface UserInputsSectionProps {
   isStreaming?: boolean;
 }
 
-function UserInputsSection({
-  userMessage,
-  additionalUserInputs = [],
-  isCollapsed,
-}: UserInputsSectionProps) {
+function UserInputsSection({ userMessage, additionalUserInputs = [], isCollapsed }: UserInputsSectionProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const allInputs = useMemo(
-    () => [userMessage, ...additionalUserInputs],
-    [userMessage, additionalUserInputs],
-  );
+  const allInputs = useMemo(() => [userMessage, ...additionalUserInputs], [userMessage, additionalUserInputs]);
   const hasMultiple = allInputs.length > 1;
   const totalLength = allInputs.reduce((sum, m) => sum + m.content.length, 0);
   const isLongContent = totalLength > USER_INPUTS_EXPAND_THRESHOLD;
@@ -604,19 +566,14 @@ function UserInputsSection({
           allInputs.map((input, index) => (
             <div
               key={input.id}
-              className={cn(
-                "rounded-md border p-3 transition-colors",
-                "bg-muted/20 border-border/50 hover:border-border",
-              )}
+              className={cn("rounded-md border p-3 transition-colors", "bg-muted/20 border-border/50 hover:border-border")}
             >
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-medium">
                   {index + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-foreground whitespace-pre-wrap break-words">
-                    {input.content}
-                  </div>
+                  <div className="text-sm text-foreground whitespace-pre-wrap break-words">{input.content}</div>
                 </div>
               </div>
             </div>
@@ -719,9 +676,7 @@ function BlockBody({
   }, [thinkingSteps, t]);
 
   // States for collapsible sections - Default expand thinking if it's the latest message
-  const [isThinkingExpanded, setIsThinkingExpanded] = useState(
-    () => isLatest && allThinkingContent.length > 0,
-  );
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(() => isLatest && allThinkingContent.length > 0);
 
   // Auto-expand thinking when content arrives for the latest message
   useEffect(() => {
@@ -773,11 +728,7 @@ function BlockBody({
 
   // When collapsed, show minimal info
   if (isCollapsed) {
-    return (
-      <div className="px-4 py-2 text-sm text-muted-foreground italic">
-        {t("ai.unified_block.collapsed")}
-      </div>
-    );
+    return <div className="px-4 py-2 text-sm text-muted-foreground italic">{t("ai.unified_block.collapsed")}</div>;
   }
 
   return (
@@ -791,9 +742,7 @@ function BlockBody({
           {/* User Inputs Section - 新增用户输入区域 (放在 timeline 内) */}
           {(userMessage || additionalUserInputs.length > 0) && (
             <UserInputsSection
-              userMessage={
-                userMessage || { id: "", role: "user" as const, content: "", timestamp: Date.now() }
-              }
+              userMessage={userMessage || { id: "", role: "user" as const, content: "", timestamp: Date.now() }}
               additionalUserInputs={additionalUserInputs}
               isCollapsed={isCollapsed}
             />
@@ -816,18 +765,14 @@ function BlockBody({
 
               <div className="flex flex-col">
                 <button
-                  onClick={() =>
-                    allThinkingContent.length > 0 && setIsThinkingExpanded(!isThinkingExpanded)
-                  }
+                  onClick={() => allThinkingContent.length > 0 && setIsThinkingExpanded(!isThinkingExpanded)}
                   className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   <span className="flex items-center gap-2">
                     {streamingPhase === "thinking" ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
-                        <span className="text-blue-600 dark:text-blue-400">
-                          {getThinkingText()}
-                        </span>
+                        <span className="text-blue-600 dark:text-blue-400">{getThinkingText()}</span>
                       </>
                     ) : allThinkingContent.length > 0 ? (
                       // #2 Fix: 已完成状态显示"思考完成"而不是"思考中"
@@ -837,9 +782,7 @@ function BlockBody({
                       </span>
                     ) : (
                       // 只有占位符，没有真实思考内容
-                      <span className="text-muted-foreground">
-                        {t("ai.unified_block.thinking_process") || "思考过程"}
-                      </span>
+                      <span className="text-muted-foreground">{t("ai.unified_block.thinking_process") || "思考过程"}</span>
                     )}
                   </span>
                   {/* 只有在有真实内容时才显示展开/收起图标 */}
@@ -877,9 +820,7 @@ function BlockBody({
             // result.name contains only the tool name (e.g., "search_files")
             // while rawCallName may contain full function call (e.g., "search_files(query=\"xxx\")")
             const result = toolResults.find(
-              (r) =>
-                r.name === displayName ||
-                (typeof call === "object" && call.toolId && r.toolId === call.toolId),
+              (r) => r.name === displayName || (typeof call === "object" && call.toolId && r.toolId === call.toolId),
             );
 
             const isError = typeof call === "object" ? call.isError : assistantMessage?.error;
@@ -970,9 +911,7 @@ function BlockBody({
                   ) : (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/50" />
-                      <span className="text-sm italic opacity-70">
-                        {t("ai.states.initializing")}
-                      </span>
+                      <span className="text-sm italic opacity-70">{t("ai.states.initializing")}</span>
                     </>
                   )}
                 </div>
@@ -991,9 +930,7 @@ function BlockBody({
                 <p className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
                   {t("ai.unified_block.error_occurred")}
                 </p>
-                <p className="mt-1 text-red-600/80 dark:text-red-400/80 font-mono text-xs break-all">
-                  {assistantMessage.error}
-                </p>
+                <p className="mt-1 text-red-600/80 dark:text-red-400/80 font-mono text-xs break-all">{assistantMessage.error}</p>
               </div>
             </div>
           )}
@@ -1019,9 +956,7 @@ function BlockBody({
 // ============================================================================
 
 // 将主题类型转换
-function themeToHeaderTheme(
-  theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES],
-): BlockHeaderTheme {
+function themeToHeaderTheme(theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES]): BlockHeaderTheme {
   return {
     border: theme.border,
     headerBg: theme.headerBg,
@@ -1032,9 +967,7 @@ function themeToHeaderTheme(
   };
 }
 
-function themeToFooterTheme(
-  theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES],
-): BlockFooterTheme {
+function themeToFooterTheme(theme: (typeof BLOCK_THEMES)[keyof typeof BLOCK_THEMES]): BlockFooterTheme {
   return {
     border: theme.border,
     headerBg: theme.headerBg,
@@ -1077,16 +1010,7 @@ function BlockHeader({
 }
 
 // 使用 ModularBlockFooter 替代内联实现
-function BlockFooter({
-  isCollapsed,
-  onToggle,
-  onCopy,
-  onRegenerate,
-  onDelete,
-  theme,
-  isStreaming,
-  onCancel,
-}: BlockFooterProps) {
+function BlockFooter({ isCollapsed, onToggle, onCopy, onRegenerate, onDelete, theme, isStreaming, onCancel }: BlockFooterProps) {
   const footerTheme = themeToFooterTheme(theme);
 
   return (
@@ -1157,9 +1081,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   const blockIndex = (blockNumber ?? 1) - 1;
   const effectiveTotalBlocks = totalBlocks ?? 1;
 
-  const [collapsed, setCollapsed] = useState(() =>
-    getDefaultCollapseState(blockIndex, effectiveTotalBlocks, isStreaming),
-  );
+  const [collapsed, setCollapsed] = useState(() => getDefaultCollapseState(blockIndex, effectiveTotalBlocks, isStreaming));
 
   useEffect(() => {
     setCollapsed(getDefaultCollapseState(blockIndex, effectiveTotalBlocks, isStreamingRef.current));
@@ -1181,25 +1103,16 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
     ]
       .filter(Boolean)
       .join("\n\n");
-  }, [
-    userMessage.content,
-    additionalUserInputs,
-    assistantMessage?.content,
-    assistantMessage?.metadata?.toolResults,
-  ]);
+  }, [userMessage.content, additionalUserInputs, assistantMessage?.content, assistantMessage?.metadata?.toolResults]);
 
   const handleCopy = useCallback(() => {
     onCopy?.(contentForCopy);
   }, [contentForCopy, onCopy]);
 
   // Quick Replies Analysis (#98)
-  const toolCalls = useMemo(
-    () => assistantMessage?.metadata?.toolCalls || [],
-    [assistantMessage?.metadata?.toolCalls],
-  );
+  const toolCalls = useMemo(() => assistantMessage?.metadata?.toolCalls || [], [assistantMessage?.metadata?.toolCalls]);
   const quickReplyAnalysis = useMemo(
-    () =>
-      analyzeQuickReplies(toolCalls, assistantMessage?.content || "", !!assistantMessage?.error),
+    () => analyzeQuickReplies(toolCalls, assistantMessage?.content || "", !!assistantMessage?.error),
     [toolCalls, assistantMessage?.content, assistantMessage?.error],
   );
 
@@ -1213,8 +1126,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   );
 
   // Show quick replies only when streaming is complete and not collapsed
-  const showQuickReplies =
-    !isStreaming && !collapsed && onQuickReply && quickReplyAnalysis.confidence > 0.6;
+  const showQuickReplies = !isStreaming && !collapsed && onQuickReply && quickReplyAnalysis.confidence > 0.6;
 
   return (
     <div

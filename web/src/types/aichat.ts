@@ -166,6 +166,7 @@ export interface AIChatContextValue {
   selectConversation: (id: string) => void;
   updateConversationTitle: (id: string, title: string) => void;
   generateConversationTitle: (id: string) => Promise<string | null>;
+  scheduleTitleRefresh: (conversationId: string) => void;
   refreshConversations: () => Promise<void>;
 
   // Message actions

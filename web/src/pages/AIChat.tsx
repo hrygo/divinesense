@@ -235,7 +235,7 @@ const AIChat = () => {
     appendUserInput,
     incrementMessageCount,
     // Title management
-    generateConversationTitle,
+    scheduleTitleRefresh,
     // Phase 5: Pending Queue
     addToPendingQueue,
   } = aiChat;
@@ -354,20 +354,17 @@ const AIChat = () => {
             if (_conversationIdNum > 0) {
               incrementMessageCount(convId);
             }
-            // Auto-generate conversation title ONLY when Block 0 (first message) completes
-            // This decouples title generation from user manual edits and subsequent messages
+            // Schedule title refresh ONLY when Block 0 (first message) completes
+            // The backend generates titles asynchronously in generateTitleAsync (~2-5s)
+            // This schedules a delayed refresh to fetch the auto-generated title
             if (_conversationIdNum > 0 && !titledConversationsRef.current.has(convId)) {
               const conv = conversations.find((c) => c.id === convId);
-              // Only generate if still has default title (user hasn't manually edited)
+              // Only refresh if still has default title (user hasn't manually edited)
               if (conv && isDefaultTitle(conv.title)) {
-                // Mark as titled before API call to prevent duplicate calls
+                // Mark as titled to prevent duplicate scheduling
                 titledConversationsRef.current.add(convId);
-                generateConversationTitle(convId).catch((err) => {
-                  // Silently fail - title generation is best-effort
-                  if (import.meta.env.DEV) {
-                    console.debug("[AI Chat] Title generation failed (non-critical):", err);
-                  }
-                });
+                // Schedule delayed refresh to fetch backend-generated title
+                scheduleTitleRefresh(convId);
               }
             }
           },
@@ -387,7 +384,7 @@ const AIChat = () => {
         console.error("[Parrot Chat Error]", error);
       }
     },
-    [chatHook, addReferencedMemos, setCapabilityStatus, currentMode, generateConversationTitle, incrementMessageCount, conversations],
+    [chatHook, addReferencedMemos, setCapabilityStatus, currentMode, scheduleTitleRefresh, incrementMessageCount, conversations],
   );
 
   const handleSend = useCallback(

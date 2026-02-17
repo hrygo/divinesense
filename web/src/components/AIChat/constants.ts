@@ -82,8 +82,7 @@ export const NODE_COLORS = {
   /** User input node - blue theme */
   user: "bg-blue-100 dark:bg-blue-900/40 border-blue-500 text-blue-600 dark:text-blue-400",
   /** Thinking/processing node - purple theme */
-  thinking:
-    "bg-purple-100 dark:bg-purple-900/40 border-purple-500 text-purple-600 dark:text-purple-400",
+  thinking: "bg-purple-100 dark:bg-purple-900/40 border-purple-500 text-purple-600 dark:text-purple-400",
   /** Tool call node - neutral with hover effect */
   tool: "bg-card border-border group-hover:border-purple-400/50 transition-colors",
   /** AI answer node - zinc theme (neutral gray, distinct from other modes) */
@@ -93,8 +92,7 @@ export const NODE_COLORS = {
   /** Edit node - green theme (for Memo timeline) */
   edit: "bg-green-100 border-green-500 dark:bg-green-900/40 dark:border-green-400 text-green-600 dark:text-green-400",
   /** Archive node - zinc/gray theme (for Memo timeline) */
-  archive:
-    "bg-zinc-100 border-zinc-500 dark:bg-zinc-800 dark:border-zinc-400 text-zinc-600 dark:text-zinc-400",
+  archive: "bg-zinc-100 border-zinc-500 dark:bg-zinc-800 dark:border-zinc-400 text-zinc-600 dark:text-zinc-400",
 } as const;
 
 // ============================================================
