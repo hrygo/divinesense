@@ -154,6 +154,9 @@ self_description:
     excludes:
       - "搜索笔记"
       - "找.*内容"
+      - "总结.*"
+      - "翻译.*"
+      - "改写.*"
     # Priority when multiple agents match (higher = preferred)
     priority: 5
     # Semantic examples for Layer 3 semantic routing

@@ -596,6 +596,9 @@ func (m *RuleMatcher) expertToIntent(expertName, input string) Intent {
 			}
 			return IntentScheduleQuery
 		}
+	case "general":
+		// General expert handles pure LLM tasks (summarize, translate, etc.)
+		return IntentGeneralTask
 	default:
 		// Unknown expert - determine based on action
 		if action == ActionSearch || action == ActionCreate {

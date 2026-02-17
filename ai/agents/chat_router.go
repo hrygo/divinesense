@@ -68,7 +68,7 @@ var intentKeywords = map[string][]string{
 		// Core keywords (from memo.yaml routing.keywords)
 		"笔记", "搜索", "找", "记录", "memo",
 		// Sticky routing: follow-up to previous memo search
-		"总结", "详细内容", "相关", "这条", "note", "search", "find", "look",
+		"详细内容", "相关", "这条", "note", "search", "find", "look",
 	},
 	"create_note": {"记", "记录", "写", "创建", "note", "record", "create", "write"},
 	"delete_note": {"删除", "笔记", "note", "delete", "remove"},

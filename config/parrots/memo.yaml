@@ -145,7 +145,6 @@ self_description:
       - "找"
       - "记录"
       # Sticky routing keywords (follow-up to previous memo intent)
-      - "总结"
       - "详细内容"
       - "相关"
       - "这条"
