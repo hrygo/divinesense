@@ -403,9 +403,9 @@ describe("BlockHeader", () => {
       expect(screen.getByText("ai.mode.evolution")).toBeInTheDocument();
     });
 
-    it("should show AMAZING badge for AMAZING parrot", () => {
+    it("should show GENERAL badge for GENERAL parrot", () => {
       const props = createDefaultProps({
-        parrotId: ParrotAgentType.AMAZING,
+        parrotId: ParrotAgentType.GENERAL,
       });
       render(<BlockHeader {...props} />);
 

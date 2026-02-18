@@ -8,7 +8,7 @@ export enum ParrotAgentType {
   AUTO = "AUTO", // 🤖 自动 - 由后端三层路由决定使用哪个代理
   MEMO = "MEMO", // 🦜 灰灰 - Memo Parrot（笔记搜索）
   SCHEDULE = "SCHEDULE", // 🦜 时巧 - Schedule Parrot（日程管理）
-  AMAZING = "AMAZING", // 🦜 折衷 - Amazing Parrot（综合助手）
+  GENERAL = "GENERAL", // 🦜 通才 - General Parrot（通用助手）
   GEEK = "GEEK", // 🦜 极客 - Geek Parrot（Claude Code CLI）
   EVOLUTION = "EVOLUTION", // 🦜 进化 - Evolution Parrot（系统自我进化）
 }
@@ -17,7 +17,7 @@ export enum ParrotAgentType {
  * Default pinned agents in the sidebar
  * 侧边栏默认固定的鹦鹉代理
  */
-export const PINNED_PARROT_AGENTS = [ParrotAgentType.MEMO, ParrotAgentType.SCHEDULE, ParrotAgentType.AMAZING];
+export const PINNED_PARROT_AGENTS = [ParrotAgentType.MEMO, ParrotAgentType.SCHEDULE, ParrotAgentType.GENERAL];
 
 /**
  * Emotional state of a parrot
@@ -77,7 +77,7 @@ export const PARROT_SOUND_EFFECTS: Record<ParrotAgentType, Record<string, string
     scheduled: "安排好了",
     free_time: "这片时间空着呢",
   },
-  [ParrotAgentType.AMAZING]: {
+  [ParrotAgentType.GENERAL]: {
     searching: "咻...",
     insight: "哇哦~",
     done: "噢！综合完成",
@@ -108,7 +108,7 @@ export const PARROT_CATCHPHRASES: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.AUTO]: ["正在分析...", "让我想想...", "路由中..."],
   [ParrotAgentType.MEMO]: ["让我想想...", "笔记里说...", "在记忆里找找..."],
   [ParrotAgentType.SCHEDULE]: ["安排好啦", "时间搞定", "妥妥的"],
-  [ParrotAgentType.AMAZING]: ["看看这个...", "综合来看", "发现规律了"],
+  [ParrotAgentType.GENERAL]: ["明白了", "这个问题...", "让我来处理"],
   [ParrotAgentType.GEEK]: ["代码搞定", "正在编译", "这个我来写"],
   [ParrotAgentType.EVOLUTION]: ["系统升级", "自我进化中", "代码已优化"],
 };
@@ -121,7 +121,7 @@ export const PARROT_BEHAVIORS: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.AUTO]: ["智能路由", "分析中", "正在选择最佳代理"],
   [ParrotAgentType.MEMO]: ["用翅膀翻找笔记", "在记忆森林中飞翔", "用喙精准啄取信息"],
   [ParrotAgentType.SCHEDULE]: ["用喙整理时间", "精准啄食安排", "展开羽翼规划"],
-  [ParrotAgentType.AMAZING]: ["在数据树丛中穿梭", "多维飞行", "综合视野"],
+  [ParrotAgentType.GENERAL]: ["灵活应对各类任务", "广泛的知识覆盖", "通晓多领域"],
   [ParrotAgentType.GEEK]: ["敲击代码", "调试中", "重构架构"],
   [ParrotAgentType.EVOLUTION]: ["迭代进化", "优化自身", "生成 PR"],
 };
@@ -129,7 +129,7 @@ export const PARROT_BEHAVIORS: Record<ParrotAgentType, string[]> = {
 /**
  * Convert AgentType enum from proto to ParrotAgentType
  * 将 proto 的 AgentType 枚举转换为 ParrotAgentType
- * DEFAULT and CREATIVE are deprecated - fallback to AMAZING
+ * DEFAULT and CREATIVE are deprecated - fallback to GENERAL
  */
 export function protoToParrotAgentType(agentType: AgentType): ParrotAgentType {
   switch (agentType) {
@@ -138,8 +138,8 @@ export function protoToParrotAgentType(agentType: AgentType): ParrotAgentType {
     case AgentType.SCHEDULE:
       return ParrotAgentType.SCHEDULE;
     default:
-      // AMAZING, DEFAULT, CREATIVE all map to AMAZING
-      return ParrotAgentType.AMAZING;
+      // GENERAL, DEFAULT, CREATIVE all map to GENERAL
+      return ParrotAgentType.GENERAL;
   }
 }
 
@@ -161,8 +161,8 @@ export function parrotToProtoAgentType(agentType: ParrotAgentType): AgentType {
       return AgentType.MEMO;
     case ParrotAgentType.SCHEDULE:
       return AgentType.SCHEDULE;
-    case ParrotAgentType.AMAZING:
-      return AgentType.AMAZING;
+    case ParrotAgentType.GENERAL:
+      return AgentType.GENERAL;
     default:
       return AgentType.DEFAULT;
   }
@@ -228,16 +228,16 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     examplePrompts: ["What's on my schedule today", "Am I free tomorrow afternoon", "Create a meeting reminder for next week"],
     backgroundImage: "/images/parrots/schedule_bg.webp",
   },
-  [ParrotAgentType.AMAZING]: {
-    id: ParrotAgentType.AMAZING,
-    name: "amazing",
+  [ParrotAgentType.GENERAL]: {
+    id: ParrotAgentType.GENERAL,
+    name: "general",
     icon: "/assistant-avatar.webp",
-    displayName: "Amazing",
-    description: "Comprehensive assistant combining memo and schedule features",
-    color: "indigo",
+    displayName: "General",
+    description: "General purpose assistant for various tasks",
+    color: "amber",
     available: true,
-    examplePrompts: ["Summarize today's memos and schedule", "Help me plan next week's work", "Search recent project-related content"],
-    backgroundImage: "/images/parrots/amazing_bg.webp",
+    examplePrompts: ["Summarize this article for me", "Help me write an email", "Explain this concept simply"],
+    backgroundImage: "/images/parrots/general_bg.webp",
   },
   [ParrotAgentType.GEEK]: {
     id: ParrotAgentType.GEEK,
@@ -273,10 +273,10 @@ export function getAvailableParrots(): ParrotAgent[] {
 
 /**
  * Get parrot agent by type
- * 根据类型获取鹦鹉代理 - fallback 到 AMAZING
+ * 根据类型获取鹦鹉代理 - fallback 到 GENERAL
  */
 export function getParrotAgent(type: ParrotAgentType): ParrotAgent {
-  return PARROT_AGENTS[type] || PARROT_AGENTS[ParrotAgentType.AMAZING];
+  return PARROT_AGENTS[type] || PARROT_AGENTS[ParrotAgentType.GENERAL];
 }
 
 /**
@@ -612,7 +612,7 @@ export const PARROT_THEMES = {
     ringColor: "ring-cyan-500",
   },
   // 折衷 - 折衷鹦鹉 (Eclectus Parrot) - 综合助手 (Legacy)
-  AMAZING: {
+  GENERAL: {
     bubbleUser: "bg-indigo-600 dark:bg-indigo-500 text-white",
     bubbleBg: "bg-white dark:bg-zinc-800",
     bubbleBorder: "border-indigo-200 dark:border-indigo-700",
@@ -701,7 +701,7 @@ export const PARROT_THEMES = {
 export const PARROT_ICONS: Record<string, string> = {
   MEMO: "/images/parrots/icons/memo_icon.webp",
   SCHEDULE: "/images/parrots/icons/schedule_icon.webp",
-  AMAZING: "/assistant-avatar.webp",
+  GENERAL: "/assistant-avatar.webp",
   GEEK: "/assistant-avatar.webp",
   EVOLUTION: "/assistant-avatar.webp",
 };

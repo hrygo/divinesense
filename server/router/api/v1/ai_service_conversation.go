@@ -30,7 +30,7 @@ func normalizeConversationTitle(title string, _ string) string {
 		"AI Chat":             "chat.default.auto",
 		"Chat with Memo":      "chat.default.memo",
 		"Chat with Schedule":  "chat.default.schedule",
-		"Chat with Amazing":   "chat.default.amazing",
+		"Chat with General":   "chat.default.general",
 		"Geek Mode Chat":      "chat.default.geek",
 		"Evolution Mode Chat": "chat.default.evolution",
 		"New Chat":            "chat.new",
@@ -53,7 +53,7 @@ func getDefaultTitle(parrotID string) string {
 	titles := map[string]string{
 		"MEMO":      "chat.default.memo",
 		"SCHEDULE":  "chat.default.schedule",
-		"AMAZING":   "chat.default.amazing",
+		"GENERAL":   "chat.default.general",
 		"GEEK":      "chat.default.geek",
 		"EVOLUTION": "chat.default.evolution",
 		"AUTO":      "chat.default.auto",
@@ -393,7 +393,7 @@ func (s *AIService) AddContextSeparator(ctx context.Context, req *v1pb.AddContex
 func convertAIConversationFromStore(c *store.AIConversation) *v1pb.AIConversation {
 	// Convert ParrotID string to AgentType enum
 	// Handle both short format ("MEMO") and long format ("AGENT_TYPE_MEMO")
-	// DEFAULT and CREATIVE are deprecated - map to AMAZING
+	// DEFAULT and CREATIVE are deprecated - map to GENERAL
 	var parrotId int32
 
 	// Try direct lookup first (long format like "AGENT_TYPE_MEMO")
@@ -402,12 +402,12 @@ func convertAIConversationFromStore(c *store.AIConversation) *v1pb.AIConversatio
 	} else {
 		// Try short format lookup ("MEMO" → "AGENT_TYPE_MEMO")
 		// AUTO → DEFAULT (Orchestrator routing)
-		// Legacy: AMAZING/DEFAULT/CREATIVE → DEFAULT (now handled by Orchestrator)
+		// Legacy: GENERAL/DEFAULT/CREATIVE → DEFAULT (now handled by Orchestrator)
 		shortToLong := map[string]v1pb.AgentType{
 			"MEMO":     v1pb.AgentType_AGENT_TYPE_MEMO,
 			"SCHEDULE": v1pb.AgentType_AGENT_TYPE_SCHEDULE,
 			"AUTO":     v1pb.AgentType_AGENT_TYPE_DEFAULT, // Auto-route via Orchestrator
-			"AMAZING":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy: now Orchestrator
+			"GENERAL":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy: now Orchestrator
 			"DEFAULT":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy alias
 			"CREATIVE": v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy alias
 		}

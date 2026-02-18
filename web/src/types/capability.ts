@@ -6,8 +6,8 @@ import { ParrotAgentType } from "./parrot";
 export enum CapabilityType {
   MEMO = "MEMO", // 笔记检索能力
   SCHEDULE = "SCHEDULE", // 日程管理能力
-  AMAZING = "AMAZING", // 综合洞察能力
-  AUTO = "AUTO", // 自动识别能力（默认，fallback 到 AMAZING）
+  GENERAL = "GENERAL", // 综合洞察能力
+  AUTO = "AUTO", // 自动识别能力（默认，fallback 到 GENERAL）
 }
 
 /**
@@ -83,10 +83,10 @@ export const CAPABILITIES: Record<CapabilityType, Omit<Capability, "id">> = {
     },
     catchphrases: ["安排好啦", "时间搞定", "妥妥的"],
   },
-  [CapabilityType.AMAZING]: {
-    parrotId: ParrotAgentType.AMAZING,
+  [CapabilityType.GENERAL]: {
+    parrotId: ParrotAgentType.GENERAL,
     name: "综合",
-    nameAlt: "Amazing",
+    nameAlt: "General",
     description: "笔记 + 日程",
     icon: "🌟",
     color: "emerald",
@@ -130,7 +130,7 @@ export function parrotAgentToCapability(agentType: ParrotAgentType): CapabilityT
     case ParrotAgentType.SCHEDULE:
       return CapabilityType.SCHEDULE;
     default:
-      return CapabilityType.AMAZING;
+      return CapabilityType.GENERAL;
   }
 }
 

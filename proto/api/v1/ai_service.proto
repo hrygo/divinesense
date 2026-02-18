@@ -359,8 +359,8 @@ enum AgentType {
   AGENT_TYPE_DEFAULT = 0; // Default behavior (existing logic)
   AGENT_TYPE_MEMO = 1; // 🦜 Memo Parrot - Note assistant
   AGENT_TYPE_SCHEDULE = 2; // 🦜 Schedule Parrot - Schedule assistant
-  AGENT_TYPE_AMAZING = 3; // 🦜 Amazing Parrot - Comprehensive assistant (Milestone 2)
-  AGENT_TYPE_CREATIVE = 4; // 🦜 Creative Parrot - Creative assistant (Milestone 4)
+  AGENT_TYPE_GENERAL = 3; // 🦜 General Parrot (通才) - General purpose assistant
+  reserved 4; // AGENT_TYPE_CREATIVE deprecated - reserved for future use
 }
 
 // ChatRequest is the request for Chat.

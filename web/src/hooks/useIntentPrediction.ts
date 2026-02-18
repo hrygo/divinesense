@@ -32,7 +32,7 @@ const INTENT_PATTERNS = {
     keywords: ["笔记", "记录", "写过", "搜索", "找", "关于", "内容", "标题", "标签"],
     weight: 0.9,
   },
-  amazing: {
+  general: {
     keywords: ["总结", "分析", "帮我", "如何", "怎么", "建议", "推荐", "计划"],
     weight: 0.8,
   },
@@ -63,7 +63,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
       const scores: Record<string, number> = {
         schedule: 0,
         memo: 0,
-        amazing: 0,
+        general: 0,
       };
 
       // 基于关键词匹配计算分数
@@ -87,7 +87,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
 
       // 问号通常表示询问
       if (text.includes("?") || text.includes("？")) {
-        scores.amazing += 0.5;
+        scores.general += 0.5;
       }
 
       // 找出最高分的意图
@@ -145,7 +145,7 @@ export function useIntentPrediction(options: IntentPredictionOptions = {}) {
         });
         break;
 
-      case CapabilityType.AMAZING:
+      case CapabilityType.GENERAL:
         actions.push({
           id: "analyze",
           label: "开始分析",

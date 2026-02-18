@@ -324,8 +324,7 @@ func (s *ConnectServiceHandler) ListParrots(ctx context.Context, req *connect.Re
 		v1pb.AgentType_AGENT_TYPE_DEFAULT,
 		v1pb.AgentType_AGENT_TYPE_MEMO,
 		v1pb.AgentType_AGENT_TYPE_SCHEDULE,
-		v1pb.AgentType_AGENT_TYPE_AMAZING,
-		v1pb.AgentType_AGENT_TYPE_CREATIVE,
+		v1pb.AgentType_AGENT_TYPE_GENERAL,
 	}
 
 	parrots := make([]*v1pb.ParrotInfo, 0, len(agentTypes))
@@ -371,31 +370,18 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 			SelfIntroduction: "我是金刚，您的日程助手。我帮您管理时间、安排日程、避免冲突。",
 			FunFact:          "我是一只蓝黄金刚鹦鹉，以守时和可靠著称",
 		}
-	case v1pb.AgentType_AGENT_TYPE_AMAZING:
+	case v1pb.AgentType_AGENT_TYPE_GENERAL:
 		return &v1pb.ParrotSelfCognition{
-			Name:             "amazing",
-			Emoji:            "⭐",
-			Title:            "惊奇 - 综合助手鹦鹉",
-			Personality:      []string{"全能", "灵活", "善于整合"},
-			Capabilities:     []string{"memo_search", "schedule_query", "integrated_analysis"},
-			Limitations:      []string{"复杂任务可能需要专门助手"},
-			WorkingStyle:     "综合分析笔记和日程，提供全面的视角和建议",
-			FavoriteTools:    []string{"memo_search", "schedule_query", "combined_analysis"},
-			SelfIntroduction: "我是惊奇，您的综合助手。我能同时查看您的笔记和日程，给您完整的信息。",
-			FunFact:          "我是一只亚马逊鹦鹉，以多才多艺著称",
-		}
-	case v1pb.AgentType_AGENT_TYPE_CREATIVE:
-		return &v1pb.ParrotSelfCognition{
-			Name:             "creative",
-			Emoji:            "💡",
-			Title:            "灵灵 - 创意助手鹦鹉",
-			Personality:      []string{"创意", "活泼", "善于表达"},
-			Capabilities:     []string{"creative_writing", "brainstorm", "text_improvement"},
-			Limitations:      []string{"创意建议需要您的判断", "不能保证所有想法都适用"},
-			WorkingStyle:     "激发创意思维，提供多种表达方式，帮助完善文字",
-			FavoriteTools:    []string{"idea_generation", "text_polish", "style_transform"},
-			SelfIntroduction: "我是灵灵，您的创意伙伴。我帮您头脑风暴、改进文字、激发灵感。",
-			FunFact:          "我是一只虎皮鹦鹉，以活泼和创造力著称",
+			Name:             "general",
+			Emoji:            "🤖",
+			Title:            "通才 - 通用助手鹦鹉",
+			Personality:      []string{"全能", "灵活", "善于应变"},
+			Capabilities:     []string{"general_qa", "summarization", "translation"},
+			Limitations:      []string{"专业任务建议使用专门助手"},
+			WorkingStyle:     "灵活应对各类通用任务，提供简洁有效的帮助",
+			FavoriteTools:    []string{"search", "summarize", "translate"},
+			SelfIntroduction: "我是通才，您的通用助手。我能帮您处理总结、翻译、问答等各类任务。",
+			FunFact:          "我是一只灰鹦鹉，以聪明和适应力强著称",
 		}
 	default:
 		return &v1pb.ParrotSelfCognition{
@@ -419,11 +405,9 @@ func getParrotNameByAgentType(agentType v1pb.AgentType) string {
 	case v1pb.AgentType_AGENT_TYPE_MEMO:
 		return "灰灰"
 	case v1pb.AgentType_AGENT_TYPE_SCHEDULE:
-		return "金刚"
-	case v1pb.AgentType_AGENT_TYPE_AMAZING:
-		return "惊奇"
-	case v1pb.AgentType_AGENT_TYPE_CREATIVE:
-		return "灵灵"
+		return "时巧"
+	case v1pb.AgentType_AGENT_TYPE_GENERAL:
+		return "通才"
 	default:
 		return "默认助手"
 	}

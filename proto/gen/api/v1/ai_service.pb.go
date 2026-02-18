@@ -80,8 +80,7 @@ const (
 	AgentType_AGENT_TYPE_DEFAULT  AgentType = 0 // Default behavior (existing logic)
 	AgentType_AGENT_TYPE_MEMO     AgentType = 1 // 🦜 Memo Parrot - Note assistant
 	AgentType_AGENT_TYPE_SCHEDULE AgentType = 2 // 🦜 Schedule Parrot - Schedule assistant
-	AgentType_AGENT_TYPE_AMAZING  AgentType = 3 // 🦜 Amazing Parrot - Comprehensive assistant (Milestone 2)
-	AgentType_AGENT_TYPE_CREATIVE AgentType = 4 // 🦜 Creative Parrot - Creative assistant (Milestone 4)
+	AgentType_AGENT_TYPE_GENERAL  AgentType = 3 // 🦜 General Parrot (通才) - General purpose assistant
 )
 
 // Enum value maps for AgentType.
@@ -90,15 +89,13 @@ var (
 		0: "AGENT_TYPE_DEFAULT",
 		1: "AGENT_TYPE_MEMO",
 		2: "AGENT_TYPE_SCHEDULE",
-		3: "AGENT_TYPE_AMAZING",
-		4: "AGENT_TYPE_CREATIVE",
+		3: "AGENT_TYPE_GENERAL",
 	}
 	AgentType_value = map[string]int32{
 		"AGENT_TYPE_DEFAULT":  0,
 		"AGENT_TYPE_MEMO":     1,
 		"AGENT_TYPE_SCHEDULE": 2,
-		"AGENT_TYPE_AMAZING":  3,
-		"AGENT_TYPE_CREATIVE": 4,
+		"AGENT_TYPE_GENERAL":  3,
 	}
 )
 
@@ -6739,13 +6736,12 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x04AUTO\x10\x00\x12\f\n" +
 	"\bSTANDARD\x10\x01\x12\n" +
 	"\n" +
-	"\x06STRICT\x10\x02*\x82\x01\n" +
+	"\x06STRICT\x10\x02*o\n" +
 	"\tAgentType\x12\x16\n" +
 	"\x12AGENT_TYPE_DEFAULT\x10\x00\x12\x13\n" +
 	"\x0fAGENT_TYPE_MEMO\x10\x01\x12\x17\n" +
 	"\x13AGENT_TYPE_SCHEDULE\x10\x02\x12\x16\n" +
-	"\x12AGENT_TYPE_AMAZING\x10\x03\x12\x17\n" +
-	"\x13AGENT_TYPE_CREATIVE\x10\x04*\x94\x01\n" +
+	"\x12AGENT_TYPE_GENERAL\x10\x03\"\x04\b\x04\x10\x04*\x94\x01\n" +
 	"\rReviewQuality\x12\x1e\n" +
 	"\x1aREVIEW_QUALITY_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14REVIEW_QUALITY_AGAIN\x10\x01\x12\x17\n" +

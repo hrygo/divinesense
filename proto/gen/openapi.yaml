@@ -906,8 +906,7 @@ paths:
                         - AGENT_TYPE_DEFAULT
                         - AGENT_TYPE_MEMO
                         - AGENT_TYPE_SCHEDULE
-                        - AGENT_TYPE_AMAZING
-                        - AGENT_TYPE_CREATIVE
+                        - AGENT_TYPE_GENERAL
                     type: string
                     format: enum
             responses:
@@ -3626,8 +3625,7 @@ components:
                         - AGENT_TYPE_DEFAULT
                         - AGENT_TYPE_MEMO
                         - AGENT_TYPE_SCHEDULE
-                        - AGENT_TYPE_AMAZING
-                        - AGENT_TYPE_CREATIVE
+                        - AGENT_TYPE_GENERAL
                     type: string
                     format: enum
                 pinned:
@@ -4093,8 +4091,7 @@ components:
                         - AGENT_TYPE_DEFAULT
                         - AGENT_TYPE_MEMO
                         - AGENT_TYPE_SCHEDULE
-                        - AGENT_TYPE_AMAZING
-                        - AGENT_TYPE_CREATIVE
+                        - AGENT_TYPE_GENERAL
                     type: string
                     format: enum
                 conversationId:
@@ -4191,8 +4188,7 @@ components:
                         - AGENT_TYPE_DEFAULT
                         - AGENT_TYPE_MEMO
                         - AGENT_TYPE_SCHEDULE
-                        - AGENT_TYPE_AMAZING
-                        - AGENT_TYPE_CREATIVE
+                        - AGENT_TYPE_GENERAL
                     type: string
                     format: enum
         CreateBlockRequest:
@@ -5262,8 +5258,7 @@ components:
                         - AGENT_TYPE_DEFAULT
                         - AGENT_TYPE_MEMO
                         - AGENT_TYPE_SCHEDULE
-                        - AGENT_TYPE_AMAZING
-                        - AGENT_TYPE_CREATIVE
+                        - AGENT_TYPE_GENERAL
                     type: string
                     format: enum
                 name:

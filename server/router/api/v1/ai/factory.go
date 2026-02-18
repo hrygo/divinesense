@@ -40,7 +40,7 @@ func AgentTypeFromProto(protoType v1pb.AgentType) AgentType {
 	case v1pb.AgentType_AGENT_TYPE_SCHEDULE:
 		return AgentTypeSchedule
 	default:
-		// DEFAULT, AMAZING, and unknown types trigger auto-routing
+		// DEFAULT, GENERAL, and unknown types trigger auto-routing
 		return AgentTypeAuto
 	}
 }

@@ -56,7 +56,7 @@ function getActionDescription(
         return t("ai.parrot.status.searching-memos");
       case CapabilityType.SCHEDULE:
         return t("ai.parrot.status.querying-schedule");
-      case CapabilityType.AMAZING:
+      case CapabilityType.GENERAL:
         return t("ai.parrot.status.analyzing");
       default:
         return t("ai.processing");
@@ -76,7 +76,7 @@ function modeToParrotType(mode: AIMode): ParrotAgentType {
     case "evolution":
       return ParrotAgentType.EVOLUTION;
     default:
-      return ParrotAgentType.AMAZING; // Normal mode uses AMAZING theme
+      return ParrotAgentType.GENERAL; // Normal mode uses GENERAL theme
   }
 }
 

@@ -297,7 +297,7 @@ export const BlockHeader = memo(function BlockHeader({
         </div>
 
         {/* Parrot Badge - hidden on mobile */}
-        {(parrotId === "GEEK" || parrotId === "EVOLUTION" || parrotId === "AMAZING") && (
+        {(parrotId === "GEEK" || parrotId === "EVOLUTION" || parrotId === "GENERAL") && (
           <span className={cn("hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium", theme.badgeBg, theme.badgeText)}>
             {parrotId === "GEEK" ? t("ai.mode.geek") : parrotId === "EVOLUTION" ? t("ai.mode.evolution") : t("ai.mode.normal")}
           </span>

@@ -9,7 +9,7 @@
 import { ParrotAgentType } from "@/types/parrot";
 
 // 可提及的专家代理映射（支持中文名和英文名）
-// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(AMAZING)
+// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(GENERAL)
 // TODO: Ideation 由其他开发者正在开发，待后端支持后添加
 const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
   // 灰灰 - 笔记助手
@@ -22,9 +22,9 @@ const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
   schedule: ParrotAgentType.SCHEDULE,
   日程: ParrotAgentType.SCHEDULE,
 
-  // 通才 - 通用助手（使用 AMAZING 类型）
-  通才: ParrotAgentType.AMAZING,
-  general: ParrotAgentType.AMAZING,
+  // 通才 - 通用助手
+  通才: ParrotAgentType.GENERAL,
+  general: ParrotAgentType.GENERAL,
 
   // Ideation - 创意助手（待后端支持）
   灵光: "IDEATION",

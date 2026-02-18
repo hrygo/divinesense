@@ -40,7 +40,7 @@ function useEffectiveParrotId(currentParrotId: ParrotAgentType | undefined, bloc
       return blockModeToParrotAgentType(lastAIBlock.mode);
     }
 
-    return currentParrotId ?? ParrotAgentType.AMAZING;
+    return currentParrotId ?? ParrotAgentType.GENERAL;
   }, [currentParrotId, blocks]);
 }
 
@@ -538,7 +538,7 @@ const ChatMessages = memo(function ChatMessages({
               >
                 {/* Typing cursor for streaming messages - only show for latest streaming block */}
                 {block.isLatest && isLastStreaming && !block.assistantMessage?.error && (
-                  <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.AMAZING} variant="dots" />
+                  <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.GENERAL} variant="dots" />
                 )}
               </UnifiedMessageBlock>
             );
@@ -552,8 +552,8 @@ const ChatMessages = memo(function ChatMessages({
           <div className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-sm bg-muted">
             <span className="text-lg md:text-xl">🤖</span>
           </div>
-          <div className={cn("px-4 py-3 rounded-xl border shadow-sm", PARROT_THEMES.AMAZING.bubbleBg, PARROT_THEMES.AMAZING.bubbleBorder)}>
-            <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.AMAZING} variant="dots" />
+          <div className={cn("px-4 py-3 rounded-xl border shadow-sm", PARROT_THEMES.GENERAL.bubbleBg, PARROT_THEMES.GENERAL.bubbleBorder)}>
+            <TypingCursor active={true} parrotId={effectiveParrotId || ParrotAgentType.GENERAL} variant="dots" />
           </div>
         </div>
       )}

@@ -138,7 +138,7 @@ function UnifiedChatView({
       <ChatMessages
         blocks={blocks ?? []}
         isTyping={isTyping}
-        currentParrotId={ParrotAgentType.AMAZING}
+        currentParrotId={ParrotAgentType.GENERAL}
         onCopyMessage={handleCopyMessage}
         onDeleteMessage={handleDeleteMessage}
         onQuickReply={handleQuickReply}

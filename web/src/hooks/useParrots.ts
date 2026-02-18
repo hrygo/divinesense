@@ -49,7 +49,7 @@ export function useParrot(type: ParrotAgentType): ParrotAgentI18n {
   const { t } = useTranslation();
 
   return useMemo(() => {
-    const agent = PARROT_AGENTS[type] || PARROT_AGENTS[ParrotAgentType.AMAZING];
+    const agent = PARROT_AGENTS[type] || PARROT_AGENTS[ParrotAgentType.GENERAL];
     return getLocalizedParrot(agent, t);
   }, [t, type]);
 }

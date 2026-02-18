@@ -215,7 +215,7 @@ func TestAgentTypeFromProto(t *testing.T) {
 	}{
 		{"MEMO", v1pb.AgentType_AGENT_TYPE_MEMO, AgentTypeMemo},
 		{"SCHEDULE", v1pb.AgentType_AGENT_TYPE_SCHEDULE, AgentTypeSchedule},
-		{"AMAZING", v1pb.AgentType_AGENT_TYPE_AMAZING, AgentTypeAuto}, // AMAZING now triggers auto-routing
+		{"GENERAL", v1pb.AgentType_AGENT_TYPE_GENERAL, AgentTypeAuto}, // GENERAL now triggers auto-routing
 		{"DEFAULT", v1pb.AgentType_AGENT_TYPE_DEFAULT, AgentTypeAuto},
 	}
 

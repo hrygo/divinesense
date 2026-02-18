@@ -59,11 +59,11 @@ export function useCapabilityRouter() {
           description: t("ai.capability.schedule.description"),
           icon: "⏰",
         };
-      case CapabilityType.AMAZING:
+      case CapabilityType.GENERAL:
         return {
-          name: t("ai.capability.amazing.name"),
-          nameAlt: "Amazing",
-          description: t("ai.capability.amazing.description"),
+          name: t("ai.capability.general.name"),
+          nameAlt: "General",
+          description: t("ai.capability.general.description"),
           icon: "🌟",
         };
       case CapabilityType.AUTO:

@@ -13,7 +13,7 @@ import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 // 排除的代理类型（不可提及）
 const EXCLUDED_AGENT_TYPES: AgentType[] = [
   AgentType.DEFAULT, // AUTO
-  AgentType.AMAZING, // Amazing
+  AgentType.GENERAL, // General
   // GEEK 和 EVOLUTION 不在 AgentType 枚举中，它们是模式标志
 ];
 
@@ -21,7 +21,7 @@ const EXCLUDED_AGENT_TYPES: AgentType[] = [
 const AGENT_TYPE_MAP: Record<number, ParrotAgentType> = {
   [AgentType.MEMO]: ParrotAgentType.MEMO,
   [AgentType.SCHEDULE]: ParrotAgentType.SCHEDULE,
-  [AgentType.AMAZING]: ParrotAgentType.AMAZING,
+  [AgentType.GENERAL]: ParrotAgentType.GENERAL,
 };
 
 /**

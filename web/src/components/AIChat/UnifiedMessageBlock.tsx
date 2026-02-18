@@ -447,7 +447,7 @@ const BLOCK_THEMES: Record<
     badgeText: "text-muted-foreground",
     ringColor: "ring-primary/20",
   },
-  // NORMAL - 普通 AI 模式（MEMO/SCHEDULE/AMAZING 都用这个）
+  // NORMAL - 普通 AI 模式（MEMO/SCHEDULE/GENERAL 都用这个）
   // Zinc 中性灰色系：专业沉稳，与 GEEK(slate) 和 EVOLUTION(emerald) 区分
   NORMAL: {
     border: "border-zinc-200 dark:border-zinc-600",
@@ -1052,7 +1052,7 @@ export const UnifiedMessageBlock = memo(function UnifiedMessageBlock({
   className,
 }: UnifiedMessageBlockProps) {
   // Map ParrotAgentType to BlockMode for theme selection
-  // AUTO/MEMO/SCHEDULE/AMAZING → NORMAL, GEEK → GEEK, EVOLUTION → EVOLUTION
+  // AUTO/MEMO/SCHEDULE/GENERAL → NORMAL, GEEK → GEEK, EVOLUTION → EVOLUTION
   const getBlockModeFromParrot = (): "NORMAL" | "GEEK" | "EVOLUTION" => {
     switch (parrotId) {
       case ParrotAgentType.GEEK:

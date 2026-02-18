@@ -16,7 +16,7 @@ interface TypingCursorProps {
 const PARROT_ANIMATIONS: Record<string, string> = {
   [ParrotAgentType.MEMO]: "memoFloat",
   [ParrotAgentType.SCHEDULE]: "scheduleTick",
-  [ParrotAgentType.AMAZING]: "amazingSpin",
+  [ParrotAgentType.GENERAL]: "generalSpin",
 };
 
 /**
@@ -24,7 +24,7 @@ const PARROT_ANIMATIONS: Record<string, string> = {
  * Creates an intelligent, animated typing indicator with multiple variations
  */
 const TypingCursor = ({ active = true, parrotId, variant = "dots" }: TypingCursorProps) => {
-  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.AMAZING : PARROT_THEMES.AMAZING;
+  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.GENERAL : PARROT_THEMES.GENERAL;
 
   if (!active) return null;
 
@@ -58,7 +58,7 @@ const TypingCursor = ({ active = true, parrotId, variant = "dots" }: TypingCurso
 
   // Parrot variant - uses parrot-specific animations
   if (variant === "parrot") {
-    const animationName = PARROT_ANIMATIONS[parrotId || ParrotAgentType.AMAZING];
+    const animationName = PARROT_ANIMATIONS[parrotId || ParrotAgentType.GENERAL];
     return (
       <span className="inline-flex items-center gap-1 ml-2">
         {[0, 1, 2].map((i) => (
@@ -104,7 +104,7 @@ interface AIThinkingIndicatorProps {
 export function AIThinkingIndicator({ active = true, parrotId, size = "md" }: AIThinkingIndicatorProps) {
   if (!active) return null;
 
-  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.AMAZING : PARROT_THEMES.AMAZING;
+  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.GENERAL : PARROT_THEMES.GENERAL;
 
   const sizeClasses = {
     sm: "w-4 h-4",
@@ -143,7 +143,7 @@ export function StreamingIndicator({ active = true, parrotId }: StreamingIndicat
   const { t } = useTranslation();
   if (!active) return null;
 
-  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.AMAZING : PARROT_THEMES.AMAZING;
+  const theme = parrotId ? PARROT_THEMES[parrotId] || PARROT_THEMES.GENERAL : PARROT_THEMES.GENERAL;
 
   return (
     <span className="inline-flex items-center gap-1 ml-2">

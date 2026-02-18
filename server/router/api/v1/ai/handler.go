@@ -35,7 +35,7 @@ type ChatStream interface {
 	Context() context.Context
 }
 
-// ParrotHandler handles all parrot agent requests (DEFAULT, MEMO, SCHEDULE, AMAZING, CREATIVE).
+// ParrotHandler handles all parrot agent requests (DEFAULT, MEMO, SCHEDULE, GENERAL, CREATIVE).
 type ParrotHandler struct {
 	factory                *AgentFactory
 	llm                    ai.LLMService
