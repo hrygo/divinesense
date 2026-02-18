@@ -108,15 +108,15 @@ const MemoDetail = () => {
           showPinned
           showNsfwContent
         />
-        <MemoRelatedList memoName={memoName} />
-        <div className="pt-8 pb-16 w-full">
+        {/* Comments section - before related memos */}
+        <div className="pt-6 w-full">
           <h2 id="comments" className="sr-only">
             {t("memo.comment.self")}
           </h2>
           <div className="relative mx-auto grow w-full min-h-full flex flex-col justify-start items-start gap-y-1">
             {comments.length === 0 ? (
               showCreateCommentButton && (
-                <div className="w-full flex flex-row justify-center items-center py-6">
+                <div className="w-full flex flex-row justify-center items-center py-4">
                   <Button variant="ghost" onClick={handleShowCommentEditor}>
                     <span className="text-muted-foreground">{t("memo.comment.write-a-comment")}</span>
                     <MessageCircleIcon className="ml-2 w-5 h-auto text-muted-foreground" />
@@ -160,6 +160,8 @@ const MemoDetail = () => {
             )}
           </div>
         </div>
+        {/* Related memos - after comments */}
+        <MemoRelatedList memoName={memoName} />
       </div>
 
       {/* Sidebar - only on desktop */}
