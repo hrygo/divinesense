@@ -518,9 +518,9 @@ message GetRelatedMemosResponse {
 
 // ParrotSelfCognition represents a parrot's metacognitive understanding of itself.
 message ParrotSelfCognition {
-  string name = 1; // Parrot name (e.g., "schedule", "memo", "creative", "amazing")
+  string name = 1; // Parrot name (e.g., "memo", "schedule", "general", "ideation")
   string emoji = 2; // Visual representation (e.g., "🦜")
-  string title = 3; // Formal title (e.g., "金刚 - 日程助手鹦鹉")
+  string title = 3; // Formal title (e.g., "时巧 - 日程管理专家")
   repeated string personality = 4; // Character traits
   repeated string capabilities = 5; // What the parrot can do
   repeated string limitations = 6; // What the parrot cannot do

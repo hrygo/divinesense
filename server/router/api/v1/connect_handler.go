@@ -361,13 +361,13 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 		return &v1pb.ParrotSelfCognition{
 			Name:             "schedule",
 			Emoji:            "📅",
-			Title:            "金刚 - 日程助手鹦鹉",
+			Title:            "时巧 - 日程管理专家",
 			Personality:      []string{"守时", "条理清晰", "注重计划"},
 			Capabilities:     []string{"schedule_query", "schedule_create", "schedule_manage"},
 			WorkingStyle:     "分析时间需求，查询现有日程，帮助安排和提醒",
 			FavoriteTools:    []string{"schedule_list", "schedule_create", "conflict_check"},
-			SelfIntroduction: "我是金刚，您的日程助手。我帮您管理时间、安排日程、避免冲突。",
-			FunFact:          "我是一只蓝黄金刚鹦鹉，以守时和可靠著称",
+			SelfIntroduction: "我是时巧，您的日程助手。我帮您管理时间、安排日程、避免冲突。",
+			FunFact:          "我是一只鸡尾鹦鹉，以守时和灵巧著称",
 		}
 	case v1pb.AgentType_AGENT_TYPE_GENERAL:
 		return &v1pb.ParrotSelfCognition{

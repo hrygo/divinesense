@@ -256,7 +256,7 @@ export function AISuggestionCards({ suggestions, onConfirmSuggestion, className 
     <div className={cn("w-full", className)}>
       {/* Header with parrot */}
       <div className="flex items-center gap-2 px-1 mb-2">
-        <span className="text-base" role="img" aria-label="金刚鹦鹉">
+        <span className="text-base" role="img" aria-label="时巧">
           {PARROT_ICON}
         </span>
         <span className="text-xs text-muted-foreground">{t("schedule.quick-input.ai-suggestions") as string}</span>
@@ -312,7 +312,7 @@ export function AISuggestionCards({ suggestions, onConfirmSuggestion, className 
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xs shadow-sm">
                   {PARROT_ICON}
                 </div>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">金刚</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">时巧</span>
               </div>
 
               {/* Title */}

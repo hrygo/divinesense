@@ -2091,9 +2091,9 @@ func (x *GetRelatedMemosResponse) GetMemos() []*SearchResult {
 // ParrotSelfCognition represents a parrot's metacognitive understanding of itself.
 type ParrotSelfCognition struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                 // Parrot name (e.g., "schedule", "memo", "creative", "amazing")
+	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                 // Parrot name (e.g., "memo", "schedule", "general", "ideation")
 	Emoji            string                 `protobuf:"bytes,2,opt,name=emoji,proto3" json:"emoji,omitempty"`                                               // Visual representation (e.g., "🦜")
-	Title            string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`                                               // Formal title (e.g., "金刚 - 日程助手鹦鹉")
+	Title            string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`                                               // Formal title (e.g., "时巧 - 日程管理专家")
 	Personality      []string               `protobuf:"bytes,4,rep,name=personality,proto3" json:"personality,omitempty"`                                   // Character traits
 	Capabilities     []string               `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty"`                                 // What the parrot can do
 	Limitations      []string               `protobuf:"bytes,6,rep,name=limitations,proto3" json:"limitations,omitempty"`                                   // What the parrot cannot do

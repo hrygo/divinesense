@@ -953,7 +953,7 @@ export const GetRelatedMemosResponseSchema: GenMessage<GetRelatedMemosResponse> 
  */
 export type ParrotSelfCognition = Message<"memos.api.v1.ParrotSelfCognition"> & {
   /**
-   * Parrot name (e.g., "schedule", "memo", "creative", "amazing")
+   * Parrot name (e.g., "memo", "schedule", "general", "ideation")
    *
    * @generated from field: string name = 1;
    */
@@ -967,7 +967,7 @@ export type ParrotSelfCognition = Message<"memos.api.v1.ParrotSelfCognition"> & 
   emoji: string;
 
   /**
-   * Formal title (e.g., "金刚 - 日程助手鹦鹉")
+   * Formal title (e.g., "时巧 - 日程管理专家")
    *
    * @generated from field: string title = 3;
    */
