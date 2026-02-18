@@ -57,7 +57,6 @@ const DEFAULT_COLOR = {
 };
 
 // 可提及的代理名称列表（从 API 获取后会过滤）
-// memo, schedule, general 已支持；ideation 待后端支持
 const MENTIONABLE_NAMES = ["memo", "schedule", "general", "ideation"];
 
 interface AgentMentionPopoverProps {

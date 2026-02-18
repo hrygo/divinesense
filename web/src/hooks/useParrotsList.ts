@@ -12,8 +12,7 @@ import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 
 // 排除的代理类型（不可提及）
 const EXCLUDED_AGENT_TYPES: AgentType[] = [
-  AgentType.DEFAULT, // AUTO
-  AgentType.GENERAL, // General
+  AgentType.DEFAULT, // AUTO - 由 Orchestrator 自动路由
   // GEEK 和 EVOLUTION 不在 AgentType 枚举中，它们是模式标志
 ];
 
@@ -22,6 +21,7 @@ const AGENT_TYPE_MAP: Record<number, ParrotAgentType> = {
   [AgentType.MEMO]: ParrotAgentType.MEMO,
   [AgentType.SCHEDULE]: ParrotAgentType.SCHEDULE,
   [AgentType.GENERAL]: ParrotAgentType.GENERAL,
+  [AgentType.IDEATION]: ParrotAgentType.IDEATION,
 };
 
 /**
@@ -77,5 +77,10 @@ export function useParrotsList() {
  * 检查代理是否可提及
  */
 export function isMentionable(agentType: ParrotAgentType): boolean {
-  return agentType === ParrotAgentType.MEMO || agentType === ParrotAgentType.SCHEDULE;
+  return (
+    agentType === ParrotAgentType.MEMO ||
+    agentType === ParrotAgentType.SCHEDULE ||
+    agentType === ParrotAgentType.GENERAL ||
+    agentType === ParrotAgentType.IDEATION
+  );
 }
