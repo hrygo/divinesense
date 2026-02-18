@@ -1054,6 +1054,8 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 				// End generation when tool is about to be used
 				stats.EndGeneration()
 
+				r.logger.Debug("CCRunner: processing tool_use block", "tool_name", block.Name, "tool_id", block.ID)
+
 				stats.RecordToolUse(block.Name, block.ID)
 
 				// Record file modification for Write/Edit tools
@@ -1075,6 +1077,7 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 				if err := callback("tool_use", &EventWithMeta{EventType: "tool_use", EventData: block.Name, Meta: meta}); err != nil {
 					return err
 				}
+				r.logger.Debug("CCRunner: tool_use callback completed", "tool_name", block.Name, "tool_id", block.ID)
 			}
 		}
 	case "user":
