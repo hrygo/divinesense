@@ -337,6 +337,9 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
+			// Debug: log received output
+			r.logger.Debug("SessionMonitor: received output", "session_id", session.ID, "line", line)
+
 			// Update session activity
 			session.mu.Lock()
 			session.LastActive = time.Now()

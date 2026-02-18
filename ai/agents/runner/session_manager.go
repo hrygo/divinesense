@@ -512,6 +512,10 @@ func (s *Session) WriteInput(msg map[string]any) error {
 	// Append newline as protocol often requires it (JSONL)
 	data = append(data, '\n')
 
+	// Debug: log the input being sent
+	// 调试：记录发送的输入
+	slog.Debug("WriteInput: sending to CLI", "session_id", s.ID, "data", string(data))
+
 	_, err = s.Stdin.Write(data)
 	if err != nil {
 		return err
