@@ -28,7 +28,7 @@ type GeekParrot struct {
 }
 
 var (
-	sharedSessionManager agentpkg.SessionManager
+	sharedSessionManager *agentpkg.CCSessionManager
 	sharedManagerOnce    sync.Once
 )
 
@@ -38,6 +38,18 @@ func getSharedSessionManager() agentpkg.SessionManager {
 		sharedSessionManager = agentpkg.NewCCSessionManager(slog.Default(), 30*time.Minute)
 	})
 	return sharedSessionManager
+}
+
+// shutdownSharedSessionManager terminates all active CLI sessions managed by the shared session manager.
+// This should be called during graceful server shutdown to ensure all Claude Code CLI
+// child processes are properly terminated.
+// shutdownSharedSessionManager 终止共享会话管理器管理的所有活动 CLI 会话。
+// 应在优雅服务器关闭期间调用，确保所有 Claude Code CLI 子进程被正确终止。
+func shutdownSharedSessionManager() {
+	if sharedSessionManager != nil {
+		slog.Info("GeekParrot: shutting down shared session manager")
+		sharedSessionManager.Shutdown()
+	}
 }
 
 // NewGeekParrot creates a new GeekParrot instance.

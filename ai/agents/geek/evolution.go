@@ -5,12 +5,22 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/store"
+)
+
+// evolutionManagers tracks all CCSessionManagers created by EvolutionParrot instances.
+// This enables graceful shutdown of all CLI processes during server termination.
+// evolutionManagers 跟踪 EvolutionParrot 实例创建的所有 CCSessionManager。
+// 这使得在服务器终止期间可以优雅关闭所有 CLI 进程。
+var (
+	evolutionManagers   []*agentpkg.CCSessionManager
+	evolutionManagersMu sync.Mutex
 )
 
 // EvolutionParrot implements the Evolution Mode agent for self-evolution.
@@ -59,6 +69,12 @@ func NewEvolutionParrot(sourceDir string, userID int32, sessionID string, st *st
 	// 为进化模式创建专用会话管理器（进程隔离）
 	// Evolution mode sessions might be long-running, use 30m idle timeout as standard
 	manager := agentpkg.NewCCSessionManager(slog.Default(), 30*time.Minute)
+
+	// Track manager for graceful shutdown
+	// 跟踪管理器以便优雅关闭
+	evolutionManagersMu.Lock()
+	evolutionManagers = append(evolutionManagers, manager)
+	evolutionManagersMu.Unlock()
 
 	// Create CCRunner with manager
 	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
@@ -267,3 +283,22 @@ func (p *EvolutionParrot) GetSessionStats() *agentpkg.NormalSessionStats {
 // Compile-time interface compliance check.
 // 编译时接口合规性检查。
 var _ agentpkg.ParrotAgent = (*EvolutionParrot)(nil)
+
+// shutdownEvolution terminates all active CLI sessions managed by EvolutionParrot instances.
+// This is called internally by the package-level Shutdown function.
+// shutdownEvolution 终止 EvolutionParrot 实例管理的所有活动 CLI 会话。
+// 由包级别的 Shutdown 函数内部调用。
+func shutdownEvolution() {
+	evolutionManagersMu.Lock()
+	defer evolutionManagersMu.Unlock()
+
+	if len(evolutionManagers) > 0 {
+		slog.Info("EvolutionParrot: shutting down evolution session managers", "count", len(evolutionManagers))
+		for _, mgr := range evolutionManagers {
+			if mgr != nil {
+				mgr.Shutdown()
+			}
+		}
+		evolutionManagers = nil
+	}
+}

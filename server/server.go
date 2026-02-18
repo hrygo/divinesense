@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hrygo/divinesense/ai"
+	"github.com/hrygo/divinesense/ai/agents/geek"
 	"github.com/hrygo/divinesense/internal/profile"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	apiv1 "github.com/hrygo/divinesense/server/router/api/v1"
@@ -139,6 +140,10 @@ func (s *Server) Shutdown(ctx context.Context) {
 			cancelFunc()
 		}
 	}
+
+	// Shutdown AI agents (terminate all Claude Code CLI child processes)
+	// 关闭 AI agents（终止所有 Claude Code CLI 子进程）
+	geek.Shutdown()
 
 	// Shutdown echo server.
 	if err := s.echoServer.Shutdown(ctx); err != nil {

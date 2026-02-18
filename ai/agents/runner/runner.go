@@ -356,6 +356,21 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
+			// Detect init event to signal CLI is ready
+			// 检测 init 事件以表明 CLI 已准备好
+			if msg.Type == "system" && msg.Subtype == "init" {
+				r.logger.Info("CCRunner: CLI init received, session ready for input",
+					"session_id", session.ID)
+				// Signal that CLI is ready (close channel if not already closed)
+				// 通知 CLI 已准备好（如果未关闭则关闭通道）
+				select {
+				case <-session.initReceived:
+					// Already closed
+				default:
+					close(session.initReceived)
+				}
+			}
+
 			if cb != nil {
 				// Handle result message - extract and send session statistics
 				if msg.Type == "result" && stats != nil {

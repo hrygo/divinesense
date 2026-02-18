@@ -50,7 +50,8 @@ type Session struct {
 	MonitorOnce     sync.Once
 
 	mu               sync.RWMutex
-	statusResetTimer *time.Timer // Timer for resetting status from Busy to Ready
+	statusResetTimer *time.Timer   // Timer for resetting status from Busy to Ready
+	initReceived     chan struct{} // Closed when CLI sends init event
 }
 
 // SetCallback sets the callback for processing session events.
@@ -365,16 +366,17 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	sm.logger.Info("Session started", "session_id", sessionID, "pid", cmd.Process.Pid)
 
 	sess := &Session{
-		ID:         sessionID,
-		Config:     cfg,
-		Cmd:        cmd,
-		Stdin:      stdin,
-		Stdout:     stdout,
-		Stderr:     stderr,
-		Cancel:     cancel,
-		CreatedAt:  time.Now(),
-		LastActive: time.Now(),
-		Status:     SessionStatusStarting,
+		ID:           sessionID,
+		Config:       cfg,
+		Cmd:          cmd,
+		Stdin:        stdin,
+		Stdout:       stdout,
+		Stderr:       stderr,
+		Cancel:       cancel,
+		CreatedAt:    time.Now(),
+		LastActive:   time.Now(),
+		Status:       SessionStatusStarting,
+		initReceived: make(chan struct{}),
 	}
 
 	// Start status transition monitor: Starting -> Ready
@@ -430,41 +432,47 @@ func (s *Session) GetStatus() SessionStatus {
 	return s.Status
 }
 
+// WaitForReady blocks until the CLI has finished initialization (sent init event)
+// or the context is cancelled. Returns nil if ready, error if cancelled or timeout.
+// WaitForReady 阻塞直到 CLI 完成初始化（发送 init 事件）或上下文被取消。
+// 如果就绪返回 nil，如果取消或超时返回错误。
+func (s *Session) WaitForReady(ctx context.Context) error {
+	select {
+	case <-s.initReceived:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // waitForReady monitors the session and transitions from Starting to Ready
-// when the process is confirmed alive and responsive.
-// waitForReady 监控会话，当进程确认存活且响应时从 Starting 转换为 Ready。
+// when the CLI sends the init event (indicating it's ready to accept input).
+// waitForReady 监控会话，当 CLI 发送 init 事件（表示准备好接收输入）时从 Starting 转换为 Ready。
 // The context parameter allows cancellation if the session is terminated early.
 func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
 
-		deadline := time.Now().Add(timeout)
-		for time.Now().Before(deadline) {
-			select {
-			case <-ctx.Done():
-				// Context cancelled - session terminated or request cancelled
-				return
-			case <-ticker.C:
-				s.mu.Lock()
-				if s.Status == SessionStatusDead {
-					s.mu.Unlock()
-					return
-				}
-				if s.IsAlive() {
-					s.Status = SessionStatusReady
-					s.mu.Unlock()
-					return
-				}
-				s.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			// Context cancelled - session terminated or request cancelled
+			return
+		case <-s.initReceived:
+			// CLI sent init event, ready to accept input
+			s.mu.Lock()
+			if s.Status == SessionStatusStarting {
+				s.Status = SessionStatusReady
 			}
+			s.mu.Unlock()
+		case <-timer.C:
+			// Timeout - mark as dead if still not ready
+			s.mu.Lock()
+			if s.Status == SessionStatusStarting {
+				s.Status = SessionStatusDead
+			}
+			s.mu.Unlock()
 		}
-		// Timeout - mark as dead if still not alive
-		s.mu.Lock()
-		if s.Status == SessionStatusStarting {
-			s.Status = SessionStatusDead
-		}
-		s.mu.Unlock()
 	}()
 }
 
