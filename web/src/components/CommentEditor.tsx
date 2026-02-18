@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils";
 // Common emojis for quick selection
 const EMOJI_LIST = ["👍", "👎", "😄", "🎉", "❤️", "🔥", "💡", "🤔", "👀", "✅", "⭐", "🙏", "💪", "🚀", "👏", "😊"];
 
+// Detect macOS for shortcut display
+const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+const shortcutKey = isMac ? "⌘" : "Ctrl";
+
 export interface CommentEditorProps {
   className?: string;
   placeholder?: string;
@@ -204,7 +208,7 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
         {/* Hint text */}
         {content.length === 0 && (
           <div className="absolute -bottom-5 left-0 right-0 text-center pointer-events-none">
-            <span className="text-[10px] text-muted-foreground/50">Ctrl+Enter 发送 • Esc 取消</span>
+            <span className="text-[10px] text-muted-foreground/50">{shortcutKey}+Enter 发送 • Esc 取消</span>
           </div>
         )}
       </div>
