@@ -220,9 +220,15 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// because the session should outlive the HTTP request that created it.
 	// 使用 context.Background() 而非请求 ctx，因为会话的生命周期应超出创建它的 HTTP 请求。
 	sessCtx, cancel := context.WithCancel(context.Background())
-	// Ensure cancel is always called, even on error paths
-	// 确保在所有路径（包括错误路径）上都调用 cancel
-	defer cancel()
+
+	// Ensure cancel is called on failure paths (but NOT on success)
+	// 确保在失败路径上调用 cancel（但在成功时不调用）
+	success := false
+	defer func() {
+		if !success {
+			cancel()
+		}
+	}()
 
 	// Use a startup timeout to prevent indefinite hangs during process start
 	// We monitor startup in a goroutine and cancel if it takes too long
@@ -233,8 +239,11 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Channel to signal successful startup or failure
 	startedCh := make(chan error, 1)
 
+	// Channel to signal function return (prevent race with startupCancel)
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
 	// Ensure we signal completion even on early return
-	// This prevents goroutine leak if function returns before startup completes
 	defer close(startedCh)
 
 	// Goroutine to monitor startup timeout
@@ -242,9 +251,16 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	go func() {
 		select {
 		case <-startupCtx.Done():
-			// Startup timeout or request cancelled - kill the session
-			cancel()
-			// Channel will be closed by defer, no need to send
+			// Startup timeout or request cancelled
+			// Check if function already returned successfully
+			select {
+			case <-doneCh:
+				// Function returned, ignore cancellation
+				return
+			default:
+				// Genuine timeout or request cancel -> kill session
+				cancel()
+			}
 		case err, ok := <-startedCh:
 			// Startup completed (success or failure)
 			if ok && err != nil {
@@ -279,6 +295,15 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 
 	if cfg.PermissionMode != "" {
 		args = append(args, "--permission-mode", cfg.PermissionMode)
+	}
+
+	// Security: Path Restrictions
+	// 安全：路径限制
+	for _, path := range cfg.AllowedPaths {
+		args = append(args, "--allowed-path", path)
+	}
+	for _, path := range cfg.ForbiddenPaths {
+		args = append(args, "--forbidden-path", path)
 	}
 
 	// Note: We don't pass the initial prompt here. The prompt will be injected via stdin later
@@ -359,6 +384,7 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Pass the startup context so waitForReady can be cancelled if startup times out
 	sess.waitForReady(startupCtx, defaultReadyTimeout)
 
+	success = true
 	return sess, nil
 }
 

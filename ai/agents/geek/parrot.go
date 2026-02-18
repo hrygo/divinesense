@@ -116,6 +116,7 @@ func (p *GeekParrot) Execute(
 		Env: map[string]string{
 			"HOME": p.workDir, // Force isolation of .claude directory
 		},
+		AllowedPaths: []string{p.workDir}, // Restrict file access to sandbox
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 

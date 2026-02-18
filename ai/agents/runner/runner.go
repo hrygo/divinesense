@@ -24,8 +24,8 @@ import (
 const (
 	// Scanner buffer sizes for CLI output parsing.
 	// 扫描器缓冲区大小，用于 CLI 输出解析。
-	scannerInitialBufSize = 256 * 1024  // 256 KB
-	scannerMaxBufSize     = 1024 * 1024 // 1 MB
+	scannerInitialBufSize = 256 * 1024       // 256 KB
+	scannerMaxBufSize     = 10 * 1024 * 1024 // 10 MB
 
 	// Maximum length of non-JSON output to log.
 	// 非 JSON 输出的最大日志长度。

@@ -1,19 +1,21 @@
+import { create } from "@bufbuild/protobuf";
 import { ConnectError } from "@connectrpc/connect";
 import { ArrowUpLeftFromCircleIcon, MessageCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { CommentEditor } from "@/components/CommentEditor";
 import { MemoDetailSidebar } from "@/components/MemoDetailSidebar";
-import MemoEditor from "@/components/MemoEditor";
 import MemoRelatedList from "@/components/MemoRelatedList";
 import MemoView from "@/components/MemoView/MemoView";
 import { Button } from "@/components/ui/button";
 import { memoNamePrefix } from "@/helpers/resource-names";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useMediaQuery from "@/hooks/useMediaQuery";
-import { useMemo, useMemoComments } from "@/hooks/useMemoQueries";
+import { useCreateMemo, useMemo, useMemoComments } from "@/hooks/useMemoQueries";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { cn } from "@/lib/utils";
+import { MemoSchema, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 
 const MemoDetail = () => {
@@ -26,6 +28,9 @@ const MemoDetail = () => {
   const uid = params.uid;
   const memoName = `${memoNamePrefix}${uid}`;
   const [showCommentEditor, setShowCommentEditor] = useState(false);
+
+  // Create memo mutation for comments
+  const createMemoMutation = useCreateMemo();
 
   // Fetch main memo with React Query
   const { data: memo, error, isLoading } = useMemo(memoName, { enabled: !!memoName });
@@ -57,101 +62,107 @@ const MemoDetail = () => {
     setShowCommentEditor(true);
   };
 
-  const handleCommentCreated = async (_memoCommentName: string) => {
-    // React Query will auto-refetch due to invalidation in the mutation
+  const handleCommentCreated = async (content: string) => {
+    // Create comment memo
+    const commentMemo = create(MemoSchema, {
+      content,
+      visibility: Visibility.PRIVATE,
+      parent: memo.name,
+    });
+
+    await createMemoMutation.mutateAsync(commentMemo);
     setShowCommentEditor(false);
   };
 
   return (
-    <>
-      <div className={cn("w-full flex flex-row justify-start items-start gap-4")}>
-        <div className={cn("w-full md:w-[calc(100%-15rem)]")}>
-          {parentMemo && (
-            <div className="w-auto inline-block mb-2">
-              <Link
-                className="px-3 py-1 border border-border rounded-lg max-w-xs w-auto text-sm flex flex-row justify-start items-center flex-nowrap text-muted-foreground hover:shadow hover:opacity-80"
-                to={`/${parentMemo.name}`}
-                state={locationState}
-                viewTransition
-              >
-                <ArrowUpLeftFromCircleIcon className="w-4 h-auto shrink-0 opacity-60 mr-2" />
-                <span className="truncate">{parentMemo.content}</span>
-              </Link>
-            </div>
-          )}
-          <MemoView
-            key={`${memo.name}-${memo.displayTime}`}
-            className="shadow hover:shadow-sm transition-all"
-            memo={memo}
-            compact={false}
-            parentPage={locationState?.from}
-            showCreator
-            showVisibility
-            showPinned
-            showNsfwContent
-          />
-          <MemoRelatedList memoName={memoName} />
-          <div className="pt-8 pb-16 w-full">
-            <h2 id="comments" className="sr-only">
-              {t("memo.comment.self")}
-            </h2>
-            <div className="relative mx-auto grow w-full min-h-full flex flex-col justify-start items-start gap-y-1">
-              {comments.length === 0 ? (
-                showCreateCommentButton && (
-                  <div className="w-full flex flex-row justify-center items-center py-6">
-                    <Button variant="ghost" onClick={handleShowCommentEditor}>
-                      <span className="text-muted-foreground">{t("memo.comment.write-a-comment")}</span>
-                      <MessageCircleIcon className="ml-2 w-5 h-auto text-muted-foreground" />
+    <div className={cn("w-full flex flex-row justify-start items-start gap-4 px-4 sm:px-6")}>
+      {/* Main content area with consistent max-width */}
+      <div className={cn("flex-1 min-w-0", "max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto")}>
+        {parentMemo && (
+          <div className="w-auto inline-block mb-2">
+            <Link
+              className="px-3 py-1 border border-border rounded-lg max-w-xs w-auto text-sm flex flex-row justify-start items-center flex-nowrap text-muted-foreground hover:shadow hover:opacity-80"
+              to={`/${parentMemo.name}`}
+              state={locationState}
+              viewTransition
+            >
+              <ArrowUpLeftFromCircleIcon className="w-4 h-auto shrink-0 opacity-60 mr-2" />
+              <span className="truncate">{parentMemo.content}</span>
+            </Link>
+          </div>
+        )}
+        <MemoView
+          key={`${memo.name}-${memo.displayTime}`}
+          className="shadow hover:shadow-sm transition-all"
+          memo={memo}
+          compact={false}
+          parentPage={locationState?.from}
+          showCreator
+          showVisibility
+          showPinned
+          showNsfwContent
+        />
+        <MemoRelatedList memoName={memoName} />
+        <div className="pt-8 pb-16 w-full">
+          <h2 id="comments" className="sr-only">
+            {t("memo.comment.self")}
+          </h2>
+          <div className="relative mx-auto grow w-full min-h-full flex flex-col justify-start items-start gap-y-1">
+            {comments.length === 0 ? (
+              showCreateCommentButton && (
+                <div className="w-full flex flex-row justify-center items-center py-6">
+                  <Button variant="ghost" onClick={handleShowCommentEditor}>
+                    <span className="text-muted-foreground">{t("memo.comment.write-a-comment")}</span>
+                    <MessageCircleIcon className="ml-2 w-5 h-auto text-muted-foreground" />
+                  </Button>
+                </div>
+              )
+            ) : (
+              <>
+                <div className="w-full flex flex-row justify-between items-center h-8 pl-3 mb-2">
+                  <div className="flex flex-row justify-start items-center">
+                    <MessageCircleIcon className="w-5 h-auto text-muted-foreground mr-1" />
+                    <span className="text-muted-foreground text-sm">{t("memo.comment.self")}</span>
+                    <span className="text-muted-foreground text-sm ml-1">({comments.length})</span>
+                  </div>
+                  {showCreateCommentButton && (
+                    <Button variant="ghost" className="text-muted-foreground" onClick={handleShowCommentEditor}>
+                      {t("memo.comment.write-a-comment")}
                     </Button>
-                  </div>
-                )
-              ) : (
-                <>
-                  <div className="w-full flex flex-row justify-between items-center h-8 pl-3 mb-2">
-                    <div className="flex flex-row justify-start items-center">
-                      <MessageCircleIcon className="w-5 h-auto text-muted-foreground mr-1" />
-                      <span className="text-muted-foreground text-sm">{t("memo.comment.self")}</span>
-                      <span className="text-muted-foreground text-sm ml-1">({comments.length})</span>
-                    </div>
-                    {showCreateCommentButton && (
-                      <Button variant="ghost" className="text-muted-foreground" onClick={handleShowCommentEditor}>
-                        {t("memo.comment.write-a-comment")}
-                      </Button>
-                    )}
-                  </div>
-                  {comments.map((comment) => (
-                    <MemoView
-                      key={`${comment.name}-${comment.displayTime}`}
-                      memo={comment}
-                      parentPage={locationState?.from}
-                      showCreator
-                      compact
-                    />
-                  ))}
-                </>
-              )}
-            </div>
+                  )}
+                </div>
+                {comments.map((comment) => (
+                  <MemoView
+                    key={`${comment.name}-${comment.displayTime}`}
+                    memo={comment}
+                    parentPage={locationState?.from}
+                    showCreator
+                    compact
+                  />
+                ))}
+              </>
+            )}
             {showCommentEditor && (
-              <div className="w-full">
-                <MemoEditor
-                  cacheKey={`${memo.name}-${memo.updateTime}-comment`}
+              <div className="w-full mt-4">
+                <CommentEditor
                   placeholder={t("editor.add-your-comment-here")}
-                  parentMemoName={memo.name}
                   autoFocus
-                  onConfirm={handleCommentCreated}
+                  onSend={handleCommentCreated}
                   onCancel={() => setShowCommentEditor(false)}
                 />
               </div>
             )}
           </div>
         </div>
-        {md && (
-          <div className="sticky top-0 left-0 shrink-0 -mt-6 w-56 h-full">
-            <MemoDetailSidebar className="py-6" memo={memo} parentPage={locationState?.from} />
-          </div>
-        )}
       </div>
-    </>
+
+      {/* Sidebar - only on desktop */}
+      {md && (
+        <div className="sticky top-0 left-0 shrink-0 -mt-6 w-56 h-full">
+          <MemoDetailSidebar className="py-6" memo={memo} parentPage={locationState?.from} />
+        </div>
+      )}
+    </div>
   );
 };
 
