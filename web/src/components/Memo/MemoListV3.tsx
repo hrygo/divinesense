@@ -249,7 +249,7 @@ function EmptyState({ type, searchKeyword, onClearSearch }: EmptyStateProps) {
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{t("memo.empty_all_subtitle")}</p>
 
         {/* 示例引导 */}
-        <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 max-w-xs text-left">
+        <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 max-w-[20rem] text-left">
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-3">{t("memo.empty_examples_title")}</p>
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
