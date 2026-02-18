@@ -180,10 +180,6 @@ export function formatAgentMention(name: string): string {
     schedule: "时巧",
     general: "通才",
     ideation: "灵光",
-    auto: "Auto",
-    amazing: "折衷",
-    geek: "极客",
-    evolution: "进化",
   };
 
   return `@${names[name] || name}`;
