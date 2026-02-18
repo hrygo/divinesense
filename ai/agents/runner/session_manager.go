@@ -61,6 +61,21 @@ func (s *Session) SetCallback(cb EventCallback) {
 	s.CurrentCallback = cb
 }
 
+// IsIdle checks if the session has been idle for longer than the timeout.
+// Safe for concurrent use.
+// IsIdle 检查会话空闲时间是否超过超时时间。并发安全。
+func (s *Session) IsIdle(timeout time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Never terminate busy sessions
+	if s.Status == SessionStatusBusy {
+		return false
+	}
+
+	return time.Since(s.LastActive) > timeout
+}
+
 // SetStats sets the statistics tracker for the current session interaction.
 // SetStats 设置当前会话交互的统计跟踪器。
 func (s *Session) SetStats(stats *SessionStats) {
@@ -519,13 +534,12 @@ func (sm *CCSessionManager) cleanupIdleSessions() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	now := time.Now()
 	for sessionID, sess := range sm.sessions {
-		idleTime := now.Sub(sess.LastActive)
-		if idleTime > sm.timeout {
+		// Use thread-safe IsIdle check
+		// 使用线程安全的 IsIdle 检查
+		if sess.IsIdle(sm.timeout) {
 			sm.logger.Info("Session idle timeout, terminating",
 				"session_id", sessionID,
-				"idle_duration", idleTime,
 				"timeout", sm.timeout)
 			_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on idle timeout
 		}

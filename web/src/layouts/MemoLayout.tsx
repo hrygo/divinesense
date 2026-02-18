@@ -1,5 +1,5 @@
 import { MenuIcon } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { matchPath, Outlet, useLocation } from "react-router-dom";
 import { MemoExplorer, type MemoExplorerContext } from "@/components/MemoExplorer";
@@ -45,6 +45,16 @@ const MemoLayout = () => {
   const currentUser = useCurrentUser();
   const [profileUserName, setProfileUserName] = useState<string | undefined>();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Ref for main content container - used for scroll restoration
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [location.pathname]);
 
   // Desktop sidebar state - persisted to localStorage
   // immersiveMode is now derived as !desktopSidebarOpen
@@ -200,6 +210,7 @@ const MemoLayout = () => {
 
         {/* Main Content */}
         <div
+          ref={mainContentRef}
           className={cn(
             "flex-1 min-h-0 overflow-y-auto flex flex-col transition-all duration-300 bg-muted/50 dark:bg-muted/10 relative",
             lg && desktopSidebarOpen ? "pl-80" : "",
