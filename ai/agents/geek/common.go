@@ -31,7 +31,7 @@ func ExecutePersistentSession(
 
 	// Wait for CLI to be ready (init event received)
 	// 等待 CLI 就绪（收到 init 事件）
-	readyCtx, readyCancel := context.WithTimeout(ctx, 15*time.Second)
+	readyCtx, readyCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer readyCancel()
 	if err := session.WaitForReady(readyCtx); err != nil {
 		return fmt.Errorf("WaitForReady failed: %w", err)

@@ -391,43 +391,24 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
-			// Detect CLI ready events
+			// Detect CLI init event - this is the ONLY signal that CLI is fully ready
 			// CLI sends system events during startup:
 			// - hook_started: Session hooks are starting
-			// - hook_response: Session hooks completed (outcome: success means hooks ready)
-			// - init: CLI fully initialized (tools, MCP servers ready)
-			// We accept either init OR hook_response as ready signal:
-			// - Prefer init (fully ready), but fall back to hook_response if init not sent
-			// 检测 CLI 就绪事件
+			// - hook_response: Session hooks completed
+			// - init: CLI fully initialized (tools, MCP servers ready) - ONLY this signals ready
+			// 检测 CLI init 事件 - 这是 CLI 完全就绪的唯一信号
 			// CLI 在启动期间发送 system 事件：
 			// - hook_started: Session hooks 正在启动
-			// - hook_response: Session hooks 完成 (outcome: success 表示 hooks 就绪)
-			// - init: CLI 完全初始化（工具、MCP 服务器就绪）
-			// 我们接受 init 或 hook_response 作为就绪信号：
-			// - 优先等待 init（完全就绪），但如果没有 init 则使用 hook_response
-			if msg.Type == "system" {
-				isReady := false
-				readyReason := ""
-
-				if msg.Subtype == "init" {
-					isReady = true
-					readyReason = "init"
-				} else if msg.Subtype == "hook_response" && msg.Outcome == "success" {
-					isReady = true
-					readyReason = "hook_response"
-				}
-
-				if isReady {
-					r.logger.Info("CCRunner: CLI ready signal received",
-						"session_id", session.ID,
-						"ready_reason", readyReason,
-						"hook_name", msg.HookName)
-					select {
-					case <-session.initReceived:
-						// Already closed
-					default:
-						close(session.initReceived)
-					}
+			// - hook_response: Session hooks 完成
+			// - init: CLI 完全初始化（工具、MCP 服务器就绪）- 只有这个信号表示就绪
+			if msg.Type == "system" && msg.Subtype == "init" {
+				r.logger.Info("CCRunner: CLI init received, session ready for input",
+					"session_id", session.ID)
+				select {
+				case <-session.initReceived:
+					// Already closed
+				default:
+					close(session.initReceived)
 				}
 			}
 

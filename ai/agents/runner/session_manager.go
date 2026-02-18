@@ -432,9 +432,9 @@ func (s *Session) GetStatus() SessionStatus {
 	return s.Status
 }
 
-// WaitForReady blocks until the CLI has finished initialization (sent init event)
-// or the context is cancelled. Returns nil if ready, error if cancelled or timeout.
-// WaitForReady 阻塞直到 CLI 完成初始化（发送 init 事件）或上下文被取消。
+// WaitForReady blocks until the CLI sends the init event (fully initialized).
+// Returns nil if ready, error if cancelled or timeout.
+// WaitForReady 阻塞直到 CLI 发送 init 事件（完全初始化）。
 // 如果就绪返回 nil，如果取消或超时返回错误。
 func (s *Session) WaitForReady(ctx context.Context) error {
 	select {
