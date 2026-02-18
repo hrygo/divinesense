@@ -544,16 +544,14 @@ func (s *AIService) WarmupSession(ctx context.Context, req *v1pb.WarmupSessionRe
 	}
 
 	// Generate session ID (same logic as handleGeekMode/handleEvolutionMode)
-	// 生成会话 ID（与 handleGeekMode/handleEvolutionMode 相同的逻辑）
+	// Unified design: user-specific namespace + mode prefix
+	// 统一设计：用户特定命名空间 + 模式前缀
+	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", user.ID))
 	var sessionID string
 	if isEvolution {
-		// Evolution mode: user-specific namespace
-		namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", user.ID))
 		sessionID = uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationId))).String()
 	} else {
-		// Geek mode: null namespace
-		namespace := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-		sessionID = uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationId))).String()
+		sessionID = uuid.NewSHA1(namespace, []byte(fmt.Sprintf("geek_%d", req.ConversationId))).String()
 	}
 
 	// Get work directory

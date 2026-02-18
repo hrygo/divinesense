@@ -391,26 +391,43 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
-			// Detect init event to signal CLI is fully ready
+			// Detect CLI ready events
 			// CLI sends system events during startup:
 			// - hook_started: Session hooks are starting
-			// - hook_response: Session hooks completed
+			// - hook_response: Session hooks completed (outcome: success means hooks ready)
 			// - init: CLI fully initialized (tools, MCP servers ready)
-			// We ONLY wait for init event to ensure CLI is completely ready before sending input.
-			// 检测 CLI 完全就绪事件
+			// We accept either init OR hook_response as ready signal:
+			// - Prefer init (fully ready), but fall back to hook_response if init not sent
+			// 检测 CLI 就绪事件
 			// CLI 在启动期间发送 system 事件：
 			// - hook_started: Session hooks 正在启动
-			// - hook_response: Session hooks 完成
+			// - hook_response: Session hooks 完成 (outcome: success 表示 hooks 就绪)
 			// - init: CLI 完全初始化（工具、MCP 服务器就绪）
-			// 我们只等待 init 事件，确保 CLI 完全就绪后再发送输入。
-			if msg.Type == "system" && msg.Subtype == "init" {
-				r.logger.Info("CCRunner: CLI init received, session ready for input",
-					"session_id", session.ID)
-				select {
-				case <-session.initReceived:
-					// Already closed
-				default:
-					close(session.initReceived)
+			// 我们接受 init 或 hook_response 作为就绪信号：
+			// - 优先等待 init（完全就绪），但如果没有 init 则使用 hook_response
+			if msg.Type == "system" {
+				isReady := false
+				readyReason := ""
+
+				if msg.Subtype == "init" {
+					isReady = true
+					readyReason = "init"
+				} else if msg.Subtype == "hook_response" && msg.Outcome == "success" {
+					isReady = true
+					readyReason = "hook_response"
+				}
+
+				if isReady {
+					r.logger.Info("CCRunner: CLI ready signal received",
+						"session_id", session.ID,
+						"ready_reason", readyReason,
+						"hook_name", msg.HookName)
+					select {
+					case <-session.initReceived:
+						// Already closed
+					default:
+						close(session.initReceived)
+					}
 				}
 			}
 

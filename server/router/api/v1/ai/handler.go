@@ -406,10 +406,16 @@ func (h *ParrotHandler) handleGeekMode(
 	}
 
 	// Generate a stable session ID based on Conversation ID using UUID v5
-	// Using a fixed namespace ensures the same conversation ID always generates the same UUID
-	// 使用固定的命名空间确保相同的 Conversation ID 总是生成相同的 UUID
-	namespace := uuid.MustParse("00000000-0000-0000-0000-000000000000") // Null UUID as namespace
-	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationID))).String()
+	// Using user-specific namespace ensures:
+	// 1. Same conversation always maps to same session (deterministic)
+	// 2. Different users' sessions are isolated (security)
+	// 3. Geek and Evolution sessions are isolated (different prefixes)
+	// 使用用户特定的命名空间确保：
+	// 1. 同一对话始终映射到同一会话（确定性）
+	// 2. 不同用户的会话相互隔离（安全性）
+	// 3. Geek 和 Evolution 会话相互隔离（不同前缀）
+	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", req.UserID))
+	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("geek_%d", req.ConversationID))).String()
 
 	// Create GeekParrot directly (no factory needed, no LLM dependency)
 	// 直接创建 GeekParrot（无需工厂，无 LLM 依赖）
@@ -482,10 +488,15 @@ func (h *ParrotHandler) handleEvolutionMode(
 		return status.Error(codes.Internal, "evolution mode requires source directory configuration")
 	}
 
-	// Generate session ID for evolution (must be valid UUID for Claude Code CLI)
-	// Using user-specific namespace to isolate Evolution sessions from Geek sessions
-	// 使用用户特定的命名空间隔离 Evolution 和 Geek 会话
-	// Format: 00000000-0000-0000-0000-<user_id_padded_to_12_hex>
+	// Generate a stable session ID based on Conversation ID using UUID v5
+	// Using user-specific namespace ensures:
+	// 1. Same conversation always maps to same session (deterministic)
+	// 2. Different users' sessions are isolated (security)
+	// 3. Geek and Evolution sessions are isolated (different prefixes)
+	// 使用用户特定的命名空间确保：
+	// 1. 同一对话始终映射到同一会话（确定性）
+	// 2. 不同用户的会话相互隔离（安全性）
+	// 3. Geek 和 Evolution 会话相互隔离（不同前缀）
 	namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", req.UserID))
 	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationID))).String()
 
