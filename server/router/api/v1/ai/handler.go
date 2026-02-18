@@ -1276,8 +1276,17 @@ func (h *ParrotHandler) executeAgent(
 	// No longer accept req.History from frontend (Backend as Source of Truth)
 	// This implements context-engineering.md Phase 1
 	// Issue #211: Phase 3 - Get conversation length for dynamic budget adjustment
+	//
+	// OPTIMIZATION: GeekMode and EvolutionMode bypass context building entirely.
+	// They execute Claude Code CLI directly without LLM-based conversation history.
 	var history []string
-	if h.contextBuilder != nil && req.ConversationID > 0 {
+	if req.GeekMode || req.EvolutionMode {
+		// Geek/Evolution mode: no context needed, direct CLI execution
+		history = []string{}
+		logger.Debug("Skipping context build for direct CLI mode",
+			slog.Bool("geek_mode", req.GeekMode),
+			slog.Bool("evolution_mode", req.EvolutionMode))
+	} else if h.contextBuilder != nil && req.ConversationID > 0 {
 		sessionID := fmt.Sprintf("conv_%d", req.ConversationID)
 
 		// Get conversation length for dynamic budget adjustment (Issue #211: Phase 3)

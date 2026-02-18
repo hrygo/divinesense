@@ -189,7 +189,7 @@ func (s *AIService) Chat(req *v1pb.ChatRequest, stream v1pb.AIService_ChatServer
 	// chatReq.History = history // Removed
 
 	// Create handler and process request
-	handler := s.createChatHandler()
+	handler := s.getChatHandler()
 
 	// Wrap stream to collect assistant response
 	collectingStream := &eventCollectingStream{
@@ -209,7 +209,30 @@ func (s *AIService) Chat(req *v1pb.ChatRequest, stream v1pb.AIService_ChatServer
 	return nil
 }
 
-// createChatHandler creates the chat handler.
+// getChatHandler returns the cached chat handler, creating it on first use.
+// This avoids creating expensive components (ChatRouter, Orchestrator, etc.) on every request.
+func (s *AIService) getChatHandler() aichat.Handler {
+	s.chatHandlerMu.RLock()
+	if s.chatHandler != nil {
+		s.chatHandlerMu.RUnlock()
+		return s.chatHandler
+	}
+	s.chatHandlerMu.RUnlock()
+
+	s.chatHandlerMu.Lock()
+	defer s.chatHandlerMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if s.chatHandler != nil {
+		return s.chatHandler
+	}
+
+	s.chatHandler = s.createChatHandler()
+	return s.chatHandler
+}
+
+// createChatHandler creates the chat handler with all routing components.
+// Called once by getChatHandler on first use.
 func (s *AIService) createChatHandler() aichat.Handler {
 	// Get cached agent factory (initializes on first use)
 	factory := s.getAgentFactory()

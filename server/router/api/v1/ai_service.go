@@ -74,12 +74,14 @@ type AIService struct {
 	EmbeddingModel           string
 	persister                *aistats.Persister  // session stats async persister
 	enrichmentTrigger        *enrichment.Trigger // Async enrichment trigger
+	chatHandler              aichat.Handler      // Cached chat handler (created once)
 	routerServiceMu          sync.RWMutex
 	chatEventBusMu           sync.RWMutex
 	contextBuilderMu         sync.RWMutex
 	conversationSummarizerMu sync.RWMutex
 	agentFactoryMu           sync.RWMutex
 	enrichmentTriggerMu      sync.RWMutex
+	chatHandlerMu            sync.RWMutex
 	mu                       sync.RWMutex
 }
 
