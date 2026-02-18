@@ -146,6 +146,12 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
     setSelectedIndex(0);
   }, [filteredAgents.length]);
 
+  // Use ref to avoid stale closure in Enter handler
+  const filteredAgentsRef = useRef(filteredAgents);
+  useEffect(() => {
+    filteredAgentsRef.current = filteredAgents;
+  }, [filteredAgents]);
+
   // 键盘事件处理
   useEffect(() => {
     if (!open) return;
@@ -155,20 +161,31 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
         case "ArrowDown":
           e.preventDefault();
           e.stopPropagation();
-          setSelectedIndex((prev) => (prev < filteredAgents.length - 1 ? prev + 1 : 0));
+          setSelectedIndex((prev) => {
+            const len = filteredAgentsRef.current.length;
+            return prev < len - 1 ? prev + 1 : 0;
+          });
           break;
         case "ArrowUp":
           e.preventDefault();
           e.stopPropagation();
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredAgents.length - 1));
+          setSelectedIndex((prev) => {
+            const len = filteredAgentsRef.current.length;
+            return prev > 0 ? prev - 1 : len - 1;
+          });
           break;
         case "Enter":
           e.preventDefault();
           e.stopPropagation();
-          if (filteredAgents[selectedIndex]) {
-            onSelect(filteredAgents[selectedIndex]);
-            onOpenChange(false);
-          }
+          // Use ref to get latest filteredAgents and selectedIndex via functional update
+          setSelectedIndex((currentIndex) => {
+            const agent = filteredAgentsRef.current[currentIndex];
+            if (agent) {
+              onSelect(agent);
+              onOpenChange(false);
+            }
+            return currentIndex;
+          });
           break;
         case "Escape":
           e.preventDefault();
@@ -180,14 +197,18 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
 
     document.addEventListener("keydown", handleKeyDown, true);
     return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [open, filteredAgents, selectedIndex, onSelect, onOpenChange]);
+  }, [open, onSelect, onOpenChange]);
 
   // 滚动到选中项
   useEffect(() => {
     if (listRef.current && filteredAgents.length > 0) {
-      const selectedElement = listRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedElement) {
-        selectedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const children = listRef.current.children;
+      // Bounds check: ensure selectedIndex is within valid range
+      if (selectedIndex >= 0 && selectedIndex < children.length) {
+        const selectedElement = children[selectedIndex] as HTMLElement;
+        if (selectedElement) {
+          selectedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
       }
     }
   }, [selectedIndex, filteredAgents.length]);
@@ -196,6 +217,8 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
   useEffect(() => {
     if (!open) return;
 
+    let isMounted = true;
+
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         onOpenChange(false);
@@ -203,10 +226,14 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
     };
 
     const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
+      // Only add listener if component is still mounted
+      if (isMounted) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
     }, 100);
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
     };

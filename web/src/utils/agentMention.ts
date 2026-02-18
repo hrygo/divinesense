@@ -10,7 +10,7 @@ import { ParrotAgentType } from "@/types/parrot";
 
 // 可提及的专家代理映射（支持中文名和英文名）
 // 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(GENERAL)
-// TODO: Ideation 由其他开发者正在开发，待后端支持后添加
+// NOTE: IDEATION is placeholder for future agent, not yet supported by backend
 const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
   // 灰灰 - 笔记助手
   灰灰: ParrotAgentType.MEMO,
@@ -107,7 +107,7 @@ export function canInsertMention(text: string, cursorPosition: number): boolean 
  *
  * 条件：
  * 1. 刚输入了 @ 字符
- * 2. 光标在可插入位置
+ * 2. 光标在可插入位置（@ 前面是空白或换行）
  *
  * @param text 完整文本
  * @param cursorPosition 光标位置
@@ -124,9 +124,9 @@ export function shouldTriggerMentionPopover(text: string, cursorPosition: number
   const atPosition = cursorPosition - 1;
   const beforeAt = text.slice(0, atPosition);
 
-  // @ 前面是空白或换行（头部）
-  if (beforeAt.trim() === "" || beforeAt.endsWith("\n")) {
-    return { shouldTrigger: true, filter: "" };
+  // @ 前面必须是空白或换行（头部位置），否则不触发
+  if (beforeAt.trim() !== "" && !beforeAt.endsWith("\n")) {
+    return { shouldTrigger: false, filter: "" };
   }
 
   // @ 后面是否有过滤文本
