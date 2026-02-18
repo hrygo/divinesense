@@ -261,7 +261,9 @@ export function ChatInput({
   return (
     <div
       className={cn("shrink-0 p-3 md:p-4 border-t border-border transition-colors", modeStyles.footerBg, className)}
-      style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : "max(16px, env(safe-area-inset-bottom))" }}
+      style={{
+        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : "max(16px, env(safe-area-inset-bottom))",
+      }}
     >
       <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto">
         {/* Quick Actions */}
@@ -334,8 +336,8 @@ export function ChatInput({
         {!onNewChat && !onClearContext && !onClearChat && !onModeChange && (
           <div className="flex items-center justify-end mb-2">
             <span className="hidden sm:inline text-xs text-muted-foreground">
-              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> 发送 ·
-              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> 换行
+              <kbd className="px-1 py-0.5 bg-muted rounded">Enter</kbd> {t("ai.input-hint-send", { key: "Enter" })} ·
+              <kbd className="px-1 py-0.5 bg-muted rounded ml-1">{sendShortcut}</kbd> {t("ai.input-hint-newline", { key: sendShortcut })}
             </span>
           </div>
         )}

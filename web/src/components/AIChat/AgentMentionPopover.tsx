@@ -15,44 +15,36 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { type ParrotInfoFromAPI, useParrotsList } from "@/hooks/useParrotsList";
 import { cn } from "@/lib/utils";
 
-// Agent 主题色映射
-const AGENT_COLORS: Record<string, { primary: string; bg: string; ring: string; emoji: string }> = {
+// Agent 主题色映射（使用静态类避免 Tailwind v4 JIT 问题）
+const AGENT_COLORS: Record<string, { bg: string; ring: string; emoji: string; text: string; indicator: string }> = {
   memo: {
-    primary: "slate",
     bg: "from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800",
     ring: "ring-slate-400 bg-slate-100 dark:bg-slate-800/50",
     emoji: "🪶",
+    text: "text-slate-700 dark:text-slate-200",
+    indicator: "bg-slate-500",
   },
   schedule: {
-    primary: "cyan",
     bg: "from-cyan-100 to-cyan-200 dark:from-cyan-800 dark:to-cyan-900",
     ring: "ring-cyan-400 bg-cyan-50 dark:bg-cyan-900/30",
     emoji: "⏰",
-  },
-  general: {
-    primary: "amber",
-    bg: "from-amber-100 to-amber-200 dark:from-amber-800 dark:to-amber-900",
-    ring: "ring-amber-400 bg-amber-50 dark:bg-amber-900/30",
-    emoji: "🤖",
-  },
-  insight: {
-    primary: "violet",
-    bg: "from-violet-100 to-violet-200 dark:from-violet-800 dark:to-violet-900",
-    ring: "ring-violet-400 bg-violet-50 dark:bg-violet-900/30",
-    emoji: "💡",
+    text: "text-cyan-700 dark:text-cyan-200",
+    indicator: "bg-cyan-500",
   },
 };
 
 // 默认颜色
 const DEFAULT_COLOR = {
-  primary: "zinc",
   bg: "from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-800",
   ring: "ring-zinc-400 bg-zinc-100 dark:bg-zinc-800/50",
   emoji: "🦜",
+  text: "text-zinc-700 dark:text-zinc-200",
+  indicator: "bg-zinc-500",
 };
 
 // 可提及的代理名称列表（从 API 获取后会过滤）
-const MENTIONABLE_NAMES = ["memo", "schedule", "general", "insight"];
+// 当前只支持 memo 和 schedule，general/insight 待后端支持
+const MENTIONABLE_NAMES = ["memo", "schedule"];
 
 interface AgentMentionPopoverProps {
   open: boolean;
@@ -294,7 +286,7 @@ export function AgentMentionPopover({ open, onOpenChange, onSelect, anchorElemen
  */
 interface AgentItemProps {
   agent: ParrotInfoFromAPI;
-  color: { primary: string; bg: string; ring: string; emoji: string };
+  color: { bg: string; ring: string; emoji: string; text: string; indicator: string };
   isSelected: boolean;
   onClick: () => void;
   onMouseEnter: () => void;
@@ -319,14 +311,12 @@ function AgentItem({ agent, color, isSelected, onClick, onMouseEnter }: AgentIte
 
       {/* 信息 */}
       <div className="flex-1 min-w-0">
-        <div className={cn("font-medium text-sm truncate", `text-${color.primary}-700 dark:text-${color.primary}-200`)}>
-          @{agent.displayName || agent.name}
-        </div>
+        <div className={cn("font-medium text-sm truncate", color.text)}>@{agent.displayName || agent.name}</div>
         <div className="text-xs text-muted-foreground truncate">{agent.description}</div>
       </div>
 
       {/* 选中指示器 */}
-      {isSelected && <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", `bg-${color.primary}-500`)} />}
+      {isSelected && <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", color.indicator)} />}
     </button>
   );
 }
