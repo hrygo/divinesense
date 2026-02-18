@@ -122,8 +122,11 @@ func (p *GeekParrot) Execute(
 	// Execute via shared persistent session logic
 	// 通过共享持久化会话逻辑执行
 	inputMsg := map[string]any{
-		"type":    "user_message",
-		"message": userInput,
+		"type": "user",
+		"content": map[string]any{
+			"type": "text",
+			"text": userInput,
+		},
 	}
 
 	if err := ExecutePersistentSession(ctx, p.runner, cfg, inputMsg, callback); err != nil {
