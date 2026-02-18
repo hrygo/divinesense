@@ -453,6 +453,16 @@ export const MemoListV3 = memo(function MemoListV3({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [memos, selectedIndex, onEdit]);
 
+  // Scroll selected item into view when selectedIndex changes
+  useEffect(() => {
+    if (selectedIndex < 0 || !containerRef.current) return;
+
+    const selectedElement = containerRef.current.querySelector(`[data-memo-index="${selectedIndex}"]`);
+    if (selectedElement) {
+      selectedElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedIndex]);
+
   // Animation delay for staggered reveal - based on original index
   const getAnimationDelay = (index: number): number => {
     // Faster cascade for first few, then slower
@@ -500,6 +510,7 @@ export const MemoListV3 = memo(function MemoListV3({
                   return (
                     <div
                       key={memo.name}
+                      data-memo-index={originalIndex}
                       className={cn(
                         "animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out relative",
                         // Keyboard navigation: selected state indicator (left border)
