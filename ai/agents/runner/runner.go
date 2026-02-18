@@ -101,24 +101,34 @@ type CCRunner struct {
 
 // NewCCRunner creates a new CCRunner instance.
 // NewCCRunner 创建一个新的 CCRunner 实例。
+// NewCCRunner creates a new CCRunner with default session manager.
 func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
-	cliPath, err := exec.LookPath("claude")
-	if err != nil {
-		return nil, fmt.Errorf("claude Code CLI not found: %w", err)
+	if logger == nil {
+		logger = slog.Default()
 	}
+	// Default 30m idle timeout per spec
+	manager := NewCCSessionManager(logger, 30*time.Minute)
+	return NewCCRunnerWithManager(manager, timeout, logger)
+}
 
+// NewCCRunnerWithManager creates a new CCRunner with an existing session manager.
+func NewCCRunnerWithManager(manager SessionManager, timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
 
-	// Initialize danger detector for security
+	cliPath, err := exec.LookPath("claude")
+	if err != nil {
+		return nil, fmt.Errorf("claude CLI not found in PATH: %w", err)
+	}
+
 	dangerDetector := NewDetector(logger)
 
 	return &CCRunner{
 		cliPath:        cliPath,
 		timeout:        timeout,
 		logger:         logger,
-		manager:        NewCCSessionManager(logger, 30*time.Minute), // Default 30m idle timeout
+		manager:        manager,
 		dangerDetector: dangerDetector,
 	}, nil
 }
@@ -270,7 +280,81 @@ func (r *CCRunner) StartAsyncSession(ctx context.Context, cfg *Config) (*Session
 	}
 
 	// Create session via manager
-	return r.manager.GetOrCreateSession(ctx, cfg.SessionID, *cfg)
+	sess, err := r.manager.GetOrCreateSession(ctx, cfg.SessionID, *cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start monitoring output if not already running
+	sess.MonitorOnce.Do(func() {
+		r.startSessionMonitor(sess)
+	})
+
+	return sess, nil
+}
+
+// startSessionMonitor monitors session output and dispatches events to the current callback.
+// startSessionMonitor 监控会话输出并将事件分发给当前回调。
+func (r *CCRunner) startSessionMonitor(session *Session) {
+	session.mu.Lock()
+	if session.Scanner == nil {
+		session.Scanner = bufio.NewScanner(session.Stdout)
+		buf := make([]byte, 0, scannerInitialBufSize)
+		session.Scanner.Buffer(buf, scannerMaxBufSize)
+	}
+	session.mu.Unlock()
+
+	go func() {
+		defer func() {
+			if panicVal := recover(); panicVal != nil {
+				r.logger.Error("CCRunner: session monitor panic recovered",
+					"session_id", session.ID,
+					"panic", panicVal)
+			}
+			r.logger.Info("CCRunner: session monitor exited", "session_id", session.ID)
+			// Terminate session on monitor exit (EOF or error)
+			_ = r.manager.TerminateSession(session.ID)
+		}()
+
+		for session.Scanner.Scan() {
+			line := session.Scanner.Text()
+			if line == "" {
+				continue
+			}
+
+			// Update session activity
+			session.mu.Lock()
+			session.LastActive = time.Now()
+			cb := session.CurrentCallback
+			stats := session.CurrentStats
+			session.mu.Unlock()
+
+			var msg StreamMessage
+			if err := json.Unmarshal([]byte(line), &msg); err != nil {
+				// Not JSON
+				if cb != nil {
+					_ = cb("answer", line)
+				}
+				continue
+			}
+
+			if cb != nil {
+				// Handle result message - extract and send session statistics
+				if msg.Type == "result" && stats != nil {
+					r.handleResultMessage(msg, stats, &session.Config, cb)
+				}
+
+				// Dispatch event to callback
+				if err := r.dispatchCallback(msg, cb, stats); err != nil {
+					r.logger.Error("CCRunner: dispatch callback failed", "error", err)
+				}
+			}
+		}
+
+		if err := session.Scanner.Err(); err != nil {
+			r.logger.Error("CCRunner: session scanner error", "session_id", session.ID, "error", err)
+		}
+	}()
 }
 
 // GetSessionManager returns the session manager.

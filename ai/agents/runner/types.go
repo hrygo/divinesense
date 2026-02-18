@@ -116,8 +116,9 @@ type Config struct {
 
 	// Evolution Mode specific
 	// 进化模式专用
-	AllowedPaths   []string // Path whitelist (evolution mode)
-	ForbiddenPaths []string // Path blacklist (evolution mode)
+	AllowedPaths   []string          // Path whitelist (evolution mode)
+	ForbiddenPaths []string          // Path blacklist (evolution mode)
+	Env            map[string]string // Custom environment variables (e.g. HOME override)
 }
 
 // CCRunnerConfig is an alias for Config for backward compatibility.

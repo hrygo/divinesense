@@ -13,7 +13,7 @@ docs/
 ├── architecture/                # 系统架构 (核心)
 │   ├── overview.md              # 系统总览
 │   ├── summary.md               # 架构摘要
-│   └── cc-runner.md             # CC Runner 架构
+│   └── cc-runner-architecture.md              # CC Runner 架构设计
 ├── dev-guides/                  # 开发指南 (活跃)
 │   ├── README.md                # 开发指南索引
 │   ├── backend/                 # 后端开发

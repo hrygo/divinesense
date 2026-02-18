@@ -55,8 +55,13 @@ func NewEvolutionParrot(sourceDir string, userID int32, sessionID string, st *st
 		adminOnlySetting = env == "true" || env == "1"
 	}
 
-	// Create CCRunner
-	runner, err := agentpkg.NewCCRunner(10*time.Minute, slog.Default())
+	// Create dedicated session manager for Evolution Mode (process isolation)
+	// 为进化模式创建专用会话管理器（进程隔离）
+	// Evolution mode sessions might be long-running, use 30m idle timeout as standard
+	manager := agentpkg.NewCCSessionManager(slog.Default(), 30*time.Minute)
+
+	// Create CCRunner with manager
+	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CCRunner: %w", err)
 	}
@@ -117,10 +122,16 @@ func (p *EvolutionParrot) Execute(
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 
-	// Execute via CCRunner
-	// 通过 CCRunner 执行
-	if err := p.runner.Execute(ctx, cfg, userInput, callback); err != nil {
-		return agentpkg.NewParrotError(p.Name(), "Execute", err)
+	// Execute via shared persistent session logic
+	// 通过共享持久化会话逻辑执行
+	// Evolution mode inputs are simple text prompts, wrapped in user_message object
+	inputMsg := map[string]any{
+		"type":    "user_message",
+		"message": userInput,
+	}
+
+	if err := ExecutePersistentSession(ctx, p.runner, cfg, inputMsg, callback); err != nil {
+		return agentpkg.NewParrotError(p.Name(), "ExecutePersistentSession", err)
 	}
 
 	// Mark as initialized after first successful execution

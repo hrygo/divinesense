@@ -1,4 +1,4 @@
-# CCRunner & AI Chat 架构深度调研报告
+# DivineSense CC Runner 架构设计文档
 
 ## 📋 执行摘要
 
@@ -134,6 +134,47 @@ flowchart LR
 
 ### 3.2 交互场景时序分析
 
+#### 场景: GeekParrot 交互逻辑 (持久化进程实现)
+
+GeekParrot 现在使用 **Persistent Process (持久化进程)** 模式。通过全局 `SessionManager` 复用 CLI 进程，实现 30 分钟内的长连接保活。
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Geek as GeekParrot (Transient)
+    participant Manager as Global SessionManager
+    participant Session as Session (Persistent)
+    participant CLI as Claude CLI
+    participant Monitor as Monitor Goroutine
+
+    User->>Geek: 发送消息
+    Geek->>Manager: StartAsyncSession(SessionID)
+    Manager->>Session: 返回现有或新建 Session
+    
+    rect rgb(240, 248, 255)
+        Note over Session,CLI: 首次启动时
+        Session->>CLI: spawn process
+        Session->>Monitor: 启动监控 Goroutine
+    end
+
+    Geek->>Session: SetCallback(CurrentCallback)
+    Geek->>Session: WriteInput(Msg)
+    Session->>CLI: 写入 Stdin JSON
+    
+    loop Stream Output
+        CLI->>Monitor: Stdout Stream
+        Monitor->>Geek: Callback(Answer/Result)
+    end
+    
+    Note over Monitor: 收到 Result 消息
+    Geek->>User: 返回响应
+    Geek->>Session: SetCallback(nil) (Detached)
+    
+    Note over Session,CLI: 进程保持活跃，等待下一次请求 (或 30m 超时)
+```
+
+> **注意**: 只有在 30 分钟内无任何交互时，`SessionManager` 才会回收进程。下次交互将触发冷启动恢复流程（加载磁盘上下文）。
+
 #### 场景: 会话恢复 (Resume) - "冷启动"
 
 这是最典型的场景：用户隔了一段时间回来，之前的 CLI 进程已经被回收，但上下文需要保留。
@@ -189,3 +230,62 @@ CCRunner 的架构设计成功地将 **逻辑对话** (AI Chat) 与 **执行运�
 1.  **稳定性**: 通过确定性映射，后端重启不会丢失用户上下文。
 2.  **资源效率**: 30分钟的自动回收机制防止了僵尸进程占用服务器资源。
 3.  **连续性**: 用户感知不到进程的重启，体验上是连续的对话流。
+
+---
+
+## 6. 安全与风控 (Security & Safety)
+
+CCRunner 内置了多层安全防御机制，防止 AI 执行危险操作。
+
+### 6.1 危险命令检测 (DangerDetector)
+
+`DangerDetector` (`ai/agents/runner/danger.go`) 会实时扫描用户输入和工具调用，拦截高危指令。
+
+**拦截模式示例**:
+*   `rm -rf /` (系统破坏)
+*   `mkfs.*` (格式化)
+*   `dd if=...` (直接磁盘写入)
+*   `> /dev/sd*` (覆盖设备文件)
+
+### 6.2 权限控制模式
+
+*   **默认模式**: CLI 运行在受限权限下。
+*   **Bypass 模式**: 管理员可通过 `--permission-mode bypassPermissions` 绕过检查（需在 `StartAsyncSession` 配置中显式启用，通常仅限 Evolution Mode）。
+
+### 6.3 运行环境隔离
+
+*   **Geek Mode**: 每个用户拥有独立的沙箱工作目录 `~/.divinesense/claude/user_<id>/`。
+*   **Git 仓库强制**: 建议在 Git 仓库内运行，以便通过 Git 历史回滚文件变更。
+
+---
+
+## 7. 配置与运维 (Configuration & Operations)
+
+### 7.1 环境变量配置
+
+| 环境变量                               | 默认值                  | 说明                            |
+| :------------------------------------- | :---------------------- | :------------------------------ |
+| `DIVINESENSE_CLAUDE_CODE_ENABLED`      | `false`                 | 是否启用 Geek Mode              |
+| `DIVINESENSE_CLAUDE_CODE_WORKDIR`      | `~/.divinesense/claude` | 根工作目录                      |
+| `DIVINESENSE_CLAUDE_CODE_IDLE_TIMEOUT` | `30m`                   | 空闲超时时间 (Go 格式 duration) |
+| `DIVINESENSE_CLAUDE_CODE_MAX_SESSIONS` | `10`                    | 单机最大并发会话数              |
+| `DIVINESENSE_EVOLUTION_ENABLED`        | `false`                 | 是否启用 Evolution Mode         |
+
+### 7.2 调试与诊断
+
+**查看活动会话**:
+```bash
+# 列出当前 SessionManager 管理的所有会话
+curl http://localhost:28081/api/v1/chat/geek/sessions
+```
+
+**日志文件**:
+*   **CLI 日志**: 位于会话工作目录下的 `.claude/sessions/{session-id}/logs.txt`。
+*   **应用日志**: DivineSense 后端日志包含 `CCRunner` 前缀的详细执行流。
+
+**手动强杀**:
+如果出现僵尸进程，可手动清理：
+```bash
+# 杀掉所有 claude 进程
+killall -9 claude
+```

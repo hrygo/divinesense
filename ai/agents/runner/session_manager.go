@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -33,19 +34,39 @@ const (
 
 // Session represents a persistent process of Claude Code CLI.
 type Session struct {
-	ID         string
-	Config     Config
-	Cmd        *exec.Cmd
-	Stdin      io.WriteCloser
-	Stdout     io.ReadCloser
-	Stderr     io.ReadCloser
-	Cancel     context.CancelFunc
-	CreatedAt  time.Time
-	LastActive time.Time
-	Status     SessionStatus
+	ID              string
+	Config          Config
+	Cmd             *exec.Cmd
+	Stdin           io.WriteCloser
+	Stdout          io.ReadCloser
+	Stderr          io.ReadCloser
+	Cancel          context.CancelFunc
+	CreatedAt       time.Time
+	LastActive      time.Time
+	Status          SessionStatus
+	Scanner         *bufio.Scanner
+	CurrentCallback EventCallback
+	CurrentStats    *SessionStats
+	MonitorOnce     sync.Once
 
 	mu               sync.RWMutex
 	statusResetTimer *time.Timer // Timer for resetting status from Busy to Ready
+}
+
+// SetCallback sets the callback for processing session events.
+// SetCallback 设置处理会话事件的回调。
+func (s *Session) SetCallback(cb EventCallback) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.CurrentCallback = cb
+}
+
+// SetStats sets the statistics tracker for the current session interaction.
+// SetStats 设置当前会话交互的统计跟踪器。
+func (s *Session) SetStats(stats *SessionStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.CurrentStats = stats
 }
 
 // SessionManager defines the interface for managing persistent sessions.
@@ -261,6 +282,11 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	cmd := exec.CommandContext(sessCtx, cliPath, args...)
 	cmd.Dir = cfg.WorkDir
 	cmd.Env = append(os.Environ(), "CLAUDE_DISABLE_TELEMETRY=1")
+
+	// Apply custom environment variables
+	for k, v := range cfg.Env {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
 
 	// Create pipes with proper cleanup on error paths
 	// 创建管道并在错误路径上正确清理

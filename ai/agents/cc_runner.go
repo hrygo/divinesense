@@ -202,6 +202,13 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 	return runner.NewCCRunner(timeout, logger)
 }
 
+// NewCCRunnerWithManager creates a new CCRunner with an existing session manager.
+//
+// Deprecated: Use runner.NewCCRunnerWithManager directly.
+func NewCCRunnerWithManager(manager SessionManager, timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
+	return runner.NewCCRunnerWithManager(manager, timeout, logger)
+}
+
 // NewDangerDetector creates a new danger detector.
 //
 // Deprecated: Use runner.NewDetector directly.

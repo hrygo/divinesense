@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,11 +27,27 @@ type GeekParrot struct {
 	deviceCtx string
 }
 
+var (
+	sharedSessionManager agentpkg.SessionManager
+	sharedManagerOnce    sync.Once
+)
+
+func getSharedSessionManager() agentpkg.SessionManager {
+	sharedManagerOnce.Do(func() {
+		// Default 30m idle timeout per spec
+		sharedSessionManager = agentpkg.NewCCSessionManager(slog.Default(), 30*time.Minute)
+	})
+	return sharedSessionManager
+}
+
 // NewGeekParrot creates a new GeekParrot instance.
 // NewGeekParrot 创建一个新的 GeekParrot 实例。
 func NewGeekParrot(sourceDir string, userID int32, sessionID string) (*GeekParrot, error) {
-	// Create CCRunner
-	runner, err := agentpkg.NewCCRunner(10*time.Minute, slog.Default())
+	// Use shared session manager to enable persistent sessions across requests
+	manager := getSharedSessionManager()
+
+	// Create CCRunner with shared manager
+	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CCRunner: %w", err)
 	}
@@ -96,12 +113,21 @@ func (p *GeekParrot) Execute(
 		UserID:         p.userID,
 		DeviceContext:  p.deviceCtx,
 		PermissionMode: "bypassPermissions",
+		Env: map[string]string{
+			"HOME": p.workDir, // Force isolation of .claude directory
+		},
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 
-	// Execute via CCRunner
-	if err := p.runner.Execute(ctx, cfg, userInput, callback); err != nil {
-		return agentpkg.NewParrotError(p.Name(), "Execute", err)
+	// Execute via shared persistent session logic
+	// 通过共享持久化会话逻辑执行
+	inputMsg := map[string]any{
+		"type":    "user_message",
+		"message": userInput,
+	}
+
+	if err := ExecutePersistentSession(ctx, p.runner, cfg, inputMsg, callback); err != nil {
+		return agentpkg.NewParrotError(p.Name(), "ExecutePersistentSession", err)
 	}
 
 	return nil

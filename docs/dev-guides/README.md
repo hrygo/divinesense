@@ -35,12 +35,12 @@
 
 ### 系统模块文档
 
-| 文档                                               | 描述                                 | 面向读者   |
-| :------------------------------------------------- | :----------------------------------- | :--------- |
-| **[AI Chat 界面](frontend/ai-chat.md)**            | Unified Block Model、组件架构        | 前端开发者 |
-| **[CC Runner 架构](../architecture/cc-runner.md)** | Geek Mode 核心、Claude Code CLI 集成 | 后端开发者 |
-| **[Stats 系统](STATS_SYSTEM.md)**                  | 成本追踪、指标收集、告警             | 后端开发者 |
-| **[SQLite 向量使用](backend/sqlite-vec.md)**       | sqlite-vec 功能范围、本地开发        | 后端开发者 |
+| 文档                                                            | 描述                                 | 面向读者   |
+| :-------------------------------------------------------------- | :----------------------------------- | :--------- |
+| **[AI Chat 界面](frontend/ai-chat.md)**                         | Unified Block Model、组件架构        | 前端开发者 |
+| **[CC Runner 架构](../architecture/cc-runner-architecture.md)** | Geek Mode 核心、Claude Code CLI 集成 | 后端开发者 |
+| **[Stats 系统](STATS_SYSTEM.md)**                               | 成本追踪、指标收集、告警             | 后端开发者 |
+| **[SQLite 向量使用](backend/sqlite-vec.md)**                    | sqlite-vec 功能范围、本地开发        | 后端开发者 |
 
 ---
 
