@@ -19,4 +19,5 @@
 | Ideation Agent 创意生成 | ✅ Issue Created | [ideation-agent-research.md](./ideation-agent-research.md)                       |
 | Orchestrator 通用子代理 | ✅ Issue Created | [orchestrator-general-agent-research.md](./orchestrator-general-agent-research.md) |
 | @ 符号选择专家 Agent | ✅ Issue Created | [agent-mention-feature-research.md](./agent-mention-feature-research.md) |
+| /explore 页面重构 | ✅ Issue Created | [explore-page-refactor-research.md](./explore-page-refactor-research.md) |
 

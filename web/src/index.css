@@ -606,3 +606,40 @@
 .dark .bg-orange-950\/30 .sticky-note-corner {
   border-color: transparent rgb(253 186 116 / 0.2) transparent transparent;
 }
+
+/* ============================================================
+   Memo Animations
+   Task complete & Save success effects
+   ============================================================ */
+
+/* Task complete pulse animation */
+@keyframes task-complete {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.task-complete-animate {
+  animation: task-complete 300ms ease;
+}
+
+/* Memo save success pulse */
+@keyframes memo-saved {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 oklch(0.6 0.08 250 / 0);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 0 4px oklch(0.6 0.08 250 / 0.3);
+  }
+}
+
+.memo-saved-animate {
+  animation: memo-saved 300ms ease;
+}

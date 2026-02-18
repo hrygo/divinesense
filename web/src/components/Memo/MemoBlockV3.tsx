@@ -132,8 +132,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection>(null);
+  const [swipeDistance, setSwipeDistance] = useState(0); // For tilt animation
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0); // For fullscreen pull-to-exit
+  const [showExitHint, setShowExitHint] = useState(true); // Show "swipe down to exit" hint
+
+  const PULL_THRESHOLD = 100; // Pull 100px to exit fullscreen
 
   // Fullscreen API helpers with compatibility check
   const isFullscreenSupported =
@@ -340,24 +345,46 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
     }
   }, [memo.name, memo.content, t, queryClient, updateMemo]);
 
-  // Touch handlers for swipe gestures
+  // Touch handlers for swipe gestures with tilt animation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
 
-    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+      const deltaY = e.touches[0].clientY - touchStartRef.current.y;
 
-    // Only trigger if horizontal swipe (not vertical scroll)
-    if (Math.abs(deltaX) > 30 && deltaY < 50) {
-      setSwipeDirection(deltaX > 0 ? "right" : "left");
-    }
-  }, []);
+      // Fullscreen pull-to-exit (iOS style)
+      if (isReadingMode) {
+        if (deltaY > 0) {
+          setPullDistance(deltaY);
+          return;
+        }
+      }
+
+      // Only trigger if horizontal swipe (not vertical scroll)
+      if (Math.abs(deltaX) > 30 && Math.abs(deltaY) < 50) {
+        setSwipeDirection(deltaX > 0 ? "right" : "left");
+        setSwipeDistance(Math.abs(deltaX));
+      } else {
+        setSwipeDistance(0);
+      }
+    },
+    [isReadingMode],
+  );
 
   const handleTouchEnd = useCallback(() => {
+    // Handle fullscreen pull-to-exit
+    if (isReadingMode && pullDistance > PULL_THRESHOLD) {
+      toggleFullscreen();
+      setPullDistance(0);
+      return;
+    }
+
+    // Handle horizontal swipe
     if (swipeDirection === "left") {
       handleToggleArchive(); // Swipe left to archive
     } else if (swipeDirection === "right") {
@@ -365,7 +392,22 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
     }
     touchStartRef.current = null;
     setSwipeDirection(null);
-  }, [swipeDirection, handleToggleArchive]);
+    setSwipeDistance(0);
+    setPullDistance(0);
+  }, [swipeDirection, handleToggleArchive, isReadingMode, pullDistance, toggleFullscreen]);
+
+  // Hide exit hint after 2 seconds in reading mode
+  useEffect(() => {
+    if (isReadingMode) {
+      setShowExitHint(true);
+      const timer = setTimeout(() => setShowExitHint(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isReadingMode]);
+
+  // Calculate tilt angle for swipe animation
+  const tiltAngle = Math.min(swipeDistance * 0.05, 5); // Max tilt 5 degrees
+  const tiltDirection = swipeDirection === "left" ? -1 : swipeDirection === "right" ? 1 : 0;
 
   // Memo metadata
   const previewText = useMemo(() => {
@@ -443,6 +485,13 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
           swipeDirection === "right" && "bg-red-50/95 dark:bg-red-950/20",
           className,
         )}
+        style={{
+          transform:
+            swipeDistance > 0
+              ? `translateX(${swipeDistance * (swipeDirection === "left" ? -1 : 1)}px) rotate(${tiltAngle * tiltDirection}deg)`
+              : undefined,
+          transition: swipeDistance === 0 ? "transform 200ms ease" : "none",
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -562,11 +611,12 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
       {/* Reading Mode Modal - fallback when fullscreen not supported */}
       {isReadingMode && !isFullscreenSupported && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center pt-16 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-start pt-8 animate-in fade-in duration-200"
           onClick={toggleFullscreen}
+          style={{ transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined }}
         >
           <div
-            className="w-full max-w-3xl mx-4 max-h-[calc(100vh-8rem)] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            className="w-full max-w-3xl mx-4 flex-1 overflow-y-auto bg-background rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with close button */}
@@ -588,6 +638,14 @@ export const MemoBlockV3 = memo(function MemoBlockV3({ memo, onEdit, className }
               <MemoContent content={memo.content} />
             </div>
           </div>
+
+          {/* Pull to exit hint - shows for 2 seconds */}
+          {showExitHint && (
+            <div className="mt-4 mb-8 flex flex-col items-center gap-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ChevronDown className="w-5 h-5 text-zinc-400 animate-bounce" />
+              <span className="text-xs text-zinc-500">{t("memo.pull_to_exit")}</span>
+            </div>
+          )}
         </div>
       )}
     </>

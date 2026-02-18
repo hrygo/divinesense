@@ -14,10 +14,11 @@
  * - Zen-style loading and empty states
  */
 
-import { Filter, Inbox, Search } from "lucide-react";
+import { Archive, Filter, Lightbulb, Search, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MemoBlockV3 } from "@/components/Memo/MemoBlockV3";
+import { MemoSkeletonGrid } from "@/components/Memo/MemoSkeleton";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export interface MemoListV3Props {
   filter?: string;
   pageSize?: number;
   onEdit?: (memoName: string) => void;
+  onClearSearch?: () => void;
   className?: string;
 }
 
@@ -212,68 +214,123 @@ function useAutoFetchWhenNotScrollable({
 }
 
 // ============================================================================
-// Loading Skeleton
-// ============================================================================
-
-function KanbanSkeleton({ columns = 2 }: { columns?: number }) {
-  return (
-    <div className={cn("columns-1 sm:columns-2 gap-4", columns === 1 && "sm:columns-1")}>
-      {Array.from({ length: columns === 1 ? 3 : 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="break-inside-avoid mb-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
-        >
-          {/* Preview lines */}
-          <div className="space-y-2">
-            <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-full animate-pulse" />
-            <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-5/6 animate-pulse" />
-            <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-4/6 animate-pulse" />
-          </div>
-          {/* Tags placeholder */}
-          <div className="flex gap-1.5 mt-3">
-            <div className="h-5 w-14 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse" />
-            <div className="h-5 w-10 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse" />
-          </div>
-          {/* Footer placeholder */}
-          <div className="flex justify-between mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="h-3 w-12 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
-            <div className="flex gap-1">
-              <div className="h-6 w-6 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
-              <div className="h-6 w-6 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
 // Empty State
 // ============================================================================
 
-function EmptyState({ type }: { type: "all" | "filtered" | "search" }) {
+interface EmptyStateProps {
+  type: "all" | "filtered" | "search" | "archived";
+  searchKeyword?: string;
+  onClearSearch?: () => void;
+}
+
+/**
+ * EmptyState - 空状态组件
+ *
+ * 设计要点：
+ * - 首次使用：显示欢迎引导和示例
+ * - 搜索无结果：显示关键词、建议和清除按钮
+ * - 筛选无结果：显示筛选建议
+ * - 归档为空：显示归档操作提示
+ */
+function EmptyState({ type, searchKeyword, onClearSearch }: EmptyStateProps) {
   const { t } = useTranslation();
 
+  // 首次使用引导 - 显示示例
+  if (type === "all") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        {/* 主图标 */}
+        <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+          <Lightbulb className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+        </div>
+
+        {/* 标题和描述 */}
+        <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1">{t("memo.empty_all_title")}</h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{t("memo.empty_all_subtitle")}</p>
+
+        {/* 示例引导 */}
+        <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 max-w-xs text-left">
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-3">{t("memo.empty_examples_title")}</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              {t("memo.empty_example_1")}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+              {t("memo.empty_example_2")}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+              {t("memo.empty_example_3")}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 搜索无结果 - 显示关键词、建议和清除按钮
+  if (type === "search") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center mb-4">
+          <Search className="w-8 h-8 text-sky-500 dark:text-sky-400" />
+        </div>
+        <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1">{t("memo.empty_search_title")}</h3>
+
+        {/* 显示搜索关键词 */}
+        {searchKeyword && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">{t("memo.empty_search_keyword", { keyword: searchKeyword })}</p>
+        )}
+
+        {/* 建议 */}
+        <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+          <p>{t("memo.empty_search_suggestions")}</p>
+        </div>
+
+        {/* 清除搜索按钮 */}
+        {onClearSearch && (
+          <button
+            onClick={onClearSearch}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg",
+              "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700",
+              "text-sm text-zinc-600 dark:text-zinc-400",
+              "transition-colors duration-200",
+            )}
+          >
+            <X className="w-4 h-4" />
+            {t("memo.empty_clear_search")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // 归档为空
+  if (type === "archived") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+          <Archive className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
+        </div>
+        <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1">{t("memo.empty_archived_title")}</h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("memo.empty_archived_subtitle")}</p>
+      </div>
+    );
+  }
+
+  // 筛选无结果
   const config = {
-    all: {
-      icon: Inbox,
-      title: t("memo.empty_all_title"),
-      description: t("memo.empty_all_subtitle"),
-    },
     filtered: {
       icon: Filter,
       title: t("memo.empty_filtered_title"),
       description: t("memo.empty_filtered_subtitle"),
     },
-    search: {
-      icon: Search,
-      title: t("memo.empty_search_title"),
-      description: t("memo.empty_search_subtitle"),
-    },
   };
 
-  const { icon: Icon, title, description } = config[type];
+  const { icon: Icon, title, description } = config[type as keyof typeof config] || config.filtered;
 
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -314,8 +371,11 @@ export const MemoListV3 = memo(function MemoListV3({
   filter,
   pageSize = DEFAULT_LIST_MEMOS_PAGE_SIZE,
   onEdit,
+  onClearSearch,
   className,
 }: MemoListV3Props) {
+  const { t } = useTranslation();
+
   // React Query infinite query
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteMemos({
     state,
@@ -332,6 +392,10 @@ export const MemoListV3 = memo(function MemoListV3({
 
   // Masonry layout: distribute items into columns
   const columns = useMasonryColumns(memos, columnCount);
+
+  // Keyboard navigation state (PC only)
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-fetch when page isn't scrollable
   useAutoFetchWhenNotScrollable({
@@ -356,14 +420,59 @@ export const MemoListV3 = memo(function MemoListV3({
     [onEdit],
   );
 
+  // Keyboard navigation handler (PC only)
+  useEffect(() => {
+    // Only enable on desktop (sm breakpoint and above)
+    if (typeof window === "undefined" || window.innerWidth < 640) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) => Math.min(prev + 1, memos.length - 1));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) => Math.max(prev - 1, -1));
+          break;
+        case "Enter":
+          if (selectedIndex >= 0 && memos[selectedIndex]) {
+            onEdit?.(memos[selectedIndex].name);
+          }
+          break;
+        case "Escape":
+          setSelectedIndex(-1);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [memos, selectedIndex, onEdit]);
+
   // Animation delay for staggered reveal - based on original index
   const getAnimationDelay = (index: number): number => {
     // Faster cascade for first few, then slower
     return index < 6 ? index * 60 : 360 + (index - 6) * 30;
   };
 
+  // Extract search keyword from filter
+  const searchKeyword = useMemo(() => {
+    if (filter && filter.includes("contentSearch")) {
+      const match = filter.match(/contentSearch=="([^"]+)"/);
+      return match ? match[1] : undefined;
+    }
+    return undefined;
+  }, [filter]);
+
   // Determine empty state type
-  const getEmptyType = (): "all" | "filtered" | "search" => {
+  const getEmptyType = (): "all" | "filtered" | "search" | "archived" => {
+    if (state === State.ARCHIVED) {
+      return "archived";
+    }
     if (filter && filter.includes("contentSearch")) {
       return "search";
     }
@@ -374,10 +483,10 @@ export const MemoListV3 = memo(function MemoListV3({
   };
 
   return (
-    <div className={cn("flex flex-col w-full", className)}>
+    <div ref={containerRef} className={cn("flex flex-col w-full", className)}>
       {/* Initial loading skeleton */}
       {isLoading ? (
-        <KanbanSkeleton columns={columnCount} />
+        <MemoSkeletonGrid count={columnCount === 1 ? 3 : 6} />
       ) : (
         <>
           {/* Kanban Masonry - Responsive 1/2 columns with left-to-right, top-to-bottom render order */}
@@ -387,15 +496,23 @@ export const MemoListV3 = memo(function MemoListV3({
                 {columnMemos.map((memo) => {
                   // Calculate original index for animation
                   const originalIndex = memos.indexOf(memo);
+                  const isSelected = originalIndex === selectedIndex;
                   return (
                     <div
                       key={memo.name}
-                      className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out"
+                      className={cn(
+                        "animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out relative",
+                        // Keyboard navigation: selected state indicator (left border)
+                        isSelected && "ring-2 ring-primary/30 rounded-lg",
+                      )}
                       style={{
                         animationDelay: `${getAnimationDelay(originalIndex)}ms`,
                         animationFillMode: "both",
                       }}
+                      onClick={() => setSelectedIndex(originalIndex)}
                     >
+                      {/* Selected indicator - left border */}
+                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-lg z-10" />}
                       <MemoBlockV3 memo={memo} onEdit={handleEdit} />
                     </div>
                   );
@@ -404,18 +521,27 @@ export const MemoListV3 = memo(function MemoListV3({
             ))}
           </div>
 
+          {/* Keyboard navigation hint (PC only, when items exist) */}
+          {memos.length > 0 && selectedIndex === -1 && (
+            <div className="hidden sm:flex items-center justify-center py-4 text-xs text-zinc-400 dark:text-zinc-500 gap-4">
+              <span>{t("memo.keyboard_hint")}</span>
+            </div>
+          )}
+
           {/* Intersection observer target */}
           <div ref={loadMoreRef} className="h-px w-full" />
 
           {/* Loading more indicator */}
           {isFetchingNextPage && (
             <div className="py-4">
-              <KanbanSkeleton columns={2} />
+              <MemoSkeletonGrid count={4} />
             </div>
           )}
 
           {/* Empty state */}
-          {!isFetchingNextPage && memos.length === 0 && <EmptyState type={getEmptyType()} />}
+          {!isFetchingNextPage && memos.length === 0 && (
+            <EmptyState type={getEmptyType()} searchKeyword={searchKeyword} onClearSearch={onClearSearch} />
+          )}
 
           {/* End of list indicator */}
           {!isFetchingNextPage && !hasNextPage && memos.length > 0 && <EndIndicator />}
