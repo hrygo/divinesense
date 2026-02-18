@@ -4,7 +4,7 @@
  * 设计特点：
  * - 极简风格：只有文本框 + 发送按钮 + Emoji
  * - 动态高度 (44-120px)
- * - Enter 发送，Shift+Enter 换行
+ * - Ctrl/Cmd+Enter 发送
  * - 禅意智识风格
  */
 
@@ -60,8 +60,8 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
     }, [autoFocus, textareaRef]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      // Enter to send, Shift+Enter for new line
-      if (e.key === "Enter" && !e.shiftKey) {
+      // Ctrl/Cmd + Enter to send
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         if (content.trim() && !isSending) {
           handleSend();
@@ -204,7 +204,7 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
         {/* Hint text */}
         {content.length === 0 && (
           <div className="absolute -bottom-5 left-0 right-0 text-center pointer-events-none">
-            <span className="text-[10px] text-muted-foreground/50">Enter 发送 • Shift+Enter 换行 • Esc 取消</span>
+            <span className="text-[10px] text-muted-foreground/50">Ctrl+Enter 发送 • Esc 取消</span>
           </div>
         )}
       </div>
