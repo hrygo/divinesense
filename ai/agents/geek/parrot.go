@@ -40,6 +40,57 @@ func getSharedSessionManager() agentpkg.SessionManager {
 	return sharedSessionManager
 }
 
+// WarmupSession pre-starts a CLI session for faster first response.
+// This is useful for Geek mode where CLI startup takes ~9 seconds.
+// The session will be reused when a subsequent Chat request uses the same sessionID.
+// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+// 后续使用相同 sessionID 的 Chat 请求将复用此会话。
+func WarmupSession(ctx context.Context, workDir string, userID int32, sessionID string) error {
+	manager := getSharedSessionManager()
+
+	// Create CCRunner with shared manager
+	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
+	if err != nil {
+		return fmt.Errorf("failed to create CCRunner: %w", err)
+	}
+
+	// Create GeekMode
+	mode := NewGeekMode("")
+
+	// Build config for warmup
+	cfg := &agentpkg.CCRunnerConfig{
+		Mode:           "geek",
+		SessionID:      sessionID,
+		UserID:         userID,
+		WorkDir:        workDir,
+		PermissionMode: "bypassPermissions",
+	}
+
+	// Build system prompt
+	systemPrompt := mode.BuildSystemPrompt(cfg)
+
+	// Warmup the session using the runner's WarmupSession method
+	warmupCfg := &agentpkg.CCRunnerConfig{
+		Mode:           "geek",
+		SessionID:      sessionID,
+		UserID:         userID,
+		WorkDir:        workDir,
+		PermissionMode: "bypassPermissions",
+		SystemPrompt:   systemPrompt,
+	}
+
+	if err := runner.WarmupSession(ctx, warmupCfg); err != nil {
+		return fmt.Errorf("warmup failed: %w", err)
+	}
+
+	slog.Info("GeekParrot: session warmed up successfully",
+		"session_id", sessionID,
+		"user_id", userID)
+
+	return nil
+}
+
 // shutdownSharedSessionManager terminates all active CLI sessions managed by the shared session manager.
 // This should be called during graceful server shutdown to ensure all Claude Code CLI
 // child processes are properly terminated.

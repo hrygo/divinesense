@@ -293,6 +293,41 @@ func (r *CCRunner) StartAsyncSession(ctx context.Context, cfg *Config) (*Session
 	return sess, nil
 }
 
+// WarmupSession pre-starts a CLI session for faster first response.
+// This is useful for Geek mode where CLI startup takes ~9 seconds.
+// The session will be reused when StartAsyncSession is called with the same SessionID.
+// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+// 当使用相同 SessionID 调用 StartAsyncSession 时，会话将被复用。
+func (r *CCRunner) WarmupSession(ctx context.Context, cfg *Config) error {
+	// Start the session (this launches CLI process)
+	// 启动会话（这会启动 CLI 进程）
+	sess, err := r.StartAsyncSession(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to start session for warmup: %w", err)
+	}
+
+	// Wait for CLI to be ready (init event received)
+	// 等待 CLI 就绪（收到 init 事件）
+	readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := sess.WaitForReady(readyCtx); err != nil {
+		r.logger.Warn("CCRunner: warmup session not ready within timeout",
+			"session_id", cfg.SessionID,
+			"error", err)
+		// Don't return error - session may still become ready later
+		// 不返回错误 - 会话可能稍后仍会就绪
+		return fmt.Errorf("warmup timeout: %w", err)
+	}
+
+	r.logger.Info("CCRunner: session warmed up successfully",
+		"session_id", cfg.SessionID,
+		"conversation_id", cfg.ConversationID)
+
+	return nil
+}
+
 // startSessionMonitor monitors session output and dispatches events to the current callback.
 // startSessionMonitor 监控会话输出并将事件分发给当前回调。
 func (r *CCRunner) startSessionMonitor(session *Session) {
@@ -356,37 +391,26 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
-			// Detect init event to signal CLI is ready
+			// Detect init event to signal CLI is fully ready
 			// CLI sends system events during startup:
 			// - hook_started: Session hooks are starting
-			// - hook_response: Session hooks completed (outcome: success means ready)
-			// 检测 CLI 准备就绪事件
+			// - hook_response: Session hooks completed
+			// - init: CLI fully initialized (tools, MCP servers ready)
+			// We ONLY wait for init event to ensure CLI is completely ready before sending input.
+			// 检测 CLI 完全就绪事件
 			// CLI 在启动期间发送 system 事件：
 			// - hook_started: Session hooks 正在启动
-			// - hook_response: Session hooks 完成 (outcome: success 表示就绪)
-			if msg.Type == "system" {
-				// Check for init event (explicit ready signal)
-				if msg.Subtype == "init" {
-					r.logger.Info("CCRunner: CLI init received, session ready for input",
-						"session_id", session.ID)
-					select {
-					case <-session.initReceived:
-						// Already closed
-					default:
-						close(session.initReceived)
-					}
-				} else if msg.Subtype == "hook_response" && msg.Outcome == "success" {
-					// Hook completed successfully - CLI is ready
-					// Hook 成功完成 - CLI 已准备好
-					r.logger.Info("CCRunner: CLI hook_response success, session ready for input",
-						"session_id", session.ID,
-						"hook_name", msg.HookName)
-					select {
-					case <-session.initReceived:
-						// Already closed
-					default:
-						close(session.initReceived)
-					}
+			// - hook_response: Session hooks 完成
+			// - init: CLI 完全初始化（工具、MCP 服务器就绪）
+			// 我们只等待 init 事件，确保 CLI 完全就绪后再发送输入。
+			if msg.Type == "system" && msg.Subtype == "init" {
+				r.logger.Info("CCRunner: CLI init received, session ready for input",
+					"session_id", session.ID)
+				select {
+				case <-session.initReceived:
+					// Already closed
+				default:
+					close(session.initReceived)
 				}
 			}
 

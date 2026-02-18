@@ -2,7 +2,9 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,7 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/google/uuid"
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/ai/agents/geek"
 	"github.com/hrygo/divinesense/ai/agents/orchestrator"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
@@ -493,6 +497,75 @@ func (s *AIService) StopChat(ctx context.Context, req *v1pb.StopChatRequest) (*e
 	//   if cancelFunc, ok := s.getActiveSessionCancel(req.ConversationId); ok {
 	//       cancelFunc()
 	//   }
+
+	return &emptypb.Empty{}, nil
+}
+
+// WarmupSession pre-starts a CLI session for faster first response.
+// This is useful for Geek mode where CLI startup takes ~9 seconds.
+// Call this after creating a Geek mode conversation to reduce latency.
+// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+// 创建 Geek 模式对话后调用此方法可减少延迟。
+func (s *AIService) WarmupSession(ctx context.Context, req *v1pb.WarmupSessionRequest) (*emptypb.Empty, error) {
+	if !s.IsEnabled() {
+		return nil, status.Errorf(codes.Unavailable, "AI features are disabled")
+	}
+
+	user, err := getCurrentUser(ctx, s.Store)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
+	}
+
+	// Verify user owns the conversation
+	if req.ConversationId <= 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "conversation_id is required")
+	}
+
+	conversations, err := s.Store.ListAIConversations(ctx, &store.FindAIConversation{
+		ID: &req.ConversationId,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get conversation: %v", err)
+	}
+	if len(conversations) == 0 {
+		return nil, status.Errorf(codes.NotFound, "conversation not found")
+	}
+	if conversations[0].CreatorID != user.ID {
+		return nil, status.Errorf(codes.PermissionDenied, "you can only warmup your own conversations")
+	}
+
+	// Generate session ID (same logic as handleGeekMode)
+	// 生成会话 ID（与 handleGeekMode 相同的逻辑）
+	namespace := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationId))).String()
+
+	// Get work directory for user
+	// 获取用户工作目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = "/tmp" // Fallback if home dir cannot be determined
+	}
+	workDir := fmt.Sprintf("%s/.divinesense/claude/user_%d", homeDir, user.ID)
+
+	slog.Info("WarmupSession called",
+		"user_id", user.ID,
+		"conversation_id", req.ConversationId,
+		"session_id", sessionID)
+
+	// Perform warmup in background with timeout
+	// 在后台执行预热，设置超时
+	warmupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := geek.WarmupSession(warmupCtx, workDir, user.ID, sessionID); err != nil {
+		slog.Warn("WarmupSession failed",
+			"user_id", user.ID,
+			"conversation_id", req.ConversationId,
+			"error", err)
+		// Don't return error - warmup is optional, Chat will still work
+		// 不返回错误 - 预热是可选的，Chat 仍可正常工作
+	}
 
 	return &emptypb.Empty{}, nil
 }

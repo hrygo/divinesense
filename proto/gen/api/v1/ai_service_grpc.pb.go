@@ -45,6 +45,7 @@ const (
 	AIService_AddContextSeparator_FullMethodName       = "/memos.api.v1.AIService/AddContextSeparator"
 	AIService_ClearConversationMessages_FullMethodName = "/memos.api.v1.AIService/ClearConversationMessages"
 	AIService_StopChat_FullMethodName                  = "/memos.api.v1.AIService/StopChat"
+	AIService_WarmupSession_FullMethodName             = "/memos.api.v1.AIService/WarmupSession"
 	AIService_GetSessionStats_FullMethodName           = "/memos.api.v1.AIService/GetSessionStats"
 	AIService_ListSessionStats_FullMethodName          = "/memos.api.v1.AIService/ListSessionStats"
 	AIService_GetCostStats_FullMethodName              = "/memos.api.v1.AIService/GetCostStats"
@@ -120,6 +121,13 @@ type AIServiceClient interface {
 	ClearConversationMessages(ctx context.Context, in *ClearConversationMessagesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(ctx context.Context, in *StopChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// WarmupSession pre-starts a CLI session for faster first response.
+	// This is useful for Geek mode where CLI startup takes ~9 seconds.
+	// Call this after creating a Geek mode conversation to reduce latency.
+	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+	// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+	// 创建 Geek 模式对话后调用此方法可减少延迟。
+	WarmupSession(ctx context.Context, in *WarmupSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(ctx context.Context, in *GetSessionStatsRequest, opts ...grpc.CallOption) (*SessionStats, error)
 	// ListSessionStats retrieves session statistics with pagination.
@@ -426,6 +434,16 @@ func (c *aIServiceClient) StopChat(ctx context.Context, in *StopChatRequest, opt
 	return out, nil
 }
 
+func (c *aIServiceClient) WarmupSession(ctx context.Context, in *WarmupSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AIService_WarmupSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aIServiceClient) GetSessionStats(ctx context.Context, in *GetSessionStatsRequest, opts ...grpc.CallOption) (*SessionStats, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SessionStats)
@@ -643,6 +661,13 @@ type AIServiceServer interface {
 	ClearConversationMessages(context.Context, *ClearConversationMessagesRequest) (*emptypb.Empty, error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error)
+	// WarmupSession pre-starts a CLI session for faster first response.
+	// This is useful for Geek mode where CLI startup takes ~9 seconds.
+	// Call this after creating a Geek mode conversation to reduce latency.
+	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+	// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+	// 创建 Geek 模式对话后调用此方法可减少延迟。
+	WarmupSession(context.Context, *WarmupSessionRequest) (*emptypb.Empty, error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(context.Context, *GetSessionStatsRequest) (*SessionStats, error)
 	// ListSessionStats retrieves session statistics with pagination.
@@ -764,6 +789,9 @@ func (UnimplementedAIServiceServer) ClearConversationMessages(context.Context, *
 }
 func (UnimplementedAIServiceServer) StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopChat not implemented")
+}
+func (UnimplementedAIServiceServer) WarmupSession(context.Context, *WarmupSessionRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method WarmupSession not implemented")
 }
 func (UnimplementedAIServiceServer) GetSessionStats(context.Context, *GetSessionStatsRequest) (*SessionStats, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSessionStats not implemented")
@@ -1277,6 +1305,24 @@ func _AIService_StopChat_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_WarmupSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WarmupSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).WarmupSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_WarmupSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).WarmupSession(ctx, req.(*WarmupSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AIService_GetSessionStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetSessionStatsRequest)
 	if err := dec(in); err != nil {
@@ -1667,6 +1713,10 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StopChat",
 			Handler:    _AIService_StopChat_Handler,
+		},
+		{
+			MethodName: "WarmupSession",
+			Handler:    _AIService_WarmupSession_Handler,
 		},
 		{
 			MethodName: "GetSessionStats",

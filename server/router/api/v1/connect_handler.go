@@ -530,6 +530,19 @@ func (s *ConnectServiceHandler) StopChat(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(resp), nil
 }
 
+// WarmupSession pre-starts a CLI session for faster first response.
+// WarmupSession 预启动 CLI 会话以加快首次响应速度。
+func (s *ConnectServiceHandler) WarmupSession(ctx context.Context, req *connect.Request[v1pb.WarmupSessionRequest]) (*connect.Response[emptypb.Empty], error) {
+	if s.AIService == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	resp, err := s.AIService.WarmupSession(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (s *ConnectServiceHandler) DetectDuplicates(ctx context.Context, req *connect.Request[v1pb.DetectDuplicatesRequest]) (*connect.Response[v1pb.DetectDuplicatesResponse], error) {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
