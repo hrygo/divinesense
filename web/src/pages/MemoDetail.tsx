@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { ConnectError } from "@connectrpc/connect";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpLeftFromCircleIcon, MessageCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { memoNamePrefix } from "@/helpers/resource-names";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useMediaQuery from "@/hooks/useMediaQuery";
-import { useCreateMemo, useMemo, useMemoComments } from "@/hooks/useMemoQueries";
+import { memoKeys, useCreateMemo, useMemo, useMemoComments } from "@/hooks/useMemoQueries";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { cn } from "@/lib/utils";
 import { MemoSchema, Visibility } from "@/types/proto/api/v1/memo_service_pb";
@@ -25,6 +26,7 @@ const MemoDetail = () => {
   const navigateTo = useNavigateTo();
   const { state: locationState } = useLocation();
   const currentUser = useCurrentUser();
+  const queryClient = useQueryClient();
   const uid = params.uid;
   const memoName = `${memoNamePrefix}${uid}`;
   const [showCommentEditor, setShowCommentEditor] = useState(false);
@@ -71,6 +73,10 @@ const MemoDetail = () => {
     });
 
     await createMemoMutation.mutateAsync(commentMemo);
+
+    // Invalidate comments query to refresh the list
+    queryClient.invalidateQueries({ queryKey: memoKeys.comments(memo.name) });
+
     setShowCommentEditor(false);
   };
 
