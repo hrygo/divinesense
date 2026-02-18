@@ -124,11 +124,12 @@ func (p *EvolutionParrot) Execute(
 
 	// Execute via shared persistent session logic
 	// 通过共享持久化会话逻辑执行
+	// Input format: {"type":"user","message":{"role":"user","content":"text"}}
 	inputMsg := map[string]any{
 		"type": "user",
-		"content": map[string]any{
-			"type": "text",
-			"text": userInput,
+		"message": map[string]any{
+			"role":    "user",
+			"content": userInput,
 		},
 	}
 
