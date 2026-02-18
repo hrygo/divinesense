@@ -6,22 +6,18 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { CommentEditor } from "@/components/CommentEditor";
-import { MemoDetailSidebar } from "@/components/MemoDetailSidebar";
 import MemoRelatedList from "@/components/MemoRelatedList";
 import MemoView from "@/components/MemoView/MemoView";
 import { Button } from "@/components/ui/button";
 import { memoNamePrefix } from "@/helpers/resource-names";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import useMediaQuery from "@/hooks/useMediaQuery";
 import { memoKeys, useCreateMemo, useMemo, useMemoComments } from "@/hooks/useMemoQueries";
 import useNavigateTo from "@/hooks/useNavigateTo";
-import { cn } from "@/lib/utils";
 import { MemoSchema, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 
 const MemoDetail = () => {
   const t = useTranslate();
-  const md = useMediaQuery("md");
   const params = useParams();
   const navigateTo = useNavigateTo();
   const { state: locationState } = useLocation();
@@ -81,9 +77,10 @@ const MemoDetail = () => {
   };
 
   return (
-    <div className={cn("w-full flex flex-row justify-start items-start gap-4 px-4 sm:px-6")}>
-      {/* Main content area with consistent max-width */}
-      <div className={cn("flex-1 min-w-0", "max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto")}>
+    <div className="w-full min-h-full text-foreground">
+      {/* Unified width container - matches Home/Explore pages */}
+      <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-8">
+        {/* Parent memo link */}
         {parentMemo && (
           <div className="w-auto inline-block mb-2">
             <Link
@@ -97,6 +94,8 @@ const MemoDetail = () => {
             </Link>
           </div>
         )}
+
+        {/* Main memo */}
         <MemoView
           key={`${memo.name}-${memo.displayTime}`}
           className="shadow hover:shadow-sm transition-all"
@@ -108,12 +107,13 @@ const MemoDetail = () => {
           showPinned
           showNsfwContent
         />
-        {/* Comments section - before related memos */}
+
+        {/* Comments section */}
         <div className="pt-6 w-full">
           <h2 id="comments" className="sr-only">
             {t("memo.comment.self")}
           </h2>
-          <div className="relative mx-auto grow w-full min-h-full flex flex-col justify-start items-start gap-y-1">
+          <div className="w-full flex flex-col gap-y-2">
             {comments.length === 0 ? (
               showCreateCommentButton && (
                 <div className="w-full flex flex-row justify-center items-center py-4">
@@ -160,16 +160,10 @@ const MemoDetail = () => {
             )}
           </div>
         </div>
-        {/* Related memos - after comments */}
+
+        {/* Related memos */}
         <MemoRelatedList memoName={memoName} />
       </div>
-
-      {/* Sidebar - only on desktop */}
-      {md && (
-        <div className="sticky top-0 left-0 shrink-0 -mt-6 w-56 h-full">
-          <MemoDetailSidebar className="py-6" memo={memo} parentPage={locationState?.from} />
-        </div>
-      )}
     </div>
   );
 };
