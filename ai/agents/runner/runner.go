@@ -357,17 +357,36 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 			}
 
 			// Detect init event to signal CLI is ready
-			// 检测 init 事件以表明 CLI 已准备好
-			if msg.Type == "system" && msg.Subtype == "init" {
-				r.logger.Info("CCRunner: CLI init received, session ready for input",
-					"session_id", session.ID)
-				// Signal that CLI is ready (close channel if not already closed)
-				// 通知 CLI 已准备好（如果未关闭则关闭通道）
-				select {
-				case <-session.initReceived:
-					// Already closed
-				default:
-					close(session.initReceived)
+			// CLI sends system events during startup:
+			// - hook_started: Session hooks are starting
+			// - hook_response: Session hooks completed (outcome: success means ready)
+			// 检测 CLI 准备就绪事件
+			// CLI 在启动期间发送 system 事件：
+			// - hook_started: Session hooks 正在启动
+			// - hook_response: Session hooks 完成 (outcome: success 表示就绪)
+			if msg.Type == "system" {
+				// Check for init event (explicit ready signal)
+				if msg.Subtype == "init" {
+					r.logger.Info("CCRunner: CLI init received, session ready for input",
+						"session_id", session.ID)
+					select {
+					case <-session.initReceived:
+						// Already closed
+					default:
+						close(session.initReceived)
+					}
+				} else if msg.Subtype == "hook_response" && msg.Outcome == "success" {
+					// Hook completed successfully - CLI is ready
+					// Hook 成功完成 - CLI 已准备好
+					r.logger.Info("CCRunner: CLI hook_response success, session ready for input",
+						"session_id", session.ID,
+						"hook_name", msg.HookName)
+					select {
+					case <-session.initReceived:
+						// Already closed
+					default:
+						close(session.initReceived)
+					}
 				}
 			}
 
@@ -894,6 +913,11 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 		if msg.Error != "" {
 			return callback("error", msg.Error)
 		}
+	case "system":
+		// System messages (init, hook_started, hook_response) are already handled
+		// by SessionMonitor for CLI readiness detection. No additional processing needed.
+		// system 消息（init, hook_started, hook_response）已由 SessionMonitor 处理
+		// 用于 CLI 就绪检测，此处无需额外处理。
 	case "thinking", "status":
 		// Start thinking phase tracking (ended in other cases or by defer)
 		stats.StartThinking()

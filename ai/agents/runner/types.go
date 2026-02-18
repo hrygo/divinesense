@@ -52,11 +52,16 @@ type StreamMessage struct {
 	Error        string            `json:"error,omitempty"`
 	Content      []ContentBlock    `json:"content,omitempty"`
 	Duration     int               `json:"duration_ms,omitempty"`
-	Subtype      string            `json:"subtype,omitempty"`        // For "result" message
+	Subtype      string            `json:"subtype,omitempty"`        // For "result" and "system" messages
 	IsError      bool              `json:"is_error,omitempty"`       // For "result" message
 	TotalCostUSD float64           `json:"total_cost_usd,omitempty"` // For "result" message
 	Usage        *UsageStats       `json:"usage,omitempty"`          // For "result" message
 	Result       string            `json:"result,omitempty"`         // For "result" message
+	// System event fields (hook_started, hook_response, init, etc.)
+	// 系统事件字段（hook_started, hook_response, init 等）
+	Outcome   string `json:"outcome,omitempty"`    // "success" or "failure" for hook_response
+	HookName  string `json:"hook_name,omitempty"`  // Name of the hook that completed
+	HookEvent string `json:"hook_event,omitempty"` // Event type that triggered the hook
 }
 
 // UsageStats represents token usage from result messages.
