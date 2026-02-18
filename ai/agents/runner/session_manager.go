@@ -297,23 +297,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		args = append(args, "--permission-mode", cfg.PermissionMode)
 	}
 
-	// Security: Path Restrictions
-	// 安全：路径限制
-	// Note: CLI uses --add-dir for additional directories, not --allowed-path
-	// 注意：CLI 使用 --add-dir 添加额外目录，而非 --allowed-path
-	for _, path := range cfg.AllowedPaths {
-		args = append(args, "--add-dir", path)
-	}
-	// Note: --forbidden-path is not supported by CLI
-	// Forbidden paths would need to be implemented via settings.json permissions.deny
-	// 注意：CLI 不支持 --forbidden-path，需通过 settings.json 的 permissions.deny 实现
-	if len(cfg.ForbiddenPaths) > 0 {
-		sm.logger.Warn("ForbiddenPaths configured but CLI does not support --forbidden-path option",
-			"session_id", sessionID,
-			"forbidden_paths", cfg.ForbiddenPaths,
-			"hint", "use settings.json permissions.deny instead")
-	}
-
 	// Note: We don't pass the initial prompt here. The prompt will be injected via stdin later
 	// OR passed as argument. BUT we want a persistent session.
 	// If we pass a prompt arg, it runs and might exit?
