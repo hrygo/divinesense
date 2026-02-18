@@ -961,7 +961,11 @@
     "code": "代码",
     "comment": {
       "self": "评论",
-      "write-a-comment": "写评论"
+      "write-a-comment": "写评论",
+      "send": "发送",
+      "sending": "发送中...",
+      "cancel": "取消",
+      "hint": "{{shortcut}}+Enter 发送 • Esc 取消"
     },
     "copy-content": "复制内容",
     "copy-link": "复制链接",

@@ -116,19 +116,33 @@ func (d *DB) VectorSearch(ctx context.Context, opts *store.VectorSearchOptions) 
 		limit = 10
 	}
 
-	// Use cosine similarity with pgvector
-	// The <=> operator computes cosine distance (1 - cosine_similarity)
-	// So we order by distance ASC to get most similar first
-	query := `
+	// Build the base query
+	baseQuery := `
 		SELECT
 			m.id, m.uid, m.creator_id, m.created_ts, m.updated_ts, m.row_status,
 			m.visibility, m.pinned, m.content, m.payload,
 			1 - (e.embedding <=> ` + placeholder(1) + `) AS score
 		FROM memo m
-		INNER JOIN memo_embedding e ON m.id = e.memo_id
+		INNER JOIN memo_embedding e ON m.id = e.memo_id`
+
+	// Add LEFT JOIN for comment exclusion if needed
+	joinClause := ""
+	whereClause := `
 		WHERE m.creator_id = ` + placeholder(2) + `
 			AND m.row_status = 'NORMAL'
-			AND e.model = ` + placeholder(3) + `
+			AND e.model = ` + placeholder(3)
+
+	if opts.ExcludeComments {
+		joinClause = `
+		LEFT JOIN memo_relation mr ON m.id = mr.memo_id AND mr.type = 'COMMENT'`
+		whereClause += `
+			AND mr.memo_id IS NULL`
+	}
+
+	// Use cosine similarity with pgvector
+	// The <=> operator computes cosine distance (1 - cosine_similarity)
+	// So we order by distance ASC to get most similar first
+	query := baseQuery + joinClause + whereClause + `
 		ORDER BY e.embedding <=> ` + placeholder(4) + `
 		LIMIT ` + placeholder(5)
 
@@ -264,18 +278,32 @@ func (d *DB) BM25Search(ctx context.Context, opts *store.BM25SearchOptions) ([]*
 		limit = 10
 	}
 
+	// Build the base query
 	// Use PostgreSQL's full-text search with bilingual support
 	// The to_tsvector_chinese/to_tsquery_chinese functions auto-detect Chinese vs English
 	// Note: ts_rank with normalization (32) divides by document length for fairer scoring
-	query := `
+	baseQuery := `
 		SELECT
 			m.id, m.uid, m.creator_id, m.created_ts, m.updated_ts, m.row_status,
 			m.visibility, m.pinned, m.content, m.payload,
 			ts_rank(to_tsvector_chinese(m.content), to_tsquery_chinese(` + placeholder(1) + `), 32) AS score
-		FROM memo m
+		FROM memo m`
+
+	// Add LEFT JOIN for comment exclusion if needed
+	joinClause := ""
+	whereClause := `
 		WHERE m.creator_id = ` + placeholder(2) + `
-			AND row_status = 'NORMAL'
-			AND to_tsvector_chinese(m.content) @@ to_tsquery_chinese(` + placeholder(3) + `)
+			AND m.row_status = 'NORMAL'
+			AND to_tsvector_chinese(m.content) @@ to_tsquery_chinese(` + placeholder(3) + `)`
+
+	if opts.ExcludeComments {
+		joinClause = `
+		LEFT JOIN memo_relation mr ON m.id = mr.memo_id AND mr.type = 'COMMENT'`
+		whereClause += `
+			AND mr.memo_id IS NULL`
+	}
+
+	query := baseQuery + joinClause + whereClause + `
 		ORDER BY score DESC, m.updated_ts DESC
 		LIMIT ` + placeholder(4)
 

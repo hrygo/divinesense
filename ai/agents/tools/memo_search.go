@@ -161,12 +161,13 @@ func (t *MemoSearchTool) Run(ctx context.Context, input string) (string, error) 
 
 	// Execute search
 	opts := &retrieval.RetrievalOptions{
-		Query:    searchInput.Query,
-		UserID:   userID,
-		Strategy: strategy,
-		Limit:    searchInput.Limit,
-		MinScore: searchInput.MinScore,
-		Tags:     tags,
+		Query:           searchInput.Query,
+		UserID:          userID,
+		Strategy:        strategy,
+		Limit:           searchInput.Limit,
+		MinScore:        searchInput.MinScore,
+		Tags:            tags,
+		ExcludeComments: true, // Exclude comments from search results
 	}
 
 	// Add time range and tags for filter queries
@@ -279,11 +280,12 @@ func (t *MemoSearchTool) RunWithStructuredResult(ctx context.Context, input stri
 
 	// Execute search
 	opts := &retrieval.RetrievalOptions{
-		Query:    searchInput.Query,
-		UserID:   userID,
-		Strategy: strategy,
-		Limit:    searchInput.Limit,
-		MinScore: searchInput.MinScore,
+		Query:           searchInput.Query,
+		UserID:          userID,
+		Strategy:        strategy,
+		Limit:           searchInput.Limit,
+		MinScore:        searchInput.MinScore,
+		ExcludeComments: true, // Exclude comments from search results
 	}
 
 	results, err := t.retriever.Retrieve(ctx, opts)

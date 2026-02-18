@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/utils/i18n";
 
 // Common emojis for quick selection
 const EMOJI_LIST = ["👍", "👎", "😄", "🎉", "❤️", "🔥", "💡", "🤔", "👀", "✅", "⭐", "🙏", "💪", "🚀", "👏", "😊"];
@@ -31,7 +32,8 @@ export interface CommentEditorProps {
 }
 
 export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>(
-  ({ className, placeholder = "写下你的评论...", autoFocus = false, onSend, onCancel }, ref) => {
+  ({ className, placeholder, autoFocus = false, onSend, onCancel }, ref) => {
+    const t = useTranslate();
     const [content, setContent] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [inputHeight, setInputHeight] = useState(44);
@@ -163,7 +165,7 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("editor.add-your-comment-here")}
             className={cn(
               "min-h-[44px] max-h-[120px] py-2.5 px-3 resize-none",
               "border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
@@ -187,7 +189,7 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
               disabled={isSending}
               className="h-9 px-3 rounded-lg text-muted-foreground hover:text-foreground"
             >
-              取消
+              {t("memo.comment.cancel")}
             </Button>
           )}
           <Button
@@ -201,14 +203,14 @@ export const CommentEditor = forwardRef<HTMLTextAreaElement, CommentEditorProps>
               canSend ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm" : "bg-transparent text-muted-foreground",
             )}
           >
-            {isSending ? "发送中..." : "发送"}
+            {isSending ? t("memo.comment.sending") : t("memo.comment.send")}
           </Button>
         </div>
 
         {/* Hint text */}
         {content.length === 0 && (
           <div className="absolute -bottom-5 left-0 right-0 text-center pointer-events-none">
-            <span className="text-[10px] text-muted-foreground/50">{shortcutKey}+Enter 发送 • Esc 取消</span>
+            <span className="text-[10px] text-muted-foreground/50">{t("memo.comment.hint", { shortcut: shortcutKey })}</span>
           </div>
         )}
       </div>

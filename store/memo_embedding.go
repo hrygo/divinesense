@@ -36,11 +36,12 @@ type MemoWithScore struct {
 
 // VectorSearchOptions represents the options for vector search.
 type VectorSearchOptions struct {
-	Vector        []float32
-	Limit         int
-	UserID        int32
-	CreatedAfter  int64 // Optional: only search memos created after this timestamp
-	MaxCandidates int   // Optional: maximum candidates to fetch (default: limit * 10)
+	Vector          []float32
+	Limit           int
+	UserID          int32
+	CreatedAfter    int64 // Optional: only search memos created after this timestamp
+	MaxCandidates   int   // Optional: maximum candidates to fetch (default: limit * 10)
+	ExcludeComments bool  // Optional: exclude comments (memos with parent)
 }
 
 // Validate validates the VectorSearchOptions.
@@ -65,10 +66,11 @@ func (o *VectorSearchOptions) Validate() error {
 
 // BM25SearchOptions represents the options for BM25 full-text search.
 type BM25SearchOptions struct {
-	Query    string
-	Limit    int
-	UserID   int32
-	MinScore float32
+	Query           string
+	Limit           int
+	UserID          int32
+	MinScore        float32
+	ExcludeComments bool // Optional: exclude comments (memos with parent)
 }
 
 // Validate validates the BM25SearchOptions.

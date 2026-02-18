@@ -966,7 +966,11 @@
     "code": "Code",
     "comment": {
       "self": "Comments",
-      "write-a-comment": "Write a comment"
+      "write-a-comment": "Write a comment",
+      "send": "Send",
+      "sending": "Sending...",
+      "cancel": "Cancel",
+      "hint": "{{shortcut}}+Enter to send • Esc to cancel"
     },
     "copy-content": "Copy Content",
     "copy-link": "Copy Link",

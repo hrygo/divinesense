@@ -50,6 +50,7 @@ type RetrievalOptions struct {
 	MinScore          float32
 	ScheduleQueryMode queryengine.ScheduleQueryMode
 	Tags              []string // 标签过滤
+	ExcludeComments   bool     // 排除评论（有 parent 的 memo）
 }
 
 // NewAdaptiveRetriever 创建自适应检索器.
@@ -213,6 +214,7 @@ func (r *AdaptiveRetriever) memoListOnly(ctx context.Context, opts *RetrievalOpt
 	findMemo := &store.FindMemo{
 		CreatorID:        &opts.UserID,
 		OrderByUpdatedTs: true,
+		ExcludeComments:  opts.ExcludeComments,
 	}
 
 	// 设置限制
@@ -266,6 +268,7 @@ func (r *AdaptiveRetriever) memoFilterOnly(ctx context.Context, opts *RetrievalO
 	findMemo := &store.FindMemo{
 		CreatorID:        &opts.UserID,
 		OrderByUpdatedTs: true,
+		ExcludeComments:  opts.ExcludeComments,
 	}
 
 	// 添加时间过滤（使用 CEL 表达式）
@@ -351,9 +354,10 @@ func (r *AdaptiveRetriever) memoBM25Only(ctx context.Context, opts *RetrievalOpt
 	// Note: MinScore=0 means no filtering - rely on DB's ORDER BY score DESC + LIMIT
 	// This is best practice since DB already returns most relevant results
 	bm25Results, err := r.store.BM25Search(ctx, &store.BM25SearchOptions{
-		UserID: opts.UserID,
-		Query:  opts.Query,
-		Limit:  limit,
+		UserID:          opts.UserID,
+		Query:           opts.Query,
+		Limit:           limit,
+		ExcludeComments: opts.ExcludeComments,
 		// MinScore: 0 (default) - no post-filter needed
 	})
 	if err != nil {
@@ -414,10 +418,11 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 	ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 
 	vectorResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-		UserID:       opts.UserID,
-		Vector:       queryVector,
-		Limit:        limit,
-		CreatedAfter: ninetyDaysAgo, // Only search recent memos
+		UserID:          opts.UserID,
+		Vector:          queryVector,
+		Limit:           limit,
+		CreatedAfter:    ninetyDaysAgo, // Only search recent memos
+		ExcludeComments: opts.ExcludeComments,
 	})
 	if err != nil {
 		opts.Logger.ErrorContext(ctx, "Vector search failed",
@@ -443,10 +448,11 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 		// 扩展到 Top 20 (with same time filter for consistency)
 		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 		moreResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-			UserID:       opts.UserID,
-			Vector:       queryVector,
-			Limit:        20,
-			CreatedAfter: ninetyDaysAgo,
+			UserID:          opts.UserID,
+			Vector:          queryVector,
+			Limit:           20,
+			CreatedAfter:    ninetyDaysAgo,
+			ExcludeComments: opts.ExcludeComments,
 		})
 		if err == nil {
 			// 合并结果
@@ -463,10 +469,11 @@ func (r *AdaptiveRetriever) memoSemanticOnly(ctx context.Context, opts *Retrieva
 		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 		// 扩展到 Top 50 给 LowQuality（更多选择）
 		moreResults, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-			UserID:       opts.UserID,
-			Vector:       queryVector,
-			Limit:        50,
-			CreatedAfter: ninetyDaysAgo,
+			UserID:          opts.UserID,
+			Vector:          queryVector,
+			Limit:           50,
+			CreatedAfter:    ninetyDaysAgo,
+			ExcludeComments: opts.ExcludeComments,
 		})
 		if err == nil {
 			results = r.mergeResults(results, r.convertVectorResults(moreResults), opts.Limit)
@@ -778,10 +785,11 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 		// Add time filter for optimized performance
 		ninetyDaysAgo := time.Now().AddDate(0, 0, -90).Unix()
 		results, err := r.store.VectorSearch(ctx, &store.VectorSearchOptions{
-			UserID:       opts.UserID,
-			Vector:       queryVector,
-			Limit:        20,
-			CreatedAfter: ninetyDaysAgo,
+			UserID:          opts.UserID,
+			Vector:          queryVector,
+			Limit:           20,
+			CreatedAfter:    ninetyDaysAgo,
+			ExcludeComments: opts.ExcludeComments,
 		})
 		select {
 		case <-ctx.Done():
@@ -795,10 +803,11 @@ func (r *AdaptiveRetriever) hybridSearch(ctx context.Context, opts *RetrievalOpt
 	// 并行执行 BM25 检索
 	go func() {
 		results, err := r.store.BM25Search(ctx, &store.BM25SearchOptions{
-			UserID:   opts.UserID,
-			Query:    opts.Query,
-			Limit:    20,
-			MinScore: 0.1,
+			UserID:          opts.UserID,
+			Query:           opts.Query,
+			Limit:           20,
+			MinScore:        0.1,
+			ExcludeComments: opts.ExcludeComments,
 		})
 		select {
 		case <-ctx.Done():
