@@ -345,7 +345,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
-	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
@@ -354,7 +353,15 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
-	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on defer stack
+
+	// Cleanup pipes on error path only (success means Session owns them)
+	// 只在错误路径上清理管道（成功时 Session 拥有所有权）
+	defer func() {
+		if !success {
+			_ = stdout.Close() //nolint:errcheck // cleanup on error path
+			_ = stderr.Close() //nolint:errcheck // cleanup on error path
+		}
+	}()
 
 	if err := cmd.Start(); err != nil {
 		startedCh <- err // Signal startup failed
