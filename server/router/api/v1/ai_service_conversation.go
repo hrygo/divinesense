@@ -394,7 +394,6 @@ func (s *AIService) AddContextSeparator(ctx context.Context, req *v1pb.AddContex
 func convertAIConversationFromStore(c *store.AIConversation) *v1pb.AIConversation {
 	// Convert ParrotID string to AgentType enum
 	// Handle both short format ("MEMO") and long format ("AGENT_TYPE_MEMO")
-	// DEFAULT and CREATIVE are deprecated - map to GENERAL
 	var parrotId int32
 
 	// Try direct lookup first (long format like "AGENT_TYPE_MEMO")

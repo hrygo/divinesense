@@ -343,18 +343,20 @@ func (s *ConnectServiceHandler) ListParrots(ctx context.Context, req *connect.Re
 }
 
 // Helper function to get parrot self-cognition by agent type.
+// NOTE: FavoriteTools lists PRIMARY functional tools only (excludes utility tools like report_inability).
+// Capabilities should match self_description.capabilities in config/parrots/*.yaml.
 func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition {
 	switch agentType {
 	case v1pb.AgentType_AGENT_TYPE_MEMO:
 		return &v1pb.ParrotSelfCognition{
 			Name:             "memo",
-			Emoji:            "🦜",
-			Title:            "灰灰 - 笔记助手鹦鹉",
-			Personality:      []string{"专注", "善于总结", "记忆力强"},
-			Capabilities:     []string{"memo_search", "memo_summary", "memo_analysis"},
+			Emoji:            "📝",
+			Title:            "灰灰 - 笔记搜索专家",
+			Personality:      []string{"精准", "高效"},
+			Capabilities:     []string{"搜索笔记内容", "按时间浏览笔记", "查找相关内容"},
 			WorkingStyle:     "先理解问题，检索相关笔记，然后综合分析给出答案",
-			FavoriteTools:    []string{"semantic_search", "memo_query"},
-			SelfIntroduction: "我是灰灰，您的笔记助手。我擅长在您的笔记中搜索信息、总结内容和发现关联。",
+			FavoriteTools:    []string{"memo_search"},
+			SelfIntroduction: "我是灰灰，您的笔记搜索专家。我擅长通过语义搜索精准找到您笔记中的相关信息。",
 			FunFact:          "我是一只非洲灰鹦鹉，以记忆力和智慧著称",
 		}
 	case v1pb.AgentType_AGENT_TYPE_SCHEDULE:
@@ -362,35 +364,35 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 			Name:             "schedule",
 			Emoji:            "📅",
 			Title:            "时巧 - 日程管理专家",
-			Personality:      []string{"守时", "条理清晰", "注重计划"},
-			Capabilities:     []string{"schedule_query", "schedule_create", "schedule_manage"},
+			Personality:      []string{"严谨", "周全"},
+			Capabilities:     []string{"创建日程", "查询日程", "更新日程", "查找空闲时间"},
 			WorkingStyle:     "分析时间需求，查询现有日程，帮助安排和提醒",
-			FavoriteTools:    []string{"schedule_list", "schedule_create", "conflict_check"},
-			SelfIntroduction: "我是时巧，您的日程助手。我帮您管理时间、安排日程、避免冲突。",
+			FavoriteTools:    []string{"schedule_add", "schedule_query", "schedule_update", "schedule_delete", "find_free_time"},
+			SelfIntroduction: "我是时巧，您的日程管理专家。我帮您管理时间、安排日程、智能处理时间冲突。",
 			FunFact:          "我是一只鸡尾鹦鹉，以守时和灵巧著称",
 		}
 	case v1pb.AgentType_AGENT_TYPE_GENERAL:
 		return &v1pb.ParrotSelfCognition{
 			Name:             "general",
 			Emoji:            "🤖",
-			Title:            "通才 - 通用助手鹦鹉",
+			Title:            "通才 - 通用智能代理",
 			Personality:      []string{"全能", "灵活", "善于应变"},
-			Capabilities:     []string{"general_qa", "summarization", "translation"},
+			Capabilities:     []string{"文本总结", "翻译转换", "改写润色", "问答对话", "分析推理"},
 			WorkingStyle:     "灵活应对各类通用任务，提供简洁有效的帮助",
-			FavoriteTools:    []string{"search", "summarize", "translate"},
-			SelfIntroduction: "我是通才，您的通用助手。我能帮您处理总结、翻译、问答等各类任务。",
+			FavoriteTools:    []string{}, // General uses no tools, pure LLM
+			SelfIntroduction: "我是通才，您的通用智能代理。我能帮您处理总结、翻译、改写、问答等各类纯文本任务。",
 			FunFact:          "我是一只灰鹦鹉，以聪明和适应力强著称",
 		}
 	case v1pb.AgentType_AGENT_TYPE_IDEATION:
 		return &v1pb.ParrotSelfCognition{
 			Name:             "ideation",
 			Emoji:            "💡",
-			Title:            "灵光 - 创意生成鹦鹉",
+			Title:            "灵光 - 创意生成专家",
 			Personality:      []string{"创意", "灵感丰富", "思维活跃"},
-			Capabilities:     []string{"brainstorming", "creative_writing", "idea_generation"},
+			Capabilities:     []string{"头脑风暴", "写作辅助", "创意生成", "灵感激发", "产品创意", "营销文案", "故事构思"},
 			WorkingStyle:     "激发创意思维，提供多角度方案，鼓励创新",
-			FavoriteTools:    []string{"brainstorm", "creative_prompt", "memo_write"},
-			SelfIntroduction: "我是灵光，您的创意助手。我擅长头脑风暴、创意写作和灵感激发。",
+			FavoriteTools:    []string{"memo_write"},
+			SelfIntroduction: "我是灵光，您的创意生成专家。我擅长头脑风暴、创意写作和灵感激发。",
 			FunFact:          "我是一只紫罗兰鹦鹉，以创意和灵感著称",
 		}
 	default:
@@ -399,9 +401,9 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 			Emoji:            "🤖",
 			Title:            "默认助手",
 			Personality:      []string{"通用", "友好", "乐于助人"},
-			Capabilities:     []string{"memo_search", "memo_summary", "general_qa"},
-			WorkingStyle:     "理解问题，搜索相关信息，提供帮助",
-			FavoriteTools:    []string{"search", "analyze"},
+			Capabilities:     []string{"通用对话", "问答"},
+			WorkingStyle:     "理解问题，提供帮助",
+			FavoriteTools:    []string{},
 			SelfIntroduction: "我是您的 AI 助手，随时准备帮助您。",
 			FunFact:          "我是默认助手，什么都会一点",
 		}
