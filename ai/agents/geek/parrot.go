@@ -113,9 +113,6 @@ func (p *GeekParrot) Execute(
 		UserID:         p.userID,
 		DeviceContext:  p.deviceCtx,
 		PermissionMode: "bypassPermissions",
-		Env: map[string]string{
-			"HOME": p.workDir, // Force isolation of .claude directory
-		},
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 
