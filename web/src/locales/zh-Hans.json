@@ -123,6 +123,18 @@
           "examples": ["今天有什么安排", "明天下午有空吗", "帮我创建下周会议提醒"],
           "name": "时巧",
           "nameAlt": "Tick"
+        },
+        "general": {
+          "description": "通用助手，擅长文本总结、翻译和改写。",
+          "examples": ["总结一下", "翻译成英文", "帮我改写这段话"],
+          "name": "通才",
+          "nameAlt": "General"
+        },
+        "insight": {
+          "description": "创意助手，擅长头脑风暴、写作辅助和灵感激发。",
+          "examples": ["帮我头脑风暴", "写一段文案", "给我一些创意"],
+          "name": "灵光",
+          "nameAlt": "Insight"
         }
       },
       "amazing-tagline": "全能助手",
@@ -380,6 +392,15 @@
       "evolution_status": "⚡ 进化就绪",
       "evolution_locked": "进化(仅管理员)",
       "evolution_locked_tooltip": "进化模式仅限管理员使用"
+    },
+    "mention": {
+      "select_agent": "🦜 选择专家代理",
+      "no_match": "未找到匹配的专家",
+      "navigate": "选择",
+      "confirm": "确认",
+      "close": "关闭",
+      "hint": "输入 @ 选择专家代理",
+      "loading": "加载中..."
     },
     "geek_mode": {
       "label": "极客",

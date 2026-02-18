@@ -3,9 +3,12 @@ import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import type { ParrotInfoFromAPI } from "@/hooks/useParrotsList";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import { PARROT_THEMES } from "@/types/parrot";
+import { canInsertMention, insertAgentMention, shouldTriggerMentionPopover } from "@/utils/agentMention";
+import { AgentMentionPopover } from "./AgentMentionPopover";
 import { ModeCycleButton } from "./ModeCycleButton";
 
 interface ChatInputProps {
@@ -45,10 +48,15 @@ export function ChatInput({
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   // Track height to avoid unnecessary auto-reset causing jitter
   const lastHeightRef = useRef(0);
   const rafIdRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+
+  // Agent Mention Popover state
+  const [mentionPopoverOpen, setMentionPopoverOpen] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState("");
 
   // Detect macOS for correct shortcut display - memoized
   const sendShortcut = useMemo(() => {
@@ -91,8 +99,67 @@ export function ChatInput({
     };
   }, []);
 
+  // Detect @ input and trigger popover
+  const checkForMentionTrigger = useCallback((text: string, cursorPosition: number) => {
+    const { shouldTrigger, filter } = shouldTriggerMentionPopover(text, cursorPosition);
+
+    if (shouldTrigger && canInsertMention(text, cursorPosition - 1)) {
+      setMentionFilter(filter);
+      setMentionPopoverOpen(true);
+    } else {
+      setMentionPopoverOpen(false);
+    }
+  }, []);
+
+  // Handle agent selection from popover
+  const handleAgentSelect = useCallback(
+    (agent: ParrotInfoFromAPI) => {
+      if (!textareaRef.current) return;
+
+      const textarea = textareaRef.current;
+      const cursorPosition = textarea.selectionStart;
+
+      // Find the @ position
+      let atPosition = cursorPosition - 1;
+      while (atPosition >= 0 && textarea.value[atPosition] !== "@") {
+        atPosition--;
+      }
+
+      if (atPosition < 0) return;
+
+      // Remove the @ and any filter text after it
+      const beforeAt = textarea.value.slice(0, atPosition);
+      const afterCursor = textarea.value.slice(cursorPosition);
+
+      // Insert the agent mention
+      const displayName = agent.displayName || agent.name;
+      const { newText, newCursorPos } = insertAgentMention(beforeAt + afterCursor, beforeAt.length, displayName);
+
+      onChange(newText);
+
+      // Set cursor position after the mention
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+
+      setMentionPopoverOpen(false);
+    },
+    [onChange],
+  );
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // If popover is open, let it handle navigation keys
+      if (mentionPopoverOpen && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === "Escape")) {
+        // These will be handled by the popover
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setMentionPopoverOpen(false);
+        }
+        return;
+      }
+
       // Enter to send, Ctrl+Enter or Cmd+Enter for new line
       if (e.key === "Enter") {
         if (e.ctrlKey || e.metaKey) {
@@ -107,6 +174,7 @@ export function ChatInput({
           target.selectionStart = target.selectionEnd = start + 1;
           // Trigger input event to update height
           target.dispatchEvent(new Event("input", { bubbles: true }));
+          onChange(newValue);
         } else {
           // Send message
           e.preventDefault();
@@ -114,35 +182,41 @@ export function ChatInput({
         }
       }
     },
-    [onSend],
+    [onSend, onChange, mentionPopoverOpen],
   );
 
-  const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-    const target = e.target as HTMLTextAreaElement;
+  const handleInput = useCallback(
+    (e: React.FormEvent<HTMLTextAreaElement>) => {
+      const target = e.target as HTMLTextAreaElement;
 
-    // Cancel pending RAF if any
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-    }
+      // Check for @ mention trigger
+      checkForMentionTrigger(target.value, target.selectionStart);
 
-    // Schedule height update in next animation frame
-    rafIdRef.current = requestAnimationFrame(() => {
-      // Ensure component is still mounted and target is valid
-      if (!target || !textareaRef.current) return;
-
-      const currentScrollHeight = target.scrollHeight;
-      const maxHeight = 120;
-      const newHeight = Math.min(currentScrollHeight, maxHeight);
-
-      // Only update if height actually changed (avoid jitter)
-      if (newHeight !== lastHeightRef.current) {
-        lastHeightRef.current = newHeight;
-        target.style.height = `${newHeight}px`;
+      // Cancel pending RAF if any
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
       }
 
-      rafIdRef.current = null;
-    });
-  }, []);
+      // Schedule height update in next animation frame
+      rafIdRef.current = requestAnimationFrame(() => {
+        // Ensure component is still mounted and target is valid
+        if (!target || !textareaRef.current) return;
+
+        const currentScrollHeight = target.scrollHeight;
+        const maxHeight = 120;
+        const newHeight = Math.min(currentScrollHeight, maxHeight);
+
+        // Only update if height actually changed (avoid jitter)
+        if (newHeight !== lastHeightRef.current) {
+          lastHeightRef.current = newHeight;
+          target.style.height = `${newHeight}px`;
+        }
+
+        rafIdRef.current = null;
+      });
+    },
+    [checkForMentionTrigger],
+  );
 
   // Reset height when value changes externally
   useEffect(() => {
@@ -268,6 +342,7 @@ export function ChatInput({
 
         {/* Input Box */}
         <div
+          ref={inputContainerRef}
           className={cn(
             "flex items-end gap-2 md:gap-3 p-2.5 md:p-3 rounded-lg border shadow-sm transition-colors",
             modeStyles.inputBg,
@@ -327,6 +402,15 @@ export function ChatInput({
             )}
           </Button>
         </div>
+
+        {/* Agent Mention Popover */}
+        <AgentMentionPopover
+          open={mentionPopoverOpen}
+          onOpenChange={setMentionPopoverOpen}
+          onSelect={handleAgentSelect}
+          anchorElement={inputContainerRef.current}
+          filter={mentionFilter}
+        />
       </div>
     </div>
   );
