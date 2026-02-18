@@ -304,6 +304,21 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 	}
 	session.mu.Unlock()
 
+	// Start stderr monitor to capture CLI error output for debugging
+	// 启动 stderr 监控以捕获 CLI 错误输出用于调试
+	go func() {
+		stderrScanner := bufio.NewScanner(session.Stderr)
+		for stderrScanner.Scan() {
+			line := stderrScanner.Text()
+			if line != "" {
+				r.logger.Warn("CCRunner: stderr output", "session_id", session.ID, "line", line)
+			}
+		}
+		if err := stderrScanner.Err(); err != nil {
+			r.logger.Error("CCRunner: stderr scanner error", "session_id", session.ID, "error", err)
+		}
+	}()
+
 	go func() {
 		defer func() {
 			if panicVal := recover(); panicVal != nil {
