@@ -9,9 +9,9 @@
 import { ParrotAgentType } from "@/types/parrot";
 
 // 可提及的专家代理映射（支持中文名和英文名）
-// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)
-// TODO: 通才和灵光由其他开发者正在开发，待后端支持后添加
-const AGENT_MENTIONS: Record<string, ParrotAgentType> = {
+// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(AMAZING)
+// TODO: Ideation 由其他开发者正在开发，待后端支持后添加
+const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
   // 灰灰 - 笔记助手
   灰灰: ParrotAgentType.MEMO,
   memo: ParrotAgentType.MEMO,
@@ -21,6 +21,14 @@ const AGENT_MENTIONS: Record<string, ParrotAgentType> = {
   时巧: ParrotAgentType.SCHEDULE,
   schedule: ParrotAgentType.SCHEDULE,
   日程: ParrotAgentType.SCHEDULE,
+
+  // 通才 - 通用助手（使用 AMAZING 类型）
+  通才: ParrotAgentType.AMAZING,
+  general: ParrotAgentType.AMAZING,
+
+  // Ideation - 创意助手（待后端支持）
+  灵光: "IDEATION",
+  ideation: "IDEATION",
 };
 
 /**
@@ -163,13 +171,15 @@ export function insertAgentMention(text: string, position: number, agentName: st
 /**
  * 格式化代理显示名称
  *
- * @param name 代理英文名（memo, schedule 等）
+ * @param name 代理英文名（memo, schedule, general, ideation 等）
  * @returns 格式化后的名称，如 "@灰灰"
  */
 export function formatAgentMention(name: string): string {
   const names: Record<string, string> = {
     memo: "灰灰",
     schedule: "时巧",
+    general: "通才",
+    ideation: "灵光",
     auto: "Auto",
     amazing: "折衷",
     geek: "极客",

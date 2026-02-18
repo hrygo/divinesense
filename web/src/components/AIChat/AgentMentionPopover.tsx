@@ -31,6 +31,20 @@ const AGENT_COLORS: Record<string, { bg: string; ring: string; emoji: string; te
     text: "text-cyan-700 dark:text-cyan-200",
     indicator: "bg-cyan-500",
   },
+  general: {
+    bg: "from-amber-100 to-amber-200 dark:from-amber-800 dark:to-amber-900",
+    ring: "ring-amber-400 bg-amber-50 dark:bg-amber-900/30",
+    emoji: "🤖",
+    text: "text-amber-700 dark:text-amber-200",
+    indicator: "bg-amber-500",
+  },
+  ideation: {
+    bg: "from-violet-100 to-violet-200 dark:from-violet-800 dark:to-violet-900",
+    ring: "ring-violet-400 bg-violet-50 dark:bg-violet-900/30",
+    emoji: "💡",
+    text: "text-violet-700 dark:text-violet-200",
+    indicator: "bg-violet-500",
+  },
 };
 
 // 默认颜色
@@ -43,8 +57,8 @@ const DEFAULT_COLOR = {
 };
 
 // 可提及的代理名称列表（从 API 获取后会过滤）
-// 当前只支持 memo 和 schedule，general/insight 待后端支持
-const MENTIONABLE_NAMES = ["memo", "schedule"];
+// memo, schedule, general 已支持；ideation 待后端支持
+const MENTIONABLE_NAMES = ["memo", "schedule", "general", "ideation"];
 
 interface AgentMentionPopoverProps {
   open: boolean;
