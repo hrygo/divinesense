@@ -2,13 +2,14 @@ import { AgentType } from "@/types/proto/api/v1/ai_service_pb";
 
 /**
  * Parrot agent types enumeration
- * 鹦鹉代理类型枚举 - 五只鹦鹉
+ * 鹦鹉代理类型枚举 - 六只鹦鹉
  */
 export enum ParrotAgentType {
   AUTO = "AUTO", // 🤖 自动 - 由后端三层路由决定使用哪个代理
   MEMO = "MEMO", // 🦜 灰灰 - Memo Parrot（笔记搜索）
   SCHEDULE = "SCHEDULE", // 🦜 时巧 - Schedule Parrot（日程管理）
   GENERAL = "GENERAL", // 🦜 通才 - General Parrot（通用助手）
+  IDEATION = "IDEATION", // 💡 灵光 - Ideation Parrot（创意生成）
   GEEK = "GEEK", // 🦜 极客 - Geek Parrot（Claude Code CLI）
   EVOLUTION = "EVOLUTION", // 🦜 进化 - Evolution Parrot（系统自我进化）
 }
@@ -84,6 +85,13 @@ export const PARROT_SOUND_EFFECTS: Record<ParrotAgentType, Record<string, string
     analyzing: "看看这个...",
     multi_task: "同时搜索中",
   },
+  [ParrotAgentType.IDEATION]: {
+    thinking: "灵光一闪...",
+    brainstorming: "头脑风暴中",
+    idea: "有个好点子！",
+    done: "创意已生成",
+    inspiring: "灵感迸发",
+  },
   [ParrotAgentType.GEEK]: {
     thinking: "编译中...",
     running: "执行中",
@@ -109,6 +117,7 @@ export const PARROT_CATCHPHRASES: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.MEMO]: ["让我想想...", "笔记里说...", "在记忆里找找..."],
   [ParrotAgentType.SCHEDULE]: ["安排好啦", "时间搞定", "妥妥的"],
   [ParrotAgentType.GENERAL]: ["明白了", "这个问题...", "让我来处理"],
+  [ParrotAgentType.IDEATION]: ["灵感来了", "头脑风暴中", "想个好点子"],
   [ParrotAgentType.GEEK]: ["代码搞定", "正在编译", "这个我来写"],
   [ParrotAgentType.EVOLUTION]: ["系统升级", "自我进化中", "代码已优化"],
 };
@@ -122,6 +131,7 @@ export const PARROT_BEHAVIORS: Record<ParrotAgentType, string[]> = {
   [ParrotAgentType.MEMO]: ["用翅膀翻找笔记", "在记忆森林中飞翔", "用喙精准啄取信息"],
   [ParrotAgentType.SCHEDULE]: ["用喙整理时间", "精准啄食安排", "展开羽翼规划"],
   [ParrotAgentType.GENERAL]: ["灵活应对各类任务", "广泛的知识覆盖", "通晓多领域"],
+  [ParrotAgentType.IDEATION]: ["激发创意火花", "在灵感天空中翱翔", "用智慧点亮思路"],
   [ParrotAgentType.GEEK]: ["敲击代码", "调试中", "重构架构"],
   [ParrotAgentType.EVOLUTION]: ["迭代进化", "优化自身", "生成 PR"],
 };
@@ -137,8 +147,12 @@ export function protoToParrotAgentType(agentType: AgentType): ParrotAgentType {
       return ParrotAgentType.MEMO;
     case AgentType.SCHEDULE:
       return ParrotAgentType.SCHEDULE;
+    case AgentType.GENERAL:
+      return ParrotAgentType.GENERAL;
+    case AgentType.IDEATION:
+      return ParrotAgentType.IDEATION;
     default:
-      // GENERAL, DEFAULT, CREATIVE all map to GENERAL
+      // DEFAULT, CREATIVE fallback to GENERAL
       return ParrotAgentType.GENERAL;
   }
 }
@@ -163,6 +177,8 @@ export function parrotToProtoAgentType(agentType: ParrotAgentType): AgentType {
       return AgentType.SCHEDULE;
     case ParrotAgentType.GENERAL:
       return AgentType.GENERAL;
+    case ParrotAgentType.IDEATION:
+      return AgentType.IDEATION;
     default:
       return AgentType.DEFAULT;
   }
@@ -237,6 +253,17 @@ export const PARROT_AGENTS: Record<ParrotAgentType, ParrotAgent> = {
     color: "amber",
     available: true,
     examplePrompts: ["Summarize this article for me", "Help me write an email", "Explain this concept simply"],
+    backgroundImage: "/images/parrots/general_bg.webp",
+  },
+  [ParrotAgentType.IDEATION]: {
+    id: ParrotAgentType.IDEATION,
+    name: "ideation",
+    icon: "/assistant-avatar.webp",
+    displayName: "Ideation",
+    description: "Creative assistant for brainstorming and ideation",
+    color: "violet",
+    available: true,
+    examplePrompts: ["Brainstorm product naming ideas", "Help me write creative copy", "Generate story concepts"],
     backgroundImage: "/images/parrots/general_bg.webp",
   },
   [ParrotAgentType.GEEK]: {
@@ -541,8 +568,11 @@ export interface OrchestratorTaskEndEvent {
  * Parrot theme configuration
  * 鹦鹉主题配置
  *
- * 设计规范 (v6.1 - Unified Block Model):
- * - Normal:    Amber (琥珀) - 闪念如琥珀般珍贵保存
+ * 设计规范 (v6.2 - Unified Block Model):
+ * - Memo:      Slate (石墨灰) - 笔记如石墨般沉淀
+ * - Schedule:  Cyan (青色) - 时间如流水般清澈
+ * - General:   Indigo (靛蓝) - 知识如海洋般深邃
+ * - Ideation:  Violet (紫罗兰) - 创意如灵感般闪耀
  * - Geek:      Sky/Slate (石板蓝) - 代码如石板般精确
  * - Evolution: Emerald (翠绿) - 系统如植物般向上生长
  *
@@ -630,6 +660,26 @@ export const PARROT_THEMES = {
     headerBg: "bg-indigo-50 dark:bg-indigo-900/20",
     footerBg: "bg-indigo-200/80 dark:bg-indigo-800/50",
     ringColor: "ring-indigo-500",
+  },
+  // 灵光 - 创意生成专家 (紫罗兰色 - 创意灵感)
+  IDEATION: {
+    bubbleUser: "bg-violet-600 dark:bg-violet-500 text-white",
+    bubbleBg: "bg-white dark:bg-zinc-800",
+    bubbleBorder: "border-violet-200 dark:border-violet-700",
+    text: "text-slate-800 dark:text-violet-50",
+    textSecondary: "text-slate-600 dark:text-violet-200",
+    iconBg: "bg-violet-100 dark:bg-violet-900",
+    iconText: "text-violet-700 dark:text-violet-300",
+    inputBg: "bg-violet-50 dark:bg-violet-950",
+    inputBorder: "border-violet-200 dark:border-violet-700",
+    inputFocus: "focus:ring-violet-500 focus:border-violet-500",
+    cardBg: "bg-white dark:bg-zinc-800",
+    cardBorder: "border-violet-200 dark:border-violet-700",
+    accent: "bg-violet-500",
+    accentText: "text-white",
+    headerBg: "bg-violet-50 dark:bg-violet-900/20",
+    footerBg: "bg-violet-200/80 dark:bg-violet-800/50",
+    ringColor: "ring-violet-500",
   },
   // Normal Mode - 中性灰 (智慧沉稳，如墨砚般深沉)
   // Zinc 纯灰色系：中性、专业，与 GEEK(slate蓝灰) 和 EVOLUTION(emerald翠绿) 明显区分

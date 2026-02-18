@@ -9,9 +9,8 @@
 import { ParrotAgentType } from "@/types/parrot";
 
 // 可提及的专家代理映射（支持中文名和英文名）
-// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(GENERAL)
-// NOTE: IDEATION is placeholder for future agent, not yet supported by backend
-const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
+// 当前支持：灰灰(MEMO)、时巧(SCHEDULE)、通才(GENERAL)、灵光(IDEATION)
+const AGENT_MENTIONS: Record<string, ParrotAgentType> = {
   // 灰灰 - 笔记助手
   灰灰: ParrotAgentType.MEMO,
   memo: ParrotAgentType.MEMO,
@@ -26,9 +25,9 @@ const AGENT_MENTIONS: Record<string, ParrotAgentType | "IDEATION"> = {
   通才: ParrotAgentType.GENERAL,
   general: ParrotAgentType.GENERAL,
 
-  // Ideation - 创意助手（待后端支持）
-  灵光: "IDEATION",
-  ideation: "IDEATION",
+  // 灵光 - 创意助手
+  灵光: ParrotAgentType.IDEATION,
+  ideation: ParrotAgentType.IDEATION,
 };
 
 /**

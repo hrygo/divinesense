@@ -361,6 +361,7 @@ enum AgentType {
   AGENT_TYPE_SCHEDULE = 2; // 🦜 Schedule Parrot - Schedule assistant
   AGENT_TYPE_GENERAL = 3; // 🦜 General Parrot (通才) - General purpose assistant
   reserved 4; // AGENT_TYPE_CREATIVE deprecated - reserved for future use
+  AGENT_TYPE_IDEATION = 5; // 💡 Ideation Parrot (灵光) - Creative assistant for brainstorming and ideation
 }
 
 // ChatRequest is the request for Chat.

@@ -37,6 +37,7 @@ function getDefaultTitle(parrotId: ParrotAgentType): string {
     [ParrotAgentType.MEMO]: "chat.default.memo",
     [ParrotAgentType.SCHEDULE]: "chat.default.schedule",
     [ParrotAgentType.GENERAL]: "chat.default.general",
+    [ParrotAgentType.IDEATION]: "chat.default.ideation",
     [ParrotAgentType.GEEK]: "chat.default.geek",
     [ParrotAgentType.EVOLUTION]: "chat.default.evolution",
   };

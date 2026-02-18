@@ -655,7 +655,8 @@
       "auto": "AI Chat",
       "memo": "Chat with Memo",
       "schedule": "Chat with Schedule",
-      "amazing": "Chat with Amazing",
+      "general": "Chat with General",
+      "ideation": "Chat with Ideation",
       "geek": "Geek Mode",
       "evolution": "Evolution Mode"
     },

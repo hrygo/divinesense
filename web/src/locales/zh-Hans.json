@@ -650,7 +650,8 @@
       "auto": "AI 对话",
       "memo": "笔记对话",
       "schedule": "日程对话",
-      "amazing": "综合助理",
+      "general": "通才对话",
+      "ideation": "灵光对话",
       "geek": "极客模式",
       "evolution": "进化模式"
     },

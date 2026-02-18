@@ -54,6 +54,7 @@ func getDefaultTitle(parrotID string) string {
 		"MEMO":      "chat.default.memo",
 		"SCHEDULE":  "chat.default.schedule",
 		"GENERAL":   "chat.default.general",
+		"IDEATION":  "chat.default.ideation",
 		"GEEK":      "chat.default.geek",
 		"EVOLUTION": "chat.default.evolution",
 		"AUTO":      "chat.default.auto",
@@ -401,16 +402,12 @@ func convertAIConversationFromStore(c *store.AIConversation) *v1pb.AIConversatio
 		parrotId = val
 	} else {
 		// Try short format lookup ("MEMO" → "AGENT_TYPE_MEMO")
-		// AUTO → DEFAULT (Orchestrator routing)
-		// Legacy: GENERAL/DEFAULT/CREATIVE/AMAZING → DEFAULT (now handled by Orchestrator)
 		shortToLong := map[string]v1pb.AgentType{
 			"MEMO":     v1pb.AgentType_AGENT_TYPE_MEMO,
 			"SCHEDULE": v1pb.AgentType_AGENT_TYPE_SCHEDULE,
+			"GENERAL":  v1pb.AgentType_AGENT_TYPE_GENERAL,
+			"IDEATION": v1pb.AgentType_AGENT_TYPE_IDEATION,
 			"AUTO":     v1pb.AgentType_AGENT_TYPE_DEFAULT, // Auto-route via Orchestrator
-			"GENERAL":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy: now Orchestrator
-			"DEFAULT":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy alias
-			"CREATIVE": v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy alias
-			"AMAZING":  v1pb.AgentType_AGENT_TYPE_DEFAULT, // Legacy alias (replaced by GENERAL)
 		}
 		if val, ok := shortToLong[c.ParrotID]; ok {
 			parrotId = int32(val)
