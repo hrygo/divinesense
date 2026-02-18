@@ -343,11 +343,11 @@ paths:
                 - AIService
             description: |-
                 WarmupSession pre-starts a CLI session for faster first response.
-                 This is useful for Geek mode where CLI startup takes ~9 seconds.
-                 Call this after creating a Geek mode conversation to reduce latency.
+                 This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
+                 Call this after creating a conversation to reduce latency.
                  WarmupSession 预启动 CLI 会话以加快首次响应速度。
-                 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
-                 创建 Geek 模式对话后调用此方法可减少延迟。
+                 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
+                 创建对话后调用此方法可减少延迟。
             operationId: AIService_WarmupSession
             requestBody:
                 content:
@@ -6438,9 +6438,8 @@ components:
                 conversationId:
                     type: integer
                     format: int32
-                userId:
-                    type: integer
-                    format: int32
+                isEvolution:
+                    type: boolean
             description: |-
                 WarmupSessionRequest is the request for pre-warming a CLI session.
                  WarmupSessionRequest 是预热 CLI 会话的请求。

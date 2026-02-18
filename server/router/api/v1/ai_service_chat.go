@@ -502,11 +502,11 @@ func (s *AIService) StopChat(ctx context.Context, req *v1pb.StopChatRequest) (*e
 }
 
 // WarmupSession pre-starts a CLI session for faster first response.
-// This is useful for Geek mode where CLI startup takes ~9 seconds.
-// Call this after creating a Geek mode conversation to reduce latency.
+// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
+// Call this after creating a conversation to reduce latency.
 // WarmupSession 预启动 CLI 会话以加快首次响应速度。
-// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
-// 创建 Geek 模式对话后调用此方法可减少延迟。
+// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
+// 创建对话后调用此方法可减少延迟。
 func (s *AIService) WarmupSession(ctx context.Context, req *v1pb.WarmupSessionRequest) (*emptypb.Empty, error) {
 	if !s.IsEnabled() {
 		return nil, status.Errorf(codes.Unavailable, "AI features are disabled")
@@ -535,30 +535,63 @@ func (s *AIService) WarmupSession(ctx context.Context, req *v1pb.WarmupSessionRe
 		return nil, status.Errorf(codes.PermissionDenied, "you can only warmup your own conversations")
 	}
 
-	// Generate session ID (same logic as handleGeekMode)
-	// 生成会话 ID（与 handleGeekMode 相同的逻辑）
-	namespace := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationId))).String()
-
-	// Get work directory for user
-	// 获取用户工作目录
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		homeDir = "/tmp" // Fallback if home dir cannot be determined
+	// Determine mode type from is_evolution flag
+	// 从 is_evolution 标志确定模式类型
+	modeType := "geek" // default
+	isEvolution := req.IsEvolution
+	if isEvolution {
+		modeType = "evolution"
 	}
-	workDir := fmt.Sprintf("%s/.divinesense/claude/user_%d", homeDir, user.ID)
+
+	// Generate session ID (same logic as handleGeekMode/handleEvolutionMode)
+	// 生成会话 ID（与 handleGeekMode/handleEvolutionMode 相同的逻辑）
+	var sessionID string
+	if isEvolution {
+		// Evolution mode: user-specific namespace
+		namespace := uuid.MustParse(fmt.Sprintf("00000000-0000-0000-0000-%012x", user.ID))
+		sessionID = uuid.NewSHA1(namespace, []byte(fmt.Sprintf("evolution_%d", req.ConversationId))).String()
+	} else {
+		// Geek mode: null namespace
+		namespace := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+		sessionID = uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationId))).String()
+	}
+
+	// Get work directory
+	// 获取工作目录
+	var workDir string
+	if isEvolution {
+		// Evolution mode uses source directory
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			homeDir = "/tmp"
+		}
+		// Try to find source directory (same logic as getSourceDir)
+		sourceDir := os.Getenv("DIVINESENSE_SOURCE_DIR")
+		if sourceDir == "" {
+			sourceDir = fmt.Sprintf("%s/divinesense", homeDir)
+		}
+		workDir = sourceDir
+	} else {
+		// Geek mode uses user-specific sandbox
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			homeDir = "/tmp"
+		}
+		workDir = fmt.Sprintf("%s/.divinesense/claude/user_%d", homeDir, user.ID)
+	}
 
 	slog.Info("WarmupSession called",
 		"user_id", user.ID,
 		"conversation_id", req.ConversationId,
-		"session_id", sessionID)
+		"session_id", sessionID,
+		"mode", modeType)
 
 	// Perform warmup in background with timeout
 	// 在后台执行预热，设置超时
 	warmupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := geek.WarmupSession(warmupCtx, workDir, user.ID, sessionID); err != nil {
+	if err := geek.WarmupSession(warmupCtx, modeType, workDir, user.ID, sessionID); err != nil {
 		slog.Warn("WarmupSession failed",
 			"user_id", user.ID,
 			"conversation_id", req.ConversationId,

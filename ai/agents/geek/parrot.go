@@ -41,12 +41,15 @@ func getSharedSessionManager() agentpkg.SessionManager {
 }
 
 // WarmupSession pre-starts a CLI session for faster first response.
-// This is useful for Geek mode where CLI startup takes ~9 seconds.
+// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
 // The session will be reused when a subsequent Chat request uses the same sessionID.
 // WarmupSession 预启动 CLI 会话以加快首次响应速度。
-// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
+// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
 // 后续使用相同 sessionID 的 Chat 请求将复用此会话。
-func WarmupSession(ctx context.Context, workDir string, userID int32, sessionID string) error {
+//
+// mode parameter: "geek" or "evolution"
+// mode 参数: "geek" 或 "evolution"
+func WarmupSession(ctx context.Context, modeType string, workDir string, userID int32, sessionID string) error {
 	manager := getSharedSessionManager()
 
 	// Create CCRunner with shared manager
@@ -55,24 +58,42 @@ func WarmupSession(ctx context.Context, workDir string, userID int32, sessionID 
 		return fmt.Errorf("failed to create CCRunner: %w", err)
 	}
 
-	// Create GeekMode
-	mode := NewGeekMode("")
+	var systemPrompt string
+	var modeName string
 
-	// Build config for warmup
-	cfg := &agentpkg.CCRunnerConfig{
-		Mode:           "geek",
-		SessionID:      sessionID,
-		UserID:         userID,
-		WorkDir:        workDir,
-		PermissionMode: "bypassPermissions",
+	switch modeType {
+	case "evolution":
+		// Create EvolutionMode
+		mode := NewEvolutionMode(&EvolutionModeConfig{
+			SourceDir: workDir,
+			AdminOnly: false, // Warmup doesn't need permission check
+		})
+		modeName = "evolution"
+		// Build config for system prompt
+		cfg := &agentpkg.CCRunnerConfig{
+			Mode:      "evolution",
+			SessionID: sessionID,
+			UserID:    userID,
+			WorkDir:   workDir,
+		}
+		systemPrompt = mode.BuildSystemPrompt(cfg)
+	default:
+		// Create GeekMode (default)
+		mode := NewGeekMode("")
+		modeName = "geek"
+		// Build config for system prompt
+		cfg := &agentpkg.CCRunnerConfig{
+			Mode:      "geek",
+			SessionID: sessionID,
+			UserID:    userID,
+			WorkDir:   workDir,
+		}
+		systemPrompt = mode.BuildSystemPrompt(cfg)
 	}
-
-	// Build system prompt
-	systemPrompt := mode.BuildSystemPrompt(cfg)
 
 	// Warmup the session using the runner's WarmupSession method
 	warmupCfg := &agentpkg.CCRunnerConfig{
-		Mode:           "geek",
+		Mode:           modeName,
 		SessionID:      sessionID,
 		UserID:         userID,
 		WorkDir:        workDir,
@@ -84,7 +105,8 @@ func WarmupSession(ctx context.Context, workDir string, userID int32, sessionID 
 		return fmt.Errorf("warmup failed: %w", err)
 	}
 
-	slog.Info("GeekParrot: session warmed up successfully",
+	slog.Info("WarmupSession: session warmed up successfully",
+		"mode", modeName,
 		"session_id", sessionID,
 		"user_id", userID)
 

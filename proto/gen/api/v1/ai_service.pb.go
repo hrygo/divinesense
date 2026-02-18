@@ -1573,7 +1573,7 @@ func (x *StopChatRequest) GetReason() string {
 type WarmupSessionRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ConversationId int32                  `protobuf:"varint,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"` // Conversation ID to warmup session for
-	UserId         int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                         // User ID (extracted from auth context if not provided)
+	IsEvolution    bool                   `protobuf:"varint,2,opt,name=is_evolution,json=isEvolution,proto3" json:"is_evolution,omitempty"`          // Set to true for Evolution mode, false (default) for Geek mode
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1615,11 +1615,11 @@ func (x *WarmupSessionRequest) GetConversationId() int32 {
 	return 0
 }
 
-func (x *WarmupSessionRequest) GetUserId() int32 {
+func (x *WarmupSessionRequest) GetIsEvolution() bool {
 	if x != nil {
-		return x.UserId
+		return x.IsEvolution
 	}
-	return 0
+	return false
 }
 
 // DangerBlockEvent represents a dangerous operation that was blocked.
@@ -6360,10 +6360,10 @@ const file_api_v1_ai_service_proto_rawDesc = "" +
 	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\"W\n" +
 	"\x0fStopChatRequest\x12,\n" +
 	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"]\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"g\n" +
 	"\x14WarmupSessionRequest\x12,\n" +
-	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x05R\x06userId\"\x98\x01\n" +
+	"\x0fconversation_id\x18\x01 \x01(\x05B\x03\xe0A\x02R\x0econversationId\x12!\n" +
+	"\fis_evolution\x18\x02 \x01(\bR\visEvolution\"\x98\x01\n" +
 	"\x10DangerBlockEvent\x12\x1c\n" +
 	"\toperation\x18\x01 \x01(\tR\toperation\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12'\n" +

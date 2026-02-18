@@ -122,11 +122,11 @@ type AIServiceClient interface {
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(ctx context.Context, in *StopChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// WarmupSession pre-starts a CLI session for faster first response.
-	// This is useful for Geek mode where CLI startup takes ~9 seconds.
-	// Call this after creating a Geek mode conversation to reduce latency.
+	// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
+	// Call this after creating a conversation to reduce latency.
 	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-	// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
-	// 创建 Geek 模式对话后调用此方法可减少延迟。
+	// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
+	// 创建对话后调用此方法可减少延迟。
 	WarmupSession(ctx context.Context, in *WarmupSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(ctx context.Context, in *GetSessionStatsRequest, opts ...grpc.CallOption) (*SessionStats, error)
@@ -662,11 +662,11 @@ type AIServiceServer interface {
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *StopChatRequest) (*emptypb.Empty, error)
 	// WarmupSession pre-starts a CLI session for faster first response.
-	// This is useful for Geek mode where CLI startup takes ~9 seconds.
-	// Call this after creating a Geek mode conversation to reduce latency.
+	// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
+	// Call this after creating a conversation to reduce latency.
 	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-	// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
-	// 创建 Geek 模式对话后调用此方法可减少延迟。
+	// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
+	// 创建对话后调用此方法可减少延迟。
 	WarmupSession(context.Context, *WarmupSessionRequest) (*emptypb.Empty, error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(context.Context, *GetSessionStatsRequest) (*SessionStats, error)
