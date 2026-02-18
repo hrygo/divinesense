@@ -325,6 +325,7 @@ func (s *ConnectServiceHandler) ListParrots(ctx context.Context, req *connect.Re
 		v1pb.AgentType_AGENT_TYPE_MEMO,
 		v1pb.AgentType_AGENT_TYPE_SCHEDULE,
 		v1pb.AgentType_AGENT_TYPE_GENERAL,
+		v1pb.AgentType_AGENT_TYPE_IDEATION,
 	}
 
 	parrots := make([]*v1pb.ParrotInfo, 0, len(agentTypes))
@@ -383,6 +384,19 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 			SelfIntroduction: "我是通才，您的通用助手。我能帮您处理总结、翻译、问答等各类任务。",
 			FunFact:          "我是一只灰鹦鹉，以聪明和适应力强著称",
 		}
+	case v1pb.AgentType_AGENT_TYPE_IDEATION:
+		return &v1pb.ParrotSelfCognition{
+			Name:             "ideation",
+			Emoji:            "💡",
+			Title:            "灵光 - 创意生成鹦鹉",
+			Personality:      []string{"创意", "灵感丰富", "思维活跃"},
+			Capabilities:     []string{"brainstorming", "creative_writing", "idea_generation"},
+			Limitations:      []string{"不擅长翻译和润色", "不负责笔记搜索"},
+			WorkingStyle:     "激发创意思维，提供多角度方案，鼓励创新",
+			FavoriteTools:    []string{"brainstorm", "creative_prompt", "memo_write"},
+			SelfIntroduction: "我是灵光，您的创意助手。我擅长头脑风暴、创意写作和灵感激发。",
+			FunFact:          "我是一只紫罗兰鹦鹉，以创意和灵感著称",
+		}
 	default:
 		return &v1pb.ParrotSelfCognition{
 			Name:             "default",
@@ -408,6 +422,8 @@ func getParrotNameByAgentType(agentType v1pb.AgentType) string {
 		return "时巧"
 	case v1pb.AgentType_AGENT_TYPE_GENERAL:
 		return "通才"
+	case v1pb.AgentType_AGENT_TYPE_IDEATION:
+		return "灵光"
 	default:
 		return "默认助手"
 	}
