@@ -29,8 +29,8 @@ func ExecutePersistentSession(
 		return fmt.Errorf("StartAsyncSession failed: %w", err)
 	}
 
-	// Wait for CLI to be ready (init event received)
-	// 等待 CLI 就绪（收到 init 事件）
+	// Wait for CLI to be ready (hook_response success received)
+	// 等待 CLI 就绪（收到 hook_response 成功）
 	readyCtx, readyCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer readyCancel()
 	if err := session.WaitForReady(readyCtx); err != nil {

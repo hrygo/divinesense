@@ -307,8 +307,8 @@ func (r *CCRunner) WarmupSession(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("failed to start session for warmup: %w", err)
 	}
 
-	// Wait for CLI to be ready (init event received)
-	// 等待 CLI 就绪（收到 init 事件）
+	// Wait for CLI to be ready (hook_response success received)
+	// 等待 CLI 就绪（收到 hook_response 成功）
 	readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -391,19 +391,21 @@ func (r *CCRunner) startSessionMonitor(session *Session) {
 				continue
 			}
 
-			// Detect CLI init event - this is the ONLY signal that CLI is fully ready
+			// Detect CLI ready signal from hook_response success
 			// CLI sends system events during startup:
 			// - hook_started: Session hooks are starting
-			// - hook_response: Session hooks completed
-			// - init: CLI fully initialized (tools, MCP servers ready) - ONLY this signals ready
-			// 检测 CLI init 事件 - 这是 CLI 完全就绪的唯一信号
+			// - hook_response: Session hooks completed (with outcome: success or failure)
+			// NOTE: CLI does NOT send an "init" event in --print mode!
+			// We use hook_response with outcome: success as the ready signal.
+			// 检测 CLI 就绪信号（从 hook_response 成功完成）
 			// CLI 在启动期间发送 system 事件：
 			// - hook_started: Session hooks 正在启动
-			// - hook_response: Session hooks 完成
-			// - init: CLI 完全初始化（工具、MCP 服务器就绪）- 只有这个信号表示就绪
-			if msg.Type == "system" && msg.Subtype == "init" {
-				r.logger.Info("CCRunner: CLI init received, session ready for input",
-					"session_id", session.ID)
+			// - hook_response: Session hooks 完成（outcome: success 或 failure）
+			// 注意：CLI 在 --print 模式下不发送 "init" 事件！
+			// 我们使用 hook_response 的 outcome: success 作为就绪信号。
+			if msg.Type == "system" && msg.Subtype == "hook_response" && msg.Outcome == "success" {
+				r.logger.Info("CCRunner: CLI hooks ready, session ready for input",
+					"session_id", session.ID, "hook_name", msg.HookName)
 				select {
 				case <-session.initReceived:
 					// Already closed

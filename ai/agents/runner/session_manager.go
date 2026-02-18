@@ -51,7 +51,7 @@ type Session struct {
 
 	mu               sync.RWMutex
 	statusResetTimer *time.Timer   // Timer for resetting status from Busy to Ready
-	initReceived     chan struct{} // Closed when CLI sends init event
+	initReceived     chan struct{} // Closed when CLI is ready (hook_response success)
 }
 
 // SetCallback sets the callback for processing session events.
@@ -432,9 +432,11 @@ func (s *Session) GetStatus() SessionStatus {
 	return s.Status
 }
 
-// WaitForReady blocks until the CLI sends the init event (fully initialized).
+// WaitForReady blocks until the CLI is ready to accept input.
+// The ready signal is triggered by hook_response with outcome: success.
 // Returns nil if ready, error if cancelled or timeout.
-// WaitForReady 阻塞直到 CLI 发送 init 事件（完全初始化）。
+// WaitForReady 阻塞直到 CLI 准备好接收输入。
+// 就绪信号由 hook_response 的 outcome: success 触发。
 // 如果就绪返回 nil，如果取消或超时返回错误。
 func (s *Session) WaitForReady(ctx context.Context) error {
 	select {
@@ -446,8 +448,8 @@ func (s *Session) WaitForReady(ctx context.Context) error {
 }
 
 // waitForReady monitors the session and transitions from Starting to Ready
-// when the CLI sends the init event (indicating it's ready to accept input).
-// waitForReady 监控会话，当 CLI 发送 init 事件（表示准备好接收输入）时从 Starting 转换为 Ready。
+// when the CLI is ready to accept input (hook_response with outcome: success).
+// waitForReady 监控会话，当 CLI 准备好接收输入时（hook_response 的 outcome: success）从 Starting 转换为 Ready。
 // The context parameter allows cancellation if the session is terminated early.
 func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 	go func() {
@@ -459,7 +461,7 @@ func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 			// Context cancelled - session terminated or request cancelled
 			return
 		case <-s.initReceived:
-			// CLI sent init event, ready to accept input
+			// CLI ready (hook_response success), ready to accept input
 			s.mu.Lock()
 			if s.Status == SessionStatusStarting {
 				s.Status = SessionStatusReady
