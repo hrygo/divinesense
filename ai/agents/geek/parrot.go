@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,112 +26,11 @@ type GeekParrot struct {
 	deviceCtx string
 }
 
-var (
-	sharedSessionManager *agentpkg.CCSessionManager
-	sharedManagerOnce    sync.Once
-)
-
-func getSharedSessionManager() agentpkg.SessionManager {
-	sharedManagerOnce.Do(func() {
-		// Default 30m idle timeout per spec
-		sharedSessionManager = agentpkg.NewCCSessionManager(slog.Default(), 30*time.Minute)
-	})
-	return sharedSessionManager
-}
-
-// WarmupSession pre-starts a CLI session for faster first response.
-// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
-// The session will be reused when a subsequent Chat request uses the same sessionID.
-// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
-// 后续使用相同 sessionID 的 Chat 请求将复用此会话。
-//
-// mode parameter: "geek" or "evolution"
-// mode 参数: "geek" 或 "evolution"
-func WarmupSession(ctx context.Context, modeType string, workDir string, userID int32, sessionID string) error {
-	manager := getSharedSessionManager()
-
-	// Create CCRunner with shared manager
-	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
-	if err != nil {
-		return fmt.Errorf("failed to create CCRunner: %w", err)
-	}
-
-	var systemPrompt string
-	var modeName string
-
-	switch modeType {
-	case "evolution":
-		// Create EvolutionMode
-		mode := NewEvolutionMode(&EvolutionModeConfig{
-			SourceDir: workDir,
-			AdminOnly: false, // Warmup doesn't need permission check
-		})
-		modeName = "evolution"
-		// Build config for system prompt
-		cfg := &agentpkg.CCRunnerConfig{
-			Mode:      "evolution",
-			SessionID: sessionID,
-			UserID:    userID,
-			WorkDir:   workDir,
-		}
-		systemPrompt = mode.BuildSystemPrompt(cfg)
-	default:
-		// Create GeekMode (default)
-		mode := NewGeekMode("")
-		modeName = "geek"
-		// Build config for system prompt
-		cfg := &agentpkg.CCRunnerConfig{
-			Mode:      "geek",
-			SessionID: sessionID,
-			UserID:    userID,
-			WorkDir:   workDir,
-		}
-		systemPrompt = mode.BuildSystemPrompt(cfg)
-	}
-
-	// Warmup the session using the runner's WarmupSession method
-	warmupCfg := &agentpkg.CCRunnerConfig{
-		Mode:           modeName,
-		SessionID:      sessionID,
-		UserID:         userID,
-		WorkDir:        workDir,
-		PermissionMode: "bypassPermissions",
-		SystemPrompt:   systemPrompt,
-	}
-
-	if err := runner.WarmupSession(ctx, warmupCfg); err != nil {
-		return fmt.Errorf("warmup failed: %w", err)
-	}
-
-	slog.Info("WarmupSession: session warmed up successfully",
-		"mode", modeName,
-		"session_id", sessionID,
-		"user_id", userID)
-
-	return nil
-}
-
-// shutdownSharedSessionManager terminates all active CLI sessions managed by the shared session manager.
-// This should be called during graceful server shutdown to ensure all Claude Code CLI
-// child processes are properly terminated.
-// shutdownSharedSessionManager 终止共享会话管理器管理的所有活动 CLI 会话。
-// 应在优雅服务器关闭期间调用，确保所有 Claude Code CLI 子进程被正确终止。
-func shutdownSharedSessionManager() {
-	if sharedSessionManager != nil {
-		slog.Info("GeekParrot: shutting down shared session manager")
-		sharedSessionManager.Shutdown()
-	}
-}
-
 // NewGeekParrot creates a new GeekParrot instance.
 // NewGeekParrot 创建一个新的 GeekParrot 实例。
 func NewGeekParrot(sourceDir string, userID int32, sessionID string) (*GeekParrot, error) {
-	// Use shared session manager to enable persistent sessions across requests
-	manager := getSharedSessionManager()
-
-	// Create CCRunner with shared manager
-	runner, err := agentpkg.NewCCRunnerWithManager(manager, 10*time.Minute, slog.Default())
+	// Create CCRunner
+	runner, err := agentpkg.NewCCRunner(10*time.Minute, slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CCRunner: %w", err)
 	}
@@ -201,19 +99,9 @@ func (p *GeekParrot) Execute(
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 
-	// Execute via shared persistent session logic
-	// 通过共享持久化会话逻辑执行
-	// Input format: {"type":"user","message":{"role":"user","content":"text"}}
-	inputMsg := map[string]any{
-		"type": "user",
-		"message": map[string]any{
-			"role":    "user",
-			"content": userInput,
-		},
-	}
-
-	if err := ExecutePersistentSession(ctx, p.runner, cfg, inputMsg, callback); err != nil {
-		return agentpkg.NewParrotError(p.Name(), "ExecutePersistentSession", err)
+	// Execute via CCRunner
+	if err := p.runner.Execute(ctx, cfg, userInput, callback); err != nil {
+		return agentpkg.NewParrotError(p.Name(), "Execute", err)
 	}
 
 	return nil

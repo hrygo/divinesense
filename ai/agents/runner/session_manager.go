@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,55 +33,19 @@ const (
 
 // Session represents a persistent process of Claude Code CLI.
 type Session struct {
-	ID              string
-	Config          Config
-	Cmd             *exec.Cmd
-	Stdin           io.WriteCloser
-	Stdout          io.ReadCloser
-	Stderr          io.ReadCloser
-	Cancel          context.CancelFunc
-	CreatedAt       time.Time
-	LastActive      time.Time
-	Status          SessionStatus
-	Scanner         *bufio.Scanner
-	CurrentCallback EventCallback
-	CurrentStats    *SessionStats
-	MonitorOnce     sync.Once
+	ID         string
+	Config     Config
+	Cmd        *exec.Cmd
+	Stdin      io.WriteCloser
+	Stdout     io.ReadCloser
+	Stderr     io.ReadCloser
+	Cancel     context.CancelFunc
+	CreatedAt  time.Time
+	LastActive time.Time
+	Status     SessionStatus
 
 	mu               sync.RWMutex
-	statusResetTimer *time.Timer   // Timer for resetting status from Busy to Ready
-	initReceived     chan struct{} // Closed when CLI is ready (hook_response success)
-}
-
-// SetCallback sets the callback for processing session events.
-// SetCallback 设置处理会话事件的回调。
-func (s *Session) SetCallback(cb EventCallback) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.CurrentCallback = cb
-}
-
-// IsIdle checks if the session has been idle for longer than the timeout.
-// Safe for concurrent use.
-// IsIdle 检查会话空闲时间是否超过超时时间。并发安全。
-func (s *Session) IsIdle(timeout time.Duration) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	// Never terminate busy sessions
-	if s.Status == SessionStatusBusy {
-		return false
-	}
-
-	return time.Since(s.LastActive) > timeout
-}
-
-// SetStats sets the statistics tracker for the current session interaction.
-// SetStats 设置当前会话交互的统计跟踪器。
-func (s *Session) SetStats(stats *SessionStats) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.CurrentStats = stats
+	statusResetTimer *time.Timer // Timer for resetting status from Busy to Ready
 }
 
 // SessionManager defines the interface for managing persistent sessions.
@@ -221,15 +184,9 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// because the session should outlive the HTTP request that created it.
 	// 使用 context.Background() 而非请求 ctx，因为会话的生命周期应超出创建它的 HTTP 请求。
 	sessCtx, cancel := context.WithCancel(context.Background())
-
-	// Ensure cancel is called on failure paths (but NOT on success)
-	// 确保在失败路径上调用 cancel（但在成功时不调用）
-	success := false
-	defer func() {
-		if !success {
-			cancel()
-		}
-	}()
+	// Ensure cancel is always called, even on error paths
+	// 确保在所有路径（包括错误路径）上都调用 cancel
+	defer cancel()
 
 	// Use a startup timeout to prevent indefinite hangs during process start
 	// We monitor startup in a goroutine and cancel if it takes too long
@@ -240,11 +197,8 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Channel to signal successful startup or failure
 	startedCh := make(chan error, 1)
 
-	// Channel to signal function return (prevent race with startupCancel)
-	doneCh := make(chan struct{})
-	defer close(doneCh)
-
 	// Ensure we signal completion even on early return
+	// This prevents goroutine leak if function returns before startup completes
 	defer close(startedCh)
 
 	// Goroutine to monitor startup timeout
@@ -252,16 +206,9 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	go func() {
 		select {
 		case <-startupCtx.Done():
-			// Startup timeout or request cancelled
-			// Check if function already returned successfully
-			select {
-			case <-doneCh:
-				// Function returned, ignore cancellation
-				return
-			default:
-				// Genuine timeout or request cancel -> kill session
-				cancel()
-			}
+			// Startup timeout or request cancelled - kill the session
+			cancel()
+			// Channel will be closed by defer, no need to send
 		case err, ok := <-startedCh:
 			// Startup completed (success or failure)
 			if ok && err != nil {
@@ -315,11 +262,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	cmd.Dir = cfg.WorkDir
 	cmd.Env = append(os.Environ(), "CLAUDE_DISABLE_TELEMETRY=1")
 
-	// Apply custom environment variables
-	for k, v := range cfg.Env {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
-	}
-
 	// Create pipes with proper cleanup on error paths
 	// 创建管道并在错误路径上正确清理
 	var stdin io.WriteCloser
@@ -337,6 +279,7 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
+	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
@@ -345,15 +288,7 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
-
-	// Cleanup pipes on error path only (success means Session owns them)
-	// 只在错误路径上清理管道（成功时 Session 拥有所有权）
-	defer func() {
-		if !success {
-			_ = stdout.Close() //nolint:errcheck // cleanup on error path
-			_ = stderr.Close() //nolint:errcheck // cleanup on error path
-		}
-	}()
+	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	if err := cmd.Start(); err != nil {
 		startedCh <- err // Signal startup failed
@@ -366,17 +301,16 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	sm.logger.Info("Session started", "session_id", sessionID, "pid", cmd.Process.Pid)
 
 	sess := &Session{
-		ID:           sessionID,
-		Config:       cfg,
-		Cmd:          cmd,
-		Stdin:        stdin,
-		Stdout:       stdout,
-		Stderr:       stderr,
-		Cancel:       cancel,
-		CreatedAt:    time.Now(),
-		LastActive:   time.Now(),
-		Status:       SessionStatusStarting,
-		initReceived: make(chan struct{}),
+		ID:         sessionID,
+		Config:     cfg,
+		Cmd:        cmd,
+		Stdin:      stdin,
+		Stdout:     stdout,
+		Stderr:     stderr,
+		Cancel:     cancel,
+		CreatedAt:  time.Now(),
+		LastActive: time.Now(),
+		Status:     SessionStatusStarting,
 	}
 
 	// Start status transition monitor: Starting -> Ready
@@ -384,7 +318,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Pass the startup context so waitForReady can be cancelled if startup times out
 	sess.waitForReady(startupCtx, defaultReadyTimeout)
 
-	success = true
 	return sess, nil
 }
 
@@ -432,49 +365,41 @@ func (s *Session) GetStatus() SessionStatus {
 	return s.Status
 }
 
-// WaitForReady blocks until the CLI is ready to accept input.
-// The ready signal is triggered by hook_response with outcome: success.
-// Returns nil if ready, error if cancelled or timeout.
-// WaitForReady 阻塞直到 CLI 准备好接收输入。
-// 就绪信号由 hook_response 的 outcome: success 触发。
-// 如果就绪返回 nil，如果取消或超时返回错误。
-func (s *Session) WaitForReady(ctx context.Context) error {
-	select {
-	case <-s.initReceived:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 // waitForReady monitors the session and transitions from Starting to Ready
-// when the CLI is ready to accept input (hook_response with outcome: success).
-// waitForReady 监控会话，当 CLI 准备好接收输入时（hook_response 的 outcome: success）从 Starting 转换为 Ready。
+// when the process is confirmed alive and responsive.
+// waitForReady 监控会话，当进程确认存活且响应时从 Starting 转换为 Ready。
 // The context parameter allows cancellation if the session is terminated early.
 func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 	go func() {
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
 
-		select {
-		case <-ctx.Done():
-			// Context cancelled - session terminated or request cancelled
-			return
-		case <-s.initReceived:
-			// CLI ready (hook_response success), ready to accept input
-			s.mu.Lock()
-			if s.Status == SessionStatusStarting {
-				s.Status = SessionStatusReady
+		deadline := time.Now().Add(timeout)
+		for time.Now().Before(deadline) {
+			select {
+			case <-ctx.Done():
+				// Context cancelled - session terminated or request cancelled
+				return
+			case <-ticker.C:
+				s.mu.Lock()
+				if s.Status == SessionStatusDead {
+					s.mu.Unlock()
+					return
+				}
+				if s.IsAlive() {
+					s.Status = SessionStatusReady
+					s.mu.Unlock()
+					return
+				}
+				s.mu.Unlock()
 			}
-			s.mu.Unlock()
-		case <-timer.C:
-			// Timeout - mark as dead if still not ready
-			s.mu.Lock()
-			if s.Status == SessionStatusStarting {
-				s.Status = SessionStatusDead
-			}
-			s.mu.Unlock()
 		}
+		// Timeout - mark as dead if still not alive
+		s.mu.Lock()
+		if s.Status == SessionStatusStarting {
+			s.Status = SessionStatusDead
+		}
+		s.mu.Unlock()
 	}()
 }
 
@@ -522,10 +447,6 @@ func (s *Session) WriteInput(msg map[string]any) error {
 	// Append newline as protocol often requires it (JSONL)
 	data = append(data, '\n')
 
-	// Debug: log the input being sent
-	// 调试：记录发送的输入
-	slog.Debug("WriteInput: sending to CLI", "session_id", s.ID, "data", string(data))
-
 	_, err = s.Stdin.Write(data)
 	if err != nil {
 		return err
@@ -572,12 +493,13 @@ func (sm *CCSessionManager) cleanupIdleSessions() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	now := time.Now()
 	for sessionID, sess := range sm.sessions {
-		// Use thread-safe IsIdle check
-		// 使用线程安全的 IsIdle 检查
-		if sess.IsIdle(sm.timeout) {
+		idleTime := now.Sub(sess.LastActive)
+		if idleTime > sm.timeout {
 			sm.logger.Info("Session idle timeout, terminating",
 				"session_id", sessionID,
+				"idle_duration", idleTime,
 				"timeout", sm.timeout)
 			_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on idle timeout
 		}

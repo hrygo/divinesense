@@ -101,34 +101,24 @@ type CCRunner struct {
 
 // NewCCRunner creates a new CCRunner instance.
 // NewCCRunner 创建一个新的 CCRunner 实例。
-// NewCCRunner creates a new CCRunner with default session manager.
 func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
-	if logger == nil {
-		logger = slog.Default()
-	}
-	// Default 30m idle timeout per spec
-	manager := NewCCSessionManager(logger, 30*time.Minute)
-	return NewCCRunnerWithManager(manager, timeout, logger)
-}
-
-// NewCCRunnerWithManager creates a new CCRunner with an existing session manager.
-func NewCCRunnerWithManager(manager SessionManager, timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
-	if logger == nil {
-		logger = slog.Default()
-	}
-
 	cliPath, err := exec.LookPath("claude")
 	if err != nil {
-		return nil, fmt.Errorf("claude CLI not found in PATH: %w", err)
+		return nil, fmt.Errorf("claude Code CLI not found: %w", err)
 	}
 
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	// Initialize danger detector for security
 	dangerDetector := NewDetector(logger)
 
 	return &CCRunner{
 		cliPath:        cliPath,
 		timeout:        timeout,
 		logger:         logger,
-		manager:        manager,
+		manager:        NewCCSessionManager(logger, 30*time.Minute), // Default 30m idle timeout
 		dangerDetector: dangerDetector,
 	}, nil
 }
@@ -254,188 +244,6 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 		"tools_used", len(stats.ToolsUsed))
 
 	return nil
-}
-
-// StartAsyncSession starts a persistent session and returns the session object.
-func (r *CCRunner) StartAsyncSession(ctx context.Context, cfg *Config) (*Session, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Derive SessionID from ConversationID using UUID v5 for deterministic mapping.
-	// 使用 UUID v5 从 ConversationID 派生 SessionID，实现确定性映射。
-	if cfg.SessionID == "" && cfg.ConversationID > 0 {
-		cfg.SessionID = ConversationIDToSessionID(cfg.ConversationID)
-		r.logger.Debug("CCRunner: derived SessionID from ConversationID",
-			"conversation_id", cfg.ConversationID,
-			"session_id", cfg.SessionID)
-	}
-
-	if err := r.ValidateConfig(cfg); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
-	}
-
-	// Ensure working directory exists
-	if err := os.MkdirAll(cfg.WorkDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create work directory: %w", err)
-	}
-
-	// Create session via manager
-	sess, err := r.manager.GetOrCreateSession(ctx, cfg.SessionID, *cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start monitoring output if not already running
-	sess.MonitorOnce.Do(func() {
-		r.startSessionMonitor(sess)
-	})
-
-	return sess, nil
-}
-
-// WarmupSession pre-starts a CLI session for faster first response.
-// This is useful for Geek mode where CLI startup takes ~9 seconds.
-// The session will be reused when StartAsyncSession is called with the same SessionID.
-// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-// 这对于 CLI 启动需要约 9 秒的 Geek 模式非常有用。
-// 当使用相同 SessionID 调用 StartAsyncSession 时，会话将被复用。
-func (r *CCRunner) WarmupSession(ctx context.Context, cfg *Config) error {
-	// Start the session (this launches CLI process)
-	// 启动会话（这会启动 CLI 进程）
-	sess, err := r.StartAsyncSession(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("failed to start session for warmup: %w", err)
-	}
-
-	// Wait for CLI to be ready (hook_response success received)
-	// 等待 CLI 就绪（收到 hook_response 成功）
-	readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	if err := sess.WaitForReady(readyCtx); err != nil {
-		r.logger.Warn("CCRunner: warmup session not ready within timeout",
-			"session_id", cfg.SessionID,
-			"error", err)
-		// Don't return error - session may still become ready later
-		// 不返回错误 - 会话可能稍后仍会就绪
-		return fmt.Errorf("warmup timeout: %w", err)
-	}
-
-	r.logger.Info("CCRunner: session warmed up successfully",
-		"session_id", cfg.SessionID,
-		"conversation_id", cfg.ConversationID)
-
-	return nil
-}
-
-// startSessionMonitor monitors session output and dispatches events to the current callback.
-// startSessionMonitor 监控会话输出并将事件分发给当前回调。
-func (r *CCRunner) startSessionMonitor(session *Session) {
-	session.mu.Lock()
-	if session.Scanner == nil {
-		session.Scanner = bufio.NewScanner(session.Stdout)
-		buf := make([]byte, 0, scannerInitialBufSize)
-		session.Scanner.Buffer(buf, scannerMaxBufSize)
-	}
-	session.mu.Unlock()
-
-	// Start stderr monitor to capture CLI error output for debugging
-	// 启动 stderr 监控以捕获 CLI 错误输出用于调试
-	go func() {
-		stderrScanner := bufio.NewScanner(session.Stderr)
-		for stderrScanner.Scan() {
-			line := stderrScanner.Text()
-			if line != "" {
-				r.logger.Warn("CCRunner: stderr output", "session_id", session.ID, "line", line)
-			}
-		}
-		if err := stderrScanner.Err(); err != nil {
-			r.logger.Error("CCRunner: stderr scanner error", "session_id", session.ID, "error", err)
-		}
-	}()
-
-	go func() {
-		defer func() {
-			if panicVal := recover(); panicVal != nil {
-				r.logger.Error("CCRunner: session monitor panic recovered",
-					"session_id", session.ID,
-					"panic", panicVal)
-			}
-			r.logger.Info("CCRunner: session monitor exited", "session_id", session.ID)
-			// Terminate session on monitor exit (EOF or error)
-			_ = r.manager.TerminateSession(session.ID)
-		}()
-
-		for session.Scanner.Scan() {
-			line := session.Scanner.Text()
-			if line == "" {
-				continue
-			}
-
-			// Debug: log received output
-			r.logger.Debug("SessionMonitor: received output", "session_id", session.ID, "line", line)
-
-			// Update session activity
-			session.mu.Lock()
-			session.LastActive = time.Now()
-			cb := session.CurrentCallback
-			stats := session.CurrentStats
-			session.mu.Unlock()
-
-			var msg StreamMessage
-			if err := json.Unmarshal([]byte(line), &msg); err != nil {
-				// Not JSON
-				if cb != nil {
-					_ = cb("answer", line)
-				}
-				continue
-			}
-
-			// Detect CLI ready signal from hook_response success
-			// CLI sends system events during startup:
-			// - hook_started: Session hooks are starting
-			// - hook_response: Session hooks completed (with outcome: success or failure)
-			// NOTE: CLI does NOT send an "init" event in --print mode!
-			// We use hook_response with outcome: success as the ready signal.
-			// 检测 CLI 就绪信号（从 hook_response 成功完成）
-			// CLI 在启动期间发送 system 事件：
-			// - hook_started: Session hooks 正在启动
-			// - hook_response: Session hooks 完成（outcome: success 或 failure）
-			// 注意：CLI 在 --print 模式下不发送 "init" 事件！
-			// 我们使用 hook_response 的 outcome: success 作为就绪信号。
-			if msg.Type == "system" && msg.Subtype == "hook_response" && msg.Outcome == "success" {
-				r.logger.Info("CCRunner: CLI hooks ready, session ready for input",
-					"session_id", session.ID, "hook_name", msg.HookName)
-				select {
-				case <-session.initReceived:
-					// Already closed
-				default:
-					close(session.initReceived)
-				}
-			}
-
-			if cb != nil {
-				// Handle result message - extract and send session statistics
-				if msg.Type == "result" && stats != nil {
-					r.handleResultMessage(msg, stats, &session.Config, cb)
-				}
-
-				// Dispatch event to callback
-				if err := r.dispatchCallback(msg, cb, stats); err != nil {
-					r.logger.Error("CCRunner: dispatch callback failed", "error", err)
-				}
-			}
-		}
-
-		if err := session.Scanner.Err(); err != nil {
-			r.logger.Error("CCRunner: session scanner error", "session_id", session.ID, "error", err)
-		}
-	}()
-}
-
-// GetSessionManager returns the session manager.
-func (r *CCRunner) GetSessionManager() SessionManager {
-	return r.manager
 }
 
 // GetSessionStats returns a copy of the current session stats.
@@ -929,6 +737,14 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 // 3. Be safe for concurrent invocation from multiple goroutines
 // dispatchCallback 将流事件分发给回调，附带元数据。
 func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, stats *SessionStats) error {
+	// Skip processing if stats is nil (can happen during session warmup or reuse)
+	// 如果 stats 为 nil 则跳过处理（可能发生在会话预热或复用时）
+	if stats == nil {
+		r.logger.Debug("dispatchCallback: stats is nil, skipping event processing",
+			"type", msg.Type, "subtype", msg.Subtype)
+		return nil
+	}
+
 	// Calculate total duration
 	totalDuration := time.Since(stats.StartTime).Milliseconds()
 
@@ -1041,6 +857,11 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 		}
 	case "message", "content", "text", "delta", "assistant":
 		// Assistant message starts generation phase
+		r.logger.Debug("dispatchCallback: processing assistant message",
+			"type", msg.Type,
+			"has_message", msg.Message != nil,
+			"has_direct_content", len(msg.Content) > 0,
+			"blocks_count", len(msg.GetContentBlocks()))
 		stats.EndThinking()
 		stats.StartGeneration()
 

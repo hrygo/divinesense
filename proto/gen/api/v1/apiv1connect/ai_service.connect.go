@@ -99,8 +99,6 @@ const (
 	AIServiceClearConversationMessagesProcedure = "/memos.api.v1.AIService/ClearConversationMessages"
 	// AIServiceStopChatProcedure is the fully-qualified name of the AIService's StopChat RPC.
 	AIServiceStopChatProcedure = "/memos.api.v1.AIService/StopChat"
-	// AIServiceWarmupSessionProcedure is the fully-qualified name of the AIService's WarmupSession RPC.
-	AIServiceWarmupSessionProcedure = "/memos.api.v1.AIService/WarmupSession"
 	// AIServiceGetSessionStatsProcedure is the fully-qualified name of the AIService's GetSessionStats
 	// RPC.
 	AIServiceGetSessionStatsProcedure = "/memos.api.v1.AIService/GetSessionStats"
@@ -194,13 +192,6 @@ type AIServiceClient interface {
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
-	// WarmupSession pre-starts a CLI session for faster first response.
-	// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
-	// Call this after creating a conversation to reduce latency.
-	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-	// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
-	// 创建对话后调用此方法可减少延迟。
-	WarmupSession(context.Context, *connect.Request[v1.WarmupSessionRequest]) (*connect.Response[emptypb.Empty], error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error)
 	// ListSessionStats retrieves session statistics with pagination.
@@ -401,12 +392,6 @@ func NewAIServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(aIServiceMethods.ByName("StopChat")),
 			connect.WithClientOptions(opts...),
 		),
-		warmupSession: connect.NewClient[v1.WarmupSessionRequest, emptypb.Empty](
-			httpClient,
-			baseURL+AIServiceWarmupSessionProcedure,
-			connect.WithSchema(aIServiceMethods.ByName("WarmupSession")),
-			connect.WithClientOptions(opts...),
-		),
 		getSessionStats: connect.NewClient[v1.GetSessionStatsRequest, v1.SessionStats](
 			httpClient,
 			baseURL+AIServiceGetSessionStatsProcedure,
@@ -533,7 +518,6 @@ type aIServiceClient struct {
 	addContextSeparator       *connect.Client[v1.AddContextSeparatorRequest, emptypb.Empty]
 	clearConversationMessages *connect.Client[v1.ClearConversationMessagesRequest, emptypb.Empty]
 	stopChat                  *connect.Client[v1.StopChatRequest, emptypb.Empty]
-	warmupSession             *connect.Client[v1.WarmupSessionRequest, emptypb.Empty]
 	getSessionStats           *connect.Client[v1.GetSessionStatsRequest, v1.SessionStats]
 	listSessionStats          *connect.Client[v1.ListSessionStatsRequest, v1.ListSessionStatsResponse]
 	getCostStats              *connect.Client[v1.GetCostStatsRequest, v1.CostStats]
@@ -677,11 +661,6 @@ func (c *aIServiceClient) StopChat(ctx context.Context, req *connect.Request[v1.
 	return c.stopChat.CallUnary(ctx, req)
 }
 
-// WarmupSession calls memos.api.v1.AIService.WarmupSession.
-func (c *aIServiceClient) WarmupSession(ctx context.Context, req *connect.Request[v1.WarmupSessionRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.warmupSession.CallUnary(ctx, req)
-}
-
 // GetSessionStats calls memos.api.v1.AIService.GetSessionStats.
 func (c *aIServiceClient) GetSessionStats(ctx context.Context, req *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error) {
 	return c.getSessionStats.CallUnary(ctx, req)
@@ -815,13 +794,6 @@ type AIServiceHandler interface {
 	ClearConversationMessages(context.Context, *connect.Request[v1.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error)
 	// StopChat cancels an ongoing chat stream and terminates the associated session.
 	StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error)
-	// WarmupSession pre-starts a CLI session for faster first response.
-	// This is useful for Geek/Evolution mode where CLI startup takes ~9 seconds.
-	// Call this after creating a conversation to reduce latency.
-	// WarmupSession 预启动 CLI 会话以加快首次响应速度。
-	// 这对于 CLI 启动需要约 9 秒的 Geek/Evolution 模式非常有用。
-	// 创建对话后调用此方法可减少延迟。
-	WarmupSession(context.Context, *connect.Request[v1.WarmupSessionRequest]) (*connect.Response[emptypb.Empty], error)
 	// GetSessionStats retrieves statistics for a specific session.
 	GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error)
 	// ListSessionStats retrieves session statistics with pagination.
@@ -1018,12 +990,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(aIServiceMethods.ByName("StopChat")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aIServiceWarmupSessionHandler := connect.NewUnaryHandler(
-		AIServiceWarmupSessionProcedure,
-		svc.WarmupSession,
-		connect.WithSchema(aIServiceMethods.ByName("WarmupSession")),
-		connect.WithHandlerOptions(opts...),
-	)
 	aIServiceGetSessionStatsHandler := connect.NewUnaryHandler(
 		AIServiceGetSessionStatsProcedure,
 		svc.GetSessionStats,
@@ -1172,8 +1138,6 @@ func NewAIServiceHandler(svc AIServiceHandler, opts ...connect.HandlerOption) (s
 			aIServiceClearConversationMessagesHandler.ServeHTTP(w, r)
 		case AIServiceStopChatProcedure:
 			aIServiceStopChatHandler.ServeHTTP(w, r)
-		case AIServiceWarmupSessionProcedure:
-			aIServiceWarmupSessionHandler.ServeHTTP(w, r)
 		case AIServiceGetSessionStatsProcedure:
 			aIServiceGetSessionStatsHandler.ServeHTTP(w, r)
 		case AIServiceListSessionStatsProcedure:
@@ -1313,10 +1277,6 @@ func (UnimplementedAIServiceHandler) ClearConversationMessages(context.Context, 
 
 func (UnimplementedAIServiceHandler) StopChat(context.Context, *connect.Request[v1.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.StopChat is not implemented"))
-}
-
-func (UnimplementedAIServiceHandler) WarmupSession(context.Context, *connect.Request[v1.WarmupSessionRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.AIService.WarmupSession is not implemented"))
 }
 
 func (UnimplementedAIServiceHandler) GetSessionStats(context.Context, *connect.Request[v1.GetSessionStatsRequest]) (*connect.Response[v1.SessionStats], error) {
