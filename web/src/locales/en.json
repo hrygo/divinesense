@@ -405,7 +405,8 @@
       "confirm": "Confirm",
       "close": "Close",
       "hint": "Type @ to select an agent",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "remove_agent": "Remove agent"
     },
     "geek_mode": {
       "label": "Geek",

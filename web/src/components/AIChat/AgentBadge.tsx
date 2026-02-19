@@ -6,6 +6,7 @@
  * @see Issue #266
  */
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ParrotInfoFromAPI } from "@/hooks/useParrotsList";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ interface AgentBadgeProps {
 }
 
 export function AgentBadge({ agent, onRemove, className }: AgentBadgeProps) {
+  const { t } = useTranslation();
   const style = AGENT_STYLES[agent.name] || DEFAULT_STYLE;
   const emoji = AGENT_EMOJI[agent.name] || "🦜";
   const displayName = agent.displayName || agent.name;
@@ -79,7 +81,7 @@ export function AgentBadge({ agent, onRemove, className }: AgentBadgeProps) {
           onRemove();
         }}
         className={cn("ml-0.5 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10", "transition-colors duration-150")}
-        aria-label="移除专家"
+        aria-label={t("ai.mention.remove_agent")}
       >
         <X className="w-3 h-3" />
       </button>

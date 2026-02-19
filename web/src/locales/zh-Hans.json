@@ -400,7 +400,8 @@
       "confirm": "确认",
       "close": "关闭",
       "hint": "输入 @ 选择专家代理",
-      "loading": "加载中..."
+      "loading": "加载中...",
+      "remove_agent": "移除专家"
     },
     "geek_mode": {
       "label": "极客",
