@@ -7,7 +7,8 @@ import type { ParrotInfoFromAPI } from "@/hooks/useParrotsList";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
 import { PARROT_THEMES } from "@/types/parrot";
-import { canInsertMention, insertAgentMention, shouldTriggerMentionPopover } from "@/utils/agentMention";
+import { canInsertMention, shouldTriggerMentionPopover } from "@/utils/agentMention";
+import { AgentBadge } from "./AgentBadge";
 import { AgentMentionPopover } from "./AgentMentionPopover";
 import { ModeCycleButton } from "./ModeCycleButton";
 
@@ -27,6 +28,9 @@ interface ChatInputProps {
   showQuickActions?: boolean;
   quickActions?: React.ReactNode;
   currentMode?: AIMode;
+  // Issue #266: 隐式专家指定
+  selectedAgent?: ParrotInfoFromAPI | null;
+  onSelectedAgentChange?: (agent: ParrotInfoFromAPI | null) => void;
 }
 
 export function ChatInput({
@@ -45,6 +49,8 @@ export function ChatInput({
   showQuickActions = false,
   quickActions,
   currentMode = "normal",
+  selectedAgent,
+  onSelectedAgentChange,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -111,7 +117,7 @@ export function ChatInput({
     }
   }, []);
 
-  // Handle agent selection from popover
+  // Handle agent selection from popover (Issue #266: 隐式专家指定)
   const handleAgentSelect = useCallback(
     (agent: ParrotInfoFromAPI) => {
       if (!textareaRef.current) return;
@@ -127,25 +133,25 @@ export function ChatInput({
 
       if (atPosition < 0) return;
 
-      // Remove the @ and any filter text after it
+      // Remove the @ and any filter text after it (不再插入 @专家名)
       const beforeAt = textarea.value.slice(0, atPosition);
       const afterCursor = textarea.value.slice(cursorPosition);
+      const cleanText = (beforeAt + afterCursor).replace(/\s+/g, " ").trim();
 
-      // Insert the agent mention
-      const displayName = agent.displayName || agent.name;
-      const { newText, newCursorPos } = insertAgentMention(beforeAt + afterCursor, beforeAt.length, displayName);
+      onChange(cleanText);
 
-      onChange(newText);
+      // 设置选中的专家（隐式传递）
+      onSelectedAgentChange?.(agent);
 
-      // Set cursor position after the mention
+      // Set cursor position
       setTimeout(() => {
         textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.setSelectionRange(beforeAt.length, beforeAt.length);
       }, 0);
 
       setMentionPopoverOpen(false);
     },
-    [onChange],
+    [onChange, onSelectedAgentChange],
   );
 
   const handleKeyDown = useCallback(
@@ -354,6 +360,8 @@ export function ChatInput({
           )}
           style={{ contain: "layout" }}
         >
+          {/* Issue #266: Agent Badge 显示 */}
+          {selectedAgent && <AgentBadge agent={selectedAgent} onRemove={() => onSelectedAgentChange?.(null)} className="mb-1.5" />}
           <Textarea
             ref={textareaRef}
             value={value}

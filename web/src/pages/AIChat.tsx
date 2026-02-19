@@ -15,6 +15,7 @@ import { isDefaultTitle, useAIChat } from "@/contexts/AIChatContext";
 import { useChat } from "@/hooks/useAIQueries";
 import { useBlocks } from "@/hooks/useBlockQueries";
 import { useCapabilityRouter } from "@/hooks/useCapabilityRouter";
+import type { ParrotInfoFromAPI } from "@/hooks/useParrotsList";
 import { usePendingQueue } from "@/hooks/usePendingQueue";
 import { cn } from "@/lib/utils";
 import type { AIMode } from "@/types/aichat";
@@ -51,6 +52,9 @@ interface UnifiedChatViewProps {
   onModeChange: (mode: AIMode) => void;
   isAdmin?: boolean;
   conversationId?: number;
+  // Issue #266: 隐式专家指定
+  selectedAgent?: ParrotInfoFromAPI | null;
+  onSelectedAgentChange?: (agent: ParrotInfoFromAPI | null) => void;
 }
 
 function UnifiedChatView({
@@ -74,6 +78,8 @@ function UnifiedChatView({
   currentMode,
   onModeChange,
   conversationId,
+  selectedAgent,
+  onSelectedAgentChange,
 }: UnifiedChatViewProps) {
   const { t } = useTranslation();
 
@@ -172,6 +178,8 @@ function UnifiedChatView({
         onModeChange={onModeChange}
         isTyping={isTyping}
         currentMode={currentMode}
+        selectedAgent={selectedAgent}
+        onSelectedAgentChange={onSelectedAgentChange}
       />
 
       {/* Clear Chat Confirmation Dialog */}
@@ -201,6 +209,9 @@ const AIChat = () => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+
+  // Issue #266: 隐式专家指定
+  const [selectedAgent, setSelectedAgent] = useState<ParrotInfoFromAPI | null>(null);
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [blockSummary, setBlockSummary] = useState<BlockSummary | undefined>();
@@ -426,16 +437,24 @@ const AIChat = () => {
       }
 
       // 智能路由：根据输入内容自动识别能力
-      const intentResult = capabilityRouter.route(userMessage, currentCapability);
-      const targetCapability = intentResult.capability;
+      // Issue #266: 优先使用用户显式选择的专家
+      let targetParrotId: ParrotAgentType;
 
-      // 如果识别出不同的能力，切换能力
-      if (targetCapability !== currentCapability && targetCapability !== CapabilityType.AUTO) {
-        setCurrentCapability(targetCapability);
+      if (selectedAgent) {
+        // 用户通过 @ 显式指定专家，直接使用
+        targetParrotId = selectedAgent.agentType;
+      } else {
+        // 自动路由：根据输入内容识别能力
+        const intentResult = capabilityRouter.route(userMessage, currentCapability);
+        const targetCapability = intentResult.capability;
+
+        // 如果识别出不同的能力，切换能力
+        if (targetCapability !== currentCapability && targetCapability !== CapabilityType.AUTO) {
+          setCurrentCapability(targetCapability);
+        }
+
+        targetParrotId = capabilityToParrotAgent(targetCapability);
       }
-
-      // 确定使用哪个 Agent
-      const targetParrotId = capabilityToParrotAgent(targetCapability);
 
       // Ensure we have a conversation
       let targetConversationId = currentConversation?.id;
@@ -485,6 +504,7 @@ const AIChat = () => {
 
       streamingContentRef.current = "";
       setInput("");
+      setSelectedAgent(null); // Issue #266: 发送后清除选中的专家
 
       // Wait for real ID if we just created the conversation
       // This is crucial to avoid "Chat with ID 0" which creates a duplicate session on backend
@@ -521,6 +541,8 @@ const AIChat = () => {
       // Phase 5: Pending queue
       addToPendingQueue,
       currentMode,
+      // Issue #266: 隐式专家指定
+      selectedAgent,
     ],
   );
 
@@ -689,6 +711,8 @@ const AIChat = () => {
       onModeChange={setMode}
       isAdmin={true}
       conversationId={currentConversationIdNum}
+      selectedAgent={selectedAgent}
+      onSelectedAgentChange={setSelectedAgent}
     />
   );
 };

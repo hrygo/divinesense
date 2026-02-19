@@ -20,4 +20,5 @@
 | Orchestrator 通用子代理 | ✅ Issue Created | [orchestrator-general-agent-research.md](./orchestrator-general-agent-research.md) |
 | @ 符号选择专家 Agent | ✅ Issue Created | [agent-mention-feature-research.md](./agent-mention-feature-research.md) |
 | /explore 页面重构 | ✅ Issue Created | [explore-page-refactor-research.md](./explore-page-refactor-research.md) |
+| @ 指令隐式路由优化 | ✅ Issue Created | [agent-mention-implicit-routing.md](./agent-mention-implicit-routing.md) |
 
