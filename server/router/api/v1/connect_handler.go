@@ -410,19 +410,20 @@ func getParrotSelfCognition(agentType v1pb.AgentType) *v1pb.ParrotSelfCognition 
 	}
 }
 
-// Helper function to get parrot name by agent type.
+// Helper function to get parrot name (identifier) by agent type.
+// Returns English identifier for programmatic use; display name is in SelfCognition.Title.
 func getParrotNameByAgentType(agentType v1pb.AgentType) string {
 	switch agentType {
 	case v1pb.AgentType_AGENT_TYPE_MEMO:
-		return "灰灰"
+		return "memo"
 	case v1pb.AgentType_AGENT_TYPE_SCHEDULE:
-		return "时巧"
+		return "schedule"
 	case v1pb.AgentType_AGENT_TYPE_GENERAL:
-		return "通才"
+		return "general"
 	case v1pb.AgentType_AGENT_TYPE_IDEATION:
-		return "灵光"
+		return "ideation"
 	default:
-		return "默认助手"
+		return "auto"
 	}
 }
 
