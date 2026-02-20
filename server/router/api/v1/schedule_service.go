@@ -397,6 +397,54 @@ func (s *ScheduleService) GetSchedule(ctx context.Context, req *v1pb.GetSchedule
 	return scheduleFromStore(schedule), nil
 }
 
+var scheduleFieldMappers = map[string]func(*v1pb.Schedule, *store.UpdateSchedule) error{
+	"title":       func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.Title = &pb.Title; return nil },
+	"description": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.Description = &pb.Description; return nil },
+	"location":    func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.Location = &pb.Location; return nil },
+	"start_ts":    func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.StartTs = &pb.StartTs; return nil },
+	"end_ts": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error {
+		if pb.EndTs != 0 {
+			u.EndTs = &pb.EndTs
+		}
+		return nil
+	},
+	"all_day":  func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.AllDay = &pb.AllDay; return nil },
+	"timezone": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error { u.Timezone = &pb.Timezone; return nil },
+	"recurrence_rule": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error {
+		u.RecurrenceRule = &pb.RecurrenceRule
+		return nil
+	},
+	"recurrence_end_ts": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error {
+		if pb.RecurrenceEndTs != 0 {
+			u.RecurrenceEndTs = &pb.RecurrenceEndTs
+		}
+		return nil
+	},
+	"state": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error {
+		rowStatus := store.RowStatus(pb.State)
+		u.RowStatus = &rowStatus
+		return nil
+	},
+	"reminders": func(pb *v1pb.Schedule, u *store.UpdateSchedule) error {
+		if len(pb.Reminders) > 0 {
+			reminders := make([]*v1pb.Reminder, 0, len(pb.Reminders))
+			for _, r := range pb.Reminders {
+				reminders = append(reminders, &v1pb.Reminder{
+					Type:  r.Type,
+					Value: r.Value,
+					Unit:  r.Unit,
+				})
+			}
+			remindersStr, err := aischedule.MarshalReminders(reminders)
+			if err != nil {
+				return status.Errorf(codes.Internal, "failed to marshal reminders: %v", err)
+			}
+			u.Reminders = &remindersStr
+		}
+		return nil
+	},
+}
+
 // UpdateSchedule updates a schedule.
 func (s *ScheduleService) UpdateSchedule(ctx context.Context, req *v1pb.UpdateScheduleRequest) (*v1pb.Schedule, error) {
 	userID := auth.GetUserID(ctx)
@@ -427,100 +475,49 @@ func (s *ScheduleService) UpdateSchedule(ctx context.Context, req *v1pb.UpdateSc
 		ID: existing.ID,
 	}
 
+	var paths []string
 	if req.UpdateMask != nil {
-		for _, path := range req.UpdateMask.Paths {
-			switch path {
-			case "title":
-				update.Title = &req.Schedule.Title
-			case "description":
-				update.Description = &req.Schedule.Description
-			case "location":
-				update.Location = &req.Schedule.Location
-			case "start_ts":
-				update.StartTs = &req.Schedule.StartTs
-			case "end_ts":
-				if req.Schedule.EndTs != 0 {
-					update.EndTs = &req.Schedule.EndTs
-				}
-			case "all_day":
-				update.AllDay = &req.Schedule.AllDay
-			case "timezone":
-				update.Timezone = &req.Schedule.Timezone
-			case "recurrence_rule":
-				update.RecurrenceRule = &req.Schedule.RecurrenceRule
-			case "recurrence_end_ts":
-				if req.Schedule.RecurrenceEndTs != 0 {
-					update.RecurrenceEndTs = &req.Schedule.RecurrenceEndTs
-				}
-			case "state":
-				rowStatus := store.RowStatus(req.Schedule.State)
-				update.RowStatus = &rowStatus
-			case "reminders":
-				// Convert reminders to JSON
-				if len(req.Schedule.Reminders) > 0 {
-					reminders := make([]*v1pb.Reminder, 0, len(req.Schedule.Reminders))
-					for _, r := range req.Schedule.Reminders {
-						reminders = append(reminders, &v1pb.Reminder{
-							Type:  r.Type,
-							Value: r.Value,
-							Unit:  r.Unit,
-						})
-					}
-					remindersStr, err := aischedule.MarshalReminders(reminders)
-					if err != nil {
-						return nil, status.Errorf(codes.Internal, "failed to marshal reminders: %v", err)
-					}
-					update.Reminders = &remindersStr
-				}
-			}
-		}
+		paths = req.UpdateMask.Paths
 	} else {
-		// If no UpdateMask provided, update all non-zero/non-empty fields
+		// Infer paths from non-empty fields
 		if req.Schedule.Title != "" {
-			update.Title = &req.Schedule.Title
+			paths = append(paths, "title")
 		}
 		if req.Schedule.Description != "" {
-			update.Description = &req.Schedule.Description
+			paths = append(paths, "description")
 		}
 		if req.Schedule.Location != "" {
-			update.Location = &req.Schedule.Location
+			paths = append(paths, "location")
 		}
 		if req.Schedule.StartTs != 0 {
-			update.StartTs = &req.Schedule.StartTs
+			paths = append(paths, "start_ts")
 		}
 		if req.Schedule.EndTs != 0 {
-			update.EndTs = &req.Schedule.EndTs
+			paths = append(paths, "end_ts")
 		}
-		// Always update boolean if provided
-		update.AllDay = &req.Schedule.AllDay
+		paths = append(paths, "all_day") // Always update boolean if provided
 		if req.Schedule.Timezone != "" {
-			update.Timezone = &req.Schedule.Timezone
+			paths = append(paths, "timezone")
 		}
 		if req.Schedule.RecurrenceRule != "" {
-			update.RecurrenceRule = &req.Schedule.RecurrenceRule
+			paths = append(paths, "recurrence_rule")
 		}
 		if req.Schedule.RecurrenceEndTs != 0 {
-			update.RecurrenceEndTs = &req.Schedule.RecurrenceEndTs
+			paths = append(paths, "recurrence_end_ts")
 		}
 		if req.Schedule.State != "" {
-			rowStatus := store.RowStatus(req.Schedule.State)
-			update.RowStatus = &rowStatus
+			paths = append(paths, "state")
 		}
-		// Convert reminders to JSON if provided
 		if len(req.Schedule.Reminders) > 0 {
-			reminders := make([]*v1pb.Reminder, 0, len(req.Schedule.Reminders))
-			for _, r := range req.Schedule.Reminders {
-				reminders = append(reminders, &v1pb.Reminder{
-					Type:  r.Type,
-					Value: r.Value,
-					Unit:  r.Unit,
-				})
+			paths = append(paths, "reminders")
+		}
+	}
+
+	for _, path := range paths {
+		if mapper, ok := scheduleFieldMappers[path]; ok {
+			if err := mapper(req.Schedule, update); err != nil {
+				return nil, err
 			}
-			remindersStr, err := aischedule.MarshalReminders(reminders)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to marshal reminders: %v", err)
-			}
-			update.Reminders = &remindersStr
 		}
 	}
 
