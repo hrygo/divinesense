@@ -8,7 +8,7 @@ These are foundational, well-tested services that form the cornerstone of upper-
 
 ```mermaid
 graph TD
-    App[Application Layer / Agents] --> Core
+    App["Application Layer / Agents"] --> Core
 
     subgraph Core [AI Core Layer]
         LLM[llm: Unified Client]
@@ -21,7 +21,7 @@ graph TD
         Ret --> Rerank
     end
 
-    Core --> Providers[External Providers (OpenAI, DeepSeek, SiliconFlow, Z.AI)]
+    Core --> Providers["External Providers (OpenAI, DeepSeek, SiliconFlow, Z.AI)"]
 ```
 
 ## Subpackages
@@ -68,17 +68,17 @@ Implements intelligent retrieval with multiple strategies:
 
 #### Retrieval Strategies
 
-| Strategy | Description |
-|----------|-------------|
-| `schedule_bm25_only` | Schedule-only query with BM25 + time filter |
-| `memo_list_only` | Direct SQL listing (fastest, for "list all memos") |
-| `memo_filter_only` | SQL filtering by time/tags |
-| `memo_bm25_only` | Pure BM25 keyword search |
-| `memo_semantic_only` | Pure vector semantic search |
-| `hybrid_bm25_weighted` | Hybrid (BM25 0.7 + Semantic 0.3) |
-| `hybrid_with_time_filter` | Hybrid + time filtering |
-| `hybrid_standard` | Standard hybrid (BM25 0.5 + Semantic 0.5) |
-| `full_pipeline_with_reranker` | Full pipeline with Rerank |
+| Strategy                      | Description                                        |
+| ----------------------------- | -------------------------------------------------- |
+| `schedule_bm25_only`          | Schedule-only query with BM25 + time filter        |
+| `memo_list_only`              | Direct SQL listing (fastest, for "list all memos") |
+| `memo_filter_only`            | SQL filtering by time/tags                         |
+| `memo_bm25_only`              | Pure BM25 keyword search                           |
+| `memo_semantic_only`          | Pure vector semantic search                        |
+| `hybrid_bm25_weighted`        | Hybrid (BM25 0.7 + Semantic 0.3)                   |
+| `hybrid_with_time_filter`     | Hybrid + time filtering                            |
+| `hybrid_standard`             | Standard hybrid (BM25 0.5 + Semantic 0.5)          |
+| `full_pipeline_with_reranker` | Full pipeline with Rerank                          |
 
 #### Advanced Features
 
