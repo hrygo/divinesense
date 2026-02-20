@@ -400,22 +400,8 @@ func (*APIV1Service) buildRefreshTokenCookie(ctx context.Context, refreshToken s
 	return strings.Join(attrs, "; ")
 }
 
-func (s *APIV1Service) fetchCurrentUser(ctx context.Context) (*store.User, error) {
-	userID := auth.GetUserID(ctx)
-	if userID == 0 {
-		return nil, nil
-	}
-	user, err := s.Store.GetUser(ctx, &store.FindUser{
-		ID: &userID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errors.Errorf("user %d not found", userID)
-	}
-	return user, nil
-}
+// fetchCurrentUser is now defined as a standalone function in permissions.go
+// and also as a backward-compatible method wrapper on APIV1Service.
 
 // extractClientInfo extracts comprehensive client information from the request context.
 //
