@@ -2,7 +2,7 @@
 
 > DivineSense 项目开发纲领 — Claude Code 辅助开发的核心指导文档
 >
-> **保鲜状态**: ✅ 2026-02-17 v0.99.1 | **架构**: Go + React 单二进制 | **AI**: Orchestrator-Workers 多代理
+> **保鲜状态**: ✅ 2026-02-20 v1.0.0 | **架构**: Go + React 单二进制 | **AI**: CCRunner v2.0 + Hot-Multiplexing
 
 ---
 
@@ -31,13 +31,13 @@
 | `proto/`  | Protobuf 定义（修改后需重新生成）       |
 
 ### 关键配置
-| 配置              | 值                                    |
-| :---------------- | :------------------------------------ |
-| GitHub 仓库       | `hrygo/divinesense`                   |
-| PostgreSQL 容器名 | `divinesense-postgres-dev`            |
-| 前端端口          | 25173                                 |
-| 后端端口          | 28081                                 |
-| 数据库端口        | 25432                                 |
+| 配置              | 值                         |
+| :---------------- | :------------------------- |
+| GitHub 仓库       | `hrygo/divinesense`        |
+| PostgreSQL 容器名 | `divinesense-postgres-dev` |
+| 前端端口          | 25173                      |
+| 后端端口          | 28081                      |
+| 数据库端口        | 25432                      |
 
 > **⚠️ 注意**：执行 `gh` 命令或 GitHub MCP 工具前，先通过 `git remote -v | head -1` 确认仓库名称。当前仓库：`hrygo/divinesense`
 
@@ -102,12 +102,12 @@
 ```
 
 ### 专家代理 (Expert Agents)
-| 代理                  | 角色     | 实现方式 |
-| :-------------------- | :------- | :------- |
-| MemoParrot (灰灰)     | 笔记搜索 | UniversalParrot + memo.yaml |
+| 代理                  | 角色     | 实现方式                        |
+| :-------------------- | :------- | :------------------------------ |
+| MemoParrot (灰灰)     | 笔记搜索 | UniversalParrot + memo.yaml     |
 | ScheduleParrot (时巧) | 日程管理 | UniversalParrot + schedule.yaml |
 | IdeationParrot (灵光) | 创意生成 | UniversalParrot + ideation.yaml |
-| GeneralParrot (通才)  | 通用任务 | UniversalParrot + general.yaml |
+| GeneralParrot (通才)  | 通用任务 | UniversalParrot + general.yaml  |
 
 > **架构**: 所有领域代理基于 **UniversalParrot** 配置驱动实现，通过 YAML 配置定义行为
 
@@ -140,7 +140,8 @@
 - **Block**: 用户-AI 交互轮次
 - **Task Plan**: 结构化任务计划，支持透明性展示
 - **Context Engineering**: 长期记忆检索（episodic memory），MemoParrot 已启用
-- **CCRunner**: 统一的 Claude Code 执行器，Geek/Evolution 模式共享
+- **CCRunner v2.0**: 统一的 Claude Code 执行引擎。在 `ParrotHandler` 中以全局单例运行，支持 **Hot-Multiplexing** (长连接 Stdin/Stdout 复用) 与 **PGID 进程组强杀** (Graceful Shutdown)。
+- **UUID v5 Sandbox**: 确定性命名空间哈希，确保 Geek/Evolution 模式与不同用户间的 Sandbox 物理级读写隔离。
 - **FastRouter**: 两层路由（Cache + Rule Matcher），配置驱动规则
 
 ---
