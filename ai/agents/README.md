@@ -11,8 +11,6 @@ DivineSense 使用"鹦鹉"作为 AI Agent 的隐喻——每一只鹦鹉都有�
 
 ## 架构设计
 
-```mermaid
-classDiagram
     class ParrotAgent {
         <<interface>>
         +Execute(ctx, input, history, callback)
@@ -27,9 +25,19 @@ classDiagram
         +Execute()
     }
     class GeekParrot {
-        -runner CCRunner
+        -runner CCRunner (Injected Singleton)
         -mode GeekMode
         +Execute()
+    }
+    class EvolutionParrot {
+        -runner CCRunner (Injected Singleton)
+        -mode EvolutionMode
+        +Execute()
+    }
+    class CCRunner {
+        <<Global Singleton>>
+        +Execute()
+        +Close(Graceful Shutdown)
     }
     class Orchestrator {
         -decomposer Decomposer
@@ -43,8 +51,11 @@ classDiagram
 
     ParrotAgent <|.. UniversalParrot
     ParrotAgent <|.. GeekParrot
+    ParrotAgent <|.. EvolutionParrot
     ChatRouter ..> ParrotAgent : 路由至
     ChatRouter ..> Orchestrator : 低置信度时
+    GeekParrot --> CCRunner: Hot-Multiplexing
+    EvolutionParrot --> CCRunner: Hot-Multiplexing
 ```
 
 ## 目录结构
@@ -59,9 +70,9 @@ agents/
 ├── recovery.go             # 错误恢复
 ├── cc_runner.go            # 统一 Claude Code 执行器
 ├── universal/               # 通用鹦鹉系统（策略、工厂）
-├── geek/                   # 极客鹦鹉（代码执行 & 进化）
+├── geek/                   # 极客鹦鹉与进化鹦鹉（代码执行 & 自我进化）
 ├── orchestrator/            # 多智能体编排（DAG、交接）
-├── runner/                 # 执行引擎（会话、隔离、安全检查）
+├── runner/                 # 统一底层执行引擎（Hot-Multiplexing、隔离、进程树强杀Graceful Shutdown）
 ├── tools/                  # 具体工具实现
 ├── events/                 # 事件定义
 ├── registry/               # 工具、Prompt、指标注册中心
@@ -70,15 +81,17 @@ agents/
 
 ## 鹦鹉列表 (Parrot Roster)
 
-| 鹦鹉                | 中文名 | 角色       | 性格           | 实现方式           |
-| :------------------ | :----- | :--------- | :------------- | :----------------- |
-| **MemoParrot**      | 灰灰   | 笔记助手   | 好奇, 严谨     | Universal (Config) |
-| **ScheduleParrot**  | 时巧   | 日程管家   | 有条理, 高效   | Universal (Config) |
-| **GeneralParrot**   | 通才   | 通用助手   | 平衡, 乐于助人 | Universal (Config) |
-| **GeekParrot**      | 极客   | 代码专家   | 技术流, 精准   | Code (Geek)        |
-| **EvolutionParrot** | 进化   | 自我进化   | 分析型, 审慎   | Code (Evolution)   |
+| 鹦鹉                | 中文名 | 角色     | 性格           | 实现方式                                |
+| :------------------ | :----- | :------- | :------------- | :-------------------------------------- |
+| **MemoParrot**      | 灰灰   | 笔记助手 | 好奇, 严谨     | Universal (Config)                      |
+| **ScheduleParrot**  | 时巧   | 日程管家 | 有条理, 高效   | Universal (Config)                      |
+| **GeneralParrot**   | 通才   | 通用助手 | 平衡, 乐于助人 | Universal (Config)                      |
+| **GeekParrot**      | 极客   | 代码专家 | 技术流, 精准   | Node.js CLI (CCRunner Hot-Multiplexing) |
+| **EvolutionParrot** | 进化   | 自我进化 | 分析型, 审慎   | Node.js CLI (CCRunner Hot-Multiplexing) |
 
-**注意**: AmazingParrot 已被 Orchestrator 替代。路由层 LLM 已移除，低置信度请求直接转 Orchestrator 进行任务分解。
+**注意**: 
+1. AmazingParrot 已被 Orchestrator 替代。路由层 LLM 已移除，低置信度请求直接转 Orchestrator 进行任务分解。
+2. GeekParrot 和 EvolutionParrot 自身属于瞬态组装体，背后统一挂载于全局长生命周期的 **CCRunner** 引擎。这确保了无论用户发送多少请求，只要对准相同的 UUID，一律零冷启动被热加载。
 
 ## 路由机制
 

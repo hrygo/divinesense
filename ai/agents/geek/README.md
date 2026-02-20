@@ -6,14 +6,12 @@
 
 ### 1. GeekParrot (Geek Mode)
 *   **代码执行**: 封装了 Claude Code CLI 的交互。
-*   **统一执行器**: 使用 `runner.CCRunner` 作为统一的执行层。
-*   **会话管理**: 支持会话持久化，跨重启恢复。
-*   **流式输出**: 实时流式传输代码执行的输出结果。
+*   **适配器模式**: 自身是无状态瞬态对象，将请求转发给全局长生命周期的 `runner.CCRunner` 单例。
+*   **会话一致性**: 通过 UUID v5 (ConversationID + UserID) 保证绝对物理隔离。
 
 ### 2. EvolutionParrot (Evolution Mode)
 *   **仓库感知**: 能够理解当前代码库的结构和上下文。
-*   **功能实现**: 接受开发任务，自动创建并修改文件。
-*   **自我进化**: 具备修改自身代码的能力（管理员专用）。
+*   **自我进化**: 接受架构调整任务，自动跨文件修改（需配合专门的长生 `evoRunner` 单例运转，防止缓存脏堵）。
 
 ### 3. GeekMode / EvolutionMode
 *   **工作目录**: 每个用户有独立的沙盒目录。
@@ -34,27 +32,31 @@
 ```mermaid
 sequenceDiagram
     participant User
+    participant Router
     participant GeekParrot
-    participant CCRunner
-    participant DangerDetector
-    participant ClaudeCLI
+    participant CCRunner as Global CCRunner
+    participant DD as DangerDetector
+    participant OS as Node Process (Active)
 
-    User->>GeekParrot: "重构 ai/utils 包"
-    GeekParrot->>GeekParrot: CheckPermission()
+    User->>Router: "重构 ai/utils 包" (ConvID: 100)
+    Router->>GeekParrot: NewGeekParrot(injected Runner)
     GeekParrot->>CCRunner: Execute(cfg, prompt)
 
-    loop Security Check
-        CCRunner->>DangerDetector: CheckInput(prompt)
-        DangerDetector-->>CCRunner: Safe / Blocked
+    CCRunner->>DD: CheckInput(prompt)
+    
+    rect rgb(240, 248, 255)
+        Note over CCRunner,OS: Hot-Multiplexing 机制
+        CCRunner->>CCRunner: Derive UUID_v5 from ConvID
+        CCRunner->>OS: Look up Session (如果存活，免冷启动)
+        CCRunner->>OS: / Write Stdin (prompt json)
     end
 
-    CCRunner->>ClaudeCLI: --print --session-id xxx
-
     loop Streaming
-        ClaudeCLI-->>CCRunner: thinking/tool_use/answer
+        OS-->>CCRunner: Stdout Event (thinking/tool_use/answer)
         CCRunner-->>User: 实时流式响应
     end
 
+    Note over CCRunner,OS: 进程继续存活，等待下次交互...
     CCRunner-->>GeekParrot: SessionStats
     GeekParrot-->>User: 任务完成 + 统计
 ```
@@ -82,7 +84,7 @@ func (p *GeekParrot) GetSessionStats() *agentpkg.NormalSessionStats { ... }
 
 GeekParrot 通过环境变量或配置获取工作目录：
 
-| 环境变量 | 说明 |
-| :--- | :--- |
-| `DIVINESENSE_CLAUDE_CODE_WORKDIR` | Claude Code 工作目录 |
-| 默认值 | `~/.divinesense/claude-code` |
+| 环境变量                          | 说明                         |
+| :-------------------------------- | :--------------------------- |
+| `DIVINESENSE_CLAUDE_CODE_WORKDIR` | Claude Code 工作目录         |
+| 默认值                            | `~/.divinesense/claude-code` |

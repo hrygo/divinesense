@@ -80,7 +80,9 @@ graph TD
     - **Orchestrator**: LLM-driven task decomposition and multi-agent coordination. Contains `Decomposer` and `Handoff` mechanisms.
     - **UniversalParrot**: Config-driven general Agent (e.g., Memo, Schedule). Supports `Direct`, `ReAct`, `Planning`, `Reflexion` strategies.
     - **Expert Agents**: Domain-specific agents including MemoParrot and ScheduleParrot.
-    - **GeekParrot**: Claude Code CLI integration for code execution.
+    - **GeekParrot / EvolutionParrot**: Claude Code CLI integration for code execution and self-evolution.
+- **[runner](./agents/runner/README.md)**: The underlying execution engine for CLI-based agents (Architecture v2.0).
+    - *Features*: **Hot-Multiplexing** (reuses OS processes for 6x faster subsequent turns), **UUID v5 Sandbox Isolation** (deterministic deterministic namespacing to prevent state corruption), and **Graceful Shutdown** (PGID-level process sweeping to prevent zombies).
 - **[services](./services/README.md)**: Business logic encapsulation (e.g., schedule repeat rule processing).
 
 ### 3. Cognitive Capabilities (Skills)
