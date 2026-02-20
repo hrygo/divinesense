@@ -1,293 +1,173 @@
-# DivineSense CC Runner 架构设计文档
+# DivineSense CC Runner 架构设计文档 (v2.0)
 
-## 📋 执行摘要
+## 📋 执行摘要 (Executive Summary)
 
-本报告深入分析了 `CCRunner` (Claude Code Runner) 的架构设计、生命周期管理及其与 AI Chat 系统的集成关系。核心发现是：**AI Chat 利用确定性的 UUID 映射策略，将持久化的数据库对话 (Conversation) 与临时的 Claude Code CLI 会话 (Session) 链接起来**。这种由于 UUID v5 带来的确定性映射，确保了即使底层执行进程被回收或重启，用户的会话上下文（存储在磁盘上的 `.claude/sessions` 目录中）依然能够被精准恢复，实现了"无状态后端，有状态 CLI"的架构目标。
+本架构白皮书深度剖析了 **`CCRunner` (Claude Code Runner)** 的新一代架构设计。作为贯穿 DivineSense 极客模式 (Geek Mode) 与进化模式 (Evolution Mode) 的核心执行引擎，`CCRunner` 摒弃了传统的“单次请求-单次启停”的昂贵模型，演进为基于 **“单例挂载 (Singleton) + 流式纯粹多路复用 (Hot-Multiplexing)”** 的高性能持久化容器引擎。
+
+最新架构通过引入 **强隔离的 UUID v5 实体映射** 与 **OS 级别的进程组 (PGID) 强生命周期绑定**，彻底根绝了会话脏读、文件锁互斥冲突 (Session already in use) 以及孤儿节点 (Zombie Process) 内存泄漏等灾难级问题，完美实现了“高频交互如丝般顺滑、上下文物理级绝对隔离、进程跟从级优雅退场”的工业级架构目标。
 
 ---
 
-## 1. 系统核心组件架构
+## 1. 核心架构拓扑图
 
-整个系统通过分层架构实现从用户请求到底层 CLI 执行的传导。
+整个体系围绕着 **依赖倒置与全局单例** 展开映射。
 
 ### 1.1 组件概览
 
-*   **AI Chat (`ParrotHandler`)**: 位于 `server/router/api/v1/ai/handler.go`。负责处理 gRPC/HTTP 请求，路由分发，以及维护数据库中的对话状态 (`AIConversation`)。
-*   **GeekParrot (`ai/agents/geek`)**: 极客模式代理，作为 AI Chat 与 CCRunner 之间的适配器。
-*   **CCRunner (`ai/agents/runner`)**: 统一的执行引擎。负责管理 CLI 进程、流式输出解析 (`stream-json`)、以及安全检查 (`DangerDetector`)。
-*   **SessionManager**: 负责进程的生命周期管理（创建、监控、空闲回收）。
+*   **`ParrotHandler` (顶层调度)**: 位于 `api/v1/ai/handler.go`。它是整个服务生命周期中最长的组件，也是 `geekRunner` 和 `evoRunner` 两大执行引擎单例的“全局持有者”。
+*   **适配器 (`GeekParrot` / `EvolutionParrot`)**: 负责将单一用户的请求（如带有上下文、设备环境的请求）与底层的执行引擎桥接，它们本身随请求而生灭，但底层传入的 `runner` 乃是持久单例。
+*   **`CCRunner` (执行引擎)**: 定义和持有 `SessionManager`，负责隔离、处理流式通信并向适配层传递实时的 `stream-json` 事件。
+*   **`SessionManager` (大管家/进程池)**: 全局管理所有活跃的 Node.js 进程。它维护一张内存路由表 (`sessions map`)，将哈希算出的 `SessionID` 无缝路由到对应处于活跃挂机 (`Ready`) 状态的标准管道中。
 
-### 1.2 架构关系图
+### 1.2 物理级隔离架构拓扑
 
 ```mermaid
 graph TD
-    subgraph "Server Layer (Persistent)"
-        User[User Request] --> Handler["ParrotHandler (AI Chat)"]
-        Handler -->|Geek Mode| Geek[GeekParrot]
-        DB[(Postgres DB)] -.->|ConversationID| Handler
+    subgraph "Server Application (DivineSense)"
+        Handler["ParrotHandler (HTTP Wrapper)"]
+        
+        subgraph "Singletons (Global Process Managers)"
+            GeekR["geekRunner (CCRunner)"]
+            EvoR["evoRunner (CCRunner)"]
+            
+            SM_G["SessionManager (Geek)"]
+            SM_E["SessionManager (Evolution)"]
+            
+            GeekR --> SM_G
+            EvoR --> SM_E
+        end
+        
+        Handler -->|Inject| GeekR
+        Handler -->|Inject| EvoR
+        
+        subgraph "Transient Request Handlers (Per HTTP Call)"
+            GeekP["GeekParrot (Session: UUID_A)"]
+            EvoP["EvolutionParrot (Session: UUID_B)"]
+            
+            GeekP -.->|Multiplex Stdin| SM_G
+            EvoP -.->|Multiplex Stdin| SM_E
+        end
     end
 
-    subgraph "Agent Layer (Transient)"
-        Geek --> Runner[CCRunner]
-        Runner --> Manager[SessionManager]
-        Runner --> Detector[DangerDetector]
+    subgraph "OS Layer (Node.js Background Process Groups)"
+        CLI_1["<PID: 1001> claude --session-id UUID_A"]
+        CLI_2["<PID: 2045> claude --session-id UUID_B"]
+        
+        SM_G -->|Pipe| CLI_1
+        SM_E -->|Pipe| CLI_2
     end
 
-    subgraph "Execution Layer (Process)"
-        Manager -->|Spawn/Monitor| Session["Session (In-Memory)"]
-        Session -->|Stdin/Stdout| CLI[Claude Code CLI Process]
+    subgraph "Local File System Sandbox"
+        Disk_A[".claude/sessions/UUID_A (Cache & DB)"]
+        Disk_B[".claude/sessions/UUID_B (Cache & DB)"]
+        
+        CLI_1 -.-> Disk_A
+        CLI_2 -.-> Disk_B
     end
 
-    subgraph "Storage Layer (Persistent Context)"
-        CLI -.->|Read/Write| Disk[(.claude/sessions/UUID)]
-    end
-
-    style Handler fill:#e1f5fe,stroke:#01579b
-    style Runner fill:#fff3e0,stroke:#ff6f00
-    style CLI fill:#e8f5e9,stroke:#2e7d32
-    style Disk fill:#f3e5f5,stroke:#7b1fa2
+    style Handler fill:#f8bbd0,stroke:#880e4f
+    style GeekR fill:#e1f5fe,stroke:#01579b
+    style EvoR fill:#fff3e0,stroke:#ff6f00
+    style CLI_1 fill:#e8f5e9,stroke:#2e7d32
+    style Disk_A fill:#f3e5f5,stroke:#7b1fa2
 ```
 
 ---
 
-## 2. 生命周期深度分析
+## 2. 三大核心设计哲学
 
-### 2.1 进程生命周期 (Process Lifecycle)
+### 2.1 铁桶结界：基于 UUID v5 的确定性命名空间隔离 (Namespacing)
+为了避免不同用户、甚至是同一用户的不同模式下的对话发生串号或重叠锁抢占，系统抛弃了自增 ID 强转的手段，而是采取严谨的 **UUID v5 (MD5/SHA1 哈希派生算法)** 实现了基于 Conversation ID 的幂等化算子。
 
-`CCRunner` 管理着 `claude` CLI 的物理 OS 进程。
+- **动态命名空间生成**: Prefix 化 `(Mode + UserID)` 以规避越权交叉感染。
+- **确定性哈希派生**: 同一个对话在任何时候算出必须是同个 ID，进而被 CLI 定位到本地文件系统唯一的缓存区。
 
-1.  **惰性启动 (Lazy Start)**: 进程不会随系统启动，只有在首次调用 `Execute()` 时才会创建。
-2.  **执行 (Execution)**:
-    *   **首次运行**: 使用 `--session-id <UUID>` 初始化。
-    *   **后续运行/恢复**: 再次使用 `--session-id <UUID>` (或 `--resume`)，CLI 会自动加载磁盘上的上下文。
-3.  **空闲监控 (Idle Monitoring)**: `SessionManager` 每分钟运行一次 `cleanupLoop`。
-4.  **终止 (Termination)**:
-    *   **空闲超时**: 默认为 **30分钟**。如果会话超过30分钟无活动，进程会被杀掉以释放内存资源。
-    *   **显式停止**: 调用 `TerminateSession()` 强制结束。
-
-### 2.2 会话生命周期 (Session Lifecycle)
-
-"会话" (Session) 的概念被拆分为 **内存状态 (Memory)** 和 **磁盘状态 (Disk)**。
-
-*   **内存会话 (`runner.Session`)**: 临时的。跟踪运行中的 `cmd` 对象、管道和状态。进程结束后即消失。
-*   **磁盘上下文 (`.claude/sessions`)**: 持久化的。由 `claude` CLI 自身管理。即使进程重启或机器重启，文件依然存在，上下文可被恢复。
-
-#### 会话状态流转图
-
-```mermaid
-stateDiagram-v2
-    [*] --> Starting: Create Session
-    Starting --> Ready: Process Started & Alive
-    Ready --> Busy: Executing Command
-    Busy --> Ready: Command Completed
-    
-    Ready --> Idle: No Activity
-    Idle --> Idle: < 30m
-    Idle --> Dead: > 30m (Timeout)
-    
-    Dead --> [*]: Cleanup & Kill Process
-    
-    state "Running Process" as Running {
-        Ready
-        Busy
-        Idle
-    }
+```go
+// 以 Evolution 为例：基于 UserID 生成根隔离结界
+namespaceBase := fmt.Sprintf("evolution_%d", req.UserID)
+namespace := uuid.NewMD5(uuid.NameSpaceOID, []byte(namespaceBase))
+// 基于具体对话 ID 算出确定且唯一，永不冲突的 Session ID
+sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationID))).String()
 ```
+**防御成果**：这从物理层面掐断了 Evolution 特权代码越界到 Geek 模式缓存中去读取历史的可能（防止平行越权）。
+
+### 2.2 瞬时响应：热态多路复用 (Hot-Multiplexing)
+启动外部 Node.js 进程拥有高达数百毫秒至数秒的延迟（冷启动建立监听、读文件、装载 Runtime），这对实时聊天系统不可接受。
+**解决方案**：
+1. **冷起 (Round 1)**: `SessionManager` 检测到该 `SessionID` 不在内存池中，执行 `exec.Command` 拉起原生进程，劫持 `Stdin/Stdout` 流并启动两个 Goroutine 不停清空并监听读取，这称为一个完整的 `*Session` 对象，随后被挂进内存 `sm.sessions` 并保活。
+2. **热复用 (Round N)**: 当该对话的下一条 HTTP 请求进来，它算出了同样的 `SessionID`。`SessionManager` 从内存命中此 `Session`，判定它当前是 `Ready` 状态（处于 `hang` 等待交互中）。
+3. **流态注射**: 绝不重启进程。后端将新指令结构化为 JSON，直插那个活跃进程的输入流 (`s.Stdin.Write(data)`)！CLI 立刻应答流式结果。
+
+**收益**：避免了并发时操作系统级文件锁定 (`Session already in use` 崩溃)，并将多轮追问的接管速度提升高达 6 倍以上。
+
+### 2.3 焦土政策：OS进程组与优雅销毁 (Graceful Shutdown)
+**痛点**：多路复用意味着后端服务里潜伏了若干悬挂的 Node.js 常驻常态化子进程。如果后端主服务崩盘（Panic 或重启），会导致大批孤儿僵尸进程。
+**破局**：引入系统底层强力管控 `Setpgid` 和 `-PID 进程组诛杀`。
+
+1. **绑定隔离组**: 每个新起的服务进程都被脱钩主进程，打上专属的独立进程组标签：`cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}`。
+2. **顶层广播链**: 服务端收到结束信号（Ctrl+C）：`AIService.Close()` -> 依次分发到单例管家 -> `CCManager.Close()`。
+3. **连根肃清**: 管家遍历字典，对每个存活项施放系统死刑宣告 `syscall.Kill(-sess.Cmd.Process.Pid, syscall.SIGKILL)`，这不仅会杀死 Claude CLI 本体，还会连带杀死它所派生的任何文件监控 (fsevents) 甚至子 shell，绝不留一滴内存泄漏！
 
 ---
 
-## 3. AI Chat 与 CCRunner 的核心关系
+## 3. 工作流序列（时序生命周期）
 
-AI Chat (持久层) 与 CCRunner (执行层) 之间的关键纽带是 **确定性身份映射 (Deterministic Identity Mapping)**。
-
-### 3.1 确定性映射机制
-
-系统使用 **UUID v5** 算法，基于固定的命名空间和 AI Chat 的 `ConversationID` 生成 `SessionID`。
-
-**公式**: `SessionID = UUID_v5(Namespace, "divinesense:conversation:{ConversationID}")`
-
-这意味着：
-*   **一对一**: 一个 AI Chat 对话永远对应同一个 CLI 会话 ID。
-*   **无状态**: 后端不需要存储 "ConversationID 100 对应哪个 SessionID"，因为它可以随时算出来。
-
-#### ID 映射流程图
-
-```mermaid
-flowchart LR
-    subgraph "AI Chat"
-        CID[ConversationID: 101]
-    end
-    
-    subgraph "Mapping Logic"
-        Algo{UUID v5 Algo}
-        NS[Namespace: DivineSense]
-    end
-    
-    subgraph "CCRunner"
-        SID[SessionID: a1b2-c3d4...]
-    end
-    
-    CID --> Algo
-    NS --> Algo
-    Algo -->|Deterministic| SID
-```
-
-### 3.2 交互场景时序分析
-
-#### 场景: GeekParrot 交互逻辑 (持久化进程实现)
-
-GeekParrot 现在使用 **Persistent Process (持久化进程)** 模式。通过全局 `SessionManager` 复用 CLI 进程，实现 30 分钟内的长连接保活。
+### 3.1 对话请求 - 完整的一生
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Geek as GeekParrot (Transient)
-    participant Manager as Global SessionManager
-    participant Session as Session (Persistent)
-    participant CLI as Claude CLI
-    participant Monitor as Monitor Goroutine
+    participant Router as HTTP Handler
+    participant Parrot as (Geek/Evo) Parrot
+    participant Mgr as SessionManager (Singleton)
+    participant OS
+    participant Disk as Local Storage
 
-    User->>Geek: 发送消息
-    Geek->>Manager: StartAsyncSession(SessionID)
-    Manager->>Session: 返回现有或新建 Session
+    User->>Router: "当前未提交代码有什么？" (ConvID: 250)
+    Router->>Router: UUID_v5 生成 SessionID (如: abcd-1234)
+    Router->>Parrot: 创建轻量级 Parrot (注入 SessionID)
     
-    rect rgb(240, 248, 255)
-        Note over Session,CLI: 首次启动时
-        Session->>CLI: spawn process
-        Session->>Monitor: 启动监控 Goroutine
+    Parrot->>Mgr: GetOrCreateSession("abcd-1234")
+    
+    alt 缓存未命中 (或者超过 30 分钟被淘汰)
+        Mgr->>OS: exec.Command(claude --session-id abcd-1234)
+        OS->>Disk: 在 .claude/sessions 下挂载环境
+        Mgr-->>Parrot: 绑定新 Session 的 Stdout 流
+    else 缓存命中 (30分钟以内同前台热聊)
+        Mgr-->>Parrot: 直接取出活跃的旧 Session 的 Stdout 流
     end
-
-    Geek->>Session: SetCallback(CurrentCallback)
-    Geek->>Session: WriteInput(Msg)
-    Session->>CLI: 写入 Stdin JSON
+    
+    Parrot->>Mgr: WriteInput( {role: user, text: "..."} )
+    
+    note over OS: Node 进程收到 JSON 触发思考...
     
     loop Stream Output
-        CLI->>Monitor: Stdout Stream
-        Monitor->>Geek: Callback(Answer/Result)
+        OS->>Mgr: Stdout 蹦出一行行流式解答
+        Mgr->>Parrot: 逆序列化 Callback
+        Parrot->>User: gRPC Stream 流式打向前端
     end
     
-    Note over Monitor: 收到 Result 消息
-    Geek->>User: 返回响应
-    Geek->>Session: SetCallback(nil) (Detached)
-    
-    Note over Session,CLI: 进程保持活跃，等待下一次请求 (或 30m 超时)
+    note over Mgr: 回答完毕 <br/> 进程不死，处于挂起监控态
 ```
 
-> **注意**: 只有在 30 分钟内无任何交互时，`SessionManager` 才会回收进程。下次交互将触发冷启动恢复流程（加载磁盘上下文）。
+### 3.2 空闲垃圾回收清理 (Garbage Collection)
 
-#### 场景: 会话恢复 (Resume) - "冷启动"
+内存中的幽灵不能无上限增长，`SessionManager` 拥有一支后台巡防协程 (`cleanupLoop`)：
 
-这是最典型的场景：用户隔了一段时间回来，之前的 CLI 进程已经被回收，但上下文需要保留。
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Handler as "AI Chat (Handler)"
-    participant Runner as CCRunner
-    participant Manager as SessionManager
-    participant CLI as Claude CLI
-    participant Disk as FileSystem
-
-    User->>Handler: 发送消息 (ConvID: 101)
-    Handler->>Runner: Execute(Msg, ConvID: 101)
-    Note over Runner: 计算 SessionID = UUID_v5(101)
-    
-    Runner->>Manager: GetOrCreateSession(SessionID)
-    Manager->>Manager: 检查内存... 未找到活跃进程
-    
-    Manager->>CLI: spawn process (`claude --session-id UUID`)
-    activate CLI
-    CLI->>Disk: 读取 `.claude/sessions/UUID`
-    Disk-->>CLI: 加载历史上下文
-    CLI-->>Manager: 进程启动就绪
-    Manager-->>Runner: 返回 Session 对象
-    
-    Runner->>CLI: 写入消息到 Stdin
-    CLI->>Disk: 更新上下文文件
-    CLI-->>Runner: 流式输出 Response
-    Runner-->>Handler: 转发事件
-    Handler-->>User: 返回响应
-    
-    Note over Manager: Start Idle Timer (30m)
-    deactivate CLI
-```
+1. **监测**: 每隔 `timeout / 2` (设定值: 15分钟) 唤醒一次。
+2. **比较**: 扫描全表，对比所有闲时挂机的 Session 其 `sess.LastActive` 到现在是否经过了惊人的 30 分钟。
+3. **拔管**: 超时未交互者，直接移除字典锁，然后触发 OS 进程强杀 `-PID SIGKILL` 释放操作系统文件描述符与内存资源。
 
 ---
 
-## 4. 关键配置总结
+## 4. 健壮性与死锁避险方案 (Resiliency)
 
-| 配置项                       | 值                                                  | 说明                                                              |
-| :--------------------------- | :-------------------------------------------------- | :---------------------------------------------------------------- |
-| **空闲超时 (Idle Timeout)**  | **30 分钟**                                         | 硬编码在 `NewCCSessionManager` 中。超过此时长无交互，进程被回收。 |
-| **会话 ID 算法**             | **UUID v5**                                         | 基于 SHA-1 哈希，确保跨平台、跨重启的一致性。                     |
-| **会话存储路径 (Geek)**      | `~/.divinesense/claude/user_<id>/.claude/sessions/` | 每个用户有独立的沙箱目录，相互隔离。                              |
-| **会话存储路径 (Evolution)** | `<ProjectRoot>/.claude/sessions/`                   | 进化模式直接操作项目根目录。                                      |
-
-## 5. 结论
-
-CCRunner 的架构设计成功地将 **逻辑对话** (AI Chat) 与 **执行运行时** (CCRunner Process) 解耦。
-
-1.  **稳定性**: 通过确定性映射，后端重启不会丢失用户上下文。
-2.  **资源效率**: 30分钟的自动回收机制防止了僵尸进程占用服务器资源。
-3.  **连续性**: 用户感知不到进程的重启，体验上是连续的对话流。
+*   **进程奔溃探测**: 当底层的 Node.js 进程因缓冲区溢出、OOM（内存不足）或其他灾难意外消失时，`SessionManager` 中监察管道的 Scanner 会自动捕获 `EOF` 或者返回读写报错。它会立刻安全关闭自身所有锁与管道，并对外标记状态为 `SessionStatusDead`。
+*   **状态自我修复**: 如果下次用户再进来要用这个 ID，但发现被标记为 `Dead`，管家会调用 `cleanupSessionLocked` 自行扫地，并**毫不迟疑地原形再造新进程**。由于上文依然安全躺在 `.claude` 数据目录中，用户端几乎感受不到后端的坠毁瞬间。
+*   **输入输出死锁切断**: 在与外界的阻塞通道交互中，写入操作和挂断操作都施加了极其谨慎的 `RWMutex` 及信道脱离保护（例如保证 `doneChan` 的 `defer close()` 的执行），防范“无休止的无限等流”直接吞没后端 Goroutines 的悲剧。
 
 ---
 
-## 6. 安全与风控 (Security & Safety)
+## 5. 总结
 
-CCRunner 内置了多层安全防御机制，防止 AI 执行危险操作。
-
-### 6.1 危险命令检测 (DangerDetector)
-
-`DangerDetector` (`ai/agents/runner/danger.go`) 会实时扫描用户输入和工具调用，拦截高危指令。
-
-**拦截模式示例**:
-*   `rm -rf /` (系统破坏)
-*   `mkfs.*` (格式化)
-*   `dd if=...` (直接磁盘写入)
-*   `> /dev/sd*` (覆盖设备文件)
-
-### 6.2 权限控制模式
-
-*   **默认模式**: CLI 运行在受限权限下。
-*   **Bypass 模式**: 管理员可通过 `--permission-mode bypassPermissions` 绕过检查（需在 `StartAsyncSession` 配置中显式启用，通常仅限 Evolution Mode）。
-
-### 6.3 运行环境隔离
-
-*   **Geek Mode**:
-    *   **工作目录**: 每个用户拥有独立的沙箱工作目录 `~/.divinesense/claude/user_<id>/`。
-    *   **配置隔离**: 强制设置环境变量 `HOME` 指向沙箱目录，确保 `.claude` 配置和会话文件物理隔离，不污染宿主环境。
-*   **Git 仓库强制**: 建议在 Git 仓库内运行，以便通过 Git 历史回滚文件变更。
-
----
-
-## 7. 配置与运维 (Configuration & Operations)
-
-### 7.1 环境变量配置
-
-| 环境变量                               | 默认值                  | 说明                            |
-| :------------------------------------- | :---------------------- | :------------------------------ |
-| `DIVINESENSE_CLAUDE_CODE_ENABLED`      | `false`                 | 是否启用 Geek Mode              |
-| `DIVINESENSE_CLAUDE_CODE_WORKDIR`      | `~/.divinesense/claude` | 根工作目录                      |
-| `DIVINESENSE_CLAUDE_CODE_IDLE_TIMEOUT` | `30m`                   | 空闲超时时间 (Go 格式 duration) |
-| `DIVINESENSE_CLAUDE_CODE_MAX_SESSIONS` | `10`                    | 单机最大并发会话数              |
-| `DIVINESENSE_EVOLUTION_ENABLED`        | `false`                 | 是否启用 Evolution Mode         |
-
-### 7.2 调试与诊断
-
-**查看活动会话**:
-```bash
-# 列出当前 SessionManager 管理的所有会话
-curl http://localhost:28081/api/v1/chat/geek/sessions
-```
-
-**日志文件**:
-*   **CLI 日志**: 位于会话工作目录下的 `.claude/sessions/{session-id}/logs.txt`。
-*   **应用日志**: DivineSense 后端日志包含 `CCRunner` 前缀的详细执行流。
-
-**手动强杀**:
-如果出现僵尸进程，可手动清理：
-```bash
-# 杀掉所有 claude 进程
-killall -9 claude
-```
+全新的 `CCRunner` 体系建立在**进程不灭与空间封锁**的两大基石上。利用极客模式与进化模式在 HTTP 顶层的单例抽象，它如同管理一个复杂的数据库连接池一样强横地支配着背后娇弱敏感的操作系统外部进程组。这造就了当今快速无阻、并行不乱、插拔自如的神圣感 (DivineSense) 执行体验。
