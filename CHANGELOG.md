@@ -9,6 +9,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.101.0] - 2026-02-20
+
+> **CCRunner v2.0: 全新热多路复用异步架构**
+
+这是一个重大的架构升级版本，核心引入了 **CCRunner v2.0**，彻底解决了长连接会话的性能与稳定性问题。
+
+### 🚀 CCRunner v2.0 核心能力
+- **Hot-Multiplexing (热多路复用)**: 通过 Stdin/Stdout 流复用实现“零冷启动延迟”，长连接进程常驻。
+- **Graceful Shutdown (优雅停机)**: 基于 PGID 进程组管理，确保后端退出时干净销毁所有子进程，根除僵尸进程问题。
+- **Sandbox Isolation (沙箱隔离)**: 采用 UUID v5 确定性命名空间生成 SessionID，实现跨用户、跨模式的物理文件系统隔离。
+- **全双工流式通信**: 完善了 Stdin 管道的并发写入安全与 Stderr 的实时日志采样。
+
+### ✨ New Features
+- **EvolutionParrot**: 增强了自我进化代理的持久化能力，支持跨请求的代码修改会话恢复。
+- **Geek Mode 增强**: 全新异步架构支持，提供更稳健的工具调用反馈与实时终端输出。
+
+### 🏗️ Architecture & Refactoring
+- **API V1 架构解耦**: 完成了 APIV1Service 的逻辑拆分，遵循 SOLID 原则，消除了原本的上帝对象 (God Object)。
+- **全局单例重构**: CCRunner 切换为全局单例模式，统一物理进程生命周期管理。
+
+---
+
 ## [v0.100.2] - 2026-02-20
 
 > 配置重构与调试增强版本
@@ -382,6 +404,7 @@ This release introduces a complete **Orchestrator-Workers architecture** that re
 ## [v0.80.3] - 2026-02-01
 
 ### 🐛 Bug Fixes
+
 - **PostgreSQL**: Fixed SSL error when running binary without .env file
   - Set default DSN in postgres.go matching .env.example defaults
   - Default: `postgres://divinesense:divinesense@localhost:25432/divinesense?sslmode=disable`
