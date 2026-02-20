@@ -86,19 +86,25 @@ User Input → ChatRouter
          ├─> Rule Matcher (config-driven)
          │     └─> confidence < 0.8 ? → Orchestrator
          └─> UniversalParrot (config-driven Agent)
+         └─> EvolutionParrot/GeekParrot (Code-driven Agent → CCRunner Hot-Multiplexing)
 ```
 
-| Component       | File                                     | Purpose                |
-| :-------------- | :--------------------------------------- | :-------------------- |
-| ChatRouter      | `ai/agents/chat_router.go`               | Request routing       |
-| FastRouter      | `ai/routing/service.go`                  | Two-layer routing     |
-| Orchestrator    | `ai/agents/orchestrator/orchestrator.go` | Task decomposition    |
-| UniversalParrot | `ai/agents/universal/parrot.go`          | Config-driven Agent   |
+| Component       | File                                     | Purpose             |
+| :-------------- | :--------------------------------------- | :------------------ |
+| ChatRouter      | `ai/agents/chat_router.go`               | Request routing     |
+| FastRouter      | `ai/routing/service.go`                  | Two-layer routing   |
+| Orchestrator    | `ai/agents/orchestrator/orchestrator.go` | Task decomposition  |
+| UniversalParrot | `ai/agents/universal/parrot.go`          | Config-driven Agent |
 
 **Expert Agents** (config-driven via UniversalParrot):
 - MemoParrot (memo search) → memo.yaml
 - ScheduleParrot (calendar) → schedule.yaml
 - GeneralParrot (general tasks) → general.yaml
+
+**External Executors** (Code-driven via CCRunner v2.0 Global Singleton):
+- GeekParrot: Direct code terminal execution
+- EvolutionParrot: Self-modification & PR generation (Admin only)
+- Engineering: Persistent OS Process Groups (PGID) + Hot-Multiplexing Stdin/Stdout flows
 
 ---
 
@@ -234,4 +240,4 @@ EOF
 
 ---
 
-*Last updated: 2026-02-13*
+*Last updated: 2026-02-20*

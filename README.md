@@ -19,7 +19,7 @@
 - **数据完全私有**：100% 自托管，无遥测，所有数据存储在您自己的服务器
 - **极简单文件部署**：Go 语言编译的单二进制文件，零依赖，极低资源占用
 - **Chat Apps 无缝集成**：原生支持 Telegram 和 钉钉，双向对话，随时随地记录与交互
-- **Geek Mode**：深度集成 Claude Code CLI，提供独立沙箱环境执行代码与自动化任务
+- **Geek Mode**: 深度集成 Claude Code CLI，采用 **Hot-Multiplexing (热多路复用)** 架构，秒级响应代码执行与自动化任务
 - **智能日程管理**：支持自然语言创建日程（如"明天下午三点开会"），自动冲突检测
 
 ---
@@ -34,29 +34,29 @@
 用户输入 → Orchestrator → 任务分解 → Expert Agents 并行执行 → 结果聚合
 ```
 
-| 组件 | 职责 |
-| :--- | :--- |
-| **Orchestrator** | LLM 驱动的任务编排入口 |
-| **Decomposer** | 智能分解复杂请求，支持 DAG 依赖 |
-| **Executor** | 并行执行独立任务，降低延迟 |
-| **Aggregator** | 合并多代理结果，统一输出格式 |
+| 组件             | 职责                            |
+| :--------------- | :------------------------------ |
+| **Orchestrator** | LLM 驱动的任务编排入口          |
+| **Decomposer**   | 智能分解复杂请求，支持 DAG 依赖 |
+| **Executor**     | 并行执行独立任务，降低延迟      |
+| **Aggregator**   | 合并多代理结果，统一输出格式    |
 
 ### 专家代理 (Expert Agents)
 
-| 代理 | 名称 | 核心能力 | 实现方式 |
-| :--- | :--- | :--- | :--- |
-| **MemoParrot** | 灰灰 | 语义搜索笔记，智能标签建议 | UniversalParrot + memo.yaml |
+| 代理               | 名称 | 核心能力                   | 实现方式                        |
+| :----------------- | :--- | :------------------------- | :------------------------------ |
+| **MemoParrot**     | 灰灰 | 语义搜索笔记，智能标签建议 | UniversalParrot + memo.yaml     |
 | **ScheduleParrot** | 时巧 | 自然语言创建日程，冲突检测 | UniversalParrot + schedule.yaml |
-| **GeneralParrot** | 通才 | 通用任务，直接响应 | UniversalParrot + general.yaml |
+| **GeneralParrot**  | 通才 | 通用任务，直接响应         | UniversalParrot + general.yaml  |
 
 > **架构**: 所有领域代理基于 **UniversalParrot** 配置驱动实现，通过 YAML 配置定义行为
 
 ### 外部执行器 (External Executors)
 
-| 代理 | 名称 | 核心能力 |
-| :--- | :--- | :--- |
-| **GeekParrot** | 极客 | Claude Code CLI 集成，代码执行沙箱 |
-| **EvolutionParrot** | 进化 | 自我进化，AI 修改源代码提交 PR |
+| 代理                | 名称 | 核心能力                           |
+| :------------------ | :--- | :--------------------------------- |
+| **GeekParrot**      | 极客 | Claude Code CLI 集成，代码执行沙箱 |
+| **EvolutionParrot** | 进化 | 自我进化，AI 修改源代码提交 PR     |
 
 > **Note**: AmazingParrot 已被 Orchestrator 替代，其职责由 Orchestrator 动态协调 Expert Agents 完成。
 
@@ -91,10 +91,11 @@
 
 ### Geek Mode — 代码执行
 
-- **Claude Code CLI 集成**：全双工持久化会话架构
-- **沙箱隔离**：用户工作目录独立，安全执行
-- **危险命令检测**：自动拦截 rm -rf 等破坏性操作
-- **代码产物预览**：实时预览生成的网页和代码
+- **Claude Code CLI 集成**：Architecture v2.0 全双工热多路复用会话架构，零冷启动延迟
+- **沙箱隔离**：基于 **UUID v5 确定性命名空间**，确保跨用户、跨模式状态物理级绝对隔离
+- **危险命令检测**：正则防火墙自动拦截 `rm -rf` 等破坏性操作
+- **生命周期管控**：支持 **PGID 进程组级回收**，随服务关闭自动清除孤儿进程，确保内存零泄漏
+- **代码产物预览**：实时预览生成的网页和代码产物
 
 ### 成本追踪
 
@@ -177,7 +178,7 @@ make deps-all && make start
 
 **架构亮点**：
 - **Orchestrator-Workers**：LLM 驱动的任务分解、并行执行、结果聚合
-- **CC Runner**：深度集成 Claude Code，通过 PTY 实现全双工交互与会话持久化
+- **CC Runner v2.0**：深度集成 Claude Code，通过 **Hot-Multiplexing** 实现 Stdin/Stdout 流复用，挂载 PGID 进程组实现优雅销毁
 - **单二进制分发**：Go embed 打包前端静态资源，零依赖部署
 - **Connect RPC**：gRPC-HTTP 转码，类型安全的 API
 - **Unified Block Model**：AI 聊天对话持久化，支持流式渲染和会话恢复
@@ -209,14 +210,14 @@ make deps-all && make start
 
 ## 开发文档
 
-| 文档                                                 | 说明                             |
-| :--------------------------------------------------- | :------------------------------- |
-| [系统架构](docs/architecture/overview.md)           | AI 代理、数据流、项目结构        |
-| [后端开发](docs/dev-guides/backend/database.md)      | API、数据库、环境配置            |
-| [前端开发](docs/dev-guides/frontend/overview.md)    | 布局、组件、Tailwind 4          |
-| [Chat Apps 指南](docs/dev-guides/user-manuals/chat-apps.md) | Telegram/钉钉机器人接入  |
-| [Git 工作流](.claude/rules/git-workflow.md)         | 分支管理、PR 规范                |
-| [贡献指南](CONTRIBUTING.md)                         | **入门必读**：环境搭建、开发规范 |
+| 文档                                                        | 说明                             |
+| :---------------------------------------------------------- | :------------------------------- |
+| [系统架构](docs/architecture/overview.md)                   | AI 代理、数据流、项目结构        |
+| [后端开发](docs/dev-guides/backend/database.md)             | API、数据库、环境配置            |
+| [前端开发](docs/dev-guides/frontend/overview.md)            | 布局、组件、Tailwind 4           |
+| [Chat Apps 指南](docs/dev-guides/user-manuals/chat-apps.md) | Telegram/钉钉机器人接入          |
+| [Git 工作流](.claude/rules/git-workflow.md)                 | 分支管理、PR 规范                |
+| [贡献指南](CONTRIBUTING.md)                                 | **入门必读**：环境搭建、开发规范 |
 
 ---
 
