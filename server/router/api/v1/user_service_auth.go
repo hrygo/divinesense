@@ -15,7 +15,6 @@ import (
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	"github.com/hrygo/divinesense/server/auth"
-	"github.com/hrygo/divinesense/store"
 )
 
 // ListPersonalAccessTokens retrieves all Personal Access Tokens (PATs) for a user.
@@ -42,9 +41,9 @@ func (s *APIV1Service) ListPersonalAccessTokens(ctx context.Context, request *v1
 	// Verify permission
 	claims := auth.GetUserClaims(ctx)
 	if claims == nil || claims.UserID != userID {
-		currentUser, _ := s.fetchCurrentUser(ctx)
-		if currentUser == nil || (currentUser.ID != userID && currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin) {
-			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		_, err := s.requireUserAccess(ctx, userID)
+		if err != nil {
+			return nil, err
 		}
 	}
 

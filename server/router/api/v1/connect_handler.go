@@ -98,8 +98,8 @@ func grpcCodeToConnectCode(code codes.Code) connect.Code {
 // AIService wrappers for Connect
 
 func (s *ConnectServiceHandler) SuggestTags(ctx context.Context, req *connect.Request[v1pb.SuggestTagsRequest]) (*connect.Response[v1pb.SuggestTagsResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.SuggestTags(ctx, req.Msg)
 	if err != nil {
@@ -109,8 +109,8 @@ func (s *ConnectServiceHandler) SuggestTags(ctx context.Context, req *connect.Re
 }
 
 func (s *ConnectServiceHandler) Format(ctx context.Context, req *connect.Request[v1pb.FormatRequest]) (*connect.Response[v1pb.FormatResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.Format(ctx, req.Msg)
 	if err != nil {
@@ -120,8 +120,8 @@ func (s *ConnectServiceHandler) Format(ctx context.Context, req *connect.Request
 }
 
 func (s *ConnectServiceHandler) Summary(ctx context.Context, req *connect.Request[v1pb.SummaryRequest]) (*connect.Response[v1pb.SummaryResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.Summary(ctx, req.Msg)
 	if err != nil {
@@ -131,8 +131,8 @@ func (s *ConnectServiceHandler) Summary(ctx context.Context, req *connect.Reques
 }
 
 func (s *ConnectServiceHandler) SemanticSearch(ctx context.Context, req *connect.Request[v1pb.SemanticSearchRequest]) (*connect.Response[v1pb.SemanticSearchResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.SemanticSearch(ctx, req.Msg)
 	if err != nil {
@@ -159,8 +159,8 @@ func (s *ConnectServiceHandler) GetRelatedMemos(ctx context.Context, req *connec
 }
 
 func (s *ConnectServiceHandler) Chat(ctx context.Context, req *connect.Request[v1pb.ChatRequest], stream *connect.ServerStream[v1pb.ChatResponse]) error {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return err
 	}
 
 	// Log entry for debugging
@@ -430,8 +430,8 @@ func getParrotNameByAgentType(agentType v1pb.AgentType) string {
 // AIConversation Connect wrappers
 
 func (s *ConnectServiceHandler) ListAIConversations(ctx context.Context, req *connect.Request[v1pb.ListAIConversationsRequest]) (*connect.Response[v1pb.ListAIConversationsResponse], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.ListAIConversations(ctx, req.Msg)
 	if err != nil {
@@ -441,8 +441,8 @@ func (s *ConnectServiceHandler) ListAIConversations(ctx context.Context, req *co
 }
 
 func (s *ConnectServiceHandler) GetAIConversation(ctx context.Context, req *connect.Request[v1pb.GetAIConversationRequest]) (*connect.Response[v1pb.AIConversation], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GetAIConversation(ctx, req.Msg)
 	if err != nil {
@@ -452,8 +452,8 @@ func (s *ConnectServiceHandler) GetAIConversation(ctx context.Context, req *conn
 }
 
 func (s *ConnectServiceHandler) CreateAIConversation(ctx context.Context, req *connect.Request[v1pb.CreateAIConversationRequest]) (*connect.Response[v1pb.AIConversation], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.CreateAIConversation(ctx, req.Msg)
 	if err != nil {
@@ -463,8 +463,8 @@ func (s *ConnectServiceHandler) CreateAIConversation(ctx context.Context, req *c
 }
 
 func (s *ConnectServiceHandler) UpdateAIConversation(ctx context.Context, req *connect.Request[v1pb.UpdateAIConversationRequest]) (*connect.Response[v1pb.AIConversation], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.UpdateAIConversation(ctx, req.Msg)
 	if err != nil {
@@ -474,8 +474,8 @@ func (s *ConnectServiceHandler) UpdateAIConversation(ctx context.Context, req *c
 }
 
 func (s *ConnectServiceHandler) GenerateConversationTitle(ctx context.Context, req *connect.Request[v1pb.GenerateConversationTitleRequest]) (*connect.Response[v1pb.GenerateConversationTitleResponse], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GenerateConversationTitle(ctx, req.Msg)
 	if err != nil {
@@ -485,8 +485,8 @@ func (s *ConnectServiceHandler) GenerateConversationTitle(ctx context.Context, r
 }
 
 func (s *ConnectServiceHandler) DeleteAIConversation(ctx context.Context, req *connect.Request[v1pb.DeleteAIConversationRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.DeleteAIConversation(ctx, req.Msg)
 	if err != nil {
@@ -496,8 +496,8 @@ func (s *ConnectServiceHandler) DeleteAIConversation(ctx context.Context, req *c
 }
 
 func (s *ConnectServiceHandler) AddContextSeparator(ctx context.Context, req *connect.Request[v1pb.AddContextSeparatorRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.AddContextSeparator(ctx, req.Msg)
 	if err != nil {
@@ -507,8 +507,8 @@ func (s *ConnectServiceHandler) AddContextSeparator(ctx context.Context, req *co
 }
 
 func (s *ConnectServiceHandler) ClearConversationMessages(ctx context.Context, req *connect.Request[v1pb.ClearConversationMessagesRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.ClearConversationMessages(ctx, req.Msg)
 	if err != nil {
@@ -520,8 +520,8 @@ func (s *ConnectServiceHandler) ClearConversationMessages(ctx context.Context, r
 // StopChat cancels an ongoing chat stream and terminates the associated session.
 // StopChat 取消正在进行的聊天流并终止相关会话。
 func (s *ConnectServiceHandler) StopChat(ctx context.Context, req *connect.Request[v1pb.StopChatRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.StopChat(ctx, req.Msg)
 	if err != nil {
@@ -531,8 +531,8 @@ func (s *ConnectServiceHandler) StopChat(ctx context.Context, req *connect.Reque
 }
 
 func (s *ConnectServiceHandler) DetectDuplicates(ctx context.Context, req *connect.Request[v1pb.DetectDuplicatesRequest]) (*connect.Response[v1pb.DetectDuplicatesResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.DetectDuplicates(ctx, req.Msg)
 	if err != nil {
@@ -542,8 +542,8 @@ func (s *ConnectServiceHandler) DetectDuplicates(ctx context.Context, req *conne
 }
 
 func (s *ConnectServiceHandler) MergeMemos(ctx context.Context, req *connect.Request[v1pb.MergeMemosRequest]) (*connect.Response[v1pb.MergeMemosResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.MergeMemos(ctx, req.Msg)
 	if err != nil {
@@ -553,8 +553,8 @@ func (s *ConnectServiceHandler) MergeMemos(ctx context.Context, req *connect.Req
 }
 
 func (s *ConnectServiceHandler) LinkMemos(ctx context.Context, req *connect.Request[v1pb.LinkMemosRequest]) (*connect.Response[v1pb.LinkMemosResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.LinkMemos(ctx, req.Msg)
 	if err != nil {
@@ -564,8 +564,8 @@ func (s *ConnectServiceHandler) LinkMemos(ctx context.Context, req *connect.Requ
 }
 
 func (s *ConnectServiceHandler) GetKnowledgeGraph(ctx context.Context, req *connect.Request[v1pb.GetKnowledgeGraphRequest]) (*connect.Response[v1pb.GetKnowledgeGraphResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GetKnowledgeGraph(ctx, req.Msg)
 	if err != nil {
@@ -575,8 +575,8 @@ func (s *ConnectServiceHandler) GetKnowledgeGraph(ctx context.Context, req *conn
 }
 
 func (s *ConnectServiceHandler) GetDueReviews(ctx context.Context, req *connect.Request[v1pb.GetDueReviewsRequest]) (*connect.Response[v1pb.GetDueReviewsResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GetDueReviews(ctx, req.Msg)
 	if err != nil {
@@ -586,8 +586,8 @@ func (s *ConnectServiceHandler) GetDueReviews(ctx context.Context, req *connect.
 }
 
 func (s *ConnectServiceHandler) RecordReview(ctx context.Context, req *connect.Request[v1pb.RecordReviewRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.RecordReview(ctx, req.Msg)
 	if err != nil {
@@ -597,8 +597,8 @@ func (s *ConnectServiceHandler) RecordReview(ctx context.Context, req *connect.R
 }
 
 func (s *ConnectServiceHandler) RecordRouterFeedback(ctx context.Context, req *connect.Request[v1pb.RecordRouterFeedbackRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	_, err := s.AIService.RecordRouterFeedback(ctx, req.Msg)
 	if err != nil {
@@ -608,8 +608,8 @@ func (s *ConnectServiceHandler) RecordRouterFeedback(ctx context.Context, req *c
 }
 
 func (s *ConnectServiceHandler) GetReviewStats(ctx context.Context, req *connect.Request[v1pb.GetReviewStatsRequest]) (*connect.Response[v1pb.GetReviewStatsResponse], error) {
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GetReviewStats(ctx, req.Msg)
 	if err != nil {
@@ -631,8 +631,8 @@ func (s *ConnectServiceHandler) SearchWithHighlight(ctx context.Context, req *co
 // AIBlock (Unified Block Model) wrappers for Connect
 
 func (s *ConnectServiceHandler) ListBlocks(ctx context.Context, req *connect.Request[v1pb.ListBlocksRequest]) (*connect.Response[v1pb.ListBlocksResponse], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.ListBlocks(ctx, req.Msg)
 	if err != nil {
@@ -642,8 +642,8 @@ func (s *ConnectServiceHandler) ListBlocks(ctx context.Context, req *connect.Req
 }
 
 func (s *ConnectServiceHandler) GetBlock(ctx context.Context, req *connect.Request[v1pb.GetBlockRequest]) (*connect.Response[v1pb.Block], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.GetBlock(ctx, req.Msg)
 	if err != nil {
@@ -653,8 +653,8 @@ func (s *ConnectServiceHandler) GetBlock(ctx context.Context, req *connect.Reque
 }
 
 func (s *ConnectServiceHandler) CreateBlock(ctx context.Context, req *connect.Request[v1pb.CreateBlockRequest]) (*connect.Response[v1pb.Block], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.CreateBlock(ctx, req.Msg)
 	if err != nil {
@@ -664,8 +664,8 @@ func (s *ConnectServiceHandler) CreateBlock(ctx context.Context, req *connect.Re
 }
 
 func (s *ConnectServiceHandler) UpdateBlock(ctx context.Context, req *connect.Request[v1pb.UpdateBlockRequest]) (*connect.Response[v1pb.Block], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.UpdateBlock(ctx, req.Msg)
 	if err != nil {
@@ -675,8 +675,8 @@ func (s *ConnectServiceHandler) UpdateBlock(ctx context.Context, req *connect.Re
 }
 
 func (s *ConnectServiceHandler) DeleteBlock(ctx context.Context, req *connect.Request[v1pb.DeleteBlockRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.DeleteBlock(ctx, req.Msg)
 	if err != nil {
@@ -686,8 +686,8 @@ func (s *ConnectServiceHandler) DeleteBlock(ctx context.Context, req *connect.Re
 }
 
 func (s *ConnectServiceHandler) AppendUserInput(ctx context.Context, req *connect.Request[v1pb.AppendUserInputRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.AppendUserInput(ctx, req.Msg)
 	if err != nil {
@@ -697,8 +697,8 @@ func (s *ConnectServiceHandler) AppendUserInput(ctx context.Context, req *connec
 }
 
 func (s *ConnectServiceHandler) AppendEvent(ctx context.Context, req *connect.Request[v1pb.AppendEventRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.AppendEvent(ctx, req.Msg)
 	if err != nil {
@@ -710,8 +710,8 @@ func (s *ConnectServiceHandler) AppendEvent(ctx context.Context, req *connect.Re
 // ========== Tree Branching Methods (tree-conversation-branching) ==========
 
 func (s *ConnectServiceHandler) ForkBlock(ctx context.Context, req *connect.Request[v1pb.ForkBlockRequest]) (*connect.Response[v1pb.Block], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.ForkBlock(ctx, req.Msg)
 	if err != nil {
@@ -721,8 +721,8 @@ func (s *ConnectServiceHandler) ForkBlock(ctx context.Context, req *connect.Requ
 }
 
 func (s *ConnectServiceHandler) ListBlockBranches(ctx context.Context, req *connect.Request[v1pb.ListBlockBranchesRequest]) (*connect.Response[v1pb.ListBlockBranchesResponse], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.ListBlockBranches(ctx, req.Msg)
 	if err != nil {
@@ -732,8 +732,8 @@ func (s *ConnectServiceHandler) ListBlockBranches(ctx context.Context, req *conn
 }
 
 func (s *ConnectServiceHandler) SwitchBranch(ctx context.Context, req *connect.Request[v1pb.SwitchBranchRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.SwitchBranch(ctx, req.Msg)
 	if err != nil {
@@ -743,8 +743,8 @@ func (s *ConnectServiceHandler) SwitchBranch(ctx context.Context, req *connect.R
 }
 
 func (s *ConnectServiceHandler) DeleteBranch(ctx context.Context, req *connect.Request[v1pb.DeleteBranchRequest]) (*connect.Response[emptypb.Empty], error) {
-	if s.AIService == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	resp, err := s.AIService.DeleteBranch(ctx, req.Msg)
 	if err != nil {

@@ -15,13 +15,17 @@ type MockConnectHandler struct {
 	AIService AIServiceInterface
 }
 
-// Re-implement the method under test directly on the mock to verify the logic we want to extract.
-// This duplicates the logic from connect_handler.go, but allows us to verify the *behavior*
-// of the logic we are about to refactor, without compiling the real ConnectServiceHandler which has huge dependencies.
+func (s *MockConnectHandler) requireAI() error {
+	if s.AIService == nil || !s.AIService.IsEnabled() {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	}
+	return nil
+}
+
 func (s *MockConnectHandler) SuggestTags(ctx context.Context, req *connect.Request[v1pb.SuggestTagsRequest]) (*connect.Response[v1pb.SuggestTagsResponse], error) {
 	// --- Logic under test START ---
-	if s.AIService == nil || !s.AIService.IsEnabled() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))
+	if err := s.requireAI(); err != nil {
+		return nil, err
 	}
 	// --- Logic under test END ---
 
