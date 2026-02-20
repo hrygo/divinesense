@@ -91,7 +91,7 @@ func (r *CCRunner) Close() error {
 	if ccManager, ok := r.manager.(*CCSessionManager); ok {
 		activeSessions := ccManager.ListActiveSessions()
 		for _, sess := range activeSessions {
-			_ = ccManager.TerminateSession(sess.ID)
+			_ = ccManager.TerminateSession(sess.ID) //nolint:errcheck // cleanup best effort
 		}
 	}
 
