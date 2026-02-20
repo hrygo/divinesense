@@ -31,7 +31,7 @@ import (
 //
 // Authentication: Required (session cookie or access token)
 // Authorization: User can only list their own tokens.
-func (s *APIV1Service) ListPersonalAccessTokens(ctx context.Context, request *v1pb.ListPersonalAccessTokensRequest) (*v1pb.ListPersonalAccessTokensResponse, error) {
+func (s *UserService) ListPersonalAccessTokens(ctx context.Context, request *v1pb.ListPersonalAccessTokensRequest) (*v1pb.ListPersonalAccessTokensResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
@@ -40,7 +40,7 @@ func (s *APIV1Service) ListPersonalAccessTokens(ctx context.Context, request *v1
 	// Verify permission
 	claims := auth.GetUserClaims(ctx)
 	if claims == nil || claims.UserID != userID {
-		_, err := s.requireUserAccess(ctx, userID)
+		_, err := requireUserAccess(ctx, s.Store, userID)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (s *APIV1Service) ListPersonalAccessTokens(ctx context.Context, request *v1
 //
 // Authentication: Required (session cookie or access token)
 // Authorization: User can only create tokens for themselves.
-func (s *APIV1Service) CreatePersonalAccessToken(ctx context.Context, request *v1pb.CreatePersonalAccessTokenRequest) (*v1pb.CreatePersonalAccessTokenResponse, error) {
+func (s *UserService) CreatePersonalAccessToken(ctx context.Context, request *v1pb.CreatePersonalAccessTokenRequest) (*v1pb.CreatePersonalAccessTokenResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
@@ -94,7 +94,7 @@ func (s *APIV1Service) CreatePersonalAccessToken(ctx context.Context, request *v
 	// Verify permission
 	claims := auth.GetUserClaims(ctx)
 	if claims == nil || claims.UserID != userID {
-		currentUser, _ := s.fetchCurrentUser(ctx)
+		currentUser, _ := fetchCurrentUser(ctx, s.Store)
 		if currentUser == nil || currentUser.ID != userID {
 			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 		}
@@ -146,7 +146,7 @@ func (s *APIV1Service) CreatePersonalAccessToken(ctx context.Context, request *v
 //
 // Authentication: Required (session cookie or access token)
 // Authorization: User can only delete their own tokens.
-func (s *APIV1Service) DeletePersonalAccessToken(ctx context.Context, request *v1pb.DeletePersonalAccessTokenRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeletePersonalAccessToken(ctx context.Context, request *v1pb.DeletePersonalAccessTokenRequest) (*emptypb.Empty, error) {
 	// Parse name: users/{user_id}/personalAccessTokens/{token_id}
 	userID, tokenID, err := ExtractUserAndPATIDFromName(request.Name)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *APIV1Service) DeletePersonalAccessToken(ctx context.Context, request *v
 	// Verify permission
 	claims := auth.GetUserClaims(ctx)
 	if claims == nil || claims.UserID != userID {
-		currentUser, _ := s.fetchCurrentUser(ctx)
+		currentUser, _ := fetchCurrentUser(ctx, s.Store)
 		if currentUser == nil || currentUser.ID != userID {
 			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 		}

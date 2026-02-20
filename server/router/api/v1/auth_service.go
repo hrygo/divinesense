@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/hrygo/divinesense/internal/profile"
 	"github.com/hrygo/divinesense/internal/util"
 	"github.com/hrygo/divinesense/plugin/idp"
 	"github.com/hrygo/divinesense/plugin/idp/oauth2"
@@ -24,6 +25,13 @@ import (
 	"github.com/hrygo/divinesense/server/auth"
 	"github.com/hrygo/divinesense/store"
 )
+
+type AuthService struct {
+	v1pb.UnimplementedAuthServiceServer
+	Store   *store.Store
+	Secret  string
+	Profile *profile.Profile
+}
 
 const (
 	unmatchedUsernameAndPasswordError = "unmatched username and password"
@@ -34,8 +42,8 @@ const (
 //
 // Authentication: Required (access token).
 // Returns: User information.
-func (s *APIV1Service) GetCurrentUser(ctx context.Context, _ *v1pb.GetCurrentUserRequest) (*v1pb.GetCurrentUserResponse, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *AuthService) GetCurrentUser(ctx context.Context, _ *v1pb.GetCurrentUserRequest) (*v1pb.GetCurrentUserResponse, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to get current user: %v", err)
 	}
@@ -61,7 +69,7 @@ func (s *APIV1Service) GetCurrentUser(ctx context.Context, _ *v1pb.GetCurrentUse
 //
 // Authentication: Not required (public endpoint).
 // Returns: User info, access token, and token expiry.
-func (s *APIV1Service) SignIn(ctx context.Context, request *v1pb.SignInRequest) (*v1pb.SignInResponse, error) {
+func (s *AuthService) SignIn(ctx context.Context, request *v1pb.SignInRequest) (*v1pb.SignInResponse, error) {
 	var existingUser *store.User
 
 	// Authentication Method 1: Password-based authentication
@@ -196,7 +204,7 @@ func (s *APIV1Service) SignIn(ctx context.Context, request *v1pb.SignInRequest) 
 // 2. Stores refresh token metadata in user_setting.
 // 3. Sets refresh token as HttpOnly cookie.
 // 4. Returns access token and its expiry time.
-func (s *APIV1Service) doSignIn(ctx context.Context, user *store.User) (string, time.Time, error) {
+func (s *AuthService) doSignIn(ctx context.Context, user *store.User) (string, time.Time, error) {
 	// Generate refresh token
 	tokenID := util.GenUUID()
 	refreshToken, refreshExpiresAt, err := auth.GenerateRefreshToken(user.ID, tokenID, []byte(s.Secret))
@@ -242,7 +250,7 @@ func (s *APIV1Service) doSignIn(ctx context.Context, user *store.User) (string, 
 //
 // Authentication: Required (access token).
 // Returns: Empty response on success.
-func (s *APIV1Service) SignOut(ctx context.Context, _ *v1pb.SignOutRequest) (*emptypb.Empty, error) {
+func (s *AuthService) SignOut(ctx context.Context, _ *v1pb.SignOutRequest) (*emptypb.Empty, error) {
 	// Get user from access token claims
 	claims := auth.GetUserClaims(ctx)
 	if claims != nil {
@@ -285,7 +293,7 @@ func (s *APIV1Service) SignOut(ctx context.Context, _ *v1pb.SignOutRequest) (*em
 //
 // Authentication: Requires valid refresh token in cookie (public endpoint)
 // Returns: New access token and expiry timestamp.
-func (s *APIV1Service) RefreshToken(ctx context.Context, _ *v1pb.RefreshTokenRequest) (*v1pb.RefreshTokenResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, _ *v1pb.RefreshTokenRequest) (*v1pb.RefreshTokenResponse, error) {
 	// Extract refresh token from cookie
 	refreshToken := ""
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
@@ -356,7 +364,7 @@ func (s *APIV1Service) RefreshToken(ctx context.Context, _ *v1pb.RefreshTokenReq
 	}, nil
 }
 
-func (s *APIV1Service) clearAuthCookies(ctx context.Context) error {
+func (s *AuthService) clearAuthCookies(ctx context.Context) error {
 	// Clear refresh token cookie
 	refreshCookie := s.buildRefreshTokenCookie(ctx, "", time.Time{})
 	if err := SetResponseHeader(ctx, "Set-Cookie", refreshCookie); err != nil {
@@ -366,7 +374,7 @@ func (s *APIV1Service) clearAuthCookies(ctx context.Context) error {
 	return nil
 }
 
-func (*APIV1Service) buildRefreshTokenCookie(ctx context.Context, refreshToken string, expireTime time.Time) string {
+func (s *AuthService) buildRefreshTokenCookie(ctx context.Context, refreshToken string, expireTime time.Time) string {
 	attrs := []string{
 		fmt.Sprintf("%s=%s", auth.RefreshTokenCookieName, refreshToken),
 		"Path=/",
@@ -416,7 +424,7 @@ func (*APIV1Service) buildRefreshTokenCookie(ctx context.Context, refreshToken s
 // - See all active sessions with device details
 // - Identify suspicious login attempts
 // - Revoke specific sessions from unknown devices.
-func (s *APIV1Service) extractClientInfo(ctx context.Context) *storepb.RefreshTokensUserSetting_ClientInfo {
+func (s *AuthService) extractClientInfo(ctx context.Context) *storepb.RefreshTokensUserSetting_ClientInfo {
 	clientInfo := &storepb.RefreshTokensUserSetting_ClientInfo{}
 
 	// Extract user agent from metadata if available
@@ -449,7 +457,7 @@ func (s *APIV1Service) extractClientInfo(ctx context.Context) *storepb.RefreshTo
 //
 // Note: This is a simplified parser. For production use with high accuracy requirements,
 // consider using a dedicated user agent parsing library.
-func (*APIV1Service) parseUserAgent(userAgent string, clientInfo *storepb.RefreshTokensUserSetting_ClientInfo) {
+func (s *AuthService) parseUserAgent(userAgent string, clientInfo *storepb.RefreshTokensUserSetting_ClientInfo) {
 	if userAgent == "" {
 		return
 	}

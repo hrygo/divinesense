@@ -42,27 +42,10 @@
 *   **3.1 Schedule 更新重构 (Field Mapper Pattern)** ✅：
     *   `schedule_service.go` — `scheduleFieldMappers` map 替代了两大块重复的 switch/if-else 硬编码
     *   新增字段只需在 map 添加一行，完全符合 OCP
-*   **3.2 APIV1Service 上帝类解耦** ✅ (已解耦基础设施)：
-    *   `fetchCurrentUser` 和 `requireUserAccess` 已提取为 standalone 函数
-    *   修复了 `requireAI` 的递归调用 bug
-    *   `AIService` 和 `ScheduleService` 已作为独立 struct 存在
-
-### 3.2 的架构约束说明
-
-`APIV1Service` 作为"上帝结构体"的存在受限于 **gRPC-Gateway 注册机制**：
-```go
-// gRPC-Gateway 要求 handler 必须实现完整的 proto 接口
-v1pb.RegisterUserServiceHandlerServer(ctx, gwMux, s)  // s 必须实现 UserServiceServer
-v1pb.RegisterMemoServiceHandlerServer(ctx, gwMux, s)  // s 必须实现 MemoServiceServer
-```
-
-完全消灭 `APIV1Service` 需要：
-1. 为每个域创建独立 struct (如 `UserService`, `MemoService`)
-2. 将 `UnimplementedXxxServer` 移到各域 struct
-3. 更新所有 gRPC-Gateway 注册为各域 struct
-4. 更新 `ConnectServiceHandler` 的委托链
-
-**当前策略**: 已将共享工具函数解耦为 standalone，使得未来按需提取各域服务成为可能，但不在本 PR 中做全量提取，避免爆炸半径过大。
+*   **3.2 APIV1Service 上帝类彻底解耦拆分 (God Class Elimination)** ✅：
+    *   **问题**: `APIV1Service` 寄生了 V1 下的十余种服务，其体积庞大，上下文依赖杂乱。
+    *   **解决**: 将所有的服务实现转移到分别封装的领域结构体 (`UserService`, `MemoService`, `AuthService`, `AttachmentService` 等) 中，并为每个结构体内部嵌入各自的按需依赖，不让它持有不需要的多余权限。
+    *   **连线**: `APIV1Service` 已变为纯粹的依赖倒置和路由透传对象层 (Composition Root)，不再亲自实现任何服务。并且在 `v1pb.RegisterXXXService(ctx, mux, s.XXXService)` 和 Connect 包裹层 `s.APIV1Service.XXXService.Method` 进行透明的接口挂载。
 
 ---
 

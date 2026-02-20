@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hrygo/divinesense/ai"
-	"github.com/hrygo/divinesense/ai/agents"
+	agent "github.com/hrygo/divinesense/ai/agents"
 	"github.com/hrygo/divinesense/ai/agents/universal"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 )

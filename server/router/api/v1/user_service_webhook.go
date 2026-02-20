@@ -13,13 +13,13 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) ListUserWebhooks(ctx context.Context, request *v1pb.ListUserWebhooksRequest) (*v1pb.ListUserWebhooksResponse, error) {
+func (s *UserService) ListUserWebhooks(ctx context.Context, request *v1pb.ListUserWebhooksRequest) (*v1pb.ListUserWebhooksResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid parent: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -45,13 +45,13 @@ func (s *APIV1Service) ListUserWebhooks(ctx context.Context, request *v1pb.ListU
 	}, nil
 }
 
-func (s *APIV1Service) CreateUserWebhook(ctx context.Context, request *v1pb.CreateUserWebhookRequest) (*v1pb.UserWebhook, error) {
+func (s *UserService) CreateUserWebhook(ctx context.Context, request *v1pb.CreateUserWebhookRequest) (*v1pb.UserWebhook, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid parent: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -81,7 +81,7 @@ func (s *APIV1Service) CreateUserWebhook(ctx context.Context, request *v1pb.Crea
 	return convertUserWebhookFromUserSetting(webhook, userID), nil
 }
 
-func (s *APIV1Service) UpdateUserWebhook(ctx context.Context, request *v1pb.UpdateUserWebhookRequest) (*v1pb.UserWebhook, error) {
+func (s *UserService) UpdateUserWebhook(ctx context.Context, request *v1pb.UpdateUserWebhookRequest) (*v1pb.UserWebhook, error) {
 	if request.Webhook == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "webhook is required")
 	}
@@ -91,7 +91,7 @@ func (s *APIV1Service) UpdateUserWebhook(ctx context.Context, request *v1pb.Upda
 		return nil, status.Errorf(codes.InvalidArgument, "invalid webhook name: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -157,13 +157,13 @@ func (s *APIV1Service) UpdateUserWebhook(ctx context.Context, request *v1pb.Upda
 	return convertUserWebhookFromUserSetting(updatedWebhook, userID), nil
 }
 
-func (s *APIV1Service) DeleteUserWebhook(ctx context.Context, request *v1pb.DeleteUserWebhookRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeleteUserWebhook(ctx context.Context, request *v1pb.DeleteUserWebhookRequest) (*emptypb.Empty, error) {
 	webhookID, userID, err := parseUserWebhookName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid webhook name: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}

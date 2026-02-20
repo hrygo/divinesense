@@ -53,18 +53,6 @@ func requireUserAccess(ctx context.Context, s *store.Store, targetUserID int32) 
 	return currentUser, nil
 }
 
-// --- Backward-compatible method wrappers on APIV1Service ---
-// These delegate to the standalone functions above, allowing gradual migration.
-
-func (s *APIV1Service) fetchCurrentUser(ctx context.Context) (*store.User, error) {
-	return fetchCurrentUser(ctx, s.Store)
-}
-
-func (s *APIV1Service) requireUserAccess(ctx context.Context, targetUserID int32) (*store.User, error) {
-	return requireUserAccess(ctx, s.Store, targetUserID)
-}
-
-// requireAI ensures that the AI service is enabled and available.
 func (s *ConnectServiceHandler) requireAI() error {
 	if s.AIService == nil || !s.AIService.IsEnabled() {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("AI features are disabled"))

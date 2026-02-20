@@ -13,8 +13,13 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) CreateIdentityProvider(ctx context.Context, request *v1pb.CreateIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
-	currentUser, err := s.fetchCurrentUser(ctx)
+type IdentityProviderService struct {
+	v1pb.UnimplementedIdentityProviderServiceServer
+	Store *store.Store
+}
+
+func (s *IdentityProviderService) CreateIdentityProvider(ctx context.Context, request *v1pb.CreateIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
@@ -32,7 +37,7 @@ func (s *APIV1Service) CreateIdentityProvider(ctx context.Context, request *v1pb
 	return convertIdentityProviderFromStore(identityProvider), nil
 }
 
-func (s *APIV1Service) ListIdentityProviders(ctx context.Context, _ *v1pb.ListIdentityProvidersRequest) (*v1pb.ListIdentityProvidersResponse, error) {
+func (s *IdentityProviderService) ListIdentityProviders(ctx context.Context, _ *v1pb.ListIdentityProvidersRequest) (*v1pb.ListIdentityProvidersResponse, error) {
 	identityProviders, err := s.Store.ListIdentityProviders(ctx, &store.FindIdentityProvider{})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list identity providers, error: %+v", err)
@@ -44,7 +49,7 @@ func (s *APIV1Service) ListIdentityProviders(ctx context.Context, _ *v1pb.ListId
 
 	// Default to lowest-privilege role, update later based on real role
 	currentUserRole := store.RoleUser
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err == nil && currentUser != nil {
 		currentUserRole = currentUser.Role
 	}
@@ -56,7 +61,7 @@ func (s *APIV1Service) ListIdentityProviders(ctx context.Context, _ *v1pb.ListId
 	return response, nil
 }
 
-func (s *APIV1Service) GetIdentityProvider(ctx context.Context, request *v1pb.GetIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
+func (s *IdentityProviderService) GetIdentityProvider(ctx context.Context, request *v1pb.GetIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
 	id, err := ExtractIdentityProviderIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identity provider name: %v", err)
@@ -73,7 +78,7 @@ func (s *APIV1Service) GetIdentityProvider(ctx context.Context, request *v1pb.Ge
 
 	// Default to lowest-privilege role, update later based on real role
 	currentUserRole := store.RoleUser
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err == nil && currentUser != nil {
 		currentUserRole = currentUser.Role
 	}
@@ -82,8 +87,8 @@ func (s *APIV1Service) GetIdentityProvider(ctx context.Context, request *v1pb.Ge
 	return redactIdentityProviderResponse(identityProviderConverted, currentUserRole), nil
 }
 
-func (s *APIV1Service) UpdateIdentityProvider(ctx context.Context, request *v1pb.UpdateIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
-	currentUser, err := s.fetchCurrentUser(ctx)
+func (s *IdentityProviderService) UpdateIdentityProvider(ctx context.Context, request *v1pb.UpdateIdentityProviderRequest) (*v1pb.IdentityProvider, error) {
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
@@ -126,8 +131,8 @@ func (s *APIV1Service) UpdateIdentityProvider(ctx context.Context, request *v1pb
 	return convertIdentityProviderFromStore(identityProvider), nil
 }
 
-func (s *APIV1Service) DeleteIdentityProvider(ctx context.Context, request *v1pb.DeleteIdentityProviderRequest) (*emptypb.Empty, error) {
-	currentUser, err := s.fetchCurrentUser(ctx)
+func (s *IdentityProviderService) DeleteIdentityProvider(ctx context.Context, request *v1pb.DeleteIdentityProviderRequest) (*emptypb.Empty, error) {
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}

@@ -26,23 +26,23 @@ import (
 )
 
 type APIV1Service struct {
-	v1pb.UnimplementedAIServiceServer
-	v1pb.UnimplementedUserServiceServer
-	v1pb.UnimplementedScheduleServiceServer
-	v1pb.UnimplementedAttachmentServiceServer
-	v1pb.UnimplementedShortcutServiceServer
-	v1pb.UnimplementedActivityServiceServer
-	v1pb.UnimplementedIdentityProviderServiceServer
-	v1pb.UnimplementedAuthServiceServer
-	v1pb.UnimplementedInstanceServiceServer
-	v1pb.UnimplementedMemoServiceServer
-	v1pb.UnimplementedChatAppServiceServer
-	MarkdownService markdown.Service
-	Profile         *profile.Profile
-	Store           *store.Store
-	AIService       *AIService
-	ScheduleService *ScheduleService
+	// Domain Services
+	UserService             *UserService
+	MemoService             *MemoService
+	AuthService             *AuthService
+	AttachmentService       *AttachmentService
+	ShortcutService         *ShortcutService
+	InstanceService         *InstanceService
+	IdentityProviderService *IdentityProviderService
+	ActivityService         *ActivityService
+	ChatAppService          *ChatAppService
+	AIService               *AIService
+	ScheduleService         *ScheduleService
 
+	// Shared Infra
+	MarkdownService    markdown.Service
+	Profile            *profile.Profile
+	Store              *store.Store
 	thumbnailSemaphore *semaphore.Weighted
 	Secret             string
 	chatChannelRouter  *channels.ChannelRouter
@@ -160,6 +160,16 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 		)
 	}
 
+	service.UserService = &UserService{Store: store}
+	service.MemoService = &MemoService{Store: store, AIService: service.AIService, MarkdownService: markdownService, Profile: profile}
+	service.AuthService = &AuthService{Store: store, Secret: secret, Profile: profile}
+	service.AttachmentService = &AttachmentService{Store: store, Profile: profile, thumbnailSemaphore: service.thumbnailSemaphore}
+	service.ShortcutService = &ShortcutService{Store: store, Profile: profile}
+	service.InstanceService = &InstanceService{Store: store, Profile: profile, AIService: service.AIService}
+	service.IdentityProviderService = &IdentityProviderService{Store: store}
+	service.ActivityService = &ActivityService{Store: store}
+	service.ChatAppService = &ChatAppService{Store: store, Secret: secret, Profile: profile, AIService: service.AIService, chatChannelRouter: service.chatChannelRouter, chatAppStore: service.chatAppStore}
+
 	return service
 }
 
@@ -216,28 +226,28 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	gwMux := runtime.NewServeMux(
 		runtime.WithMiddlewares(gatewayAuthMiddleware),
 	)
-	if err := v1pb.RegisterInstanceServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterInstanceServiceHandlerServer(ctx, gwMux, s.InstanceService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterAuthServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterAuthServiceHandlerServer(ctx, gwMux, s.AuthService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterUserServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterUserServiceHandlerServer(ctx, gwMux, s.UserService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterMemoServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterMemoServiceHandlerServer(ctx, gwMux, s.MemoService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterAttachmentServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterAttachmentServiceHandlerServer(ctx, gwMux, s.AttachmentService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterShortcutServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterShortcutServiceHandlerServer(ctx, gwMux, s.ShortcutService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterActivityServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterActivityServiceHandlerServer(ctx, gwMux, s.ActivityService); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterIdentityProviderServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterIdentityProviderServiceHandlerServer(ctx, gwMux, s.IdentityProviderService); err != nil {
 		return err
 	}
 	// Register AI service if available
@@ -252,7 +262,7 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	}
 
 	// Register ChatAppService
-	if err := v1pb.RegisterChatAppServiceHandlerServer(ctx, gwMux, s); err != nil {
+	if err := v1pb.RegisterChatAppServiceHandlerServer(ctx, gwMux, s.ChatAppService); err != nil {
 		return err
 	}
 	gwGroup := echoServer.Group("")
@@ -291,7 +301,7 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	systemGroup.GET("/metrics/overview", s.GetMetricsOverview)
 
 	// Initialize chat channels from database
-	if err := s.initializeChatChannels(ctx); err != nil {
+	if err := s.ChatAppService.initializeChatChannels(ctx); err != nil {
 		slog.Warn("failed to initialize chat channels", "error", err)
 		// Don't fail startup if chat channels fail to initialize
 	}

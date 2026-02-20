@@ -13,8 +13,8 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) SetMemoRelations(ctx context.Context, request *v1pb.SetMemoRelationsRequest) (*emptypb.Empty, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *MemoService) SetMemoRelations(ctx context.Context, request *v1pb.SetMemoRelationsRequest) (*emptypb.Empty, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -74,7 +74,7 @@ func (s *APIV1Service) SetMemoRelations(ctx context.Context, request *v1pb.SetMe
 	return &emptypb.Empty{}, nil
 }
 
-func (s *APIV1Service) ListMemoRelations(ctx context.Context, request *v1pb.ListMemoRelationsRequest) (*v1pb.ListMemoRelationsResponse, error) {
+func (s *MemoService) ListMemoRelations(ctx context.Context, request *v1pb.ListMemoRelationsRequest) (*v1pb.ListMemoRelationsResponse, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -84,7 +84,7 @@ func (s *APIV1Service) ListMemoRelations(ctx context.Context, request *v1pb.List
 		return nil, status.Errorf(codes.Internal, "failed to get memo")
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}
@@ -130,7 +130,7 @@ func (s *APIV1Service) ListMemoRelations(ctx context.Context, request *v1pb.List
 	return response, nil
 }
 
-func (s *APIV1Service) convertMemoRelationFromStore(ctx context.Context, memoRelation *store.MemoRelation) (*v1pb.MemoRelation, error) {
+func (s *MemoService) convertMemoRelationFromStore(ctx context.Context, memoRelation *store.MemoRelation) (*v1pb.MemoRelation, error) {
 	memo, err := s.Store.GetMemo(ctx, &store.FindMemo{ID: &memoRelation.MemoID})
 	if err != nil {
 		return nil, err

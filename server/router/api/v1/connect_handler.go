@@ -151,7 +151,7 @@ func (s *ConnectServiceHandler) GetRelatedMemos(ctx context.Context, req *connec
 		return connect.NewResponse(resp), nil
 	}
 	// Fallback to MemoService implementation (keyword/tag-based)
-	resp, err := s.APIV1Service.GetRelatedMemos(ctx, req.Msg)
+	resp, err := s.MemoService.GetRelatedMemos(ctx, req.Msg)
 	if err != nil {
 		return nil, convertGRPCError(err)
 	}
@@ -621,7 +621,7 @@ func (s *ConnectServiceHandler) GetReviewStats(ctx context.Context, req *connect
 // MemoService wrappers for Connect
 
 func (s *ConnectServiceHandler) SearchWithHighlight(ctx context.Context, req *connect.Request[v1pb.SearchWithHighlightRequest]) (*connect.Response[v1pb.SearchWithHighlightResponse], error) {
-	resp, err := s.APIV1Service.SearchWithHighlight(ctx, req.Msg)
+	resp, err := s.MemoService.SearchWithHighlight(ctx, req.Msg)
 	if err != nil {
 		return nil, convertGRPCError(err)
 	}

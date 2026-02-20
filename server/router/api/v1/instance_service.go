@@ -8,13 +8,21 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/hrygo/divinesense/internal/profile"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	"github.com/hrygo/divinesense/store"
 )
 
+type InstanceService struct {
+	v1pb.UnimplementedInstanceServiceServer
+	Store     *store.Store
+	Profile   *profile.Profile
+	AIService *AIService
+}
+
 // GetInstanceProfile returns the instance profile.
-func (s *APIV1Service) GetInstanceProfile(ctx context.Context, _ *v1pb.GetInstanceProfileRequest) (*v1pb.InstanceProfile, error) {
+func (s *InstanceService) GetInstanceProfile(ctx context.Context, _ *v1pb.GetInstanceProfileRequest) (*v1pb.InstanceProfile, error) {
 	instanceProfile := &v1pb.InstanceProfile{
 		Version:     s.Profile.Version,
 		Mode:        s.Profile.Mode,
@@ -30,7 +38,7 @@ func (s *APIV1Service) GetInstanceProfile(ctx context.Context, _ *v1pb.GetInstan
 	return instanceProfile, nil
 }
 
-func (s *APIV1Service) GetInstanceSetting(ctx context.Context, request *v1pb.GetInstanceSettingRequest) (*v1pb.InstanceSetting, error) {
+func (s *InstanceService) GetInstanceSetting(ctx context.Context, request *v1pb.GetInstanceSettingRequest) (*v1pb.InstanceSetting, error) {
 	instanceSettingKeyString, err := ExtractInstanceSettingKeyFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid instance setting name: %v", err)
@@ -66,7 +74,7 @@ func (s *APIV1Service) GetInstanceSetting(ctx context.Context, request *v1pb.Get
 
 	// For storage setting, only host can get it.
 	if instanceSetting.Key == storepb.InstanceSettingKey_STORAGE {
-		user, err := s.fetchCurrentUser(ctx)
+		user, err := fetchCurrentUser(ctx, s.Store)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 		}
@@ -81,8 +89,8 @@ func (s *APIV1Service) GetInstanceSetting(ctx context.Context, request *v1pb.Get
 	return convertInstanceSettingFromStore(instanceSetting), nil
 }
 
-func (s *APIV1Service) UpdateInstanceSetting(ctx context.Context, request *v1pb.UpdateInstanceSettingRequest) (*v1pb.InstanceSetting, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *InstanceService) UpdateInstanceSetting(ctx context.Context, request *v1pb.UpdateInstanceSettingRequest) (*v1pb.InstanceSetting, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -272,7 +280,7 @@ func convertInstanceMemoRelatedSettingToStore(setting *v1pb.InstanceSetting_Memo
 
 var ownerCache *v1pb.User
 
-func (s *APIV1Service) GetInstanceOwner(ctx context.Context) (*v1pb.User, error) {
+func (s *InstanceService) GetInstanceOwner(ctx context.Context) (*v1pb.User, error) {
 	if ownerCache != nil {
 		return ownerCache, nil
 	}

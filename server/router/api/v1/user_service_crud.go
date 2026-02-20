@@ -21,8 +21,13 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) ListUsers(ctx context.Context, request *v1pb.ListUsersRequest) (*v1pb.ListUsersResponse, error) {
-	currentUser, err := s.fetchCurrentUser(ctx)
+type UserService struct {
+	v1pb.UnimplementedUserServiceServer
+	Store *store.Store
+}
+
+func (s *UserService) ListUsers(ctx context.Context, request *v1pb.ListUsersRequest) (*v1pb.ListUsersResponse, error) {
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
@@ -62,7 +67,7 @@ func (s *APIV1Service) ListUsers(ctx context.Context, request *v1pb.ListUsersReq
 	return response, nil
 }
 
-func (s *APIV1Service) GetUser(ctx context.Context, request *v1pb.GetUserRequest) (*v1pb.User, error) {
+func (s *UserService) GetUser(ctx context.Context, request *v1pb.GetUserRequest) (*v1pb.User, error) {
 	// Extract identifier from "users/{id_or_username}"
 	identifier := extractUserIdentifierFromName(request.Name)
 	if identifier == "" {
@@ -95,9 +100,9 @@ func (s *APIV1Service) GetUser(ctx context.Context, request *v1pb.GetUserRequest
 	return convertUserFromStore(user), nil
 }
 
-func (s *APIV1Service) CreateUser(ctx context.Context, request *v1pb.CreateUserRequest) (*v1pb.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, request *v1pb.CreateUserRequest) (*v1pb.User, error) {
 	// Get current user (might be nil for unauthenticated requests)
-	currentUser, _ := s.fetchCurrentUser(ctx)
+	currentUser, _ := fetchCurrentUser(ctx, s.Store)
 
 	// Check if there are any existing users (for first-time setup detection)
 	limitOne := 1
@@ -172,7 +177,7 @@ func (s *APIV1Service) CreateUser(ctx context.Context, request *v1pb.CreateUserR
 	return convertUserFromStore(user), nil
 }
 
-func (s *APIV1Service) UpdateUser(ctx context.Context, request *v1pb.UpdateUserRequest) (*v1pb.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, request *v1pb.UpdateUserRequest) (*v1pb.User, error) {
 	if request.UpdateMask == nil || len(request.UpdateMask.Paths) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "update mask is empty")
 	}
@@ -180,7 +185,7 @@ func (s *APIV1Service) UpdateUser(ctx context.Context, request *v1pb.UpdateUserR
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
@@ -284,12 +289,12 @@ func (s *APIV1Service) UpdateUser(ctx context.Context, request *v1pb.UpdateUserR
 	return convertUserFromStore(updatedUser), nil
 }
 
-func (s *APIV1Service) DeleteUser(ctx context.Context, request *v1pb.DeleteUserRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeleteUser(ctx context.Context, request *v1pb.DeleteUserRequest) (*emptypb.Empty, error) {
 	userID, err := ExtractUserIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}

@@ -14,6 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/hrygo/divinesense/internal/base"
+	"github.com/hrygo/divinesense/internal/profile"
+	"github.com/hrygo/divinesense/plugin/markdown"
 	"github.com/hrygo/divinesense/plugin/webhook"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
@@ -22,8 +24,16 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoRequest) (*v1pb.Memo, error) {
-	user, err := s.fetchCurrentUser(ctx)
+type MemoService struct {
+	v1pb.UnimplementedMemoServiceServer
+	Store           *store.Store
+	AIService       *AIService
+	MarkdownService markdown.Service
+	Profile         *profile.Profile
+}
+
+func (s *MemoService) CreateMemo(ctx context.Context, request *v1pb.CreateMemoRequest) (*v1pb.Memo, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}
@@ -150,7 +160,7 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	return memoMessage, nil
 }
 
-func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosRequest) (*v1pb.ListMemosResponse, error) {
+func (s *MemoService) ListMemos(ctx context.Context, request *v1pb.ListMemosRequest) (*v1pb.ListMemosResponse, error) {
 	memoFind := &store.FindMemo{
 		// Exclude comments by default.
 		ExcludeComments: true,
@@ -174,13 +184,13 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 	}
 
 	if request.Filter != "" {
-		if err := s.validateFilter(ctx, request.Filter); err != nil {
+		if err := validateSearchFilter(ctx, s.Profile, request.Filter); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
 		}
 		memoFind.Filters = append(memoFind.Filters, request.Filter)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}
@@ -292,7 +302,7 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 	return response, nil
 }
 
-func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest) (*v1pb.Memo, error) {
+func (s *MemoService) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest) (*v1pb.Memo, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -307,7 +317,7 @@ func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 	if memo.Visibility != store.Public {
-		user, err := s.fetchCurrentUser(ctx)
+		user, err := fetchCurrentUser(ctx, s.Store)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get user")
 		}
@@ -340,7 +350,7 @@ func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest
 	return memoMessage, nil
 }
 
-func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoRequest) (*v1pb.Memo, error) {
+func (s *MemoService) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoRequest) (*v1pb.Memo, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Memo.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -357,7 +367,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 
-	user, err := s.fetchCurrentUser(ctx)
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -486,7 +496,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 	return memoMessage, nil
 }
 
-func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoRequest) (*emptypb.Empty, error) {
+func (s *MemoService) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoRequest) (*emptypb.Empty, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -501,7 +511,7 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 
-	user, err := s.fetchCurrentUser(ctx)
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -554,7 +564,7 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 	return &emptypb.Empty{}, nil
 }
 
-func (s *APIV1Service) CreateMemoComment(ctx context.Context, request *v1pb.CreateMemoCommentRequest) (*v1pb.Memo, error) {
+func (s *MemoService) CreateMemoComment(ctx context.Context, request *v1pb.CreateMemoCommentRequest) (*v1pb.Memo, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -625,7 +635,7 @@ func (s *APIV1Service) CreateMemoComment(ctx context.Context, request *v1pb.Crea
 	return memoComment, nil
 }
 
-func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListMemoCommentsRequest) (*v1pb.ListMemoCommentsResponse, error) {
+func (s *MemoService) ListMemoComments(ctx context.Context, request *v1pb.ListMemoCommentsRequest) (*v1pb.ListMemoCommentsResponse, error) {
 	memoUID, err := ExtractMemoUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
@@ -635,7 +645,7 @@ func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListM
 		return nil, status.Errorf(codes.Internal, "failed to get memo")
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}
@@ -719,7 +729,7 @@ func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListM
 	return response, nil
 }
 
-func (s *APIV1Service) getContentLengthLimit(ctx context.Context) (int, error) {
+func (s *MemoService) getContentLengthLimit(ctx context.Context) (int, error) {
 	instanceMemoRelatedSetting, err := s.Store.GetInstanceMemoRelatedSetting(ctx)
 	if err != nil {
 		return 0, status.Errorf(codes.Internal, "failed to get instance memo related setting")
@@ -728,21 +738,21 @@ func (s *APIV1Service) getContentLengthLimit(ctx context.Context) (int, error) {
 }
 
 // DispatchMemoCreatedWebhook dispatches webhook when memo is created.
-func (s *APIV1Service) DispatchMemoCreatedWebhook(ctx context.Context, memo *v1pb.Memo) error {
+func (s *MemoService) DispatchMemoCreatedWebhook(ctx context.Context, memo *v1pb.Memo) error {
 	return s.dispatchMemoRelatedWebhook(ctx, memo, "memos.memo.created")
 }
 
 // DispatchMemoUpdatedWebhook dispatches webhook when memo is updated.
-func (s *APIV1Service) DispatchMemoUpdatedWebhook(ctx context.Context, memo *v1pb.Memo) error {
+func (s *MemoService) DispatchMemoUpdatedWebhook(ctx context.Context, memo *v1pb.Memo) error {
 	return s.dispatchMemoRelatedWebhook(ctx, memo, "memos.memo.updated")
 }
 
 // DispatchMemoDeletedWebhook dispatches webhook when memo is deleted.
-func (s *APIV1Service) DispatchMemoDeletedWebhook(ctx context.Context, memo *v1pb.Memo) error {
+func (s *MemoService) DispatchMemoDeletedWebhook(ctx context.Context, memo *v1pb.Memo) error {
 	return s.dispatchMemoRelatedWebhook(ctx, memo, "memos.memo.deleted")
 }
 
-func (s *APIV1Service) dispatchMemoRelatedWebhook(ctx context.Context, memo *v1pb.Memo, activityType string) error {
+func (s *MemoService) dispatchMemoRelatedWebhook(ctx context.Context, memo *v1pb.Memo, activityType string) error {
 	creatorID, err := ExtractUserIDFromName(memo.Creator)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "invalid memo creator")
@@ -776,7 +786,7 @@ func convertMemoToWebhookPayload(memo *v1pb.Memo) (*webhook.WebhookRequestPayloa
 	}, nil
 }
 
-func (s *APIV1Service) getMemoContentSnippet(content string) (string, error) {
+func (s *MemoService) getMemoContentSnippet(content string) (string, error) {
 	// Use goldmark service for snippet generation
 	snippet, err := s.MarkdownService.GenerateSnippet([]byte(content), 64)
 	if err != nil {
@@ -788,7 +798,7 @@ func (s *APIV1Service) getMemoContentSnippet(content string) (string, error) {
 // parseMemoOrderBy parses the order_by field and sets the appropriate ordering in memoFind.
 // Follows AIP-132: supports comma-separated list of fields with optional "desc" suffix.
 // Example: "pinned desc, display_time desc" or "create_time asc".
-func (*APIV1Service) parseMemoOrderBy(orderBy string, memoFind *store.FindMemo) error {
+func (s *MemoService) parseMemoOrderBy(orderBy string, memoFind *store.FindMemo) error {
 	if strings.TrimSpace(orderBy) == "" {
 		return errors.New("empty order_by")
 	}
@@ -842,7 +852,7 @@ func (*APIV1Service) parseMemoOrderBy(orderBy string, memoFind *store.FindMemo) 
 
 // SearchWithHighlight searches memos and returns results with keyword highlighting.
 // This is an AI-powered feature that requires PostgreSQL.
-func (s *APIV1Service) SearchWithHighlight(ctx context.Context, request *v1pb.SearchWithHighlightRequest) (*v1pb.SearchWithHighlightResponse, error) {
+func (s *MemoService) SearchWithHighlight(ctx context.Context, request *v1pb.SearchWithHighlightRequest) (*v1pb.SearchWithHighlightResponse, error) {
 	const (
 		maxQueryLength  = 500 // Maximum query length in runes
 		maxContextChars = 200 // Maximum context characters
@@ -865,7 +875,7 @@ func (s *APIV1Service) SearchWithHighlight(ctx context.Context, request *v1pb.Se
 	}
 
 	// Get current user
-	user, err := s.fetchCurrentUser(ctx)
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}
@@ -936,7 +946,7 @@ func (s *APIV1Service) SearchWithHighlight(ctx context.Context, request *v1pb.Se
 
 // GetRelatedMemos returns related memos for a given memo.
 // P1-C003: Related memo recommendations based on semantic similarity and tag co-occurrence.
-func (s *APIV1Service) GetRelatedMemos(ctx context.Context, request *v1pb.GetRelatedMemosRequest) (*v1pb.GetRelatedMemosResponse, error) {
+func (s *MemoService) GetRelatedMemos(ctx context.Context, request *v1pb.GetRelatedMemosRequest) (*v1pb.GetRelatedMemosResponse, error) {
 	// Validate request
 	if request.Name == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "name is required")
@@ -949,7 +959,7 @@ func (s *APIV1Service) GetRelatedMemos(ctx context.Context, request *v1pb.GetRel
 	}
 
 	// Get current user
-	user, err := s.fetchCurrentUser(ctx)
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
 	}

@@ -104,7 +104,7 @@ func (c *memoStatsCollector) toProto(userID int32) *v1pb.UserStats {
 	}
 }
 
-func (s *APIV1Service) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUserStatsRequest) (*v1pb.ListAllUserStatsResponse, error) {
+func (s *UserService) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUserStatsRequest) (*v1pb.ListAllUserStatsResponse, error) {
 	instanceSetting, err := s.Store.GetInstanceMemoRelatedSetting(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get instance memo setting")
@@ -118,7 +118,7 @@ func (s *APIV1Service) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUser
 		RowStatus:       &normalStatus,
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
@@ -166,7 +166,7 @@ func (s *APIV1Service) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUser
 	return &v1pb.ListAllUserStatsResponse{Stats: stats}, nil
 }
 
-func (s *APIV1Service) GetUserStats(ctx context.Context, req *v1pb.GetUserStatsRequest) (*v1pb.UserStats, error) {
+func (s *UserService) GetUserStats(ctx context.Context, req *v1pb.GetUserStatsRequest) (*v1pb.UserStats, error) {
 	userID, err := ExtractUserIDFromName(req.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
@@ -186,7 +186,7 @@ func (s *APIV1Service) GetUserStats(ctx context.Context, req *v1pb.GetUserStatsR
 		RowStatus:       &normalStatus,
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}

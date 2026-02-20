@@ -14,7 +14,7 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) ListMemoReactions(ctx context.Context, request *v1pb.ListMemoReactionsRequest) (*v1pb.ListMemoReactionsResponse, error) {
+func (s *MemoService) ListMemoReactions(ctx context.Context, request *v1pb.ListMemoReactionsRequest) (*v1pb.ListMemoReactionsResponse, error) {
 	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
 		ContentID: &request.Name,
 	})
@@ -32,8 +32,8 @@ func (s *APIV1Service) ListMemoReactions(ctx context.Context, request *v1pb.List
 	return response, nil
 }
 
-func (s *APIV1Service) UpsertMemoReaction(ctx context.Context, request *v1pb.UpsertMemoReactionRequest) (*v1pb.Reaction, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *MemoService) UpsertMemoReaction(ctx context.Context, request *v1pb.UpsertMemoReactionRequest) (*v1pb.Reaction, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -54,8 +54,8 @@ func (s *APIV1Service) UpsertMemoReaction(ctx context.Context, request *v1pb.Ups
 	return reactionMessage, nil
 }
 
-func (s *APIV1Service) DeleteMemoReaction(ctx context.Context, request *v1pb.DeleteMemoReactionRequest) (*emptypb.Empty, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *MemoService) DeleteMemoReaction(ctx context.Context, request *v1pb.DeleteMemoReactionRequest) (*emptypb.Empty, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}

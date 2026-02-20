@@ -31,7 +31,7 @@ func validateChatAppsConfig() error {
 // initializeChatChannels loads all enabled credentials from the database
 // and initializes the corresponding chat channels.
 // This should be called during service startup.
-func (s *APIV1Service) initializeChatChannels(ctx context.Context) error {
+func (s *ChatAppService) initializeChatChannels(ctx context.Context) error {
 	slog.Info("initializing chat channels")
 
 	chatAppStore := store.NewChatAppStore(s.Store.GetDriver().GetDB())
@@ -66,7 +66,7 @@ func (s *APIV1Service) initializeChatChannels(ctx context.Context) error {
 }
 
 // createChannelForCredential creates and initializes a channel for the given credential.
-func (s *APIV1Service) createChannelForCredential(cred *chat_apps.Credential) (channels.ChatChannel, error) {
+func (s *ChatAppService) createChannelForCredential(cred *chat_apps.Credential) (channels.ChatChannel, error) {
 	// Decrypt the access token for channel initialization
 	accessToken, err := s.decryptAccessToken(cred.AccessToken)
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *APIV1Service) createChannelForCredential(cred *chat_apps.Credential) (c
 }
 
 // decryptAccessToken decrypts an encrypted access token.
-func (s *APIV1Service) decryptAccessToken(encryptedToken string) (string, error) {
+func (s *ChatAppService) decryptAccessToken(encryptedToken string) (string, error) {
 	secretKey := os.Getenv("DIVINESENSE_CHAT_APPS_SECRET_KEY")
 	if secretKey == "" {
 		// FAIL FAST - Do not allow insecure decryption

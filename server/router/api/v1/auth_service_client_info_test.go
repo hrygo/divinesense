@@ -73,7 +73,7 @@ func TestParseUserAgent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientInfo := &storepb.RefreshTokensUserSetting_ClientInfo{}
-			service.parseUserAgent(tt.userAgent, clientInfo)
+			service.AuthService.parseUserAgent(tt.userAgent, clientInfo)
 
 			if clientInfo.DeviceType != tt.expectedDevice {
 				t.Errorf("Expected device type %s, got %s", tt.expectedDevice, clientInfo.DeviceType)
@@ -100,7 +100,7 @@ func TestExtractClientInfo(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	clientInfo := service.extractClientInfo(ctx)
+	clientInfo := service.AuthService.extractClientInfo(ctx)
 
 	if clientInfo.UserAgent == "" {
 		t.Error("Expected user agent to be set")
@@ -156,7 +156,7 @@ func TestClientInfoExamples(t *testing.T) {
 	for _, example := range examples {
 		t.Run(example.description, func(t *testing.T) {
 			clientInfo := &storepb.RefreshTokensUserSetting_ClientInfo{}
-			service.parseUserAgent(example.userAgent, clientInfo)
+			service.AuthService.parseUserAgent(example.userAgent, clientInfo)
 
 			t.Logf("User Agent: %s", example.userAgent)
 			t.Logf("Device Type: %s", clientInfo.DeviceType)

@@ -14,7 +14,12 @@ import (
 	"github.com/hrygo/divinesense/store"
 )
 
-func (s *APIV1Service) ListActivities(ctx context.Context, request *v1pb.ListActivitiesRequest) (*v1pb.ListActivitiesResponse, error) {
+type ActivityService struct {
+	v1pb.UnimplementedActivityServiceServer
+	Store *store.Store
+}
+
+func (s *ActivityService) ListActivities(ctx context.Context, request *v1pb.ListActivitiesRequest) (*v1pb.ListActivitiesResponse, error) {
 	// Set default page size if not specified
 	pageSize := request.PageSize
 	if pageSize <= 0 || pageSize > 1000 {
@@ -45,7 +50,7 @@ func (s *APIV1Service) ListActivities(ctx context.Context, request *v1pb.ListAct
 	}, nil
 }
 
-func (s *APIV1Service) GetActivity(ctx context.Context, request *v1pb.GetActivityRequest) (*v1pb.Activity, error) {
+func (s *ActivityService) GetActivity(ctx context.Context, request *v1pb.GetActivityRequest) (*v1pb.Activity, error) {
 	activityID, err := ExtractActivityIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid activity name: %v", err)
@@ -67,7 +72,7 @@ func (s *APIV1Service) GetActivity(ctx context.Context, request *v1pb.GetActivit
 // convertActivityFromStore converts a storage-layer activity to an API activity.
 // This handles the mapping between internal activity representation and the public API,
 // including proper type and level conversions.
-func (s *APIV1Service) convertActivityFromStore(ctx context.Context, activity *store.Activity) (*v1pb.Activity, error) {
+func (s *ActivityService) convertActivityFromStore(ctx context.Context, activity *store.Activity) (*v1pb.Activity, error) {
 	payload, err := s.convertActivityPayloadFromStore(ctx, activity.Payload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to convert activity payload from store: %v", err)
@@ -103,7 +108,7 @@ func (s *APIV1Service) convertActivityFromStore(ctx context.Context, activity *s
 
 // convertActivityPayloadFromStore converts a storage-layer activity payload to an API payload.
 // This resolves references (e.g., memo IDs) to resource names for the API.
-func (s *APIV1Service) convertActivityPayloadFromStore(ctx context.Context, payload *storepb.ActivityPayload) (*v1pb.ActivityPayload, error) {
+func (s *ActivityService) convertActivityPayloadFromStore(ctx context.Context, payload *storepb.ActivityPayload) (*v1pb.ActivityPayload, error) {
 	v2Payload := &v1pb.ActivityPayload{}
 	if payload.MemoComment != nil {
 		// Fetch the comment memo

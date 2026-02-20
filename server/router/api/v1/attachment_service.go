@@ -16,6 +16,7 @@ import (
 
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -28,6 +29,13 @@ import (
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	"github.com/hrygo/divinesense/store"
 )
+
+type AttachmentService struct {
+	v1pb.UnimplementedAttachmentServiceServer
+	Store              *store.Store
+	Profile            *profile.Profile
+	thumbnailSemaphore *semaphore.Weighted
+}
 
 const (
 	// The upload memory buffer is 32 MiB.
@@ -44,8 +52,8 @@ var SupportedThumbnailMimeTypes = []string{
 	"image/jpeg",
 }
 
-func (s *APIV1Service) CreateAttachment(ctx context.Context, request *v1pb.CreateAttachmentRequest) (*v1pb.Attachment, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *AttachmentService) CreateAttachment(ctx context.Context, request *v1pb.CreateAttachmentRequest) (*v1pb.Attachment, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		slog.Error("failed to get current user", "error", err)
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
@@ -140,8 +148,8 @@ func (s *APIV1Service) CreateAttachment(ctx context.Context, request *v1pb.Creat
 	return convertAttachmentFromStore(attachment), nil
 }
 
-func (s *APIV1Service) ListAttachments(ctx context.Context, request *v1pb.ListAttachmentsRequest) (*v1pb.ListAttachmentsResponse, error) {
-	user, err := s.fetchCurrentUser(ctx)
+func (s *AttachmentService) ListAttachments(ctx context.Context, request *v1pb.ListAttachmentsRequest) (*v1pb.ListAttachmentsResponse, error) {
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		slog.Error("failed to get current user", "error", err)
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
@@ -207,7 +215,7 @@ func (s *APIV1Service) ListAttachments(ctx context.Context, request *v1pb.ListAt
 	return response, nil
 }
 
-func (s *APIV1Service) GetAttachment(ctx context.Context, request *v1pb.GetAttachmentRequest) (*v1pb.Attachment, error) {
+func (s *AttachmentService) GetAttachment(ctx context.Context, request *v1pb.GetAttachmentRequest) (*v1pb.Attachment, error) {
 	attachmentUID, err := ExtractAttachmentUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid attachment id")
@@ -223,7 +231,7 @@ func (s *APIV1Service) GetAttachment(ctx context.Context, request *v1pb.GetAttac
 	return convertAttachmentFromStore(attachment), nil
 }
 
-func (s *APIV1Service) UpdateAttachment(ctx context.Context, request *v1pb.UpdateAttachmentRequest) (*v1pb.Attachment, error) {
+func (s *AttachmentService) UpdateAttachment(ctx context.Context, request *v1pb.UpdateAttachmentRequest) (*v1pb.Attachment, error) {
 	attachmentUID, err := ExtractAttachmentUIDFromName(request.Attachment.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid attachment id")
@@ -260,12 +268,12 @@ func (s *APIV1Service) UpdateAttachment(ctx context.Context, request *v1pb.Updat
 	})
 }
 
-func (s *APIV1Service) DeleteAttachment(ctx context.Context, request *v1pb.DeleteAttachmentRequest) (*emptypb.Empty, error) {
+func (s *AttachmentService) DeleteAttachment(ctx context.Context, request *v1pb.DeleteAttachmentRequest) (*emptypb.Empty, error) {
 	attachmentUID, err := ExtractAttachmentUIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid attachment id")
 	}
-	user, err := s.fetchCurrentUser(ctx)
+	user, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		slog.Error("failed to get current user", "error", err)
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
@@ -355,7 +363,7 @@ func SaveAttachmentBlob(ctx context.Context, profile *profile.Profile, stores *s
 	return nil
 }
 
-func (s *APIV1Service) GetAttachmentBlob(attachment *store.Attachment) ([]byte, error) {
+func (s *AttachmentService) GetAttachmentBlob(attachment *store.Attachment) ([]byte, error) {
 	// For local storage, read the file from the local disk.
 	if attachment.StorageType == storepb.AttachmentStorageType_LOCAL {
 		attachmentPath := filepath.FromSlash(attachment.Reference)
@@ -439,7 +447,7 @@ func isValidMimeType(mimeType string) bool {
 	return matched
 }
 
-func (s *APIV1Service) validateAttachmentFilter(ctx context.Context, filterStr string) error {
+func (s *AttachmentService) validateAttachmentFilter(ctx context.Context, filterStr string) error {
 	if filterStr == "" {
 		return errors.New("filter cannot be empty")
 	}

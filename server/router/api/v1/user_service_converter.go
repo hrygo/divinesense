@@ -273,7 +273,7 @@ func extractWebhookIDFromName(name string) string {
 
 // convertInboxToUserNotification converts a storage-layer inbox to an API notification.
 // This handles the mapping between the internal inbox representation and the public API.
-func (*APIV1Service) convertInboxToUserNotification(_ context.Context, inbox *store.Inbox) (*v1pb.UserNotification, error) {
+func (s *UserService) convertInboxToUserNotification(_ context.Context, inbox *store.Inbox) (*v1pb.UserNotification, error) {
 	notification := &v1pb.UserNotification{
 		Name:       fmt.Sprintf("users/%d/notifications/%d", inbox.ReceiverID, inbox.ID),
 		Sender:     fmt.Sprintf("%s%d", UserNamePrefix, inbox.SenderID),

@@ -15,14 +15,14 @@ import (
 // ListUserNotifications lists all notifications for a user.
 // Notifications are backed by the inbox storage layer and represent activities
 // that require user attention (e.g., memo comments).
-func (s *APIV1Service) ListUserNotifications(ctx context.Context, request *v1pb.ListUserNotificationsRequest) (*v1pb.ListUserNotificationsResponse, error) {
+func (s *UserService) ListUserNotifications(ctx context.Context, request *v1pb.ListUserNotificationsRequest) (*v1pb.ListUserNotificationsResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
 
 	// Verify the requesting user has permission to view these notifications
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -61,7 +61,7 @@ func (s *APIV1Service) ListUserNotifications(ctx context.Context, request *v1pb.
 
 // UpdateUserNotification updates a notification's status (e.g., marking as read/archived).
 // Only the notification owner can update their notifications.
-func (s *APIV1Service) UpdateUserNotification(ctx context.Context, request *v1pb.UpdateUserNotificationRequest) (*v1pb.UserNotification, error) {
+func (s *UserService) UpdateUserNotification(ctx context.Context, request *v1pb.UpdateUserNotificationRequest) (*v1pb.UserNotification, error) {
 	if request.Notification == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "notification is required")
 	}
@@ -71,7 +71,7 @@ func (s *APIV1Service) UpdateUserNotification(ctx context.Context, request *v1pb
 		return nil, status.Errorf(codes.InvalidArgument, "invalid notification name: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -133,13 +133,13 @@ func (s *APIV1Service) UpdateUserNotification(ctx context.Context, request *v1pb
 
 // DeleteUserNotification permanently deletes a notification.
 // Only the notification owner can delete their notifications.
-func (s *APIV1Service) DeleteUserNotification(ctx context.Context, request *v1pb.DeleteUserNotificationRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeleteUserNotification(ctx context.Context, request *v1pb.DeleteUserNotificationRequest) (*emptypb.Empty, error) {
 	notificationID, err := ExtractNotificationIDFromName(request.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid notification name: %v", err)
 	}
 
-	currentUser, err := s.fetchCurrentUser(ctx)
+	currentUser, err := fetchCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}

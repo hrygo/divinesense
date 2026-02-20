@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	agentpkg "github.com/hrygo/divinesense/ai/agents"
+	"github.com/hrygo/divinesense/internal/profile"
 	"github.com/hrygo/divinesense/plugin/chat_apps"
 	"github.com/hrygo/divinesense/plugin/chat_apps/channels"
 	"github.com/hrygo/divinesense/plugin/chat_apps/metrics"
@@ -20,7 +21,18 @@ import (
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	"github.com/hrygo/divinesense/server/auth"
 	aichat "github.com/hrygo/divinesense/server/router/api/v1/ai"
+	"github.com/hrygo/divinesense/store"
 )
+
+type ChatAppService struct {
+	v1pb.UnimplementedChatAppServiceServer
+	Store             *store.Store
+	Secret            string
+	Profile           *profile.Profile
+	AIService         *AIService
+	chatChannelRouter *channels.ChannelRouter
+	chatAppStore      *chatstore.ChatAppStore
+}
 
 // contextKey is a typed context key to prevent collisions.
 // Using private struct type prevents other packages from colliding with our key.
@@ -30,7 +42,7 @@ type contextKey struct{}
 var userIDContextKey = contextKey{}
 
 // RegisterCredential binds a chat app account to the current user.
-func (s *APIV1Service) RegisterCredential(ctx context.Context, request *v1pb.RegisterCredentialRequest) (*v1pb.Credential, error) {
+func (s *ChatAppService) RegisterCredential(ctx context.Context, request *v1pb.RegisterCredentialRequest) (*v1pb.Credential, error) {
 	userID := auth.GetUserID(ctx)
 	if userID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
@@ -106,7 +118,7 @@ func (s *APIV1Service) RegisterCredential(ctx context.Context, request *v1pb.Reg
 }
 
 // ListCredentials returns all registered chat app credentials for the current user.
-func (s *APIV1Service) ListCredentials(ctx context.Context, request *v1pb.ListCredentialsRequest) (*v1pb.ListCredentialsResponse, error) {
+func (s *ChatAppService) ListCredentials(ctx context.Context, request *v1pb.ListCredentialsRequest) (*v1pb.ListCredentialsResponse, error) {
 	userID := auth.GetUserID(ctx)
 	if userID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
@@ -132,7 +144,7 @@ func (s *APIV1Service) ListCredentials(ctx context.Context, request *v1pb.ListCr
 }
 
 // DeleteCredential removes a chat app binding for the current user.
-func (s *APIV1Service) DeleteCredential(ctx context.Context, request *v1pb.DeleteCredentialRequest) (*emptypb.Empty, error) {
+func (s *ChatAppService) DeleteCredential(ctx context.Context, request *v1pb.DeleteCredentialRequest) (*emptypb.Empty, error) {
 	userID := auth.GetUserID(ctx)
 	if userID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
@@ -172,7 +184,7 @@ func (s *APIV1Service) DeleteCredential(ctx context.Context, request *v1pb.Delet
 }
 
 // UpdateCredential modifies an existing credential.
-func (s *APIV1Service) UpdateCredential(ctx context.Context, request *v1pb.UpdateCredentialRequest) (*v1pb.Credential, error) {
+func (s *ChatAppService) UpdateCredential(ctx context.Context, request *v1pb.UpdateCredentialRequest) (*v1pb.Credential, error) {
 	userID := auth.GetUserID(ctx)
 	if userID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "unauthorized")
@@ -244,7 +256,7 @@ func (s *APIV1Service) UpdateCredential(ctx context.Context, request *v1pb.Updat
 }
 
 // HandleWebhook processes incoming webhook events from chat platforms.
-func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookRequest) (*v1pb.WebhookResponse, error) {
+func (s *ChatAppService) HandleWebhook(ctx context.Context, request *v1pb.WebhookRequest) (*v1pb.WebhookResponse, error) {
 	startTime := time.Now()
 
 	if request.Platform == v1pb.Platform_PLATFORM_UNSPECIFIED {
@@ -345,7 +357,7 @@ func (s *APIV1Service) HandleWebhook(ctx context.Context, request *v1pb.WebhookR
 
 // processChatAppMessage handles the actual message processing and AI routing.
 // Accepts optional metrics tracking (startTime and registry can be zero/nil).
-func (s *APIV1Service) processChatAppMessage(
+func (s *ChatAppService) processChatAppMessage(
 	ctx context.Context,
 	cred *chat_apps.Credential,
 	msg *chat_apps.IncomingMessage,
@@ -384,7 +396,7 @@ func (s *APIV1Service) processChatAppMessage(
 // routeAndSendAIResponse routes the message to AI and sends the response back.
 // Uses streaming for better UX with long AI responses.
 // Accepts optional metrics tracking (startTime and registry can be zero/nil).
-func (s *APIV1Service) routeAndSendAIResponse(
+func (s *ChatAppService) routeAndSendAIResponse(
 	ctx context.Context,
 	cred *chat_apps.Credential,
 	msg *chat_apps.IncomingMessage,
@@ -406,7 +418,7 @@ func (s *APIV1Service) routeAndSendAIResponse(
 }
 
 // buildAIPrompt builds a prompt for the AI based on the incoming message.
-func (s *APIV1Service) buildAIPrompt(msg *chat_apps.IncomingMessage) string {
+func (s *ChatAppService) buildAIPrompt(msg *chat_apps.IncomingMessage) string {
 	// Build a simple prompt with context
 	prompt := msg.Content
 	if msg.Type == chat_apps.MessageTypePhoto || msg.Type == chat_apps.MessageTypeVideo {
@@ -416,7 +428,7 @@ func (s *APIV1Service) buildAIPrompt(msg *chat_apps.IncomingMessage) string {
 }
 
 // sendSimpleResponse sends a simple text response to the chat platform.
-func (s *APIV1Service) sendSimpleResponse(
+func (s *ChatAppService) sendSimpleResponse(
 	ctx context.Context,
 	cred *chat_apps.Credential,
 	msg *chat_apps.IncomingMessage,
@@ -448,7 +460,7 @@ func (s *APIV1Service) sendSimpleResponse(
 
 // sendStreamingResponse sends a streaming AI response to the chat platform.
 // This uses the SendChunkedMessage interface for better UX with long AI responses.
-func (s *APIV1Service) sendStreamingResponse(
+func (s *ChatAppService) sendStreamingResponse(
 	ctx context.Context,
 	cred *chat_apps.Credential,
 	msg *chat_apps.IncomingMessage,
@@ -557,7 +569,7 @@ func (s *APIV1Service) sendStreamingResponse(
 
 // SendMessage sends a message to a chat app channel.
 // This is used internally to deliver AI responses to users.
-func (s *APIV1Service) SendMessage(ctx context.Context, request *v1pb.SendMessageRequest) (*emptypb.Empty, error) {
+func (s *ChatAppService) SendMessage(ctx context.Context, request *v1pb.SendMessageRequest) (*emptypb.Empty, error) {
 	if request.Platform == v1pb.Platform_PLATFORM_UNSPECIFIED {
 		return nil, status.Errorf(codes.InvalidArgument, "platform is required")
 	}
@@ -602,7 +614,7 @@ func (s *APIV1Service) SendMessage(ctx context.Context, request *v1pb.SendMessag
 }
 
 // GetWebhookInfo returns webhook configuration for a platform.
-func (s *APIV1Service) GetWebhookInfo(ctx context.Context, request *v1pb.GetWebhookInfoRequest) (*v1pb.WebhookInfo, error) {
+func (s *ChatAppService) GetWebhookInfo(ctx context.Context, request *v1pb.GetWebhookInfoRequest) (*v1pb.WebhookInfo, error) {
 	if request.Platform == v1pb.Platform_PLATFORM_UNSPECIFIED {
 		return nil, status.Errorf(codes.InvalidArgument, "platform is required")
 	}
@@ -654,20 +666,20 @@ func (s *APIV1Service) GetWebhookInfo(ctx context.Context, request *v1pb.GetWebh
 
 // Helper functions
 
-func (s *APIV1Service) getChatAppStore() *chatstore.ChatAppStore {
+func (s *ChatAppService) getChatAppStore() *chatstore.ChatAppStore {
 	return s.chatAppStore
 }
 
-func (s *APIV1Service) getChannelRegistry() *channels.ChannelRouter {
+func (s *ChatAppService) getChannelRegistry() *channels.ChannelRouter {
 	// Return the actual channel router initialized at service startup
 	return s.chatChannelRouter
 }
 
-func (s *APIV1Service) getBaseURL() string {
+func (s *ChatAppService) getBaseURL() string {
 	return s.Profile.InstanceURL
 }
 
-func (s *APIV1Service) encryptAccessToken(token string) (string, error) {
+func (s *ChatAppService) encryptAccessToken(token string) (string, error) {
 	// Get encryption key from environment
 	secretKey := os.Getenv("DIVINESENSE_CHAT_APPS_SECRET_KEY")
 	if secretKey == "" {

@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/hrygo/divinesense/ai"
 	"github.com/hrygo/divinesense/store"
 	"github.com/lithammer/shortuuid/v4"
-	"log/slog"
 )
 
 // BlockReader defines the interface for reading blocks from storage.
