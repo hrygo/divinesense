@@ -83,6 +83,21 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 	}, nil
 }
 
+// Close terminates all active sessions managed by this runner and cleans up resources.
+func (r *CCRunner) Close() error {
+	r.logger.Info("Closing CCRunner and terminating all active sessions")
+
+	// Ensure manager is a CCSessionManager to call specific iterative cleanup
+	if ccManager, ok := r.manager.(*CCSessionManager); ok {
+		activeSessions := ccManager.ListActiveSessions()
+		for _, sess := range activeSessions {
+			_ = ccManager.TerminateSession(sess.ID)
+		}
+	}
+
+	return nil
+}
+
 // Execute runs Claude Code CLI with the given configuration and streams events.
 func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, callback events.Callback) error {
 	// Security check: Detect dangerous operations before execution

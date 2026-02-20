@@ -166,7 +166,8 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 	// Force kill if needed
 	if sess.Cmd != nil && sess.Cmd.Process != nil {
 		// Use specific signal or Kill
-		_ = sess.Cmd.Process.Kill() //nolint:errcheck // force terminate
+		// We set Setpgid = true, so we negate the PID to kill the process group
+		_ = syscall.Kill(-sess.Cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck // force terminate entire process tree
 	}
 
 	return nil
@@ -271,6 +272,7 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	cmd := exec.CommandContext(sessCtx, cliPath, args...)
 	cmd.Dir = cfg.WorkDir
 	cmd.Env = append(os.Environ(), "CLAUDE_DISABLE_TELEMETRY=1")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // Isolate into new process group for clean tree kill
 
 	// Create pipes with proper cleanup on error paths
 	var stdin io.WriteCloser

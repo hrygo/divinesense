@@ -109,6 +109,20 @@ func (h *ParrotHandler) SetMetadataManager(mgr *ctxpkg.MetadataManager) {
 	h.metadataMgr = mgr
 }
 
+// Close gracefully shuts down all managed singleton runners and active sessions.
+func (h *ParrotHandler) Close() error {
+	slog.Info("Shutting down ParrotHandler singletons")
+
+	if h.geekRunner != nil {
+		h.geekRunner.Close()
+	}
+	if h.evoRunner != nil {
+		h.evoRunner.Close()
+	}
+
+	return nil
+}
+
 // SetContextBuilder configures the context builder for backend-driven context construction.
 // P0 fix: enables context-engineering.md Phase 1 backend-driven context.
 func (h *ParrotHandler) SetContextBuilder(builder *ctxpkg.Service) {
@@ -1757,6 +1771,14 @@ func (h *RoutingHandler) Handle(ctx context.Context, req *ChatRequest, stream Ch
 	// All agent types (including DEFAULT) now use parrot handler
 	// DEFAULT parrot (羽飞/Navi) is implemented as a standard parrot with pure LLM mode
 	return h.parrotHandler.Handle(ctx, req, stream)
+}
+
+// Close gracefully shuts down the underlying ParrotHandler and its singletons.
+func (h *RoutingHandler) Close() error {
+	if h.parrotHandler != nil {
+		return h.parrotHandler.Close()
+	}
+	return nil
 }
 
 // ToChatRequest converts a protobuf request to an internal ChatRequest.

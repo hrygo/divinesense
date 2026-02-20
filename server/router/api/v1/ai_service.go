@@ -110,6 +110,15 @@ func (s *AIService) Close(timeout time.Duration) error {
 		s.persister = nil
 	}
 
+	// Shutdown chat handler (which holds CCRunner singletons)
+	if s.chatHandler != nil {
+		if closer, ok := s.chatHandler.(interface{ Close() error }); ok {
+			if err := closer.Close(); err != nil {
+				errs = append(errs, fmt.Errorf("chat handler close failed: %w", err))
+			}
+		}
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("AIService close errors: %v", errs)
 	}

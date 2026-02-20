@@ -20,7 +20,12 @@ else
     NC=''
 fi
 
-echo "${CYAN}🚀 Pre-push checks (smart CI)...${NC}"
+# Use printf for reliable escape sequence handling across platforms
+print_color() {
+    printf '%b\n' "$1"
+}
+
+print_color "${CYAN}🚀 Pre-push checks (smart CI)...${NC}"
 echo ""
 
 # Get list of files being pushed (compare with origin/main)
@@ -39,7 +44,7 @@ fi
 # Get changed files compared to remote
 CHANGED_FILES=$(git diff --name-only $REMOTE_BRANCH...HEAD 2>/dev/null || git diff --name-only HEAD~5..HEAD)
 if [ -z "$CHANGED_FILES" ]; then
-    echo "${YELLOW}No changes detected, skipping checks${NC}"
+    print_color "${YELLOW}No changes detected, skipping checks${NC}"
     exit 0
 fi
 
@@ -56,7 +61,7 @@ if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ] || [ "$HAS_FRONTEND" -gt
 fi
 
 # Show what's being checked
-echo "${BLUE}Changes summary:${NC}"
+print_color "${BLUE}Changes summary:${NC}"
 echo "  Go files:        $HAS_GO_FILES"
 echo "  Go mod/sum:      $HAS_GO_MOD"
 echo "  Frontend:        $HAS_FRONTEND"
@@ -71,7 +76,7 @@ TOTAL_START=$(date +%s)
 # ==================== Backend Checks ====================
 
 if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
-    echo "${BLUE}📦 Backend CI checks:${NC}"
+    print_color "${BLUE}📦 Backend CI checks:${NC}"
     BACKEND_START=$(date +%s)
 
     # go.mod/go.sum tidy check
@@ -81,13 +86,13 @@ if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
         cp go.sum go.sum.bak 2>/dev/null || true
         go mod tidy
         if ! git diff --quiet go.mod go.sum; then
-            echo "    ${RED}✗ go.mod/go.sum not tidy${NC}"
+            print_color "    ${RED}✗ go.mod/go.sum not tidy${NC}"
             mv go.mod.bak go.mod 2>/dev/null || true
             mv go.sum.bak go.sum 2>/dev/null || true
             CHECKS_FAILED=true
         else
             rm -f go.mod.bak go.sum.bak
-            echo "    ${GREEN}✓${NC} go.mod/go.sum tidy"
+            print_color "    ${GREEN}✓${NC} go.mod/go.sum tidy"
         fi
     fi
 
@@ -95,10 +100,10 @@ if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
     if [ "$HAS_GO_FILES" -gt 0 ]; then
         echo "  → golangci-lint..."
         if ! golangci-lint run --config=.golangci.yaml --timeout=3m --build-tags=noui 2>&1; then
-            echo "    ${RED}✗ golangci-lint failed${NC}"
+            print_color "    ${RED}✗ golangci-lint failed${NC}"
             CHECKS_FAILED=true
         else
-            echo "    ${GREEN}✓${NC} golangci-lint"
+            print_color "    ${GREEN}✓${NC} golangci-lint"
         fi
     fi
 
@@ -107,44 +112,44 @@ if [ "$HAS_GO_FILES" -gt 0 ] || [ "$HAS_GO_MOD" -gt 0 ]; then
         echo "  → go test..."
         # Skip benchmarks with -run '^Test' for faster execution
         if ! go test -short -run '^Test' -timeout=60s -tags=noui $(go list ./... | grep -v -E '(^github.com/hrygo/divinesense/proto/|^github.com/hrygo/divinesense/plugin/cron$)') 2>&1; then
-            echo "    ${RED}✗ tests failed${NC}"
+            print_color "    ${RED}✗ tests failed${NC}"
             CHECKS_FAILED=true
         else
-            echo "    ${GREEN}✓${NC} tests passed (benchmarks skipped)"
+            print_color "    ${GREEN}✓${NC} tests passed (benchmarks skipped)"
         fi
     fi
 
     BACKEND_END=$(date +%s)
     BACKEND_TIME=$((BACKEND_END - BACKEND_START))
-    echo "    ${BLUE}⏱ Backend: ${BACKEND_TIME}s${NC}"
+    print_color "    ${BLUE}⏱ Backend: ${BACKEND_TIME}s${NC}"
     echo ""
 fi
 
 # ==================== Frontend Checks ====================
 
 if [ "$HAS_FRONTEND" -gt 0 ]; then
-    echo "${BLUE}🎨 Frontend CI checks:${NC}"
+    print_color "${BLUE}🎨 Frontend CI checks:${NC}"
     FRONTEND_START=$(date +%s)
 
     if [ -d "web" ] && [ -f "web/package.json" ]; then
         cd web
 
         echo "  → pnpm lint..."
-        if ! pnpm lint --silent 2>&1; then
-            echo "    ${RED}✗ Frontend lint failed${NC}"
+        if ! pnpm lint 2>&1; then
+            print_color "    ${RED}✗ Frontend lint failed${NC}"
             cd ..
             CHECKS_FAILED=true
         else
-            echo "    ${GREEN}✓${NC} pnpm lint"
+            print_color "    ${GREEN}✓${NC} pnpm lint"
         fi
 
         echo "  → pnpm build..."
         if ! pnpm build >/dev/null 2>&1; then
-            echo "    ${RED}✗ Frontend build failed${NC}"
+            print_color "    ${RED}✗ Frontend build failed${NC}"
             cd ..
             CHECKS_FAILED=true
         else
-            echo "    ${GREEN}✓${NC} pnpm build"
+            print_color "    ${GREEN}✓${NC} pnpm build"
         fi
 
         cd ..
@@ -152,23 +157,23 @@ if [ "$HAS_FRONTEND" -gt 0 ]; then
 
     FRONTEND_END=$(date +%s)
     FRONTEND_TIME=$((FRONTEND_END - FRONTEND_START))
-    echo "    ${BLUE}⏱ Frontend: ${FRONTEND_TIME}s${NC}"
+    print_color "    ${BLUE}⏱ Frontend: ${FRONTEND_TIME}s${NC}"
     echo ""
 fi
 
 # ==================== Proto Files Check ====================
 
 if [ "$HAS_PROTO" -gt 0 ]; then
-    echo "${BLUE}🔷 Proto files changed:${NC}"
-    echo "    ${YELLOW}⚠ Make sure to run 'make generate' after push${NC}"
+    print_color "${BLUE}🔷 Proto files changed:${NC}"
+    print_color "    ${YELLOW}⚠ Make sure to run 'make generate' after push${NC}"
     echo ""
 fi
 
 # ==================== Documentation Only ====================
 
 if [ "$HAS_DOCS_ONLY" = true ]; then
-    echo "${BLUE}📚 Documentation only changes${NC}"
-    echo "    ${GREEN}✓ Skipping all CI checks${NC}"
+    print_color "${BLUE}📚 Documentation only changes${NC}"
+    print_color "    ${GREEN}✓ Skipping all CI checks${NC}"
     echo ""
 fi
 
@@ -179,12 +184,12 @@ TOTAL_TIME=$((TOTAL_END - TOTAL_START))
 
 if [ "$CHECKS_FAILED" = true ]; then
     echo ""
-    echo "${RED}✗ Pre-push checks failed${NC}"
+    print_color "${RED}✗ Pre-push checks failed${NC}"
     echo ""
     echo "Fix the errors above and try again, or use:"
     echo "  git push --no-verify"
     exit 1
 fi
 
-echo "${GREEN}✅ All pre-push checks passed! (Total: ${TOTAL_TIME}s)${NC}"
+print_color "${GREEN}✅ All pre-push checks passed! (Total: ${TOTAL_TIME}s)${NC}"
 echo ""
