@@ -440,7 +440,7 @@ func (h *ParrotHandler) handleGeekMode(
 	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationID))).String()
 
 	if h.geekRunner == nil {
-		logger.Error("GeekRunner singleton is null", nil)
+		logger.Error("GeekRunner global singleton is null, cannot perform Hot-Multiplexing", nil)
 		return status.Error(codes.Unavailable, "GeekMode CLI runner not initialized")
 	}
 
@@ -523,7 +523,7 @@ func (h *ParrotHandler) handleEvolutionMode(
 	sessionID := uuid.NewSHA1(namespace, []byte(fmt.Sprintf("conversation_%d", req.ConversationID))).String()
 
 	if h.evoRunner == nil {
-		logger.Error("EvoRunner singleton is null", nil)
+		logger.Error("EvoRunner global singleton is null, cannot perform Hot-Multiplexing", nil)
 		return status.Error(codes.Unavailable, "EvolutionMode CLI runner not initialized")
 	}
 

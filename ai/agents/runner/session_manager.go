@@ -33,7 +33,8 @@ const (
 	cleanupCheckInterval = 1 * time.Minute  // Interval between idle session cleanup checks
 )
 
-// Session represents a persistent process of Claude Code CLI.
+// Session represents a persistent Hot-Multiplexing process of Claude Code CLI.
+// It wraps the OS process, standard I/O pipes, and synchronization primitives.
 type Session struct {
 	ID         string
 	Config     Config
@@ -55,7 +56,7 @@ type Session struct {
 	logger   *slog.Logger // Needed for background readers
 }
 
-// SessionManager defines the interface for managing persistent sessions.
+// SessionManager defines the interface for managing the persistent process pool.
 type SessionManager interface {
 	GetOrCreateSession(ctx context.Context, sessionID string, cfg Config) (*Session, error)
 	GetSession(sessionID string) (*Session, bool)
@@ -64,6 +65,8 @@ type SessionManager interface {
 }
 
 // CCSessionManager implements SessionManager.
+// It serves as a global process pool, maintaining active Node.js processes
+// and performing idle garbage collection (GC) to free up memory.
 type CCSessionManager struct {
 	sessions map[string]*Session
 	mu       sync.RWMutex
@@ -150,7 +153,7 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 
 	delete(sm.sessions, sessionID)
 
-	sm.logger.Info("Terminating session", "session_id", sessionID)
+	sm.logger.Info("Terminating session and sweeping OS process group", "session_id", sessionID)
 
 	// Stop the status reset timer and clean up session resources
 	// Hold session lock to prevent race with WriteInput
@@ -173,7 +176,7 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 	return nil
 }
 
-// startSession initializes the process. Caller must hold lock.
+// startSession initializes the OS process (Cold Start). Caller must hold lock.
 func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, cfg Config) (*Session, error) {
 	// Early exit if request context is already cancelled
 	if ctx.Err() != nil {
@@ -307,7 +310,10 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Signal that startup succeeded
 	startedCh <- nil
 
-	sm.logger.Info("Session started", "session_id", sessionID, "pid", cmd.Process.Pid)
+	sm.logger.Info("OS Process started (Cold Start)",
+		"session_id", sessionID,
+		"pid", cmd.Process.Pid,
+		"pgid", cmd.Process.Pid) // PGID is the same as PID since we use Setpgid: true
 
 	sess := &Session{
 		ID:         sessionID,
@@ -331,7 +337,9 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	go func() {
 		err := cmd.Wait()
 		if sm.logger != nil {
-			sm.logger.Warn("Session process exited", "session_id", sessionID, "error", err)
+			sm.logger.Warn("Session OS process exited unexpectedly",
+				"session_id", sessionID,
+				"exit_error", err)
 		}
 	}()
 

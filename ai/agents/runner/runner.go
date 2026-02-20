@@ -37,8 +37,10 @@ var divineSenseNamespace = uuid.Must(uuid.FromBytes([]byte{
 }))
 
 // ConversationIDToSessionID converts a database ConversationID to a deterministic UUID v5.
-// This ensures the same ConversationID always maps to the same SessionID,
-// enabling reliable session resume across backend restarts.
+// Architecture v2.0: This ensures the same ConversationID always maps to the same SessionID.
+// By combining a namespace (e.g., "geek_userId" or "evolution_userId") with the conversation ID,
+// we guarantee physical sandbox isolation between different modes and users, while enabling
+// reliable session resume (Hot-Multiplexing) across backend requests.
 func ConversationIDToSessionID(conversationID int64) string {
 	// UUID v5 uses SHA-1 hash of namespace + name
 	// Use conversation ID as string bytes for deterministic mapping
@@ -46,9 +48,9 @@ func ConversationIDToSessionID(conversationID int64) string {
 	return uuid.NewSHA1(divineSenseNamespace, []byte(name)).String()
 }
 
-// CCRunner is the unified Claude Code CLI integration layer.
-// It provides a shared implementation for all modes that need to interact
-// with Claude Code CLI (Geek Mode, Evolution Mode, etc.).
+// CCRunner is the unified Claude Code CLI integration layer (Architecture v2.0).
+// Configured as a long-lived Singleton, it provides a persistent execution engine
+// with Hot-Multiplexing capabilities spanning across Geek Mode and Evolution Mode.
 type CCRunner struct {
 	cliPath        string
 	timeout        time.Duration
@@ -84,8 +86,10 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 }
 
 // Close terminates all active sessions managed by this runner and cleans up resources.
+// It triggers Graceful Shutdown by cascading termination signals down to the SessionManager,
+// which drops the entire process group (PGID) to prevent zombie processes.
 func (r *CCRunner) Close() error {
-	r.logger.Info("Closing CCRunner and terminating all active sessions")
+	r.logger.Info("Closing CCRunner and sweeping all active pgid sessions", "component", "CCRunner")
 
 	// Ensure manager is a CCSessionManager to call specific iterative cleanup
 	if ccManager, ok := r.manager.(*CCSessionManager); ok {
@@ -104,7 +108,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 	// Skip danger check for Evolution mode (admin only, self-modification)
 	if cfg.Mode != "evolution" {
 		if dangerEvent := r.dangerDetector.CheckInput(prompt); dangerEvent != nil {
-			r.logger.Warn("Dangerous operation blocked",
+			r.logger.Warn("Dangerous operation blocked by regex firewall",
 				"operation", dangerEvent.Operation,
 				"reason", dangerEvent.Reason,
 				"level", dangerEvent.Level,
@@ -212,8 +216,10 @@ func (r *CCRunner) ValidateConfig(cfg *Config) error {
 	return nil
 }
 
-// executeWithMultiplex uses the SessionManager for persistent process multiplexing.
-// System prompt is injected only at process startup; subsequent turns send user messages via stdin.
+// executeWithMultiplex uses the SessionManager for persistent process Hot-Multiplexing.
+// Instead of repeatedly spawning heavy Node.js CLI processes, it looks up the deterministic SessionID.
+// If missing, it performs a Cold Start. If present, it directly pipes the `prompt` via Stdin (Hot-Multiplexing).
+// System prompt is injected only at cold startup; subsequent turns send user messages via stdin.
 func (r *CCRunner) executeWithMultiplex(
 	ctx context.Context,
 	cfg *Config,
@@ -239,7 +245,7 @@ func (r *CCRunner) executeWithMultiplex(
 		return fmt.Errorf("get or create session: %w", err)
 	}
 
-	r.logger.Info("CCRunner: session ready for multiplex",
+	r.logger.Info("CCRunner: session pipeline ready for hot-multiplexing",
 		"session_id", cfg.SessionID,
 		"mode", cfg.Mode,
 		"user_id", cfg.UserID)
@@ -376,8 +382,8 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 		totalCostUSD = inputCost + outputCost
 	}
 
-	// Log session completion stats
-	r.logger.Info("CCRunner: session completed",
+	// Log session completion stats with explicit performance markers
+	r.logger.Info("CCRunner: multiplexed turn completed",
 		"mode", cfg.Mode,
 		"session_id", cfg.SessionID,
 		"duration_ms", stats.TotalDurationMs,
