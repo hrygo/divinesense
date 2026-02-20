@@ -1,6 +1,6 @@
 # AI 代理测试指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-12) | **最后检查**: v0.99.0 | **建议**: 测试流程已验证
+> **保鲜状态**: ✅ 已验证 (2026-02-20) | **最后检查**: v1.0.0 | **建议**: 测试流程已验证
 
 > DivineSense AI 代理 (Parrot) 的测试与验证方法
 
@@ -44,7 +44,26 @@ go run ./cmd/test-agent/main.go
 
 ---
 
-### 方式 3: 手动 API 测试
+### 方式 3: CCRunner E2E 冒烟测试 (Geek/Evolution 模式专用)
+
+针对代码执行类 Agent，需验证 **Hot-Multiplexing** 和 **PGID 进程组回收**：
+
+```bash
+# 1. 验证热复用逻辑 (Stdin 管道复用)
+go run scripts/test_multiplex_prompt.go
+
+# 2. 验证端到端多轮会话 (Geek Sandbox)
+go run scripts/test_ccrunner_e2e.go
+```
+
+> **验证点**: 
+> - 第一轮执行为 "Cold Start" (启动 OS 进程)。
+> - 第二轮执行应秒级响应 (Hot-Multiplexing)。
+> - 服务关闭后，使用 `ps aux | grep claude` 确认无残留进程。
+
+---
+
+### 方式 4: 手动 API 测试
 
 #### 步骤 1: 启动服务
 

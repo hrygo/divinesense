@@ -1,7 +1,7 @@
 # Agent 开发快速开始指南
 
-> **保鲜状态**: ✅ 已验证 (2026-02-18) | **版本**: v0.100.1
-> **状态**: ✅ 完成 (v0.100.1) | **投入**: 3人天
+> **保鲜状态**: ✅ 已验证 (2026-02-20) | **版本**: v1.0.0
+> **状态**: ✅ 完成 (v1.0.0) | **投入**: 3人天
 
 ## 概述
 
@@ -117,11 +117,12 @@ self_description:
 
 #### 2.3 执行策略选择
 
-| 策略         | 适用场景     | 特点                            |
-| :----------- | :----------- | :------------------------------ |
-| **react**    | 复杂多步任务 | 思考-行动循环，每个步骤都有推理 |
-| **direct**   | 简单工具调用 | 原生 LLM 工具调用，更快         |
-| **planning** | 多工具协作   | 两阶段规划 + 并发执行           |
+| 策略                 | 适用场景         | 特点                                                |
+| :------------------- | :--------------- | :-------------------------------------------------- |
+| **Self-Consistency** | 不确定推理任务   | 多路径采样投票，提升准确率，计算成本倍增            |
+| **Direct Calling**   | 简单任务 (<3步)  | 原生 Function Calling，快速、低成本，不适合复杂任务 |
+| **Hot-Multiplexing** | 长连接持久化会话 | Stdin/Stdout 流复用，零冷启动延迟，内存常驻         |
+| **planning**         | 多工具协作       | 两阶段规划 + 并发执行                               |
 
 **推荐选择**：
 - 简单查询任务 → `direct`
@@ -163,14 +164,37 @@ func (a *MyCustomAgent) ExecuteWithCallback(
     history []string,
     callback EventCallback,
 ) error {
-    // 实现自定义逻辑
+    // 💡 架构建议：对于复杂的外部 CLI 集成（如 Claude Code），
+    // 推荐直接调用 `runner.CCRunner` 单例进行 Hot-Multiplexing 执行。
+    // 详见：docs/architecture/cc-runner-architecture.md
     return nil
 }
 ```
 
----
+## 4. 高级：代码执行引擎 (CCRunner v2.0)
 
-## 3. 工具注册流程
+对于 `GeekParrot` 和 `EvolutionParrot` 等需要执行 OS 命令的代理，DivineSense 提供了 **CCRunner v2.0** 核心：
+
+- **Hot-Multiplexing**: 自动管理 OS 进程生命周期，通过 Stdin/Stdout 流复用实现“零拉起延迟”。
+- **PGID 隔离**: 确保代理产生的子进程能被优雅销毁，无孤儿进程。
+- **UUID v5**: 确定的 SessionID 生成机制，支持跨请求会话恢复。
+
+开发此类 Agent 时，通常在 `Handler` 层直接注入 `runner.CCRunner` 实例并调用 `Execute` 方法。
+
+### 高级执行模式 (CCRunner v2.0)
+
+针对代码执行类 Agent，DivineSense 引入了 **全双工热多路复用** 模式：
+
+```
+GeekParrot/EvolutionParrot
+    │
+    ▼
+CCRunner (Global Singleton)
+    │
+    ├─ GetOrCreateSession(SessionID) ──▶ UUID v5 路由
+    ├─ WriteInput(Stdin) ───────────▶ Hot-Multiplexing
+    └─ Terminate(PGID) ─────────────▶ Graceful Shutdown
+```
 
 ### 3.1 理解工具接口
 
