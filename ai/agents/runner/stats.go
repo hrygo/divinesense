@@ -6,7 +6,6 @@ import (
 )
 
 // SessionStats collects session-level statistics for Geek/Evolution modes.
-// SessionStats 收集极客/进化模式的会话级别统计数据。
 type SessionStats struct {
 	mu                   sync.Mutex
 	SessionID            string
@@ -82,7 +81,6 @@ func (s *SessionStats) RecordTokens(input, output, cacheWrite, cacheRead int32) 
 }
 
 // StartThinking marks the start of the thinking phase.
-// StartThinking 标记思考阶段的开始。
 func (s *SessionStats) StartThinking() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,7 +90,6 @@ func (s *SessionStats) StartThinking() {
 }
 
 // EndThinking marks the end of the thinking phase and records its duration.
-// EndThinking 标记思考阶段的结束并记录其持续时间。
 func (s *SessionStats) EndThinking() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,7 +100,6 @@ func (s *SessionStats) EndThinking() {
 }
 
 // StartGeneration marks the start of the generation phase.
-// StartGeneration 标记生成阶段的开始。
 func (s *SessionStats) StartGeneration() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -114,7 +110,6 @@ func (s *SessionStats) StartGeneration() {
 }
 
 // EndGeneration marks the end of the generation phase and records its duration.
-// EndGeneration 标记生成阶段的结束并记录其持续时间。
 func (s *SessionStats) EndGeneration() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -177,7 +172,6 @@ func (s *SessionStats) ToSummary() map[string]interface{} {
 }
 
 // FinalizeDuration finalizes any ongoing phase tracking and returns the final stats.
-// FinalizeDuration 完成任何正在进行的阶段追踪并返回最终统计数据。
 func (s *SessionStats) FinalizeDuration() *SessionStats {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -34,12 +34,13 @@ type EvolutionParrot struct {
 // NewEvolutionParrot 创建一个新的 EvolutionParrot 实例。
 //
 // Parameters:
+//   - runner: CCRunner instance for execution
 //   - sourceDir: DivineSense source code directory
 //   - userID: User ID requesting evolution mode
 //   - sessionID: Session identifier for persistence
 //   - st: Store for user role checking (required for admin verification)
 //   - adminOnly: Whether only admins can use evolution mode (default: from env or true)
-func NewEvolutionParrot(sourceDir string, userID int32, sessionID string, st *store.Store, adminOnly ...bool) (*EvolutionParrot, error) {
+func NewEvolutionParrot(runner *agentpkg.CCRunner, sourceDir string, userID int32, sessionID string, st *store.Store, adminOnly ...bool) (*EvolutionParrot, error) {
 	// Generate task ID if not provided
 	taskID := uuid.New().String()[:8]
 	if sessionID == "" {
@@ -53,12 +54,6 @@ func NewEvolutionParrot(sourceDir string, userID int32, sessionID string, st *st
 		adminOnlySetting = adminOnly[0]
 	} else if env := os.Getenv("DIVINESENSE_EVOLUTION_ADMIN_ONLY"); env != "" {
 		adminOnlySetting = env == "true" || env == "1"
-	}
-
-	// Create CCRunner
-	runner, err := agentpkg.NewCCRunner(10*time.Minute, slog.Default())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CCRunner: %w", err)
 	}
 
 	// Create EvolutionMode

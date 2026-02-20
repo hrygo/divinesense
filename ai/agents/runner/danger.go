@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -271,11 +272,16 @@ func (dd *Detector) getSuggestions(pat *DangerPattern) []string {
 }
 
 // SetAllowPaths sets the list of allowed safe paths.
+// Paths are cleaned to eliminate arbitrary trailing slashes or relative segments.
 func (dd *Detector) SetAllowPaths(paths []string) {
 	dd.mu.Lock()
 	defer dd.mu.Unlock()
-	dd.allowPaths = paths
-	dd.logger.Debug("Danger detector allow paths updated", "paths", paths)
+	cleaned := make([]string, 0, len(paths))
+	for _, p := range paths {
+		cleaned = append(cleaned, filepath.Clean(p))
+	}
+	dd.allowPaths = cleaned
+	dd.logger.Debug("Danger detector allow paths updated", "paths", cleaned)
 }
 
 // SetBypassEnabled enables or disables bypass mode.
@@ -292,12 +298,21 @@ func (dd *Detector) SetBypassEnabled(enabled bool) {
 }
 
 // IsPathAllowed checks if a path is in the allowlist.
+// Both the input path and allowed paths should be cleaned first.
 func (dd *Detector) IsPathAllowed(path string) bool {
 	dd.mu.RLock()
 	defer dd.mu.RUnlock()
 
+	cleanPath := filepath.Clean(path)
+
 	for _, allowed := range dd.allowPaths {
-		if strings.HasPrefix(path, allowed) {
+		// Exact match
+		if cleanPath == allowed {
+			return true
+		}
+		// Subdirectory match - must end with separator to prevent prefix hijacking
+		// e.g. allowed="/opt/dir", path="/opt/dir-malicious" should be blocked
+		if strings.HasPrefix(cleanPath, allowed+string(filepath.Separator)) {
 			return true
 		}
 	}
@@ -307,15 +322,17 @@ func (dd *Detector) IsPathAllowed(path string) bool {
 // CheckFileAccess checks if file access is within allowed paths.
 // Returns true if the access is safe (within allowed paths), false otherwise.
 func (dd *Detector) CheckFileAccess(filePath string) bool {
-	// Clean the path
+	// Clean the path and expand env vars
 	filePath = os.ExpandEnv(filePath)
-	if !strings.HasPrefix(filePath, "/") {
-		// Relative path - check if it resolves to safe location
+	if !filepath.IsAbs(filePath) {
+		// Relative path - resolve to absolute location
 		cwd, err := os.Getwd()
 		if err == nil {
-			filePath = cwd + "/" + filePath
+			filePath = filepath.Join(cwd, filePath)
 		}
 	}
+
+	filePath = filepath.Clean(filePath)
 
 	return dd.IsPathAllowed(filePath)
 }
@@ -393,16 +410,4 @@ func (d DangerLevel) String() string {
 	default:
 		return "unknown"
 	}
-}
-
-// DangerDetector is an alias for Detector for backward compatibility.
-//
-// Deprecated: Use Detector directly.
-type DangerDetector = Detector
-
-// NewDangerDetector is an alias for NewDetector for backward compatibility.
-//
-// Deprecated: Use NewDetector directly.
-func NewDangerDetector(logger *slog.Logger) *Detector {
-	return NewDetector(logger)
 }

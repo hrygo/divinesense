@@ -3,11 +3,14 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // TestSessionStatus_Transitions tests the session state machine.
@@ -345,6 +348,151 @@ func TestSession_WriteInput_StatusTransition(t *testing.T) {
 	})
 }
 
+// TestSession_Multiplexing_Integration tests full-duplex process reuse without deadlocks.
+func TestSession_Multiplexing_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("claude CLI not found, skipping test")
+	}
+
+	sm := NewCCSessionManager(nil, 5*time.Minute)
+	defer sm.Shutdown()
+
+	ctx := context.Background()
+	cfg := Config{
+		WorkDir:        os.TempDir(),
+		PermissionMode: "bypassPermissions",
+	}
+
+	sessionID := uuid.New().String()
+	sess, err := sm.GetOrCreateSession(ctx, sessionID, cfg)
+	if err != nil {
+		t.Fatalf("GetOrCreateSession failed: %v", err)
+	}
+
+	// 模拟 Python 脚本，给底层 Node.js 进程足够的启动时间避免吞掉缓冲的 stdin
+	time.Sleep(3 * time.Second)
+
+	// Helper to run a turn
+	runTurn := func(prompt string) bool {
+		done := make(chan struct{})
+		var success bool
+
+		cb := func(eventType string, data any) error {
+			t.Logf("Turn received event: %s", eventType)
+			switch eventType {
+			case "result":
+				success = true
+				close(done)
+			case "error":
+				close(done)
+			}
+			return nil
+		}
+
+		sess.SetCallback(cb, done)
+
+		msg := map[string]any{
+			"type": "user",
+			"message": map[string]any{
+				"role": "user",
+				"content": []map[string]any{
+					{"type": "text", "text": prompt},
+				},
+			},
+		}
+
+		if err := sess.WriteInput(msg); err != nil {
+			t.Errorf("WriteInput failed: %v", err)
+			return false
+		}
+
+		select {
+		case <-done:
+			return success
+		case <-time.After(45 * time.Second):
+			t.Errorf("Timeout waiting for turn to complete: %s", prompt)
+			return false
+		}
+	}
+
+	// Turn 1
+	if !runTurn("Calculate 10+10 and output only the number.") {
+		t.Fatal("Turn 1 failed")
+	}
+
+	// Turn 2: Should queue/process immediately without hang
+	if !runTurn("Calculate 20+20 and output only the number.") {
+		t.Fatal("Turn 2 failed")
+	}
+}
+
+// TestSession_Stderr_Deadlock_Prevention_Integration tests that massive mixed stdout/stderr doesn't hang.
+func TestSession_Stderr_Deadlock_Prevention_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("claude CLI not found, skipping test")
+	}
+
+	sm := NewCCSessionManager(nil, 5*time.Minute)
+	defer sm.Shutdown()
+
+	ctx := context.Background()
+	cfg := Config{
+		WorkDir:        os.TempDir(),
+		PermissionMode: "bypassPermissions",
+	}
+
+	sessionID := uuid.New().String()
+	sess, err := sm.GetOrCreateSession(ctx, sessionID, cfg)
+	if err != nil {
+		t.Fatalf("GetOrCreateSession failed: %v", err)
+	}
+
+	time.Sleep(3 * time.Second)
+
+	done := make(chan struct{})
+	var success bool
+	cb := func(eventType string, data any) error {
+		switch eventType {
+		case "result":
+			success = true
+			close(done)
+		case "error":
+			close(done)
+		}
+		return nil
+	}
+	sess.SetCallback(cb, done)
+
+	msg := map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role": "user",
+			"content": []map[string]any{
+				{"type": "text", "text": "Use bash to run this: `for i in 1 2 3; do echo 'stdout msg'; >&2 echo 'stderr error'; sleep 1; done`"},
+			},
+		},
+	}
+
+	if err := sess.WriteInput(msg); err != nil {
+		t.Fatalf("WriteInput failed: %v", err)
+	}
+
+	select {
+	case <-done:
+		if !success {
+			t.Fatal("Turn failed to complete successfully with mixed IO")
+		}
+	case <-time.After(60 * time.Second):
+		t.Fatal("Timeout! Process likely deadlocked on stderr/stdout buffers")
+	}
+}
+
 // nopWriteCloser is a no-op WriteCloser for testing.
 type nopWriteCloser struct{}
 
@@ -648,4 +796,77 @@ func (w *writeCaptureCloser) Write(p []byte) (int, error) {
 
 func (w *writeCaptureCloser) Close() error {
 	return nil
+}
+
+func TestSession_ReadStdout_ExitsEarly(t *testing.T) {
+	// Tests that if readStdout exits early (e.g. scanner error or closed pipe),
+	// it correctly closes the doneChan to avoid deadlocks.
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	// Create a pipe to simulate stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create pipe: %v", err)
+	}
+
+	sess := &Session{
+		ID:     "test-early-exit",
+		Stdout: r,
+		logger: logger,
+	}
+
+	doneChan := make(chan struct{})
+	var callbackCalled bool
+
+	cb := func(eventType string, data any) error {
+		callbackCalled = true
+		return nil
+	}
+
+	sess.SetCallback(cb, doneChan)
+
+	// Start the reader
+	go sess.readStdout()
+
+	// Write some valid data first
+	_, _ = w.WriteString(`{"type": "text", "text": "hello"}` + "\n")
+
+	// Now suddenly close the writer to simulate process crash/EOF
+	_ = w.Close()
+
+	// Use a select to check if doneChan gets closed by the defer block
+	select {
+	case <-doneChan:
+		// Success! The channel was closed
+	case <-time.After(2 * time.Second):
+		t.Fatal("readStdout exited but failed to close doneChan (deadlock risk)")
+	}
+
+	if callbackCalled {
+		t.Log("Callback was successfully called before early exit")
+	}
+
+	// Wait a moment for defer block to complete status update
+	time.Sleep(100 * time.Millisecond)
+
+	// Let's also check if it gracefully closes if doneChan is already closed and readStdout exits
+	// Create new session
+	r2, w2, _ := os.Pipe()
+
+	sess2 := &Session{
+		ID:     "test-early-exit-already-closed",
+		Stdout: r2,
+		logger: logger,
+	}
+
+	doneChan2 := make(chan struct{})
+	close(doneChan2) // pre-close it
+
+	sess2.SetCallback(cb, doneChan2)
+
+	go sess2.readStdout()
+	_ = w2.Close() // force exit
+
+	// Should not panic on closing an already closed channel
+	time.Sleep(200 * time.Millisecond)
 }

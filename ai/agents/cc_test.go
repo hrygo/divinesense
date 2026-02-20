@@ -2,7 +2,6 @@ package agent
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -80,29 +79,6 @@ func TestCCRunnerValidateConfig(t *testing.T) {
 				t.Errorf("ValidateConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
-	}
-}
-
-// TestCCRunnerIsFirstCall tests session first call detection.
-func TestCCRunnerIsFirstCall(t *testing.T) {
-	tmpDir := t.TempDir()
-	sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "test-session")
-
-	r := &CCRunner{}
-
-	// First call should return true
-	if !r.IsFirstCall(sessionDir) {
-		t.Error("IsFirstCall() should return true for non-existent session directory")
-	}
-
-	// Create session directory
-	if err := os.MkdirAll(sessionDir, 0755); err != nil {
-		t.Fatalf("failed to create session directory: %v", err)
-	}
-
-	// Second call should return false
-	if r.IsFirstCall(sessionDir) {
-		t.Error("IsFirstCall() should return false for existing session directory")
 	}
 }
 

@@ -608,3 +608,96 @@ func TestDangerDetector_Suggestions(t *testing.T) {
 		})
 	}
 }
+func TestDangerDetector_CheckFileAccess(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	detector := NewDetector(logger)
+
+	// Set allowed paths
+	allowed := []string{
+		"/Users/project/safe",
+		"/tmp/workdir",
+	}
+	detector.SetAllowPaths(allowed)
+
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{
+			name:     "exact match",
+			path:     "/Users/project/safe",
+			expected: true,
+		},
+		{
+			name:     "subdirectory match",
+			path:     "/Users/project/safe/file.txt",
+			expected: true,
+		},
+		{
+			name:     "prefix hijacking",
+			path:     "/Users/project/safe-malicious/file.txt",
+			expected: false,
+		},
+		{
+			name:     "unrelated path",
+			path:     "/etc/passwd",
+			expected: false,
+		},
+		{
+			name:     "directory traversal attack",
+			path:     "/Users/project/safe/../../../etc/passwd",
+			expected: false,
+		},
+		{
+			name:     "directory traversal within allowed",
+			path:     "/Users/project/safe/subdir/../file.txt",
+			expected: true,
+		},
+		{
+			name:     "relative path without leading slash",
+			path:     ".",
+			expected: false, // assumes cwd is not in allowed paths by default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.CheckFileAccess(tt.path)
+			if result != tt.expected {
+				t.Errorf("CheckFileAccess(%q) = %v, want %v", tt.path, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDangerDetector_IsPathAllowed(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	detector := NewDetector(logger)
+
+	detector.SetAllowPaths([]string{"/home/user/project", "/tmp/safe"})
+
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{"exact match", "/home/user/project", true},
+		{"subfile", "/home/user/project/file.txt", true},
+		{"subdir", "/home/user/project/docs/readme.md", true},
+		{"prefix hijack", "/home/user/project-evil", false},
+		{"prefix hijack subfile", "/home/user/project-evil/file.txt", false},
+		{"unrelated", "/home/other", false},
+		{"path escape", "/home/user/project/../../root", false},
+		{"trailing slashes handled", "/home/user/project///", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.IsPathAllowed(tt.path)
+			if result != tt.expected {
+				t.Errorf("IsPathAllowed(%q) = %v, want %v", tt.path, result, tt.expected)
+			}
+		})
+	}
+}

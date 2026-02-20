@@ -38,7 +38,6 @@ func SummarizeInput(input map[string]any) string {
 }
 
 // StreamMessage represents a single event in the stream-json format.
-// StreamMessage 表示 stream-json 格式中的单个事件。
 type StreamMessage struct {
 	Message      *AssistantMessage `json:"message,omitempty"`
 	Input        map[string]any    `json:"input,omitempty"`
@@ -60,7 +59,6 @@ type StreamMessage struct {
 }
 
 // UsageStats represents token usage from result messages.
-// UsageStats 表示 result 消息中的 token 使用情况。
 type UsageStats struct {
 	InputTokens           int32 `json:"input_tokens"`
 	OutputTokens          int32 `json:"output_tokens"`
@@ -69,7 +67,6 @@ type UsageStats struct {
 }
 
 // GetContentBlocks returns the content blocks, checking both direct and nested locations.
-// GetContentBlocks 返回内容块，同时检查直接和嵌套位置。
 func (m *StreamMessage) GetContentBlocks() []ContentBlock {
 	if m.Message != nil && len(m.Message.Content) > 0 {
 		return m.Message.Content
@@ -78,7 +75,6 @@ func (m *StreamMessage) GetContentBlocks() []ContentBlock {
 }
 
 // AssistantMessage represents the nested message structure in assistant events.
-// AssistantMessage 表示 assistant 事件中的嵌套消息结构。
 type AssistantMessage struct {
 	ID      string         `json:"id,omitempty"`
 	Type    string         `json:"type,omitempty"`
@@ -87,7 +83,6 @@ type AssistantMessage struct {
 }
 
 // ContentBlock represents a content block in stream-json format.
-// ContentBlock 表示 stream-json 格式中的内容块。
 type ContentBlock struct {
 	Type      string         `json:"type"`
 	Text      string         `json:"text,omitempty"`
@@ -100,7 +95,6 @@ type ContentBlock struct {
 }
 
 // Config defines mode-specific configuration for CCRunner execution.
-// Config 定义 CCRunner 执行的模式特定配置。
 type Config struct {
 	Mode           string // "geek" | "evolution"
 	WorkDir        string // Working directory for CLI
@@ -111,22 +105,14 @@ type Config struct {
 	DeviceContext  string // Device/browser context JSON
 
 	// Security / Permission Control
-	// 安全/权限控制
 	PermissionMode string // "default", "bypassPermissions", etc.
 
 	// Evolution Mode specific
-	// 进化模式专用
 	AllowedPaths   []string // Path whitelist (evolution mode)
 	ForbiddenPaths []string // Path blacklist (evolution mode)
 }
 
-// CCRunnerConfig is an alias for Config for backward compatibility.
-//
-// Deprecated: Use Config directly.
-type CCRunnerConfig = Config
-
 // ProcessingPhase represents the current phase of agent processing.
-// ProcessingPhase 表示代理处理的当前阶段。
 type ProcessingPhase string
 
 const (
@@ -141,7 +127,6 @@ const (
 )
 
 // PhaseChangeEvent represents a phase change event.
-// PhaseChangeEvent 表示阶段变更事件。
 type PhaseChangeEvent struct {
 	Phase            ProcessingPhase `json:"phase"`
 	PhaseNumber      int             `json:"phase_number"`
@@ -150,7 +135,6 @@ type PhaseChangeEvent struct {
 }
 
 // ProgressEvent represents a progress update event.
-// ProgressEvent 表示进度更新事件。
 type ProgressEvent struct {
 	Percent              int `json:"percent"`
 	EstimatedSeconds     int `json:"estimated_seconds"`

@@ -1,15 +1,12 @@
 package runner
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -22,16 +19,10 @@ import (
 
 const (
 	// Scanner buffer sizes for CLI output parsing.
-	// 扫描器缓冲区大小，用于 CLI 输出解析。
 	scannerInitialBufSize = 256 * 1024       // 256 KB
 	scannerMaxBufSize     = 10 * 1024 * 1024 // 10 MB
 
-	// Maximum length of non-JSON output to log.
-	// 非 JSON 输出的最大日志长度。
-	maxNonJSONOutputLength = 100
-
 	// DeepSeek V3 pricing (USD per million tokens).
-	// DeepSeek V3 定价（每百万 token 美元）。
 	// Source: https://api.deepseek.com/
 	deepSeekInputCostPerMillion  = 0.27
 	deepSeekOutputCostPerMillion = 2.25
@@ -39,7 +30,6 @@ const (
 
 // UUID v5 namespace for DivineSense session mapping.
 // Using a custom v4 namespace ensures uniqueness across projects.
-// DivineSense 专用的 UUID v5 命名空间，用于会话映射。
 // Generated with: uuid.NewRandom() to avoid conflicts with other projects.
 var divineSenseNamespace = uuid.Must(uuid.FromBytes([]byte{
 	0xd1, 0x7e, 0xc3, 0x9b, 0x1a, 0x5f, 0x4e, 0x8a,
@@ -49,8 +39,6 @@ var divineSenseNamespace = uuid.Must(uuid.FromBytes([]byte{
 // ConversationIDToSessionID converts a database ConversationID to a deterministic UUID v5.
 // This ensures the same ConversationID always maps to the same SessionID,
 // enabling reliable session resume across backend restarts.
-// 将数据库 ConversationID 转换为确定性的 UUID v5。
-// 确保相同的 ConversationID 始终映射到相同的 SessionID，实现跨重启的可靠会话恢复。
 func ConversationIDToSessionID(conversationID int64) string {
 	// UUID v5 uses SHA-1 hash of namespace + name
 	// Use conversation ID as string bytes for deterministic mapping
@@ -58,39 +46,13 @@ func ConversationIDToSessionID(conversationID int64) string {
 	return uuid.NewSHA1(divineSenseNamespace, []byte(name)).String()
 }
 
-// EventCallback is the callback function type for agent events.
-// EventCallback 是代理事件的回调函数类型。
-//
-// Deprecated: Use events.Callback directly. Will be removed in v1.0.0.
-type EventCallback = events.Callback
-
-// SafeCallbackFunc is a callback that logs errors instead of returning them.
-// Use SafeCallback to wrap an EventCallback for non-critical events.
-// SafeCallbackFunc 是一个记录错误而不是返回错误的回调函数。
-// 使用 SafeCallback 包装 EventCallback 用于非关键事件。
-//
-// Deprecated: Use events.SafeCallback directly. Will be removed in v1.0.0.
-type SafeCallbackFunc = events.SafeCallback
-
-// SafeCallback wraps an EventCallback to log errors instead of propagating them.
-// Use this for non-critical callbacks where errors should not interrupt execution.
-// SafeCallback 包装 EventCallback 以记录错误而不是传播它们。
-// 用于错误不应中断执行的非关键回调。
-//
-// Deprecated: Use events.WrapSafe directly. Will be removed in v1.0.0.
-var SafeCallback = events.WrapSafe
-
 // CCRunner is the unified Claude Code CLI integration layer.
-// CCRunner 是统一的 Claude Code CLI 集成层。
-//
 // It provides a shared implementation for all modes that need to interact
 // with Claude Code CLI (Geek Mode, Evolution Mode, etc.).
-// 它为所有需要与 Claude Code CLI 交互的模式提供共享实现（极客模式、进化模式等）。
 type CCRunner struct {
 	cliPath        string
 	timeout        time.Duration
 	logger         *slog.Logger
-	mu             sync.Mutex
 	manager        SessionManager
 	dangerDetector *Detector
 	// Session stats for the last execution (thread-safe)
@@ -99,7 +61,6 @@ type CCRunner struct {
 }
 
 // NewCCRunner creates a new CCRunner instance.
-// NewCCRunner 创建一个新的 CCRunner 实例。
 func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
 	cliPath, err := exec.LookPath("claude")
 	if err != nil {
@@ -123,8 +84,7 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 }
 
 // Execute runs Claude Code CLI with the given configuration and streams events.
-// Execute 使用给定配置运行 Claude Code CLI 并流式传输事件。
-func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, callback EventCallback) error {
+func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, callback events.Callback) error {
 	// Security check: Detect dangerous operations before execution
 	// Skip danger check for Evolution mode (admin only, self-modification)
 	if cfg.Mode != "evolution" {
@@ -135,7 +95,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 				"level", dangerEvent.Level,
 			)
 			// Send danger block event to client (non-critical - error already being returned)
-			callbackSafe := SafeCallback(callback)
+			callbackSafe := events.WrapSafe(callback)
 			if callbackSafe != nil {
 				callbackSafe("danger_block", dangerEvent)
 			}
@@ -143,14 +103,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 		}
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	// Derive SessionID from ConversationID using UUID v5 for deterministic mapping.
-	// This ensures the same conversation always maps to the same session,
-	// enabling reliable resume across backend restarts (per spec 2.2).
-	// 使用 UUID v5 从 ConversationID 派生 SessionID，实现确定性映射。
-	// 确保同一对话始终映射到同一会话，实现跨重启的可靠恢复（规格 2.2）。
 	if cfg.SessionID == "" && cfg.ConversationID > 0 {
 		cfg.SessionID = ConversationIDToSessionID(cfg.ConversationID)
 		r.logger.Debug("CCRunner: derived SessionID from ConversationID",
@@ -159,38 +112,13 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 	}
 
 	// Validate configuration
-	// 验证配置
 	if err := r.ValidateConfig(cfg); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 
 	// Ensure working directory exists
-	// 确保工作目录存在
 	if err := os.MkdirAll(cfg.WorkDir, 0755); err != nil {
 		return fmt.Errorf("failed to create work directory: %w", err)
-	}
-
-	// Determine if this is a first call or resume
-	// 确定是首次调用还是恢复
-	sessionDir := filepath.Join(cfg.WorkDir, ".claude", "sessions", cfg.SessionID)
-	firstCall := r.IsFirstCall(sessionDir)
-
-	if firstCall {
-		if err := os.MkdirAll(sessionDir, 0755); err != nil {
-			r.logger.Warn("Failed to create session directory",
-				"user_id", cfg.UserID,
-				"session_id", cfg.SessionID,
-				"error", err)
-		}
-		r.logger.Info("CCRunner: Starting NEW session",
-			"user_id", cfg.UserID,
-			"mode", cfg.Mode,
-			"session_id", cfg.SessionID)
-	} else {
-		r.logger.Info("CCRunner: Resuming EXISTING session",
-			"user_id", cfg.UserID,
-			"mode", cfg.Mode,
-			"session_id", cfg.SessionID)
 	}
 
 	// Initialize session stats for observability
@@ -200,8 +128,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 	}
 
 	// Send thinking event
-	// 发送思考事件
-	callbackSafe := SafeCallback(callback)
+	callbackSafe := events.WrapSafe(callback)
 	if callbackSafe != nil {
 		meta := &EventMeta{
 			Status:          "running",
@@ -210,9 +137,8 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 		callbackSafe("thinking", &EventWithMeta{EventType: "thinking", EventData: fmt.Sprintf("ai.%s_mode.thinking", cfg.Mode), Meta: meta})
 	}
 
-	// Execute CLI with session management
-	// 执行 CLI 并管理会话
-	if err := r.executeWithSession(ctx, cfg, prompt, firstCall, callback, stats); err != nil {
+	// Execute via multiplexed persistent session
+	if err := r.executeWithMultiplex(ctx, cfg, prompt, callback, stats); err != nil {
 		r.logger.Error("CCRunner: execution failed",
 			"user_id", cfg.UserID,
 			"mode", cfg.Mode,
@@ -221,10 +147,6 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 	}
 
 	// Finalize and save session stats
-	// 完成并保存会话统计数据
-	// Use CLI-reported duration if available and reasonable (> 1ms to filter out zeros/errors).
-	// Otherwise fallback to server-measured duration.
-	// 使用 CLI 报告的持续时间（如果合理），否则回退到服务器测量值。
 	if stats.TotalDurationMs <= 1 {
 		measuredDuration := time.Since(stats.StartTime).Milliseconds()
 		if measuredDuration > stats.TotalDurationMs {
@@ -246,7 +168,6 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *Config, prompt string, call
 }
 
 // GetSessionStats returns a copy of the current session stats.
-// GetSessionStats 返回当前会话统计数据的副本。
 func (r *CCRunner) GetSessionStats() *SessionStats {
 	r.statsMu.Lock()
 	defer r.statsMu.Unlock()
@@ -256,12 +177,10 @@ func (r *CCRunner) GetSessionStats() *SessionStats {
 	}
 
 	// Finalize any ongoing phases before copying
-	// 完成任何正在进行的阶段，然后再复制
 	return r.currentStats.FinalizeDuration()
 }
 
 // ValidateConfig validates the Config.
-// ValidateConfig 验证 Config。
 func (r *CCRunner) ValidateConfig(cfg *Config) error {
 	if cfg.Mode == "" {
 		return fmt.Errorf("mode is required")
@@ -278,393 +197,127 @@ func (r *CCRunner) ValidateConfig(cfg *Config) error {
 	return nil
 }
 
-// IsFirstCall checks if this is the first call for a session.
-// IsFirstCall 检查是否是会话的首次调用。
-func (r *CCRunner) IsFirstCall(sessionDir string) bool {
-	_, err := os.Stat(sessionDir)
-	return os.IsNotExist(err)
-}
-
-// executeWithSession executes Claude Code CLI with appropriate session flags.
-// executeWithSession 使用适当的会话标志执行 Claude Code CLI。
-func (r *CCRunner) executeWithSession(
+// executeWithMultiplex uses the SessionManager for persistent process multiplexing.
+// System prompt is injected only at process startup; subsequent turns send user messages via stdin.
+func (r *CCRunner) executeWithMultiplex(
 	ctx context.Context,
 	cfg *Config,
 	prompt string,
-	firstCall bool,
-	callback EventCallback,
+	callback events.Callback,
 	stats *SessionStats,
 ) error {
-	// Build system prompt
-	// 构建系统提示词
+	// Build system prompt (passed to SessionManager for first-time process creation only)
 	systemPrompt := cfg.SystemPrompt
 	if systemPrompt == "" {
 		systemPrompt = BuildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
 	}
 
-	// Build command arguments
-	// 构建命令参数
-	var args []string
-	if firstCall {
-		args = []string{
-			"--print",
-			"--verbose",
-			"--append-system-prompt", systemPrompt,
-			"--session-id", cfg.SessionID,
-			"--output-format", "stream-json",
-		}
-
-		if cfg.PermissionMode != "" {
-			args = append(args, "--permission-mode", cfg.PermissionMode)
-		}
-
-		args = append(args, prompt)
-	} else {
-		args = []string{
-			"--print",
-			"--verbose",
-			"--append-system-prompt", systemPrompt,
-			"--resume", cfg.SessionID,
-			"--output-format", "stream-json",
-		}
-
-		if cfg.PermissionMode != "" {
-			args = append(args, "--permission-mode", cfg.PermissionMode)
-		}
-
-		args = append(args, prompt)
+	smCfg := Config{
+		WorkDir:        cfg.WorkDir,
+		PermissionMode: cfg.PermissionMode,
+		SystemPrompt:   systemPrompt,
 	}
 
-	cmd := exec.CommandContext(ctx, r.cliPath, args...)
-	cmd.Dir = cfg.WorkDir
+	// GetOrCreateSession reuses existing process or starts a new one
+	sess, err := r.manager.GetOrCreateSession(ctx, cfg.SessionID, smCfg)
+	if err != nil {
+		return fmt.Errorf("get or create session: %w", err)
+	}
 
-	// Set environment for programmatic usage
-	// 设置程序化使用环境变量
-	// Note: We do NOT set CLAUDE_CONFIG_DIR here, so CLI uses the main
-	// config which already has authentication credentials.
-	// 注意：这里不设置 CLAUDE_CONFIG_DIR，让 CLI 使用已认证的主配置
-	cmd.Env = append(os.Environ(),
-		"CLAUDE_DISABLE_TELEMETRY=1",
-	)
-
-	// Debug: Log CLI execution details
-	// 调试：记录 CLI 执行详情
-	r.logger.Debug("CCRunner: executing CLI command",
-		"cli_path", r.cliPath,
-		"work_dir", cfg.WorkDir,
-		"args", args,
+	r.logger.Info("CCRunner: session ready for multiplex",
 		"session_id", cfg.SessionID,
-		"first_call", firstCall,
-		"env_count", len(cmd.Env))
+		"mode", cfg.Mode,
+		"user_id", cfg.UserID)
 
-	// Get pipes
-	// 获取管道
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("stdout pipe: %w", err)
-	}
-	defer stdout.Close() //nolint:errcheck // cleanup on error path
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		// Close stdout immediately since we won't reach the normal defer
-		_ = stdout.Close() //nolint:errcheck // cleanup on error path
-		return fmt.Errorf("stderr pipe: %w", err)
-	}
-	defer stderr.Close() //nolint:errcheck // cleanup on error path
-
-	// Start command
-	// 启动命令
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start command: %w", err)
-	}
-
-	// Create stderr buffer to capture output for error context
-	// 创建 stderr 缓冲区以捕获输出用于错误上下文
-	stderrBuf := newStderrBuffer(100)
-
-	// Stream output with timeout
-	// 带超时流式输出
-	if err := r.streamOutput(ctx, cfg, stdout, stderr, callback, stats, stderrBuf); err != nil {
-		r.logger.Error("CCRunner: streamOutput failed", "mode", cfg.Mode, "session_id", cfg.SessionID, "error", err)
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill() //nolint:errcheck // process already terminating
+	// Wait for session to be ready (process fully started)
+	readyCtx, readyCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer readyCancel()
+	for {
+		status := sess.GetStatus()
+		if status == SessionStatusReady || status == SessionStatusBusy {
+			break
 		}
-		// Include stderr context in error
-		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
-			return fmt.Errorf("stream failed: %w (last %d stderr lines: %s)", err, len(stderrLines), joinStrings(stderrLines, "; "))
+		if status == SessionStatusDead {
+			return fmt.Errorf("session %s is dead, cannot execute", cfg.SessionID)
 		}
-		return err
-	}
-
-	// Wait for command completion
-	// 等待命令完成
-	waitErr := cmd.Wait()
-	if waitErr != nil {
-		r.logger.Error("CCRunner: CLI process exited with error",
-			"mode", cfg.Mode,
-			"session_id", cfg.SessionID,
-			"error", waitErr)
-
-		// Get exit code if available
-		exitCode := 0
-		if cmd.ProcessState != nil {
-			exitCode = cmd.ProcessState.ExitCode()
-		}
-
-		// Include stderr context in error if available
-		if stderrLines := stderrBuf.getLastN(10); len(stderrLines) > 0 {
-			return fmt.Errorf("command exited with code %d: %w (stderr: %s)",
-				exitCode, waitErr, joinStrings(stderrLines, "; "))
-		}
-		return fmt.Errorf("command exited with code %d: %w", exitCode, waitErr)
-	}
-
-	return nil
-}
-
-// streamOutput reads and parses stream-json output from CLI.
-// streamOutput 读取并解析 CLI 的 stream-json 输出。
-func (r *CCRunner) streamOutput(
-	ctx context.Context,
-	cfg *Config,
-	stdout, stderr io.ReadCloser,
-	callback EventCallback,
-	stats *SessionStats,
-	stderrBuf *stderrBuffer,
-) error {
-	var wg sync.WaitGroup
-	errCh := make(chan error, 2)
-	done := make(chan struct{})
-	// Create a cancel context to signal goroutines to stop
-	// Derive from parent ctx so cancellation propagates (fixes goroutine leak)
-	streamCtx, stopStreams := context.WithCancel(ctx)
-	defer stopStreams()
-
-	// Create safe callback once for all goroutines to reuse
-	// This avoids redundant wrapping in each goroutine
-	callbackSafe := SafeCallback(callback)
-
-	// Stream stdout
-	// 流式处理 stdout
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		scanner := bufio.NewScanner(stdout)
-		buf := make([]byte, 0, scannerInitialBufSize)
-		scanner.Buffer(buf, scannerMaxBufSize)
-
-		scanDone := make(chan bool)
-		go func() {
-			lineCount := 0
-			lastValidDataTime := time.Now() // Track last time we received valid data
-
-			// Add panic recovery to ensure scanDone is always closed even on panic
-			// 添加 panic recovery 以确保即使 panic 也关闭 scanDone
-			defer func() {
-				if panicVal := recover(); panicVal != nil {
-					r.logger.Error("CCRunner: scanner goroutine panic recovered",
-						"mode", cfg.Mode,
-						"session_id", cfg.SessionID,
-						"panic", panicVal)
-					scanDone <- true // Signal completion even on panic
-				} else {
-					close(scanDone) // Normal exit: close channel for proper cleanup
-				}
-			}()
-
-			for scanner.Scan() {
-				lineCount++
-
-				// Check for inactivity before processing the line
-				// This detects when CLI stops sending data while scanner is blocked
-				if time.Since(lastValidDataTime) > 60*time.Second {
-					r.logger.Warn("CCRunner: no valid data from CLI for 60+ seconds",
-						"mode", cfg.Mode,
-						"session_id", cfg.SessionID,
-						"last_line_count", lineCount)
-					// Reset timer to avoid spamming
-					lastValidDataTime = time.Now()
-				}
-
-				line := scanner.Text()
-				if line == "" {
-					continue
-				}
-
-				// Update last activity time when we receive non-empty line
-				lastValidDataTime = time.Now()
-
-				var msg StreamMessage
-				if err := json.Unmarshal([]byte(line), &msg); err != nil {
-					// Not JSON, treat as plain text
-					if len(line) > maxNonJSONOutputLength {
-						line = line[:maxNonJSONOutputLength]
-					}
-					r.logger.Debug("CCRunner: non-JSON output",
-						"mode", cfg.Mode,
-						"line", line)
-					if callbackSafe != nil {
-						callbackSafe("answer", line)
-					}
-					continue
-				}
-
-				// Handle result message - extract and send session statistics
-				if msg.Type == "result" {
-					r.handleResultMessage(msg, stats, cfg, callback)
-					break // break loop instead of return - let scanDone be sent
-				}
-
-				// Handle system message - silently consume
-				if msg.Type == "system" {
-					r.logger.Debug("CCRunner: system message received (control data, no callback needed)",
-						"subtype", msg.Subtype,
-						"session_id", msg.SessionID)
-					continue
-				}
-
-				// Dispatch event to callback
-				if callback != nil {
-					if err := r.dispatchCallback(msg, callback, stats); err != nil {
-						select {
-						case errCh <- err:
-						case <-streamCtx.Done():
-						}
-						break // break loop on error
-					}
-				}
-
-				// Check for error completion
-				if msg.Type == "error" {
-					break // break loop instead of return - let scanDone be sent
-				}
-			}
-			scanDone <- true
-		}()
-
-		// Wait for scan to complete or context to be cancelled
 		select {
-		case <-scanDone:
-			if scanErr := scanner.Err(); scanErr != nil {
-				r.logger.Error("CCRunner: scanner error",
-					"mode", cfg.Mode,
-					"session_id", cfg.SessionID,
-					"error", scanErr)
-				select {
-				case errCh <- scanErr:
-				case <-streamCtx.Done():
-				}
+		case <-readyCtx.Done():
+			return fmt.Errorf("session %s not ready within 10s (status: %s)", cfg.SessionID, status)
+		case <-time.After(200 * time.Millisecond):
+			// poll again
+		}
+	}
+
+	// Create doneChan for this turn
+	doneChan := make(chan struct{})
+
+	// Bridge callback: wraps the caller's events.Callback with metadata enrichment
+	// from dispatchCallback and handleResultMessage, preserving all existing behavior.
+	bridge := func(eventType string, data any) error {
+		msg, ok := data.(StreamMessage)
+		if !ok {
+			// Non-StreamMessage data (e.g. raw text from non-JSON lines)
+			callbackSafe := events.WrapSafe(callback)
+			if callbackSafe != nil {
+				callbackSafe(eventType, data)
 			}
-			// stdout scan completed - signal stderr goroutine to stop
-			// This prevents deadlock where stderr goroutine waits forever
-			stopStreams()
-		case <-streamCtx.Done():
-			// Force close pipes to interrupt any blocked scanner
-			// This prevents goroutine leak when scanner is blocked on I/O
-			_ = stdout.Close() //nolint:errcheck // force close to unblock scanner
-			_ = stderr.Close() //nolint:errcheck // force close to unblock scanner
-			// Wait for scanner to exit (with timeout to prevent indefinite blocking)
-			select {
-			case <-scanDone:
-			case <-time.After(1 * time.Second):
-				r.logger.Warn("CCRunner: scanner did not exit after pipe close",
-					"mode", cfg.Mode,
-					"session_id", cfg.SessionID)
-			}
+			return nil
 		}
-	}()
 
-	// Stream stderr with sampling for logs and capture last N lines for error context.
-	// 对 stderr 进行采样以防止日志泛滥，同时保留调试信息。
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// Log ALL stderr output for debugging CLI issues.
-		// Previously sampled at 10% which could miss critical errors.
-		// 记录所有 stderr 输出以便调试 CLI 问题。
-		// 之前 10% 采样可能遗漏关键错误。
-		scanner := bufio.NewScanner(stderr)
-		lineCount := 0
-		for scanner.Scan() {
-			line := scanner.Text()
-			lineCount++
-			stderrBuf.addLine(line)
-
-			// Log all stderr lines for debugging (increased from 10% sampling)
-			// 记录所有 stderr 行以便调试（从 10% 采样提高）
-			r.logger.Warn("CCRunner: stderr output",
-				"user_id", cfg.UserID,
-				"mode", cfg.Mode,
-				"session_id", cfg.SessionID,
-				"line_num", lineCount,
-				"line", line)
+		// Handle result message — extract stats and send session_stats event
+		if msg.Type == "result" {
+			r.handleResultMessage(msg, stats, cfg, callback)
+			return nil
 		}
-		// Check for scanner errors (previously missing)
-		// 检查扫描器错误（之前缺失）
-		if err := scanner.Err(); err != nil {
-			r.logger.Error("CCRunner: stderr scanner error",
-				"mode", cfg.Mode,
-				"session_id", cfg.SessionID,
-				"error", err)
+
+		// Silently consume system messages (init, hooks)
+		if msg.Type == "system" {
+			return nil
 		}
-	}()
 
-	// Wait for completion or timeout
-	// 等待完成或超时
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
+		// Dispatch all other events (assistant, tool_use, error, etc.) with metadata
+		if callback != nil {
+			return r.dispatchCallback(msg, callback, stats)
+		}
+		return nil
+	}
 
+	sess.SetCallback(bridge, doneChan)
+
+	// Build stream-json user message payload
+	msgPayload := map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role": "user",
+			"content": []map[string]any{
+				{"type": "text", "text": prompt},
+			},
+		},
+	}
+
+	// Send user message to CLI stdin
+	if err := sess.WriteInput(msgPayload); err != nil {
+		return fmt.Errorf("write input: %w", err)
+	}
+
+	// Wait for turn completion with timeout
 	timer := time.NewTimer(r.timeout)
 	defer timer.Stop()
 
 	select {
-	case <-done:
-		// Collect any errors
-		var errors []string
-		for i := 0; i < 2; i++ {
-			select {
-			case err := <-errCh:
-				if err != nil {
-					errors = append(errors, err.Error())
-				}
-			default:
-			}
-		}
-		if len(errors) > 0 {
-			return fmt.Errorf("stream errors: %s", errors[0])
-		}
+	case <-doneChan:
+		// Turn completed successfully
 		return nil
 	case <-ctx.Done():
-		stopStreams() // Signal goroutines to stop
-		// Drain errCh to prevent goroutines from blocking
-		for i := 0; i < 2; i++ {
-			select {
-			case <-errCh:
-			default:
-			}
-		}
 		return ctx.Err()
 	case <-timer.C:
-		stopStreams() // Signal goroutines to stop
-		// Drain errCh to prevent goroutines from blocking
-		for i := 0; i < 2; i++ {
-			select {
-			case <-errCh:
-			default:
-			}
-		}
 		return fmt.Errorf("execution timeout after %v", r.timeout)
 	}
 }
 
 // handleResultMessage processes the result message from CLI, extracts statistics,
 // and sends session_stats event to frontend.
-// handleResultMessage 处理 CLI 的 result 消息，提取统计数据，并发送 session_stats 事件到前端。
-func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, cfg *Config, callback EventCallback) {
+func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, cfg *Config, callback events.Callback) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
 
@@ -721,7 +374,7 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 
 	// Send session_stats event to frontend (non-critical)
 	if callback != nil {
-		callbackSafe := SafeCallback(callback)
+		callbackSafe := events.WrapSafe(callback)
 		callbackSafe("session_stats", &SessionStatsData{
 			SessionID:            cfg.SessionID,
 			ConversationID:       cfg.ConversationID,
@@ -755,10 +408,8 @@ func (r *CCRunner) handleResultMessage(msg StreamMessage, stats *SessionStats, c
 // 1. Return quickly (< 5 seconds) to avoid blocking stream processing
 // 2. NOT call back into Session/CCRunner methods (risk of deadlock)
 // 3. Be safe for concurrent invocation from multiple goroutines
-// dispatchCallback 将流事件分发给回调，附带元数据。
-func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, stats *SessionStats) error {
+func (r *CCRunner) dispatchCallback(msg StreamMessage, callback events.Callback, stats *SessionStats) error {
 	// Skip processing if stats is nil (can happen during session warmup or reuse)
-	// 如果 stats 为 nil 则跳过处理（可能发生在会话预热或复用时）
 	if stats == nil {
 		r.logger.Debug("dispatchCallback: stats is nil, skipping event processing",
 			"type", msg.Type, "subtype", msg.Subtype)
@@ -776,8 +427,6 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 	case "system":
 		// System messages (init, hook_started, hook_response) are already handled
 		// by SessionMonitor for CLI readiness detection. No additional processing needed.
-		// system 消息（init, hook_started, hook_response）已由 SessionMonitor 处理
-		// 用于 CLI 就绪检测，此处无需额外处理。
 	case "thinking", "status":
 		// Start thinking phase tracking (ended in other cases or by defer)
 		stats.StartThinking()
@@ -962,7 +611,7 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 			"has_output", msg.Output != "")
 
 		// Try to extract any text content (non-critical - use safe callback)
-		callbackSafe := SafeCallback(callback)
+		callbackSafe := events.WrapSafe(callback)
 		for _, block := range msg.GetContentBlocks() {
 			if block.Type == "text" && block.Text != "" {
 				if callbackSafe != nil {
@@ -975,7 +624,6 @@ func (r *CCRunner) dispatchCallback(msg StreamMessage, callback EventCallback, s
 }
 
 // GetCLIVersion returns the Claude Code CLI version.
-// GetCLIVersion 返回 Claude Code CLI 版本。
 func (r *CCRunner) GetCLIVersion() (string, error) {
 	cmd := exec.Command(r.cliPath, "--version")
 	output, err := cmd.Output()
@@ -987,8 +635,6 @@ func (r *CCRunner) GetCLIVersion() (string, error) {
 
 // StopSession terminates a running session by session ID.
 // This is the implementation for session.stop from the spec.
-// StopSession 通过 session ID 终止正在运行的会话。
-// 这是规范中 session.stop 的实现。
 func (r *CCRunner) StopSession(sessionID string, reason string) error {
 	r.logger.Info("CCRunner: stopping session",
 		"session_id", sessionID,
@@ -998,34 +644,28 @@ func (r *CCRunner) StopSession(sessionID string, reason string) error {
 }
 
 // StopSessionByConversationID terminates a session by its conversation ID.
-// StopSessionByConversationID 通过对话 ID 终止会话。
 func (r *CCRunner) StopSessionByConversationID(conversationID int64, reason string) error {
 	sessionID := ConversationIDToSessionID(conversationID)
 	return r.StopSession(sessionID, reason)
 }
 
 // SetDangerAllowPaths sets the allowed safe paths for the danger detector.
-// SetDangerAllowPaths 设置危险检测器的允许安全路径。
 func (r *CCRunner) SetDangerAllowPaths(paths []string) {
 	r.dangerDetector.SetAllowPaths(paths)
 }
 
 // SetDangerBypassEnabled enables or disables danger detection bypass.
 // WARNING: Only use for Evolution mode (admin only).
-// SetDangerBypassEnabled 启用或禁用危险检测绕过。
-// 警告：仅用于进化模式（仅管理员）。
 func (r *CCRunner) SetDangerBypassEnabled(enabled bool) {
 	r.dangerDetector.SetBypassEnabled(enabled)
 }
 
 // GetDangerDetector returns the danger detector instance.
-// GetDangerDetector 返回危险检测器实例。
 func (r *CCRunner) GetDangerDetector() *Detector {
 	return r.dangerDetector
 }
 
 // BuildSystemPrompt provides minimal, high-signal context for Claude Code CLI.
-// BuildSystemPrompt 为 Claude Code CLI 提供最小化、高信噪比的上下文。
 func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
 	return BuildSystemPromptWithRuntime(workDir, sessionID, userID, deviceContext, getRuntimeInfo())
 }
@@ -1041,13 +681,11 @@ func BuildSystemPromptWithRuntime(workDir, sessionID string, userID int32, devic
 	timestamp := runtimeInfo.Timestamp.Format("2006-01-02 15:04:05")
 
 	// Try to parse device context for better formatting
-	// 尝试解析设备上下文以便更好地格式化
 	var contextMap map[string]any
 	userAgent := "Unknown"
 	deviceInfo := "Unknown"
 	if deviceContext != "" {
 		// Optimization: only attempt JSON parse if it looks like JSON
-		// 优化：只在看起来像 JSON 时才尝试解析
 		trimmed := strings.TrimSpace(deviceContext)
 		if strings.HasPrefix(trimmed, "{") {
 			if err := json.Unmarshal([]byte(deviceContext), &contextMap); err == nil {
@@ -1062,7 +700,6 @@ func BuildSystemPromptWithRuntime(workDir, sessionID string, userID int32, devic
 					}
 				}
 				// Add more fields if available (screen, language, etc.)
-				// 如果有更多字段则添加（屏幕、语言等）
 				if w, ok := contextMap["screenWidth"].(float64); ok {
 					if h, ok := contextMap["screenHeight"].(float64); ok {
 						deviceInfo = fmt.Sprintf("%s (%dx%d)", deviceInfo, int(w), int(h))
@@ -1112,19 +749,4 @@ func getRuntimeInfo() RuntimeInfo {
 		Arch:      runtime.GOARCH,
 		Timestamp: time.Now(),
 	}
-}
-
-// joinStrings joins a slice of strings with a separator.
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	var sb strings.Builder
-	for i, s := range strs {
-		if i > 0 {
-			sb.WriteString(sep)
-		}
-		sb.WriteString(s)
-	}
-	return sb.String()
 }

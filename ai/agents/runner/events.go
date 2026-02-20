@@ -1,12 +1,10 @@
 package runner
 
 import (
-	"sync"
 	"time"
 )
 
 // EventMeta contains detailed metadata for streaming events.
-// EventMeta 包含流式事件的详细元数据。
 type EventMeta struct {
 	// Timing
 	DurationMs      int64 `json:"duration_ms"`       // Event duration in milliseconds
@@ -39,8 +37,6 @@ type EventMeta struct {
 }
 
 // EventWithMeta extends the basic event with metadata for observability.
-// EventWithMeta 扩展基本事件，添加元数据以增强可观测性。
-//
 // This type is used by executors (DirectExecutor, ReActExecutor, PlanningExecutor)
 // and CCRunner to send detailed event metadata to the frontend.
 type EventWithMeta struct {
@@ -50,8 +46,6 @@ type EventWithMeta struct {
 }
 
 // NewEventWithMeta creates a new EventWithMeta with guaranteed non-nil Meta.
-// NewEventWithMeta 创建新的 EventWithMeta，确保 Meta 非 nil。
-//
 // If meta is nil, an empty EventMeta{} is used instead.
 // This prevents nil pointer dereferences when accessing Meta fields.
 func NewEventWithMeta(eventType, eventData string, meta *EventMeta) *EventWithMeta {
@@ -66,7 +60,6 @@ func NewEventWithMeta(eventType, eventData string, meta *EventMeta) *EventWithMe
 }
 
 // SessionStatsData represents the final session statistics sent to the frontend and stored in database.
-// SessionStatsData 表示发送给前端并存储到数据库的最终会话统计数据。
 type SessionStatsData struct {
 	SessionID            string   `json:"session_id"`
 	ConversationID       int64    `json:"conversation_id"` // Database conversation ID
@@ -96,9 +89,6 @@ type SessionStatsData struct {
 // AgentSessionStatsForStorage represents session statistics for database persistence.
 // This is a bridge type that converts SessionStatsData (with Unix timestamps)
 // to the format expected by the store layer (with time.Time).
-// AgentSessionStatsForStorage 表示用于数据库持久化的会话统计数据。
-// 这是一个桥接类型，将 SessionStatsData（使用 Unix 时间戳）转换为
-// 存储层期望的格式（使用 time.Time）。
 type AgentSessionStatsForStorage struct {
 	SessionID            string
 	ConversationID       int64
@@ -127,8 +117,6 @@ type AgentSessionStatsForStorage struct {
 
 // ToAgentSessionStats converts SessionStatsData to AgentSessionStatsForStorage.
 // It converts Unix timestamps to time.Time for database storage.
-// ToAgentSessionStats 将 SessionStatsData 转换为 AgentSessionStatsForStorage。
-// 它将 Unix 时间戳转换为 time.Time 用于数据库存储。
 func (d *SessionStatsData) ToAgentSessionStats() *AgentSessionStatsForStorage {
 	return &AgentSessionStatsForStorage{
 		SessionID:            d.SessionID,
@@ -155,49 +143,4 @@ func (d *SessionStatsData) ToAgentSessionStats() *AgentSessionStatsForStorage {
 		IsError:              d.IsError,
 		ErrorMessage:         d.ErrorMessage,
 	}
-}
-
-// stderrBuffer captures stderr output for error context.
-type stderrBuffer struct {
-	mu        sync.Mutex
-	lines     []string
-	maxLines  int
-	lineCount int
-}
-
-func newStderrBuffer(maxLines int) *stderrBuffer {
-	return &stderrBuffer{
-		lines:    make([]string, 0, maxLines),
-		maxLines: maxLines,
-	}
-}
-
-// addLine adds a line to the buffer, keeping only the last maxLines.
-func (b *stderrBuffer) addLine(line string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.lineCount++
-	if len(b.lines) >= b.maxLines {
-		b.lines = b.lines[1:]
-	}
-	b.lines = append(b.lines, line)
-}
-
-// getLines returns a copy of the captured lines.
-func (b *stderrBuffer) getLines() []string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	result := make([]string, len(b.lines))
-	copy(result, b.lines)
-	return result
-}
-
-// getLastN returns the last N lines (or all if fewer).
-func (b *stderrBuffer) getLastN(n int) []string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if len(b.lines) <= n {
-		return b.getLines()
-	}
-	return b.lines[len(b.lines)-n:]
 }

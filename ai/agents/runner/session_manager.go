@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/hrygo/divinesense/ai/agents/events"
 )
 
 // SessionStatus defines the current state of a session.
@@ -24,7 +27,6 @@ const (
 )
 
 // Session lifecycle constants.
-// 会话生命周期常量。
 const (
 	defaultReadyTimeout  = 10 * time.Second // Maximum time to wait for session to be ready
 	statusBusyDuration   = 2 * time.Second  // Duration to keep session in Busy state after input
@@ -46,6 +48,11 @@ type Session struct {
 
 	mu               sync.RWMutex
 	statusResetTimer *time.Timer // Timer for resetting status from Busy to Ready
+
+	// Multiplexing fields
+	callback events.Callback
+	doneChan chan struct{}
+	logger   *slog.Logger // Needed for background readers
 }
 
 // SessionManager defines the interface for managing persistent sessions.
@@ -78,7 +85,6 @@ func NewCCSessionManager(logger *slog.Logger, timeout time.Duration) *CCSessionM
 	}
 
 	// Start idle session cleanup goroutine (per spec 6: 30m idle timeout)
-	// 启动空闲会话清理 goroutine（规格 6：30分钟空闲超时）
 	go sm.cleanupLoop()
 
 	return sm
@@ -169,7 +175,6 @@ func (sm *CCSessionManager) cleanupSessionLocked(sessionID string) error {
 // startSession initializes the process. Caller must hold lock.
 func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, cfg Config) (*Session, error) {
 	// Early exit if request context is already cancelled
-	// 尽早退出如果请求上下文已取消
 	if ctx.Err() != nil {
 		return nil, fmt.Errorf("request context cancelled: %w", ctx.Err())
 	}
@@ -182,15 +187,17 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// Prepare context with cancellation.
 	// We intentionally use context.Background() instead of the request ctx
 	// because the session should outlive the HTTP request that created it.
-	// 使用 context.Background() 而非请求 ctx，因为会话的生命周期应超出创建它的 HTTP 请求。
 	sessCtx, cancel := context.WithCancel(context.Background())
-	// Ensure cancel is always called, even on error paths
-	// 确保在所有路径（包括错误路径）上都调用 cancel
-	defer cancel()
+	// Ensure cancel is called only on error paths to keep the process alive on success
+	var success bool
+	defer func() {
+		if !success {
+			cancel()
+		}
+	}()
 
 	// Use a startup timeout to prevent indefinite hangs during process start
 	// We monitor startup in a goroutine and cancel if it takes too long
-	// 使用启动超时来防止进程启动期间的无限挂起
 	startupCtx, startupCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer startupCancel()
 
@@ -205,21 +212,24 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	// If startup takes longer than the timeout, cancel the session
 	go func() {
 		select {
+		case err := <-startedCh:
+			if err != nil {
+				cancel()
+			}
 		case <-startupCtx.Done():
-			// Startup timeout or request cancelled - kill the session
-			cancel()
-			// Channel will be closed by defer, no need to send
-		case err, ok := <-startedCh:
-			// Startup completed (success or failure)
-			if ok && err != nil {
-				// Startup failed - cancel the session context
+			select {
+			case err := <-startedCh:
+				if err != nil {
+					cancel()
+				}
+			default:
+				// Startup timed out and no success signal was sent
 				cancel()
 			}
 		}
 	}()
 
 	// Build arguments
-	// NOTE: Logic duplicate from CCRunner.executeWithSession slightly, refactor later if needed.
 	// We always force --output-format stream-json and --print
 
 	// Check if first call logic is needed?
@@ -263,7 +273,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 	cmd.Env = append(os.Environ(), "CLAUDE_DISABLE_TELEMETRY=1")
 
 	// Create pipes with proper cleanup on error paths
-	// 创建管道并在错误路径上正确清理
 	var stdin io.WriteCloser
 	var stdout, stderr io.ReadCloser
 
@@ -279,7 +288,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
-	defer func() { _ = stdout.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
@@ -288,7 +296,6 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		cancel()
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
-	defer func() { _ = stderr.Close() }() //nolint:errcheck // cleanup on defer stack
 
 	if err := cmd.Start(); err != nil {
 		startedCh <- err // Signal startup failed
@@ -311,35 +318,44 @@ func (sm *CCSessionManager) startSession(ctx context.Context, sessionID string, 
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 		Status:     SessionStatusStarting,
+		logger:     sm.logger,
 	}
 
-	// Start status transition monitor: Starting -> Ready
-	// 启动状态转换监控：Starting -> Ready
-	// Pass the startup context so waitForReady can be cancelled if startup times out
-	sess.waitForReady(startupCtx, defaultReadyTimeout)
+	// Start background readers for multiplexing
+	go sess.readStdout()
+	go sess.readStderr()
 
+	// Monitor process exit to prevent zombies and log unexpected crashes
+	go func() {
+		err := cmd.Wait()
+		if sm.logger != nil {
+			sm.logger.Warn("Session process exited", "session_id", sessionID, "error", err)
+		}
+	}()
+
+	// Start status transition monitor: Starting -> Ready
+	sess.waitForReady(sessCtx, defaultReadyTimeout)
+
+	success = true
 	return sess, nil
+}
+
+// isAliveLocked checks if the process is still running. Caller must hold lock.
+func (s *Session) isAliveLocked() bool {
+	if s.Cmd == nil || s.Cmd.Process == nil || s.Status == SessionStatusDead {
+		return false
+	}
+	if err := s.Cmd.Process.Signal(syscall.Signal(0)); err != nil {
+		return false
+	}
+	return true
 }
 
 // IsAlive checks if the process is still running.
 func (s *Session) IsAlive() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
-	if s.Cmd == nil || s.Cmd.Process == nil {
-		return false
-	}
-
-	// Non-blocking wait to check status?
-	// Since we use CommandContext, ProcessState is set only after Wait() returns.
-	// But Wait() closes pipes.
-	// A simple way is relying on the fact that if it crashed, writing to Stdin or Reading Stdout might fail.
-	// Or we can check process existence (signal 0).
-
-	if err := s.Cmd.Process.Signal(syscall.Signal(0)); err != nil {
-		return false
-	}
-	return true
+	return s.isAliveLocked()
 }
 
 // Touch updates LastActive time.
@@ -350,7 +366,6 @@ func (s *Session) Touch() {
 }
 
 // SetStatus updates the session status with proper locking.
-// SetStatus 使用适当的锁更新会话状态。
 func (s *Session) SetStatus(status SessionStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -358,7 +373,6 @@ func (s *Session) SetStatus(status SessionStatus) {
 }
 
 // GetStatus returns the current session status.
-// GetStatus 返回当前会话状态。
 func (s *Session) GetStatus() SessionStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -367,7 +381,6 @@ func (s *Session) GetStatus() SessionStatus {
 
 // waitForReady monitors the session and transitions from Starting to Ready
 // when the process is confirmed alive and responsive.
-// waitForReady 监控会话，当进程确认存活且响应时从 Starting 转换为 Ready。
 // The context parameter allows cancellation if the session is terminated early.
 func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 	go func() {
@@ -386,7 +399,7 @@ func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 					s.mu.Unlock()
 					return
 				}
-				if s.IsAlive() {
+				if s.isAliveLocked() {
 					s.Status = SessionStatusReady
 					s.mu.Unlock()
 					return
@@ -405,7 +418,6 @@ func (s *Session) waitForReady(ctx context.Context, timeout time.Duration) {
 
 // WriteInput injects a JSON message to Stdin.
 // Transitions session to Busy during write, back to Ready after completion.
-// 注入 JSON 消息到 Stdin。写入时转换为 Busy，完成后恢复为 Ready。
 func (s *Session) WriteInput(msg map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -415,7 +427,6 @@ func (s *Session) WriteInput(msg map[string]any) error {
 	s.Status = SessionStatusBusy
 
 	// Reset existing timer if any (prevents goroutine accumulation)
-	// 重置现有定时器（防止 goroutine 累积）
 	if s.statusResetTimer != nil {
 		// Stop the timer and check if it was already fired
 		if !s.statusResetTimer.Stop() {
@@ -429,12 +440,11 @@ func (s *Session) WriteInput(msg map[string]any) error {
 
 	// Schedule status recovery to Ready after a short delay
 	// This allows the session to be marked busy while the CLI processes the input
-	// 调度状态恢复到 Ready（允许 CLI 处理输入时保持 Busy 状态）
 	// Callback acquires lock to prevent race with WriteInput
 	s.statusResetTimer = time.AfterFunc(statusBusyDuration, func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		if s.IsAlive() {
+		if s.isAliveLocked() {
 			s.Status = SessionStatusReady
 		}
 	})
@@ -458,7 +468,6 @@ func (s *Session) WriteInput(msg map[string]any) error {
 
 // close releases resources held by the session.
 // Must be called with session lock held.
-// close 释放会话持有的资源。必须在持有会话锁时调用。
 func (s *Session) close() {
 	// Stop the status reset timer if exists
 	// Use a local copy to avoid holding lock during Stop()
@@ -470,9 +479,124 @@ func (s *Session) close() {
 	}
 }
 
+// SetCallback registers the callback to handle stream events for the current turn.
+// It also takes a done channel that will be closed when the turn completes.
+func (s *Session) SetCallback(cb events.Callback, doneChan chan struct{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.callback = cb
+	s.doneChan = doneChan
+}
+
+// readStdout asynchronously reads CLI stdout, parses JSON, and dispatches callbacks.
+func (s *Session) readStdout() {
+	if s.Stdout == nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(s.Stdout)
+	buf := make([]byte, 0, scannerInitialBufSize)
+	scanner.Buffer(buf, scannerMaxBufSize)
+
+	// Ensure doneChan is closed on exit to prevent callers from hanging indefinitely
+	// This handles cases where the scanner aborts due to ErrTooLong, process crash, or EOF.
+	defer func() {
+		s.mu.RLock()
+		done := s.doneChan
+		s.mu.RUnlock()
+
+		if done != nil {
+			select {
+			case <-done:
+				// Already closed
+			default:
+				if s.logger != nil {
+					s.logger.Warn("Session stdout reader exited early, force-closing doneChan to prevent deadlock", "session_id", s.ID)
+				}
+				close(done)
+			}
+		}
+
+		// If scanner exited with error, the process is likely dead or in a bad state
+		if err := scanner.Err(); err != nil {
+			if s.logger != nil {
+				s.logger.Error("Session stdout scanner error", "session_id", s.ID, "error", err)
+			}
+			s.mu.Lock()
+			s.Status = SessionStatusDead
+			s.mu.Unlock()
+		}
+	}()
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+
+		s.mu.RLock()
+		cb := s.callback
+		done := s.doneChan
+		s.mu.RUnlock()
+
+		var msg StreamMessage
+		if err := json.Unmarshal([]byte(line), &msg); err != nil {
+			// Not JSON, handle gracefully
+			if cb != nil {
+				if err := cb("answer", line); err != nil {
+					s.logger.Debug("readStdout: answer callback error", "error", err)
+				}
+			}
+			continue
+		}
+
+		if cb != nil {
+			if err := cb(msg.Type, msg); err != nil {
+				s.logger.Debug("readStdout: dispatch callback error", "type", msg.Type, "error", err)
+			}
+		}
+
+		// Check if the turn is complete
+		if msg.Type == "result" || msg.Type == "error" {
+			if done != nil {
+				select {
+				case <-done:
+				default:
+					close(done)
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil && s.logger != nil {
+		s.logger.Error("Session stdout scanner error", "session_id", s.ID, "error", err)
+	}
+}
+
+// readStderr asynchronously reads CLI stderr to prevent buffer deadlocks.
+func (s *Session) readStderr() {
+	if s.Stderr == nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(s.Stderr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		if s.logger != nil {
+			s.logger.Warn("Session stderr", "session_id", s.ID, "stderr", line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil && s.logger != nil {
+		s.logger.Error("Session stderr scanner error", "session_id", s.ID, "error", err)
+	}
+}
+
 // cleanupLoop runs periodic cleanup of idle sessions.
 // Runs every minute and terminates sessions that have been idle longer than timeout.
-// 运行定期清理空闲会话。每分钟检查一次，终止空闲超过超时时间的会话。
 func (sm *CCSessionManager) cleanupLoop() {
 	ticker := time.NewTicker(cleanupCheckInterval)
 	defer ticker.Stop()
@@ -488,7 +612,6 @@ func (sm *CCSessionManager) cleanupLoop() {
 }
 
 // cleanupIdleSessions removes sessions that have exceeded the idle timeout.
-// 移除超过空闲超时的会话。
 func (sm *CCSessionManager) cleanupIdleSessions() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -507,14 +630,27 @@ func (sm *CCSessionManager) cleanupIdleSessions() {
 }
 
 // Shutdown gracefully stops the session manager and all active sessions.
-// Shutdown 优雅停止会话管理器和所有活动会话。
 func (sm *CCSessionManager) Shutdown() {
 	close(sm.done)
 
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	// Terminate all sessions
+	// Mark all sessions as Dead and close pending doneChan to unblock waiting callers
+	for _, sess := range sm.sessions {
+		sess.mu.Lock()
+		sess.Status = SessionStatusDead
+		if sess.doneChan != nil {
+			select {
+			case <-sess.doneChan:
+			default:
+				close(sess.doneChan)
+			}
+		}
+		sess.mu.Unlock()
+	}
+
+	// Terminate all sessions (kill processes, cancel contexts)
 	for sessionID := range sm.sessions {
 		_ = sm.cleanupSessionLocked(sessionID) //nolint:errcheck // cleanup on shutdown
 	}

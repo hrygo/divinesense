@@ -28,12 +28,7 @@ type GeekParrot struct {
 
 // NewGeekParrot creates a new GeekParrot instance.
 // NewGeekParrot 创建一个新的 GeekParrot 实例。
-func NewGeekParrot(sourceDir string, userID int32, sessionID string) (*GeekParrot, error) {
-	// Create CCRunner
-	runner, err := agentpkg.NewCCRunner(10*time.Minute, slog.Default())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CCRunner: %w", err)
-	}
+func NewGeekParrot(runner *agentpkg.CCRunner, sourceDir string, userID int32, sessionID string) (*GeekParrot, error) {
 
 	// Create GeekMode
 	// Geek Mode uses its own sandbox directory, so we pass empty string to let it

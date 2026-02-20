@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/hrygo/divinesense/ai/agents/events"
 	"github.com/hrygo/divinesense/ai/agents/runner"
 )
 
@@ -18,7 +19,6 @@ import (
 // ============================================================================
 
 // Type aliases for backward compatibility
-// 类型别名，用于向后兼容
 
 // CCRunner is an alias for runner.CCRunner.
 //
@@ -60,10 +60,10 @@ type SessionManager = runner.SessionManager
 // Deprecated: Use runner.StreamMessage directly.
 type StreamMessage = runner.StreamMessage
 
-// EventCallback is an alias for runner.EventCallback.
+// EventCallback is an alias for events.Callback.
 //
-// Deprecated: Use runner.EventCallback directly.
-type EventCallback = runner.EventCallback
+// Deprecated: Use events.Callback directly.
+type EventCallback = events.Callback
 
 // EventMeta is an alias for runner.EventMeta.
 //
@@ -91,7 +91,6 @@ type SessionStatsData = runner.SessionStatsData
 type AgentSessionStatsForStorage = runner.AgentSessionStatsForStorage
 
 // SessionStatsProvider is the interface for agents that provide session statistics.
-// SessionStatsProvider 是提供会话统计信息的代理接口。
 //
 // This interface is implemented by GeekParrot and EvolutionParrot which have
 // direct access to CCRunner's SessionStats.
@@ -101,7 +100,6 @@ type SessionStatsProvider interface {
 
 // ParrotStreamAdapter is an adapter that converts event callbacks to the
 // format expected by the streaming response handler.
-// ParrotStreamAdapter 是一个适配器，将事件回调转换为流响应处理器期望的格式。
 type ParrotStreamAdapter struct {
 	send func(eventType string, eventData any) error
 }
@@ -112,7 +110,6 @@ func (a *ParrotStreamAdapter) Send(eventType string, eventData any) error {
 }
 
 // NewParrotStreamAdapter creates a new stream adapter from a send function.
-// NewParrotStreamAdapter 从发送函数创建新的流适配器。
 func NewParrotStreamAdapter(send func(eventType string, eventData any) error) *ParrotStreamAdapter {
 	return &ParrotStreamAdapter{send: send}
 }
@@ -142,10 +139,10 @@ type PhaseChangeEvent = runner.PhaseChangeEvent
 // Deprecated: Use runner.ProgressEvent directly.
 type ProgressEvent = runner.ProgressEvent
 
-// SafeCallbackFunc is an alias for runner.SafeCallbackFunc.
+// SafeCallbackFunc is an alias for events.SafeCallback.
 //
-// Deprecated: Use runner.SafeCallbackFunc directly.
-type SafeCallbackFunc = runner.SafeCallbackFunc
+// Deprecated: Use events.SafeCallback directly.
+type SafeCallbackFunc = events.SafeCallback
 
 // ContentBlock is an alias for runner.ContentBlock.
 //
@@ -193,7 +190,6 @@ const (
 )
 
 // Function aliases for backward compatibility
-// 函数别名，用于向后兼容
 
 // NewCCRunner creates a new CCRunner instance.
 //
@@ -232,9 +228,9 @@ func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext st
 
 // SafeCallback wraps an EventCallback to log errors instead of propagating them.
 //
-// Deprecated: Use runner.SafeCallback directly.
+// Deprecated: Use events.WrapSafe directly.
 func SafeCallback(callback EventCallback) SafeCallbackFunc {
-	return runner.SafeCallback(callback)
+	return events.WrapSafe(callback)
 }
 
 // NewEventWithMeta creates a new EventWithMeta.
