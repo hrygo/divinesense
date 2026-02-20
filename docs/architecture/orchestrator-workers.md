@@ -65,18 +65,18 @@
 
 快速意图识别与路由。
 
-| 组件 | 功能 | 延迟 |
-|:-----|:-----|:-----|
-| Cache | 缓存路由决策 | ~0ms |
-| Rule | 规则匹配 + 历史分析 | ~0ms |
-| Confidence | 置信度评估 | - |
+| 组件       | 功能                | 延迟 |
+| :--------- | :------------------ | :--- |
+| Cache      | 缓存路由决策        | ~0ms |
+| Rule       | 规则匹配 + 历史分析 | ~0ms |
+| Confidence | 置信度评估          | -    |
 
 **路由决策**：
 
-| 置信度 | 输出 |
-|:-------|:-----|
-| ≥ 0.8 | 直接路由到专家 |
-| < 0.8 | 交给 Orchestrator 编排 |
+| 置信度 | 输出                   |
+| :----- | :--------------------- |
+| ≥ 0.8  | 直接路由到专家         |
+| < 0.8  | 交给 Orchestrator 编排 |
 
 ### 2.2 Orchestrator
 
@@ -182,17 +182,19 @@ Events:
 
 配置驱动的专家池。
 
-| 专家 | 符号 | 能力 |
-|:-----|:-----|:-----|
-| Memo | 📝 | 搜索笔记、浏览笔记 |
-| Schedule | 📅 | 创建/查询/修改日程 |
+| Expert    | 符号 | 能力                                         |
+| :-------- | :--- | :------------------------------------------- |
+| Memo      | 📝    | 搜索笔记、浏览笔记                           |
+| Schedule  | 📅    | 创建/查询/修改日程                           |
+| Geek      | 💻    | **CCRunner v2.0**: Hot-Multiplexing 代码执行 |
+| Evolution | 🧬    | **CCRunner v2.0**: 自我进化与代码修改        |
 
 **专家配置原则**：
 
-| 声明 | 不声明 |
-|:-----|:-------|
+| 声明                       | 不声明                                 |
+| :------------------------- | :------------------------------------- |
 | `capabilities`（能做什么） | `limitations`（不能做什么 - 无法穷尽） |
-| | `handoff_triggers`（涉及"不能"） |
+|                            | `handoff_triggers`（涉及"不能"）       |
 
 ---
 
@@ -309,10 +311,10 @@ self_description:
 
 ### 5.1 两级路由
 
-| 层级 | 组件 | 延迟 | 场景 |
-|:-----|:-----|:-----|:-----|
-| L1 | FastRouter | ~0ms | 简单意图、高置信度 |
-| L2 | Orchestrator | ~400ms | 复杂意图、多意图 |
+| 层级 | 组件         | 延迟   | 场景               |
+| :--- | :----------- | :----- | :----------------- |
+| L1   | FastRouter   | ~0ms   | 简单意图、高置信度 |
+| L2   | Orchestrator | ~400ms | 复杂意图、多意图   |
 
 ### 5.2 专家零耦合
 
@@ -329,12 +331,12 @@ Orchestrator 视角:
 
 ### 5.3 降级机制
 
-| 场景 | 降级策略 |
-|:-----|:---------|
+| 场景         | 降级策略                |
+| :----------- | :---------------------- |
 | LLM 分解失败 | Fallback Plan（单专家） |
-| LLM 聚合失败 | 简单拼接 |
-| 专家不可用 | 返回空计划 |
-| 无匹配能力 | 直接回复用户 |
+| LLM 聚合失败 | 简单拼接                |
+| 专家不可用   | 返回空计划              |
+| 无匹配能力   | 直接回复用户            |
 
 ---
 
@@ -357,16 +359,16 @@ Orchestrator 视角:
 
 ## 7. 文件索引
 
-| 组件 | 文件 |
-|:-----|:-----|
-| Orchestrator | `ai/agents/orchestrator/orchestrator.go` |
-| Decomposer | `ai/agents/orchestrator/decomposer.go` |
-| Executor | `ai/agents/orchestrator/executor.go` |
-| Aggregator | `ai/agents/orchestrator/aggregator.go` |
-| HandoffHandler | `ai/agents/orchestrator/handoff.go` |
-| CapabilityMap | `ai/agents/orchestrator/capability_map.go` |
-| ExpertRegistry | `ai/agents/orchestrator/expert_registry.go` |
-| UniversalParrot | `ai/agents/universal/universal_parrot.go` |
+| 组件            | 文件                                        |
+| :-------------- | :------------------------------------------ |
+| Orchestrator    | `ai/agents/orchestrator/orchestrator.go`    |
+| Decomposer      | `ai/agents/orchestrator/decomposer.go`      |
+| Executor        | `ai/agents/orchestrator/executor.go`        |
+| Aggregator      | `ai/agents/orchestrator/aggregator.go`      |
+| HandoffHandler  | `ai/agents/orchestrator/handoff.go`         |
+| CapabilityMap   | `ai/agents/orchestrator/capability_map.go`  |
+| ExpertRegistry  | `ai/agents/orchestrator/expert_registry.go` |
+| UniversalParrot | `ai/agents/universal/universal_parrot.go`   |
 
 ---
 
@@ -377,27 +379,28 @@ Orchestrator 视角:
 
 ### 8.1 组件实现状态
 
-| 状态 | 组件 | 文件位置 | 说明 |
-|:-----|:-----|:---------|:-----|
-| ✅ | FastRouter | `ai/routing/service.go:84-135` | Cache → Rule 两层路由，置信度阈值 0.8 |
-| ✅ | Decomposer | `ai/agents/orchestrator/decomposer.go` | LLM 分解 + fallback 机制 |
-| ✅ | Executor | `ai/agents/orchestrator/executor.go` | 并发控制、事件回调完整 |
-| ✅ | Aggregator | `ai/agents/orchestrator/aggregator.go` | 支持多语言、降级拼接 |
-| ✅ | ExpertRegistry | `ai/agents/orchestrator/expert_registry.go` | 通过 ParrotFactory 实现 |
-| ✅ | UniversalParrot | `ai/agents/universal/universal_parrot.go` | 支持多种执行策略 |
-| ❌ | **HandoffHandler** | 文件不存在 | 粘性路由 Handoff 机制完全缺失 |
-| ❌ | **CapabilityMap** | 文件不存在 | 能力映射未实现 |
-| ⚠️ | DAG 依赖执行 | `Task.Dependencies` 未使用 | 字段存在但执行逻辑未实现 |
+| 状态 | 组件               | 文件位置                                    | 说明                                  |
+| :--- | :----------------- | :------------------------------------------ | :------------------------------------ |
+| ✅    | FastRouter         | `ai/routing/service.go:84-135`              | Cache → Rule 两层路由，置信度阈值 0.8 |
+| ✅    | Decomposer         | `ai/agents/orchestrator/decomposer.go`      | LLM 分解 + fallback 机制              |
+| ✅    | Executor           | `ai/agents/orchestrator/executor.go`        | 并发控制、事件回调完整                |
+| ✅    | Aggregator         | `ai/agents/orchestrator/aggregator.go`      | 支持多语言、降级拼接                  |
+| ✅    | ExpertRegistry     | `ai/agents/orchestrator/expert_registry.go` | 通过 ParrotFactory 实现               |
+| ✅    | UniversalParrot    | `ai/agents/universal/universal_parrot.go`   | 支持多种执行策略                      |
+| ✅    | **CCRunner v2.0**  | `ai/agents/runner/runner.go`                | **Hot-Multiplexing** + PGID 级回收    |
+| ❌    | **HandoffHandler** | 文件不存在                                  | 粘性路由 Handoff 机制完全缺失         |
+| ❌    | **CapabilityMap**  | 文件不存在                                  | 能力映射未实现                        |
+| ⚠️    | DAG 依赖执行       | `Task.Dependencies` 未使用                  | 字段存在但执行逻辑未实现              |
 
 ### 8.2 风险清单
 
-| 优先级 | 风险 | 严重度 | 缓解措施 |
-|:-------|:-----|:-------|:---------|
-| **P0** | Handoff 机制未实现 | High | 实现 MissingCapability 检测 + CapabilityMap |
-| **P0** | CapabilityMap 缺失 | High | 从专家配置聚合构建 |
-| **P1** | 任务依赖未实现 | Medium | executor.go 添加依赖拓扑排序 |
-| **P1** | 单任务无超时 | Medium | 添加 per-task context timeout |
-| **P2** | 阈值 0.8 硬编码 | Low | 配置化到 `config/routing.yaml` |
+| 优先级 | 风险               | 严重度 | 缓解措施                                    |
+| :----- | :----------------- | :----- | :------------------------------------------ |
+| **P0** | Handoff 机制未实现 | High   | 实现 MissingCapability 检测 + CapabilityMap |
+| **P0** | CapabilityMap 缺失 | High   | 从专家配置聚合构建                          |
+| **P1** | 任务依赖未实现     | Medium | executor.go 添加依赖拓扑排序                |
+| **P1** | 单任务无超时       | Medium | 添加 per-task context timeout               |
+| **P2** | 阈值 0.8 硬编码    | Low    | 配置化到 `config/routing.yaml`              |
 
 ### 8.3 核心接口定义（待实现）
 
@@ -443,14 +446,14 @@ Phase 3 (优化)
 
 ### 8.5 验收标准
 
-| 阶段 | 验收项 |
-|:-----|:-------|
+| 阶段    | 验收项                                                  |
+| :------ | :------------------------------------------------------ |
 | Phase 1 | 粘性路由场景下专家报告 MissingCapability 可触发 Handoff |
-| Phase 1 | Handoff 后任务正确转交到目标专家 |
-| Phase 2 | 有依赖的任务串行，无依赖并行 |
-| Phase 2 | 单个任务超时不阻塞整体计划 |
-| Phase 3 | 置信度阈值可配置 |
-| Phase 3 | Prometheus metrics 覆盖关键指标 |
+| Phase 1 | Handoff 后任务正确转交到目标专家                        |
+| Phase 2 | 有依赖的任务串行，无依赖并行                            |
+| Phase 2 | 单个任务超时不阻塞整体计划                              |
+| Phase 3 | 置信度阈值可配置                                        |
+| Phase 3 | Prometheus metrics 覆盖关键指标                         |
 
 ### 8.6 架构优点
 
@@ -462,4 +465,4 @@ Phase 3 (优化)
 
 ---
 
-*更新日期: 2026-02-14*
+*更新日期: 2026-02-20*

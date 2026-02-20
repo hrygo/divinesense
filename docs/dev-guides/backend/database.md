@@ -1,6 +1,6 @@
 # 后端与数据库指南
 
-> **保鲜状态**: ✅ 已更新 (2026-02-18) | **最后检查**: v0.100.1 (UniversalParrot)
+> **保鲜状态**: ✅ 已更新 (2026-02-20) | **最后检查**: v1.0.0 (CCRunner v2.0)
 
 ## 数据库支持策略
 
@@ -230,11 +230,11 @@ DIVINESENSE_AI_RERANK_MODEL=BAAI/bge-reranker-v2-m3
 
 所有 AI 聊天逻辑通过 `ai/agents/` 中的 `ChatRouter` 路由：
 
-| 代理                | 配置文件                        | 用途           | 工具                                                                   |
-| :------------------ | :------------------------------ | :------------- | :--------------------------------------------------------------------- |
-| **MemoParrot**      | `config/parrots/memo.yaml`      | 笔记搜索和检索 | `memo_search`                                                          |
-| **ScheduleParrot**  | `config/parrots/schedule.yaml`  | 日程管理       | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
-| **GeneralParrot**   | `config/parrots/general.yaml`  | 通用任务       | 路由决定的领域工具                                                     |
+| 代理               | 配置文件                       | 用途           | 工具                                                                  |
+| :----------------- | :----------------------------- | :------------- | :-------------------------------------------------------------------- |
+| **MemoParrot**     | `config/parrots/memo.yaml`     | 笔记搜索和检索 | `memo_search`                                                         |
+| **ScheduleParrot** | `config/parrots/schedule.yaml` | 日程管理       | `schedule_add`、`schedule_query`、`schedule_update`、`find_free_time` |
+| **GeneralParrot**  | `config/parrots/general.yaml`  | 通用任务       | 路由决定的领域工具                                                    |
 
 > **架构**: 所有领域代理基于 **UniversalParrot** 配置驱动实现，通过 YAML 配置定义行为。
 
@@ -533,20 +533,20 @@ CREATE UNIQUE INDEX idx_chat_app_credential_unique ON chat_app_credential(creato
 
 ## 目录结构
 
-| 路径                        | 用途                                                |
-| :-------------------------- | :-------------------------------------------------- |
-| `cmd/divinesense/`          | 主程序入口                                          |
-| `server/router/api/v1/`     | REST/Connect RPC API 处理器                         |
-| `server/service/`           | 业务逻辑层                                          |
-| `ai/core/retrieval/`        | 混合搜索（BM25 + 向量）                             |
-| `server/queryengine/`       | 查询分析和路由                                      |
+| 路径                        | 用途                                               |
+| :-------------------------- | :------------------------------------------------- |
+| `cmd/divinesense/`          | 主程序入口                                         |
+| `server/router/api/v1/`     | REST/Connect RPC API 处理器                        |
+| `server/service/`           | 业务逻辑层                                         |
+| `ai/core/retrieval/`        | 混合搜索（BM25 + 向量）                            |
+| `server/queryengine/`       | 查询分析和路由                                     |
 | `ai/agents/`                | AI 代理（UniversalParrot 配置驱动 + Orchestrator） |
 | `ai/routing/`               | 两层路由（Cache + Rule Matcher）                   |
-| `ai/vector/`                | Embedding 服务                                      |
-| `plugin/chat_apps/`         | 聊天应用接入（Telegram/钉钉/WhatsApp）              |
-| `store/`                    | 数据访问层接口                                      |
-| `store/db/postgres/`        | PostgreSQL 实现                                     |
-| `store/migration/postgres/` | 数据库迁移                                          |
-| `proto/api/v1/`             | Connect RPC 协议定义                                |
-| `proto/store/`              | Store 协议定义                                      |
-| `web/`                      | 前端（React + Vite）                                |
+| `ai/vector/`                | Embedding 服务                                     |
+| `plugin/chat_apps/`         | 聊天应用接入（Telegram/钉钉/WhatsApp）             |
+| `store/`                    | 数据访问层接口                                     |
+| `store/db/postgres/`        | PostgreSQL 实现                                    |
+| `store/migration/postgres/` | 数据库迁移                                         |
+| `proto/api/v1/`             | Connect RPC 协议定义                               |
+| `proto/store/`              | Store 协议定义                                     |
+| `web/`                      | 前端（React + Vite）                               |

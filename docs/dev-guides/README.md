@@ -1,10 +1,10 @@
 # DivineSense 开发者指南索引
 
-> **版本**: v0.100.1 | **更新时间**: 2026-02-18
+> **版本**: v1.0.0 | **更新时间**: 2026-02-20
 >
 > 本文档目录为 DivineSense 开发者提供全面的技术指南和架构文档。
 
-> **架构更新 (v0.100.x)**: UniversalParrot 配置驱动 + 两层 FastRouter
+> **架构更新 (v1.0.x)**: CCRunner v2.0 Hot-Multiplexing + UniversalParrot + FastRouter
 
 ---
 
@@ -114,7 +114,7 @@ docs/
 ├── architecture/         # 系统架构
 │   ├── overview.md                # 系统总览
 │   ├── summary.md                 # 架构摘要
-│   └── cc-runner.md               # CC Runner 架构
+│   └── cc-runner-architecture.md   # CCRunner v2.0 (Hot-Multiplexing) 架构说明书
 │
 ├── research/             # 研究文档
 │   └── DEBUG_LESSONS.md
@@ -167,4 +167,4 @@ docs/
 
 ---
 
-*最后更新：2026-02-18*
+*最后更新：2026-02-20*
