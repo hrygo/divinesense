@@ -156,3 +156,73 @@ func ExtractActivityIDFromName(name string) (int32, error) {
 	}
 	return id, nil
 }
+
+// --- Compound resource name extractors ---
+
+const (
+	ShortcutNamePrefix            = "shortcuts/"
+	PersonalAccessTokenNamePrefix = "personalAccessTokens/"
+	SettingNamePrefix             = "settings/"
+)
+
+// ExtractUserAndShortcutIDFromName extracts user ID and shortcut ID from "users/{user}/shortcuts/{shortcut}".
+func ExtractUserAndShortcutIDFromName(name string) (int32, string, error) {
+	tokens, err := GetNameParentTokens(name, UserNamePrefix, ShortcutNamePrefix)
+	if err != nil {
+		return 0, "", errors.Errorf("invalid shortcut name format: %s", name)
+	}
+	userID, err := util.ConvertStringToInt32(tokens[0])
+	if err != nil {
+		return 0, "", errors.Errorf("invalid user ID %q", tokens[0])
+	}
+	return userID, tokens[1], nil
+}
+
+// ExtractUserAndWebhookIDFromName extracts user ID and webhook ID from "users/{user}/webhooks/{webhook}".
+func ExtractUserAndWebhookIDFromName(name string) (int32, string, error) {
+	tokens, err := GetNameParentTokens(name, UserNamePrefix, WebhookNamePrefix)
+	if err != nil {
+		return 0, "", errors.Errorf("invalid webhook name format: %s", name)
+	}
+	userID, err := util.ConvertStringToInt32(tokens[0])
+	if err != nil {
+		return 0, "", errors.Errorf("invalid user ID %q", tokens[0])
+	}
+	return userID, tokens[1], nil
+}
+
+// ExtractUserAndSettingKeyFromName extracts user ID and setting key from "users/{user}/settings/{key}".
+func ExtractUserAndSettingKeyFromName(name string) (int32, string, error) {
+	tokens, err := GetNameParentTokens(name, UserNamePrefix, SettingNamePrefix)
+	if err != nil {
+		return 0, "", errors.Errorf("invalid resource name format: %s", name)
+	}
+	userID, err := util.ConvertStringToInt32(tokens[0])
+	if err != nil {
+		return 0, "", errors.Errorf("invalid user ID: %s", tokens[0])
+	}
+	return userID, tokens[1], nil
+}
+
+// ExtractUserAndPATIDFromName extracts user ID and token ID from "users/{user}/personalAccessTokens/{tokenID}".
+func ExtractUserAndPATIDFromName(name string) (int32, string, error) {
+	tokens, err := GetNameParentTokens(name, UserNamePrefix, PersonalAccessTokenNamePrefix)
+	if err != nil {
+		return 0, "", errors.Errorf("invalid personal access token name: %s", name)
+	}
+	userID, err := util.ConvertStringToInt32(tokens[0])
+	if err != nil {
+		return 0, "", errors.Errorf("invalid user ID %q", tokens[0])
+	}
+	return userID, tokens[1], nil
+}
+
+// ExtractWebhookIDFromResourceName extracts webhook ID from "users/{user}/webhooks/{webhook_id}".
+// Lightweight variant that only returns the webhook ID.
+func ExtractWebhookIDFromResourceName(name string) string {
+	_, webhookID, err := ExtractUserAndWebhookIDFromName(name)
+	if err != nil {
+		return ""
+	}
+	return webhookID
+}

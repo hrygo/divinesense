@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -149,16 +148,10 @@ func (s *APIV1Service) CreatePersonalAccessToken(ctx context.Context, request *v
 // Authorization: User can only delete their own tokens.
 func (s *APIV1Service) DeletePersonalAccessToken(ctx context.Context, request *v1pb.DeletePersonalAccessTokenRequest) (*emptypb.Empty, error) {
 	// Parse name: users/{user_id}/personalAccessTokens/{token_id}
-	parts := strings.Split(request.Name, "/")
-	if len(parts) != 4 || parts[0] != "users" || parts[2] != "personalAccessTokens" {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid personal access token name")
-	}
-
-	userID, err := util.ConvertStringToInt32(parts[1])
+	userID, tokenID, err := ExtractUserAndPATIDFromName(request.Name)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user ID: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid personal access token name: %v", err)
 	}
-	tokenID := parts[3]
 
 	// Verify permission
 	claims := auth.GetUserClaims(ctx)

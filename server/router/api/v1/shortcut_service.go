@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -19,23 +18,9 @@ import (
 
 // Helper function to extract user ID and shortcut ID from shortcut resource name.
 // Format: users/{user}/shortcuts/{shortcut}.
+// Delegates to the standardized resource name extractor.
 func extractUserAndShortcutIDFromName(name string) (int32, string, error) {
-	parts := strings.Split(name, "/")
-	if len(parts) != 4 || parts[0] != "users" || parts[2] != "shortcuts" {
-		return 0, "", errors.Errorf("invalid shortcut name format: %s", name)
-	}
-
-	userID, err := util.ConvertStringToInt32(parts[1])
-	if err != nil {
-		return 0, "", errors.Errorf("invalid user ID %q", parts[1])
-	}
-
-	shortcutID := parts[3]
-	if shortcutID == "" {
-		return 0, "", errors.Errorf("empty shortcut ID in name: %s", name)
-	}
-
-	return userID, shortcutID, nil
+	return ExtractUserAndShortcutIDFromName(name)
 }
 
 // Helper function to construct shortcut resource name.

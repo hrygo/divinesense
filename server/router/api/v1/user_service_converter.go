@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/hrygo/divinesense/internal/util"
 	v1pb "github.com/hrygo/divinesense/proto/gen/api/v1"
 	storepb "github.com/hrygo/divinesense/proto/gen/store"
 	"github.com/hrygo/divinesense/store"
@@ -31,18 +29,13 @@ func generateUserWebhookID() string {
 
 // parseUserWebhookName parses a webhook name and returns the webhook ID and user ID.
 // Format: users/{user}/webhooks/{webhook}.
+// Delegates to the standardized resource name extractor.
 func parseUserWebhookName(name string) (string, int32, error) {
-	parts := strings.Split(name, "/")
-	if len(parts) != 4 || parts[0] != "users" || parts[2] != "webhooks" {
-		return "", 0, errors.New("invalid webhook name format")
-	}
-
-	userID, err := strconv.ParseInt(parts[1], 10, 32)
+	userID, webhookID, err := ExtractUserAndWebhookIDFromName(name)
 	if err != nil {
-		return "", 0, errors.New("invalid user ID in webhook name")
+		return "", 0, err
 	}
-
-	return parts[3], int32(userID), nil
+	return webhookID, userID, nil
 }
 
 // convertUserWebhookFromUserSetting converts a storepb webhook to a v1pb UserWebhook.
@@ -123,20 +116,9 @@ func extractImageInfo(dataURI string) (string, string, error) {
 
 // ExtractUserIDAndSettingKeyFromName extracts user ID and setting key from resource name.
 // e.g., "users/123/settings/general" -> 123, "general".
+// Delegates to the standardized resource name extractor.
 func ExtractUserIDAndSettingKeyFromName(name string) (int32, string, error) {
-	// Expected format: users/{user}/settings/{setting}
-	parts := strings.Split(name, "/")
-	if len(parts) != 4 || parts[0] != "users" || parts[2] != "settings" {
-		return 0, "", errors.Errorf("invalid resource name format: %s", name)
-	}
-
-	userID, err := util.ConvertStringToInt32(parts[1])
-	if err != nil {
-		return 0, "", errors.Errorf("invalid user ID: %s", parts[1])
-	}
-
-	settingKey := parts[3]
-	return userID, settingKey, nil
+	return ExtractUserAndSettingKeyFromName(name)
 }
 
 // convertSettingKeyToStore converts API setting key to store enum.
@@ -284,12 +266,9 @@ func convertUserSettingToStore(apiSetting *v1pb.UserSetting, userID int32, key s
 
 // extractWebhookIDFromName extracts webhook ID from resource name.
 // e.g., "users/123/webhooks/webhook-id" -> "webhook-id".
+// Delegates to the standardized resource name extractor.
 func extractWebhookIDFromName(name string) string {
-	parts := strings.Split(name, "/")
-	if len(parts) >= 4 && parts[0] == "users" && parts[2] == "webhooks" {
-		return parts[3]
-	}
-	return ""
+	return ExtractWebhookIDFromResourceName(name)
 }
 
 // convertInboxToUserNotification converts a storage-layer inbox to an API notification.
