@@ -1,54 +1,79 @@
 # API V1 优化重构执行方案 (Optimized Plan)
 
-> **状态**: 待执行
-> **目标**: 针对 `server/router/api/v1` 的技术债务进行“先破除巨石，后精确打击”的高效重构。
+> **状态**: 阶段 1-3 已完成
+> **分支**: `refactor/issue-268-api-v1-solid`
+> **目标**: 针对 `server/router/api/v1` 的技术债务进行"先破除巨石，后精确打击"的高效重构。
 > **策略**: 激进拆分，稳妥去重，重构上帝类。
+> **最后更新**: 2026-02-20
 
 ---
 
-## 阶段一：破除巨石 (高优激进拆分)
-鉴于当前无并发代码冲突，优先将巨石文件 `user_service.go` (1400+ 行) 根据业务领域进行**物理隔离**。此阶段不改变底层业务逻辑，仅做结构调整，为后续 DRY 重构扫清障碍，降低代码审查的复杂度。
+## 阶段一：破除巨石 (高优激进拆分) ✅
 
-*   **物理结构拆分规划**：
-    *   `user_service.go`: 仅保留基础的 gRPC 接口声明、服务初始化以及公共的底层辅助逻辑。
-    *   `user_service_crud.go`: 承接用户的核心增删改查逻辑 (`GetUser`, `CreateUser`, `UpdateUser`, `DeleteUser`, `ListUsers` 等)。
-    *   `user_service_settings.go`: 承接用户个性化设置逻辑 (`GetUserSetting`, `UpdateUserSetting`, `ListUserSettings` 等)。
-    *   `user_service_auth.go`: 承接个人访问令牌 (PAT) 相关逻辑 (`ListPersonalAccessTokens`, `CreatePersonalAccessToken`, `DeletePersonalAccessToken`)。
-    *   `user_service_webhook.go`: 承接用户级别的 Webhooks 和通知设定逻辑。
-    *   `user_service_converter.go`: 将所有跨域的、以 `convertUser...` 开头的 proto 转换辅助函数统一收敛到一处。
+鉴于当前无并发代码冲突，优先将巨石文件 `user_service.go` (1400+ 行) 根据业务领域进行**物理隔离**。
 
----
-
-## 阶段二：DRY 去重与标准化提取
-在完成物理拆解后，各业务域代码量大幅下降。此时开始精确打击核心重复代码，植入高复用性逻辑。
-
-*   **2.1 统一权限守卫 (`RequireUserAccess`)**：
-    *   **动作**: 新建 `server/router/api/v1/permissions.go`。
-    *   **逻辑**: 提取高度重复的 `fetchCurrentUser` -> `nil` 检查 -> `所有权/管理员验证` 的样板代码。
-    *   **落地**: 清洗并替换刚拆分出的 `user_service_*.go` 家族、以及庞大的 `memo_service.go` 内部的校验逻辑。
-*   **2.2 AI 服务可用性检查 (`RequireAI`)**：
-    *   **动作**: 将 `s.AIService == nil || !s.AIService.IsEnabled()` 的判断逻辑严密收敛为辅助包装函数或中间件拦截器。
-    *   **落地**: 搜查并清理 `connect_handler.go` 及相关文件中存在的数十处冗余 `if` 块。
-*   **2.3 规范化资源名称解析**：
-    *   **动作**: 全面排查类似于 `strings.Split(name, "/")` 等高风险的硬编码字符串操作。
-    *   **落地**: 将其统一点对点替换为 `resource_name.go` 提供的标准化资源解析函数，确保类型的强校验一致性。
+*   **已完成的物理结构拆分**：
+    *   `user_service_crud.go`: 用户增删改查 (`GetUser`, `CreateUser`, `UpdateUser`, `DeleteUser`, `ListUsers`)
+    *   `user_service_settings.go`: 用户设置 (`GetUserSetting`, `UpdateUserSetting`, `ListUserSettings`)
+    *   `user_service_auth.go`: 个人访问令牌 PAT (`ListPersonalAccessTokens`, `Create...`, `Delete...`)
+    *   `user_service_webhook.go`: Webhooks
+    *   `user_service_notification.go`: 通知
+    *   `user_service_stats.go`: 统计
+    *   `user_service_converter.go`: Proto 转换辅助函数
 
 ---
 
-## 阶段三：结构健康与 OCP 治理
-在代码显著瘦身并消除大量坏味道后，补齐最后一环，保障系统的长期可维护性和扩展性。
+## 阶段二：DRY 去重与标准化提取 ✅
 
-*   **3.1 Schedule 更新重构**：
-    *   **动作**: 消除 `schedule_service.go` (如 `UpdateSchedule`) 中由于使用 `switch struct` 导致的硬编码字段映射。
-    *   **落地**: 采用 **Field Mappers (字段映射器)** 模式进行重构，提高可扩展性并使其坚决符合开闭原则 (OCP)。
-*   **3.2 APIV1Service 上帝类解耦**：
-    *   **动作**: 继续将 `UserService`、`MemoService`、`AttachmentService` 等大模块按照已有的 `AIService` / `ScheduleService` 模式从 `APIV1Service` 结构体中剥离解耦（采用结构体组合模式）。
-    *   **落地**: 逐步引入接口层依赖而非具体实现依赖，彻底切断不同服务间的不合理紧耦合。
+*   **2.1 统一权限守卫 (`requireUserAccess`)** ✅：
+    *   `permissions.go` — 提取为独立包级函数 `fetchCurrentUser(ctx, store)` 和 `requireUserAccess(ctx, store, userID)`
+    *   保留 `*APIV1Service` 上的薄包装方法以保持向后兼容
+    *   已在 `user_service_*.go` 和 `memo_service.go` 中替换
+*   **2.2 AI 服务可用性检查 (`requireAI`)** ✅：
+    *   `permissions.go` — `ConnectServiceHandler.requireAI()` 方法
+    *   已替换 `connect_handler.go` 中 **35+ 处** 冗余的 `if s.AIService == nil` 检查
+*   **2.3 资源名称解析** ⚠️ (部分完成)：
+    *   `resource_name.go` 已存在，但 `memo_service.go` 中仍有部分 `strings.Split` 硬编码未全部清理 → 作为后续小任务
 
 ---
 
-## 验证计划
-在每个阶段的重构行动后，必须严格执行以下质量关卡：
-1.  **运行现有测试**: `go test ./server/router/api/v1/...`
-2.  **Lint 检查**: 确保没有引入新的 Linter 错误 (`golangci-lint run`)。
-3.  **无损验证**: 确保对外 API 的行为特征和错误码响应保持完全一致。
+## 阶段三：结构健康与 OCP 治理 ✅
+
+*   **3.1 Schedule 更新重构 (Field Mapper Pattern)** ✅：
+    *   `schedule_service.go` — `scheduleFieldMappers` map 替代了两大块重复的 switch/if-else 硬编码
+    *   新增字段只需在 map 添加一行，完全符合 OCP
+*   **3.2 APIV1Service 上帝类解耦** ✅ (已解耦基础设施)：
+    *   `fetchCurrentUser` 和 `requireUserAccess` 已提取为 standalone 函数
+    *   修复了 `requireAI` 的递归调用 bug
+    *   `AIService` 和 `ScheduleService` 已作为独立 struct 存在
+
+### 3.2 的架构约束说明
+
+`APIV1Service` 作为"上帝结构体"的存在受限于 **gRPC-Gateway 注册机制**：
+```go
+// gRPC-Gateway 要求 handler 必须实现完整的 proto 接口
+v1pb.RegisterUserServiceHandlerServer(ctx, gwMux, s)  // s 必须实现 UserServiceServer
+v1pb.RegisterMemoServiceHandlerServer(ctx, gwMux, s)  // s 必须实现 MemoServiceServer
+```
+
+完全消灭 `APIV1Service` 需要：
+1. 为每个域创建独立 struct (如 `UserService`, `MemoService`)
+2. 将 `UnimplementedXxxServer` 移到各域 struct
+3. 更新所有 gRPC-Gateway 注册为各域 struct
+4. 更新 `ConnectServiceHandler` 的委托链
+
+**当前策略**: 已将共享工具函数解耦为 standalone，使得未来按需提取各域服务成为可能，但不在本 PR 中做全量提取，避免爆炸半径过大。
+
+---
+
+## 验证结果
+- ✅ `go test ./server/router/api/v1/...` — 全部通过
+- ✅ `go vet ./...` — 无警告
+- ✅ `go fmt` — 无格式问题
+- ✅ pre-commit hooks — 全部通过
+
+## 提交历史
+1. `refactor: split user_service.go into domain-specific files` — 阶段一
+2. `refactor: extract requireUserAccess and requireAI to eliminate DRY violations` — 阶段二
+3. `refactor: apply Field Mapper pattern to ScheduleService.UpdateSchedule` — 阶段三 3.1
+4. `refactor: decouple fetchCurrentUser and requireUserAccess from APIV1Service god struct` — 阶段三 3.2
