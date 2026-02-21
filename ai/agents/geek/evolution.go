@@ -104,11 +104,12 @@ func (p *EvolutionParrot) Execute(
 	// Build config for CCRunner
 	// 为 CCRunner 构建配置
 	cfg := &agentpkg.CCRunnerConfig{
-		Mode:          p.mode.Name(),
-		WorkDir:       p.workDir,
-		SessionID:     p.sessionID,
-		UserID:        p.userID,
-		DeviceContext: p.deviceCtx,
+		Mode:           p.mode.Name(),
+		WorkDir:        p.workDir,
+		SessionID:      p.sessionID,
+		UserID:         p.userID,
+		DeviceContext:  p.deviceCtx,
+		PermissionMode: "bypassPermissions",
 	}
 	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
 

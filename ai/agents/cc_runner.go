@@ -125,20 +125,37 @@ const (
 	EventTypeSessionStats = "session_stats"
 )
 
-func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
-	opts := hotplex.EngineOptions{
+// CCRunnerOption is a functional option for configuring CCRunner.
+type CCRunnerOption func(*CCRunner)
+
+// WithAdminToken sets the admin token for danger bypass mode.
+func WithAdminToken(token string) CCRunnerOption {
+	return func(r *CCRunner) {
+		r.adminToken = token
+	}
+}
+
+func NewCCRunner(timeout time.Duration, logger *slog.Logger, opts ...CCRunnerOption) (*CCRunner, error) {
+	engineOpts := hotplex.EngineOptions{
 		Timeout:     timeout,
 		IdleTimeout: 30 * time.Minute,
 		Logger:      logger,
 		Namespace:   "divinesense",
 	}
 
-	engine, err := hotplex.NewEngine(opts)
+	engine, err := hotplex.NewEngine(engineOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &CCRunner{engine: engine}, nil
+	runner := &CCRunner{engine: engine}
+
+	// Apply functional options
+	for _, opt := range opts {
+		opt(runner)
+	}
+
+	return runner, nil
 }
 
 func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {
