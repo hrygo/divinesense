@@ -237,6 +237,11 @@ func (s *ConversationService) handleConversationStart(ctx context.Context, event
 		return event.ConversationID, nil
 	}
 
+	// Skip conversation creation for temp conversations
+	if event.IsTempConversation {
+		return int32(0), nil
+	}
+
 	// Create new conversation
 	id, err := s.createConversation(ctx, event)
 
