@@ -260,32 +260,24 @@ func ConversationIDToSessionID(conversationID int64) string {
 	return uuid.NewSHA1(namespace, []byte(name)).String()
 }
 
-func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
-	return BuildSystemPromptWithRuntime(workDir, sessionID, userID, deviceContext, getRuntimeInfo())
-}
+// DivineSenseBaseContext is the fixed context for all DivineSense sessions.
+// This should be included in EngineOptions.BaseSystemPrompt.
+const DivineSenseBaseContext = `# Context
 
-type RuntimeInfo struct {
-	OS        string
-	Arch      string
-	Timestamp time.Time
-}
+You are running inside DivineSense, an intelligent assistant system.
 
-func getRuntimeInfo() RuntimeInfo {
-	return RuntimeInfo{
-		OS:        runtime.GOOS,
-		Arch:      runtime.GOARCH,
-		Timestamp: time.Now(),
-	}
-}
+**User Interaction**: Users type questions in their web browser, which invokes you via a Go backend. Your response streams back to their browser in real-time. **Always respond in Chinese (Simplified).**
+`
 
-func BuildSystemPromptWithRuntime(workDir, sessionID string, userID int32, deviceContext string, runtimeInfo RuntimeInfo) string {
-	osName := runtimeInfo.OS
-	arch := runtimeInfo.Arch
+// BuildUserContextPrompt builds the user-specific context prompt.
+// This should be passed to hotplex.Config.TaskSystemPrompt on first session creation.
+// Time is excluded as it changes on every request.
+func BuildUserContextPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
+	osName := runtime.GOOS
+	arch := runtime.GOARCH
 	if osName == "darwin" {
 		osName = "macOS"
 	}
-
-	timestamp := runtimeInfo.Timestamp.Format("2006-01-02 15:04:05")
 
 	var contextMap map[string]any
 	userAgent := "Unknown"
@@ -320,21 +312,19 @@ func BuildSystemPromptWithRuntime(workDir, sessionID string, userID int32, devic
 		}
 	}
 
-	return fmt.Sprintf(`# Context
-
-You are running inside DivineSense, an intelligent assistant system.
-
-**User Interaction**: Users type questions in their web browser, which invokes you via a Go backend. Your response streams back to their browser in real-time. **Always respond in Chinese (Simplified).**
-
-- **User ID**: %d
+	return fmt.Sprintf(`- **User ID**: %d
 - **Client Device**: %s
 - **User Agent**: %s
 - **Server OS**: %s (%s)
-- **Time**: %s
 - **Workspace**: %s
 - **Mode**: Non-interactive headless (--print)
 - **Session**: %s (persists via --session-id/--resume)
-`, userID, deviceInfo, userAgent, osName, arch, timestamp, workDir, sessionID)
+`, userID, deviceInfo, userAgent, osName, arch, workDir, sessionID)
+}
+
+// BuildSystemPrompt is deprecated. Use DivineSenseBaseContext + BuildUserContextPrompt instead.
+func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
+	return DivineSenseBaseContext + "\n" + BuildUserContextPrompt(workDir, sessionID, userID, deviceContext)
 }
 
 func SafeCallback(callback EventCallback) SafeCallbackFunc {

@@ -72,7 +72,9 @@ func (m *GeekMode) BuildSystemPrompt(cfg *agentpkg.CCRunnerConfig) string {
 // BaseSystemPrompt returns the fixed part of the Geek Mode system prompt.
 // This should be passed to hotplex.EngineOptions.BaseSystemPrompt.
 func (m *GeekMode) BaseSystemPrompt() string {
-	return `# Output Behavior
+	return agentpkg.DivineSenseBaseContext + `
+
+# Output Behavior
 
 You are running in an **embedded web service**, NOT a terminal.
 
@@ -87,9 +89,10 @@ Users can access created files directly via HTTP at:
 }
 
 // BuildContextPrompt builds the user-specific context prompt.
-// This should be passed to hotplex.Config.TaskSystemPrompt.
+// This should be passed to hotplex.Config.TaskSystemPrompt on first session creation.
+// Subsequent requests should NOT include this (user context is already established).
 func (m *GeekMode) BuildContextPrompt(cfg *agentpkg.CCRunnerConfig) string {
-	return agentpkg.BuildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
+	return agentpkg.BuildUserContextPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
 }
 
 // GetWorkDir returns the user-specific sandbox directory.
@@ -168,7 +171,9 @@ func (m *EvolutionMode) BuildSystemPrompt(cfg *agentpkg.CCRunnerConfig) string {
 // BaseSystemPrompt returns the Evolution Mode system prompt.
 // This should be passed to hotplex.EngineOptions.BaseSystemPrompt.
 func (m *EvolutionMode) BaseSystemPrompt() string {
-	return `# Evolution Mode 🧬
+	return agentpkg.DivineSenseBaseContext + `
+
+# Evolution Mode 🧬
 
 You are evolving DivineSense's source code through a structured, interactive process.
 
