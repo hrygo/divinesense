@@ -164,9 +164,11 @@ function getCurrentPhase(events: StreamingEvent[]): number {
   let currentPhase = 0;
 
   for (const event of events) {
+    console.log("[Phase] event:", event.type, event.data?.substring(0, 30));
     if (event.type === "tool_use") {
       const toolMatch = event.data.match(/^(\w+)(?::|$)/);
       const toolName = toolMatch ? toolMatch[1] : "";
+      console.log("[Phase] toolName:", toolName);
       if (toolName === "schedule_add") {
         currentPhase = 3;
       } else if (toolName === "schedule_query" || toolName === "find_free_time") {
@@ -182,6 +184,6 @@ function getCurrentPhase(events: StreamingEvent[]): number {
       if (currentPhase < 2) currentPhase = 2;
     }
   }
-
+  console.log("[Phase] final:", currentPhase);
   return currentPhase;
 }
