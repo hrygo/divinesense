@@ -645,8 +645,7 @@ func (h *ParrotHandler) executeWithOrchestrator(
 
 		// Early title generation: Start immediately after block creation for parallel execution
 		// This runs concurrently with Orchestrator processing, reducing perceived latency
-		// Skip for SCHEDULE agent (quick schedule creation doesn't need conversation title)
-		if h.titleGenerator != nil && req.ConversationID > 0 && req.AgentType != AgentTypeSchedule {
+		if h.titleGenerator != nil && req.ConversationID > 0 {
 			h.maybeGenerateConversationTitle(ctx, req.ConversationID, req.Message)
 		}
 	}
@@ -959,8 +958,7 @@ func (h *ParrotHandler) executeAgent(
 		} else if currentBlock != nil {
 			// Early title generation: Start immediately after block creation for parallel execution
 			// This runs concurrently with agent processing, reducing perceived latency
-			// Skip for SCHEDULE agent (quick schedule creation doesn't need conversation title)
-			if h.titleGenerator != nil && req.AgentType != AgentTypeSchedule {
+			if h.titleGenerator != nil {
 				h.maybeGenerateConversationTitle(ctx, req.ConversationID, req.Message)
 			}
 		}

@@ -95,6 +95,7 @@ export async function* scheduleAgentChatStream(
     message,
     userTimezone,
     agentType: AgentType.SCHEDULE,
+    isTempConversation: true,
   });
 
   for await (const chunk of response) {
