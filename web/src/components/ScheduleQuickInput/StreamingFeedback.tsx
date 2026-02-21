@@ -161,33 +161,23 @@ function getEventDescription(event: StreamingEvent | null, t: ReturnType<typeof 
 function getCurrentPhase(events: StreamingEvent[]): number {
   if (events.length === 0) return 0;
 
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
+  let currentPhase = 0;
 
+  for (const event of events) {
     if (event.type === "tool_use") {
       const toolMatch = event.data.match(/^(\w+)(?::|$)/);
       const toolName = toolMatch ? toolMatch[1] : "";
       if (toolName === "schedule_add") {
-        return 3;
+        currentPhase = 3;
+      } else if (toolName === "schedule_query" || toolName === "find_free_time") {
+        currentPhase = 2;
       }
-    }
-
-    if (event.type === "tool_use") {
-      const toolMatch = event.data.match(/^(\w+)(?::|$)/);
-      const toolName = toolMatch ? toolMatch[1] : "";
-      if (toolName === "schedule_query" || toolName === "find_free_time") {
-        return 2;
-      }
-    }
-
-    if (event.type === "task_start") {
-      return 1;
-    }
-
-    if (event.type === "plan" || event.type === "thinking") {
-      return 0;
+    } else if (event.type === "task_start") {
+      currentPhase = 1;
+    } else if (event.type === "plan" || event.type === "thinking") {
+      if (currentPhase === 0) currentPhase = 0;
     }
   }
 
-  return 0;
+  return currentPhase;
 }

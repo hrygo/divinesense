@@ -90,7 +90,6 @@ export function useScheduleAgentStreamingChat() {
         const { scheduleAgentChatStream } = await import("./useScheduleAgent");
 
         const eventHandler = (event: { type: string; data: string }) => {
-          console.log("[ScheduleChat] Received event:", event.type, event.data?.substring(0, 50));
           const streamingEvent: StreamingEvent = {
             type: event.type as StreamingEvent["type"],
             data: event.data,
