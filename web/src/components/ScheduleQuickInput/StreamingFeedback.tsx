@@ -171,9 +171,15 @@ function getCurrentPhase(events: StreamingEvent[]): number {
         currentPhase = 3;
       } else if (toolName === "schedule_query" || toolName === "find_free_time") {
         currentPhase = 2;
+      } else {
+        currentPhase = 2;
       }
     } else if (event.type === "task_start") {
       currentPhase = 1;
+    } else if (event.type === "tool_result") {
+      if (currentPhase < 2) currentPhase = 2;
+    } else if (event.type === "answer") {
+      if (currentPhase < 2) currentPhase = 2;
     }
   }
 
