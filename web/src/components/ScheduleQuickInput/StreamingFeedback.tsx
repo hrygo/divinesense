@@ -1,63 +1,95 @@
 import { CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
+import { PhaseProgress } from "./PhaseProgress";
 import { SCHEDULE_PHASES, type StreamingEvent } from "./phaseConfig";
 
-interface PhaseProgressProps {
-  currentPhase: number;
-  isComplete?: boolean;
-  hasError?: boolean;
-  className?: string;
+// Constants
+const MAX_PHASE = SCHEDULE_PHASES.length - 1;
+const PREVIEW_MAX_LENGTH = 60;
+
+// Pre-compiled regex patterns
+const TOOL_NAME_PLAIN_REGEX = /^(\w+)(?::|$)/;
+
+function extractToolName(data: string): string {
+  // Try JSON format first
+  if (data.includes('"tool_name"') || data.includes('"name"')) {
+    try {
+      const parsed = JSON.parse(data);
+      return parsed.tool_name || parsed.name || "";
+    } catch {
+      // Fall through to plain text parsing
+    }
+  }
+  // Try plain text format
+  const match = data.match(TOOL_NAME_PLAIN_REGEX);
+  return match ? match[1] : "";
 }
 
-export function PhaseProgress({ currentPhase, isComplete, hasError, className }: PhaseProgressProps) {
-  const t = useTranslate();
-  const phases = SCHEDULE_PHASES;
+function getCurrentPhase(events: StreamingEvent[]): number {
+  if (events.length === 0) return 0;
 
-  return (
-    <div className={cn("flex items-start justify-between w-full gap-1", className)}>
-      {phases.map((phase, index) => {
-        const isCompleted = index < currentPhase || isComplete;
-        const isCurrent = index === currentPhase && !isComplete && !hasError;
-        const isPending = index > currentPhase && !isComplete;
+  let currentPhase = 0;
 
-        return (
-          <div key={phase.key} className="flex flex-col items-center flex-1">
-            <div
-              className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 shadow-sm",
-                isCompleted && "bg-green-500 text-white ring-2 ring-green-500/30",
-                isCurrent && !hasError && "bg-primary text-primary-foreground ring-2 ring-primary/30 animate-pulse",
-                isPending && "bg-muted text-muted-foreground ring-2 ring-muted",
-                hasError && index <= currentPhase && "bg-destructive text-destructive-foreground ring-2 ring-destructive/30",
-              )}
-            >
-              {isCompleted ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : isCurrent ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : hasError && index <= currentPhase ? (
-                <XCircle className="w-5 h-5" />
-              ) : (
-                <div className={cn("w-2.5 h-2.5 rounded-full bg-current", isCurrent && "animate-ping")} />
-              )}
-            </div>
-            <span
-              className={cn(
-                "text-xs mt-1.5 font-medium text-center",
-                isCompleted && "text-green-600 dark:text-green-400",
-                isCurrent && !hasError && "text-primary",
-                isPending && "text-muted-foreground/60",
-                hasError && index <= currentPhase && "text-destructive",
-              )}
-            >
-              {t(phase.labelKey as "schedule.phase.understand")}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
+  for (const event of events) {
+    if (event.type === "tool_use") {
+      const toolName = extractToolName(event.data);
+      if (toolName === "schedule_add") {
+        currentPhase = 3;
+      } else if (toolName === "schedule_query" || toolName === "find_free_time") {
+        currentPhase = 2;
+      } else {
+        currentPhase = 2;
+      }
+    } else if (event.type === "task_start") {
+      currentPhase = 1;
+    } else if (event.type === "tool_result") {
+      if (event.data.includes("Created:") || event.data.includes("已创建")) {
+        currentPhase = 3;
+      } else if (currentPhase < 2) {
+        currentPhase = 2;
+      }
+    } else if (event.type === "answer") {
+      if (currentPhase < 2) currentPhase = 2;
+    }
+  }
+
+  return currentPhase;
+}
+
+function getEventDescription(event: StreamingEvent | null, t: ReturnType<typeof useTranslate>, isStreaming: boolean): string {
+  if (!event) return t("schedule.ai.thinking");
+
+  switch (event.type) {
+    case "thinking":
+    case "plan":
+      return event.data || t("schedule.ai.thinking");
+    case "task_start":
+      return t("schedule.ai.parsing");
+    case "tool_use": {
+      const toolName = extractToolName(event.data);
+      switch (toolName) {
+        case "schedule_query":
+          return t("schedule.ai.checking-schedule");
+        case "schedule_add":
+          return t("schedule.ai.creating-schedule");
+        case "schedule_update":
+          return t("schedule.ai.updating-schedule");
+        case "find_free_time":
+          return t("schedule.ai.finding-free-time");
+        default:
+          return t("schedule.ai.using-tool");
+      }
+    }
+    case "tool_result":
+      return t("schedule.ai.processing-result");
+    case "answer":
+      return isStreaming ? t("schedule.ai.generating") : t("schedule.ai.completed");
+    case "error":
+      return event.data || t("schedule.ai.error");
+    default:
+      return "";
+  }
 }
 
 interface StreamingFeedbackProps {
@@ -75,10 +107,11 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
 
   const hasError = events.some((e) => e.type === "error");
   const isComplete = !isStreaming && events.length > 0 && !hasError;
-  const currentPhase = Math.min(getCurrentPhase(events), 3);
+  const currentPhase = Math.min(getCurrentPhase(events), MAX_PHASE);
 
   const lastEvent = events.at(-1) || null;
   const statusText = getEventDescription(lastEvent, t, isStreaming);
+  const previewText = lastEvent?.data && lastEvent.type !== "thinking" ? lastEvent.data.slice(0, PREVIEW_MAX_LENGTH) : null;
 
   return (
     <div
@@ -110,10 +143,10 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
         </div>
         <div className="flex-1 min-w-0">
           <p className={cn("text-sm font-medium truncate", hasError ? "text-destructive" : "text-foreground")}>{statusText}</p>
-          {lastEvent?.data && lastEvent.type !== "thinking" && (
+          {previewText && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {lastEvent.data.substring(0, 60)}
-              {lastEvent.data.length > 60 ? "..." : ""}
+              {previewText}
+              {lastEvent!.data.length > PREVIEW_MAX_LENGTH && "..."}
             </p>
           )}
         </div>
@@ -122,76 +155,4 @@ export function StreamingFeedback({ events, isStreaming, className }: StreamingF
   );
 }
 
-function getEventDescription(event: StreamingEvent | null, t: ReturnType<typeof useTranslate>, isStreaming: boolean): string {
-  if (!event) return t("schedule.ai.thinking");
-
-  switch (event.type) {
-    case "thinking":
-    case "plan":
-      return event.data || t("schedule.ai.thinking");
-    case "task_start":
-      return t("schedule.ai.parsing");
-    case "tool_use": {
-      const toolMatch = event.data.match(/^(\w+)(?::|$)/);
-      const toolName = toolMatch ? toolMatch[1] : "";
-      switch (toolName) {
-        case "schedule_query":
-          return t("schedule.ai.checking-schedule");
-        case "schedule_add":
-          return t("schedule.ai.creating-schedule");
-        case "schedule_update":
-          return t("schedule.ai.updating-schedule");
-        case "find_free_time":
-          return t("schedule.ai.finding-free-time");
-        default:
-          return t("schedule.ai.using-tool");
-      }
-    }
-    case "tool_result":
-      return t("schedule.ai.processing-result");
-    case "answer":
-      return isStreaming ? t("schedule.ai.generating") : t("schedule.ai.completed");
-    case "error":
-      return event.data || t("schedule.ai.error");
-    default:
-      return "";
-  }
-}
-
-function getCurrentPhase(events: StreamingEvent[]): number {
-  if (events.length === 0) return 0;
-
-  let currentPhase = 0;
-
-  for (const event of events) {
-    if (event.type === "tool_use") {
-      let toolName = "";
-      try {
-        const data = JSON.parse(event.data);
-        toolName = data.tool_name || data.name || "";
-      } catch {
-        const toolMatch = event.data.match(/^(\w+)(?::|$)/);
-        toolName = toolMatch ? toolMatch[1] : "";
-      }
-      if (toolName === "schedule_add") {
-        currentPhase = 3;
-      } else if (toolName === "schedule_query" || toolName === "find_free_time") {
-        currentPhase = 2;
-      } else {
-        currentPhase = 2;
-      }
-    } else if (event.type === "task_start") {
-      currentPhase = 1;
-    } else if (event.type === "tool_result") {
-      if (event.data.includes("Created:") || event.data.includes("已创建")) {
-        currentPhase = 3;
-      } else if (currentPhase < 2) {
-        currentPhase = 2;
-      }
-    } else if (event.type === "answer") {
-      if (currentPhase < 2) currentPhase = 2;
-    }
-  }
-
-  return currentPhase;
-}
+export type { StreamingEvent };
