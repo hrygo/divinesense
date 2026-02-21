@@ -57,17 +57,27 @@ export function useScheduleAgentChat() {
 
 /**
  * Parse an event JSON string into a ParsedEvent
+ * Handles both JSON format and plain text events from backend
  */
-export function parseEvent(eventJSON: string): ParsedEvent | null {
-  try {
-    const event = JSON.parse(eventJSON);
-    return {
-      type: event.type,
-      data: event.data,
-    };
-  } catch (e) {
-    console.error("Failed to parse event:", eventJSON, e);
+export function parseEvent(eventData: string, eventType?: string): ParsedEvent | null {
+  if (!eventData) {
     return null;
+  }
+
+  // Try to parse as JSON first
+  try {
+    const event = JSON.parse(eventData);
+    return {
+      type: event.type || eventType || "unknown",
+      data: event.data || eventData,
+    };
+  } catch {
+    // If JSON parsing fails, treat the entire string as data
+    // This handles plain text events like "thinking" and "answer" from backend
+    return {
+      type: eventType || "unknown",
+      data: eventData,
+    };
   }
 }
 
@@ -90,7 +100,7 @@ export async function* scheduleAgentChatStream(
   for await (const chunk of response) {
     // Parse the event from eventType and eventData fields
     if (chunk.eventType) {
-      const parsed = parseEvent(chunk.eventData || "{}");
+      const parsed = parseEvent(chunk.eventData || "", chunk.eventType);
       if (parsed) {
         onEvent?.(parsed);
         yield parsed;
