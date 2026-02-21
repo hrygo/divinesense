@@ -131,6 +131,7 @@ type CCRunnerOption func(*ccRunnerOptions)
 type ccRunnerOptions struct {
 	adminToken       string
 	baseSystemPrompt string
+	namespace        string
 }
 
 // WithAdminToken sets the admin token for danger bypass mode.
@@ -148,6 +149,14 @@ func WithBaseSystemPrompt(prompt string) CCRunnerOption {
 	}
 }
 
+// WithNamespace sets the namespace for UUID v5 session ID generation.
+// Different namespaces ensure physical isolation between modes (e.g., Geek vs Evolution).
+func WithNamespace(namespace string) CCRunnerOption {
+	return func(o *ccRunnerOptions) {
+		o.namespace = namespace
+	}
+}
+
 func NewCCRunner(timeout time.Duration, logger *slog.Logger, opts ...CCRunnerOption) (*CCRunner, error) {
 	// Apply options
 	opt := &ccRunnerOptions{}
@@ -155,11 +164,17 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger, opts ...CCRunnerOpt
 		o(opt)
 	}
 
+	// Default namespace
+	namespace := opt.namespace
+	if namespace == "" {
+		namespace = "divinesense"
+	}
+
 	engineOpts := hotplex.EngineOptions{
 		Timeout:          timeout,
 		IdleTimeout:      30 * time.Minute,
 		Logger:           logger,
-		Namespace:        "divinesense",
+		Namespace:        namespace,
 		BaseSystemPrompt: opt.baseSystemPrompt,
 		AdminToken:       opt.adminToken,
 	}

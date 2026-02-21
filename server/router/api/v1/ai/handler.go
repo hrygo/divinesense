@@ -67,10 +67,11 @@ func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aista
 	})
 
 	// Create singletons for CC execution. Evolution and Geek use isolated runners.
-	// Each runner has its own BaseSystemPrompt configured at engine creation.
+	// Each runner has its own BaseSystemPrompt and Namespace for physical isolation.
 	geekRunner, err := agentpkg.NewCCRunner(30*time.Minute, slog.Default(),
 		agentpkg.WithAdminToken(adminToken),
 		agentpkg.WithBaseSystemPrompt(geekMode.BaseSystemPrompt()),
+		agentpkg.WithNamespace("divinesense-geek"),
 	)
 	if err != nil {
 		slog.Warn("Failed to create geekRunner in init (CLI not found?)", "error", err)
@@ -78,6 +79,7 @@ func NewParrotHandler(factory *AgentFactory, llm ai.LLMService, persister *aista
 	evoRunner, err := agentpkg.NewCCRunner(30*time.Minute, slog.Default(),
 		agentpkg.WithAdminToken(adminToken),
 		agentpkg.WithBaseSystemPrompt(evoMode.BaseSystemPrompt()),
+		agentpkg.WithNamespace("divinesense-evolution"),
 	)
 	if err != nil {
 		slog.Warn("Failed to create evoRunner in init (CLI not found?)", "error", err)
