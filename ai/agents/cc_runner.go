@@ -15,7 +15,8 @@ import (
 )
 
 type CCRunner struct {
-	engine *hotplex.Engine
+	engine     hotplex.HotPlexClient
+	adminToken string // Token for SetDangerBypassEnabled calls
 }
 
 // CCRunnerConfig defines the configuration for CCRunner execution.
@@ -30,12 +31,6 @@ type CCRunnerConfig struct {
 	DeviceContext  string // Used to build SystemPrompt via BuildSystemPrompt()
 	PermissionMode string
 }
-
-type DangerDetector = hotplex.Detector
-
-type Session = hotplex.Session
-
-type SessionStatus = hotplex.SessionStatus
 
 type StreamMessage = hotplex.StreamMessage
 
@@ -89,10 +84,6 @@ func NewParrotStreamAdapter(send func(eventType string, eventData any) error) *P
 	return &ParrotStreamAdapter{send: send}
 }
 
-type DangerLevel = hotplex.DangerLevel
-
-type DangerBlockEvent = hotplex.DangerBlockEvent
-
 type ProcessingPhase string
 
 const (
@@ -124,15 +115,6 @@ type AssistantMessage = hotplex.AssistantMessage
 type UsageStats = hotplex.UsageStats
 
 const (
-	SessionStatusStarting = hotplex.SessionStatusStarting
-	SessionStatusReady    = hotplex.SessionStatusReady
-	SessionStatusBusy     = hotplex.SessionStatusBusy
-	SessionStatusDead     = hotplex.SessionStatusDead
-
-	DangerLevelCritical = hotplex.DangerLevelCritical
-	DangerLevelHigh     = hotplex.DangerLevelHigh
-	DangerLevelModerate = hotplex.DangerLevelModerate
-
 	EventTypePhaseChange  = "phase_change"
 	EventTypeProgress     = "progress"
 	EventTypeThinking     = "thinking"
@@ -156,11 +138,7 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) 
 		return nil, err
 	}
 
-	if e, ok := engine.(*hotplex.Engine); ok {
-		return &CCRunner{engine: e}, nil
-	}
-
-	return nil, fmt.Errorf("hotplex: failed to cast to *Engine")
+	return &CCRunner{engine: engine}, nil
 }
 
 func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {
@@ -174,8 +152,10 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 		TaskSystemPrompt: cfg.SystemPrompt,
 	}
 
-	if cfg.PermissionMode == "bypassPermissions" {
-		r.engine.SetDangerBypassEnabled(true)
+	if cfg.PermissionMode == "bypassPermissions" && r.adminToken != "" {
+		if err := r.engine.SetDangerBypassEnabled(r.adminToken, true); err != nil {
+			return fmt.Errorf("failed to enable danger bypass: %w", err)
+		}
 	}
 
 	var cb hotplex.Callback
@@ -207,12 +187,9 @@ func (r *CCRunner) SetDangerAllowPaths(paths []string) {
 	r.engine.SetDangerAllowPaths(paths)
 }
 
-func (r *CCRunner) SetDangerBypassEnabled(enabled bool) {
-	r.engine.SetDangerBypassEnabled(enabled)
-}
-
-func (r *CCRunner) GetDangerDetector() *DangerDetector {
-	return r.engine.GetDangerDetector()
+func (r *CCRunner) SetDangerBypassEnabled(token string, enabled bool) error {
+	r.adminToken = token // Store for Execute calls
+	return r.engine.SetDangerBypassEnabled(token, enabled)
 }
 
 func (r *CCRunner) ValidateConfig(cfg *CCRunnerConfig) error {
