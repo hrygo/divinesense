@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/hrygo/divinesense/ai/agents/runner"
 )
 
 // TestCCRunnerValidateConfig tests config validation.
@@ -67,14 +65,7 @@ func TestCCRunnerValidateConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &CCRunner{}
-			// Convert CCRunnerConfig to runner.Config
-			cfg := &runner.Config{
-				Mode:      tt.cfg.Mode,
-				WorkDir:   tt.cfg.WorkDir,
-				SessionID: tt.cfg.SessionID,
-				UserID:    tt.cfg.UserID,
-			}
-			err := r.ValidateConfig(cfg)
+			err := r.ValidateConfig(tt.cfg)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}

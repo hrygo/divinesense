@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	agents "github.com/hrygo/divinesense/ai/agents"
-	agentpkg "github.com/hrygo/divinesense/ai/agents/runner"
 	"github.com/hrygo/divinesense/ai/agents/universal"
 	ctxpkg "github.com/hrygo/divinesense/ai/context"
 )
@@ -166,7 +165,7 @@ func (r *ParrotExpertRegistry) ExecuteExpert(ctx context.Context, expertName str
 				eventDataStr = v
 			case []byte:
 				eventDataStr = string(v)
-			case *agentpkg.EventWithMeta:
+			case *agents.EventWithMeta:
 				// If Meta exists, include it as JSON for handler to parse tool_name etc.
 				// This ensures handler can extract Meta fields like tool_name, status, etc.
 				if v.Meta != nil {

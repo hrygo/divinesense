@@ -1,241 +1,373 @@
 package agent
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"runtime"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hrygo/divinesense/ai/agents/events"
-	"github.com/hrygo/divinesense/ai/agents/runner"
+	"github.com/hrygo/hotplex"
 )
 
-// ============================================================================
-// BACKWARD COMPATIBILITY BRIDGE
-// ============================================================================
-//
-// This file provides backward compatibility aliases for types and functions
-// that have been moved to the runner subpackage.
-//
-// Deprecated: Use github.com/hrygo/divinesense/ai/agents/runner directly.
-// ============================================================================
+type CCRunner struct {
+	engine *hotplex.Engine
+}
 
-// Type aliases for backward compatibility
+type CCRunnerConfig struct {
+	Mode           string
+	WorkDir        string
+	ConversationID int64
+	SessionID      string
+	UserID         int32
+	SystemPrompt   string
+	DeviceContext  string
+	PermissionMode string
+	AllowedPaths   []string
+	ForbiddenPaths []string
+}
 
-// CCRunner is an alias for runner.CCRunner.
-//
-// Deprecated: Use runner.CCRunner directly.
-type CCRunner = runner.CCRunner
+type DangerDetector = hotplex.Detector
 
-// CCRunnerConfig is an alias for runner.Config.
-//
-// Deprecated: Use runner.Config directly.
-type CCRunnerConfig = runner.Config
+type Session = hotplex.Session
 
-// DangerDetector is an alias for runner.Detector.
-//
-// Deprecated: Use runner.Detector directly.
-type DangerDetector = runner.Detector
+type SessionStatus = hotplex.SessionStatus
 
-// CCSessionManager is an alias for runner.CCSessionManager.
-//
-// Deprecated: Use runner.CCSessionManager directly.
-type CCSessionManager = runner.CCSessionManager
+type StreamMessage = hotplex.StreamMessage
 
-// Session is an alias for runner.Session.
-//
-// Deprecated: Use runner.Session directly.
-type Session = runner.Session
-
-// SessionStatus is an alias for runner.SessionStatus.
-//
-// Deprecated: Use runner.SessionStatus directly.
-type SessionStatus = runner.SessionStatus
-
-// SessionManager is an alias for runner.SessionManager.
-//
-// Deprecated: Use runner.SessionManager directly.
-type SessionManager = runner.SessionManager
-
-// StreamMessage is an alias for runner.StreamMessage.
-//
-// Deprecated: Use runner.StreamMessage directly.
-type StreamMessage = runner.StreamMessage
-
-// EventCallback is an alias for events.Callback.
-//
-// Deprecated: Use events.Callback directly.
 type EventCallback = events.Callback
 
-// EventMeta is an alias for runner.EventMeta.
-//
-// Deprecated: Use runner.EventMeta directly.
-type EventMeta = runner.EventMeta
+type EventMeta = hotplex.EventMeta
 
-// EventWithMeta is an alias for runner.EventWithMeta.
-//
-// Deprecated: Use runner.EventWithMeta directly.
-type EventWithMeta = runner.EventWithMeta
+type EventWithMeta = hotplex.EventWithMeta
 
-// SessionStats is an alias for runner.SessionStats.
-//
-// Deprecated: Use runner.SessionStats directly.
-type SessionStats = runner.SessionStats
+type SessionStats = hotplex.SessionStats
 
-// SessionStatsData is an alias for runner.SessionStatsData.
-//
-// Deprecated: Use runner.SessionStatsData directly.
-type SessionStatsData = runner.SessionStatsData
+type SessionStatsData struct {
+	SessionID            string   `json:"session_id"`
+	ConversationID       int64    `json:"conversation_id"`
+	UserID               int32    `json:"user_id"`
+	AgentType            string   `json:"agent_type"`
+	StartTime            int64    `json:"start_time"`
+	EndTime              int64    `json:"end_time"`
+	TotalDurationMs      int64    `json:"total_duration_ms"`
+	ThinkingDurationMs   int64    `json:"thinking_duration_ms"`
+	ToolDurationMs       int64    `json:"tool_duration_ms"`
+	GenerationDurationMs int64    `json:"generation_duration_ms"`
+	InputTokens          int32    `json:"input_tokens"`
+	OutputTokens         int32    `json:"output_tokens"`
+	CacheWriteTokens     int32    `json:"cache_write_tokens"`
+	CacheReadTokens      int32    `json:"cache_read_tokens"`
+	TotalTokens          int32    `json:"total_tokens"`
+	ToolCallCount        int32    `json:"tool_call_count"`
+	ToolsUsed            []string `json:"tools_used"`
+	FilesModified        int32    `json:"files_modified"`
+	FilePaths            []string `json:"file_paths"`
+	TotalCostUSD         float64  `json:"total_cost_usd"`
+	ModelUsed            string   `json:"model_used"`
+	IsError              bool     `json:"is_error"`
+	ErrorMessage         string   `json:"error_message,omitempty"`
+}
 
-// AgentSessionStatsForStorage is an alias for runner.AgentSessionStatsForStorage.
-//
-// Deprecated: Use runner.AgentSessionStatsForStorage directly.
-type AgentSessionStatsForStorage = runner.AgentSessionStatsForStorage
-
-// SessionStatsProvider is the interface for agents that provide session statistics.
-//
-// This interface is implemented by GeekParrot and EvolutionParrot which have
-// direct access to CCRunner's SessionStats.
 type SessionStatsProvider interface {
 	GetSessionStats() *SessionStats
 }
 
-// ParrotStreamAdapter is an adapter that converts event callbacks to the
-// format expected by the streaming response handler.
 type ParrotStreamAdapter struct {
 	send func(eventType string, eventData any) error
 }
 
-// Send sends an event through the adapter.
 func (a *ParrotStreamAdapter) Send(eventType string, eventData any) error {
 	return a.send(eventType, eventData)
 }
 
-// NewParrotStreamAdapter creates a new stream adapter from a send function.
 func NewParrotStreamAdapter(send func(eventType string, eventData any) error) *ParrotStreamAdapter {
 	return &ParrotStreamAdapter{send: send}
 }
 
-// DangerLevel is an alias for runner.DangerLevel.
-//
-// Deprecated: Use runner.DangerLevel directly.
-type DangerLevel = runner.DangerLevel
+type DangerLevel = hotplex.DangerLevel
 
-// DangerBlockEvent is an alias for runner.DangerBlockEvent.
-//
-// Deprecated: Use runner.DangerBlockEvent directly.
-type DangerBlockEvent = runner.DangerBlockEvent
+type DangerBlockEvent = hotplex.DangerBlockEvent
 
-// ProcessingPhase is an alias for runner.ProcessingPhase.
-//
-// Deprecated: Use runner.ProcessingPhase directly.
-type ProcessingPhase = runner.ProcessingPhase
+type ProcessingPhase string
 
-// PhaseChangeEvent is an alias for runner.PhaseChangeEvent.
-//
-// Deprecated: Use runner.PhaseChangeEvent directly.
-type PhaseChangeEvent = runner.PhaseChangeEvent
-
-// ProgressEvent is an alias for runner.ProgressEvent.
-//
-// Deprecated: Use runner.ProgressEvent directly.
-type ProgressEvent = runner.ProgressEvent
-
-// SafeCallbackFunc is an alias for events.SafeCallback.
-//
-// Deprecated: Use events.SafeCallback directly.
-type SafeCallbackFunc = events.SafeCallback
-
-// ContentBlock is an alias for runner.ContentBlock.
-//
-// Deprecated: Use runner.ContentBlock directly.
-type ContentBlock = runner.ContentBlock
-
-// AssistantMessage is an alias for runner.AssistantMessage.
-//
-// Deprecated: Use runner.AssistantMessage directly.
-type AssistantMessage = runner.AssistantMessage
-
-// UsageStats is an alias for runner.UsageStats.
-//
-// Deprecated: Use runner.UsageStats directly.
-type UsageStats = runner.UsageStats
-
-// Constants for backward compatibility
 const (
-	// SessionStatus constants
-	SessionStatusStarting = runner.SessionStatusStarting
-	SessionStatusReady    = runner.SessionStatusReady
-	SessionStatusBusy     = runner.SessionStatusBusy
-	SessionStatusDead     = runner.SessionStatusDead
-
-	// DangerLevel constants
-	DangerLevelCritical = runner.DangerLevelCritical
-	DangerLevelHigh     = runner.DangerLevelHigh
-	DangerLevelModerate = runner.DangerLevelModerate
-
-	// ProcessingPhase constants
-	PhaseAnalyzing    = runner.PhaseAnalyzing
-	PhasePlanning     = runner.PhasePlanning
-	PhaseRetrieving   = runner.PhaseRetrieving
-	PhaseSynthesizing = runner.PhaseSynthesizing
-
-	// Event type constants
-	EventTypePhaseChange  = runner.EventTypePhaseChange
-	EventTypeProgress     = runner.EventTypeProgress
-	EventTypeThinking     = runner.EventTypeThinking
-	EventTypeToolUse      = runner.EventTypeToolUse
-	EventTypeToolResult   = runner.EventTypeToolResult
-	EventTypeAnswer       = runner.EventTypeAnswer
-	EventTypeError        = runner.EventTypeError
-	EventTypeSessionStats = "session_stats" // Session statistics event
+	PhaseAnalyzing    ProcessingPhase = "analyzing"
+	PhasePlanning     ProcessingPhase = "planning"
+	PhaseRetrieving   ProcessingPhase = "retrieving"
+	PhaseSynthesizing ProcessingPhase = "synthesizing"
 )
 
-// Function aliases for backward compatibility
+type PhaseChangeEvent struct {
+	Phase            ProcessingPhase `json:"phase"`
+	PhaseNumber      int             `json:"phase_number"`
+	TotalPhases      int             `json:"total_phases"`
+	EstimatedSeconds int             `json:"estimated_seconds"`
+}
 
-// NewCCRunner creates a new CCRunner instance.
-//
-// Deprecated: Use runner.NewCCRunner directly.
+type ProgressEvent struct {
+	Percent              int `json:"percent"`
+	EstimatedSeconds     int `json:"estimated_seconds"`
+	EstimatedTimeSeconds int `json:"estimated_time_seconds"`
+}
+
+type SafeCallbackFunc = events.SafeCallback
+
+type ContentBlock = hotplex.ContentBlock
+
+type AssistantMessage = hotplex.AssistantMessage
+
+type UsageStats = hotplex.UsageStats
+
+const (
+	SessionStatusStarting = hotplex.SessionStatusStarting
+	SessionStatusReady    = hotplex.SessionStatusReady
+	SessionStatusBusy     = hotplex.SessionStatusBusy
+	SessionStatusDead     = hotplex.SessionStatusDead
+
+	DangerLevelCritical = hotplex.DangerLevelCritical
+	DangerLevelHigh     = hotplex.DangerLevelHigh
+	DangerLevelModerate = hotplex.DangerLevelModerate
+
+	EventTypePhaseChange  = "phase_change"
+	EventTypeProgress     = "progress"
+	EventTypeThinking     = "thinking"
+	EventTypeToolUse      = "tool_use"
+	EventTypeToolResult   = "tool_result"
+	EventTypeAnswer       = "answer"
+	EventTypeError        = "error"
+	EventTypeSessionStats = "session_stats"
+)
+
 func NewCCRunner(timeout time.Duration, logger *slog.Logger) (*CCRunner, error) {
-	return runner.NewCCRunner(timeout, logger)
+	opts := hotplex.EngineOptions{
+		Timeout:     timeout,
+		IdleTimeout: 30 * time.Minute,
+		Logger:      logger,
+		Namespace:   "divinesense",
+	}
+
+	engine, err := hotplex.NewEngine(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if e, ok := engine.(*hotplex.Engine); ok {
+		return &CCRunner{engine: e}, nil
+	}
+
+	return nil, fmt.Errorf("hotplex: failed to cast to *Engine")
 }
 
-// NewDangerDetector creates a new danger detector.
-//
-// Deprecated: Use runner.NewDetector directly.
-func NewDangerDetector(logger *slog.Logger) *DangerDetector {
-	return runner.NewDetector(logger)
+func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {
+	if cfg.SessionID == "" && cfg.ConversationID > 0 {
+		cfg.SessionID = ConversationIDToSessionID(cfg.ConversationID)
+	}
+
+	hotplexCfg := &hotplex.Config{
+		WorkDir:          cfg.WorkDir,
+		SessionID:        cfg.SessionID,
+		TaskSystemPrompt: cfg.SystemPrompt,
+	}
+
+	if cfg.PermissionMode == "bypassPermissions" {
+		r.engine.SetDangerBypassEnabled(true)
+	}
+
+	var cb hotplex.Callback
+	if callback != nil {
+		cb = hotplex.Callback(callback)
+	}
+
+	return r.engine.Execute(ctx, hotplexCfg, prompt, cb)
 }
 
-// NewCCSessionManager creates a new session manager.
-//
-// Deprecated: Use runner.NewCCSessionManager directly.
-func NewCCSessionManager(logger *slog.Logger, timeout time.Duration) *CCSessionManager {
-	return runner.NewCCSessionManager(logger, timeout)
+func (r *CCRunner) Close() error {
+	r.engine.Close()
+	return nil
 }
 
-// ConversationIDToSessionID converts a database ConversationID to a SessionID.
-//
-// Deprecated: Use runner.ConversationIDToSessionID directly.
+func (r *CCRunner) GetSessionStats() *SessionStats {
+	return r.engine.GetSessionStats()
+}
+
+func (r *CCRunner) StopSession(sessionID string, reason string) error {
+	return r.engine.StopSession(sessionID, reason)
+}
+
+func (r *CCRunner) SetDangerAllowPaths(paths []string) {
+	r.engine.SetDangerAllowPaths(paths)
+}
+
+func (r *CCRunner) SetDangerBypassEnabled(enabled bool) {
+	r.engine.SetDangerBypassEnabled(enabled)
+}
+
+func (r *CCRunner) GetDangerDetector() *DangerDetector {
+	return r.engine.GetDangerDetector()
+}
+
+func (r *CCRunner) ValidateConfig(cfg *CCRunnerConfig) error {
+	if cfg.Mode == "" {
+		return fmt.Errorf("mode is required")
+	}
+	if cfg.WorkDir == "" {
+		return fmt.Errorf("work_dir is required")
+	}
+	if cfg.SessionID == "" {
+		return fmt.Errorf("session_id is required")
+	}
+	if cfg.UserID == 0 {
+		return fmt.Errorf("user_id is required")
+	}
+	return nil
+}
+
 func ConversationIDToSessionID(conversationID int64) string {
-	return runner.ConversationIDToSessionID(conversationID)
+	namespace := uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	name := fmt.Sprintf("divinesense:conversation:%d", conversationID)
+	return uuid.NewSHA1(namespace, []byte(name)).String()
 }
 
-// BuildSystemPrompt provides context for Claude Code CLI.
-//
-// Deprecated: Use runner.BuildSystemPrompt directly.
 func BuildSystemPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
-	return runner.BuildSystemPrompt(workDir, sessionID, userID, deviceContext)
+	return BuildSystemPromptWithRuntime(workDir, sessionID, userID, deviceContext, getRuntimeInfo())
 }
 
-// SafeCallback wraps an EventCallback to log errors instead of propagating them.
-//
-// Deprecated: Use events.WrapSafe directly.
+type RuntimeInfo struct {
+	OS        string
+	Arch      string
+	Timestamp time.Time
+}
+
+func getRuntimeInfo() RuntimeInfo {
+	return RuntimeInfo{
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+		Timestamp: time.Now(),
+	}
+}
+
+func BuildSystemPromptWithRuntime(workDir, sessionID string, userID int32, deviceContext string, runtimeInfo RuntimeInfo) string {
+	osName := runtimeInfo.OS
+	arch := runtimeInfo.Arch
+	if osName == "darwin" {
+		osName = "macOS"
+	}
+
+	timestamp := runtimeInfo.Timestamp.Format("2006-01-02 15:04:05")
+
+	var contextMap map[string]any
+	userAgent := "Unknown"
+	deviceInfo := "Unknown"
+	if deviceContext != "" {
+		trimmed := strings.TrimSpace(deviceContext)
+		if strings.HasPrefix(trimmed, "{") {
+			if err := json.Unmarshal([]byte(deviceContext), &contextMap); err == nil {
+				if ua, ok := contextMap["userAgent"].(string); ok {
+					userAgent = ua
+				}
+				if mobile, ok := contextMap["isMobile"].(bool); ok {
+					if mobile {
+						deviceInfo = "Mobile"
+					} else {
+						deviceInfo = "Desktop"
+					}
+				}
+				if w, ok := contextMap["screenWidth"].(float64); ok {
+					if h, ok := contextMap["screenHeight"].(float64); ok {
+						deviceInfo = fmt.Sprintf("%s (%dx%d)", deviceInfo, int(w), int(h))
+					}
+				}
+				if lang, ok := contextMap["language"].(string); ok {
+					deviceInfo = fmt.Sprintf("%s, Language: %s", deviceInfo, lang)
+				}
+			} else {
+				userAgent = deviceContext
+			}
+		} else {
+			userAgent = deviceContext
+		}
+	}
+
+	return fmt.Sprintf(`# Context
+
+You are running inside DivineSense, an intelligent assistant system.
+
+**User Interaction**: Users type questions in their web browser, which invokes you via a Go backend. Your response streams back to their browser in real-time. **Always respond in Chinese (Simplified).**
+
+- **User ID**: %d
+- **Client Device**: %s
+- **User Agent**: %s
+- **Server OS**: %s (%s)
+- **Time**: %s
+- **Workspace**: %s
+- **Mode**: Non-interactive headless (--print)
+- **Session**: %s (persists via --session-id/--resume)
+`, userID, deviceInfo, userAgent, osName, arch, timestamp, workDir, sessionID)
+}
+
 func SafeCallback(callback EventCallback) SafeCallbackFunc {
 	return events.WrapSafe(callback)
 }
 
-// NewEventWithMeta creates a new EventWithMeta.
-//
-// Deprecated: Use runner.NewEventWithMeta directly.
 func NewEventWithMeta(eventType, eventData string, meta *EventMeta) *EventWithMeta {
-	return runner.NewEventWithMeta(eventType, eventData, meta)
+	return hotplex.NewEventWithMeta(eventType, eventData, meta)
+}
+
+type AgentSessionStatsForStorage struct {
+	SessionID            string
+	ConversationID       int64
+	UserID               int32
+	AgentType            string
+	StartTime            time.Time
+	EndedAt              time.Time
+	TotalDurationMs      int64
+	ThinkingDurationMs   int64
+	ToolDurationMs       int64
+	GenerationDurationMs int64
+	InputTokens          int32
+	OutputTokens         int32
+	CacheWriteTokens     int32
+	CacheReadTokens      int32
+	TotalTokens          int32
+	TotalCostUSD         float64
+	ToolCallCount        int32
+	ToolsUsed            []string
+	FilesModified        int32
+	FilePaths            []string
+	ModelUsed            string
+	IsError              bool
+	ErrorMessage         string
+}
+
+func (d *SessionStatsData) ToAgentSessionStats() *AgentSessionStatsForStorage {
+	return &AgentSessionStatsForStorage{
+		SessionID:            d.SessionID,
+		ConversationID:       d.ConversationID,
+		UserID:               d.UserID,
+		AgentType:            d.AgentType,
+		StartTime:            time.Unix(d.StartTime, 0),
+		EndedAt:              time.Unix(d.EndTime, 0),
+		TotalDurationMs:      d.TotalDurationMs,
+		ThinkingDurationMs:   d.ThinkingDurationMs,
+		ToolDurationMs:       d.ToolDurationMs,
+		GenerationDurationMs: d.GenerationDurationMs,
+		InputTokens:          d.InputTokens,
+		OutputTokens:         d.OutputTokens,
+		CacheWriteTokens:     d.CacheWriteTokens,
+		CacheReadTokens:      d.CacheReadTokens,
+		TotalTokens:          d.TotalTokens,
+		TotalCostUSD:         d.TotalCostUSD,
+		ToolCallCount:        d.ToolCallCount,
+		ToolsUsed:            d.ToolsUsed,
+		FilesModified:        d.FilesModified,
+		FilePaths:            d.FilePaths,
+		ModelUsed:            d.ModelUsed,
+		IsError:              d.IsError,
+		ErrorMessage:         d.ErrorMessage,
+	}
 }
