@@ -18,13 +18,12 @@ import (
 // using the unified CCRunner + GeekMode architecture.
 // 它提供 Claude Code CLI 的直接访问，不经过任何 LLM 处理，使用统一的 CCRunner + GeekMode 架构。
 type GeekParrot struct {
-	runner      *agentpkg.CCRunner
-	mode        *GeekMode
-	sessionID   string
-	userID      int32
-	workDir     string
-	deviceCtx   string
-	initialized bool // Tracks if user context has been injected
+	runner    *agentpkg.CCRunner
+	mode      *GeekMode
+	sessionID string
+	userID    int32
+	workDir   string
+	deviceCtx string
 }
 
 // NewGeekParrot creates a new GeekParrot instance.
@@ -93,18 +92,7 @@ func (p *GeekParrot) Execute(
 		DeviceContext:  p.deviceCtx,
 		PermissionMode: "bypassPermissions",
 	}
-
-	// TaskSystemPrompt: only inject user context on first session creation
-	// BaseSystemPrompt (DivineSense context + Output Behavior) is set at engine creation
-	if !p.initialized {
-		cfg.SystemPrompt = p.mode.BuildContextPrompt(cfg)
-		p.initialized = true
-		slog.Info("GeekParrot: User context injected for first session",
-			"user_id", p.userID,
-			"session_id", p.sessionID)
-	} else {
-		cfg.SystemPrompt = "" // Subsequent requests: only user prompt, no system context
-	}
+	cfg.TaskInstructions = p.mode.BuildContextPrompt(cfg)
 
 	// Execute via CCRunner
 	if err := p.runner.Execute(ctx, cfg, userInput, callback); err != nil {

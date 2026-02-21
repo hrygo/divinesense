@@ -89,7 +89,7 @@ Users can access created files directly via HTTP at:
 }
 
 // BuildContextPrompt builds the user-specific context prompt.
-// This should be passed to hotplex.Config.TaskSystemPrompt on first session creation.
+// This should be passed to hotplex.Config.TaskInstructions on first session creation.
 // Subsequent requests should NOT include this (user context is already established).
 func (m *GeekMode) BuildContextPrompt(cfg *agentpkg.CCRunnerConfig) string {
 	return agentpkg.BuildUserContextPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)

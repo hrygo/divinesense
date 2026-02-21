@@ -112,7 +112,8 @@ func (p *EvolutionParrot) Execute(
 		PermissionMode: "bypassPermissions",
 	}
 	// EvolutionMode has no dynamic context, BaseSystemPrompt is set at engine creation
-	cfg.SystemPrompt = ""
+	// TaskInstructions intentionally left empty - hotplex will use empty instructions
+	cfg.TaskInstructions = ""
 
 	// Execute via CCRunner
 	// 通过 CCRunner 执行

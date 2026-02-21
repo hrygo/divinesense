@@ -20,16 +20,19 @@ type CCRunner struct {
 }
 
 // CCRunnerConfig defines the configuration for CCRunner execution.
-// DeviceContext is used to build SystemPrompt, not passed to hotplex directly.
+// DeviceContext is used to build TaskInstructions, not passed to hotplex directly.
+//
+// TaskInstructions has session-level persistence in hotplex: once set, it automatically
+// applies to all subsequent Execute calls in the same session unless explicitly overridden.
 type CCRunnerConfig struct {
-	Mode           string
-	WorkDir        string
-	ConversationID int64
-	SessionID      string
-	UserID         int32
-	SystemPrompt   string
-	DeviceContext  string // Used to build SystemPrompt via BuildSystemPrompt()
-	PermissionMode string
+	Mode             string
+	WorkDir          string
+	ConversationID   int64
+	SessionID        string
+	UserID           int32
+	TaskInstructions string // Session-persistent instructions (mapped to hotplex.TaskInstructions)
+	DeviceContext    string // Used to build TaskInstructions via BuildUserContextPrompt()
+	PermissionMode   string
 }
 
 type StreamMessage = hotplex.StreamMessage
@@ -195,7 +198,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 	hotplexCfg := &hotplex.Config{
 		WorkDir:          cfg.WorkDir,
 		SessionID:        cfg.SessionID,
-		TaskSystemPrompt: cfg.SystemPrompt,
+		TaskInstructions: cfg.TaskInstructions,
 	}
 
 	if cfg.PermissionMode == "bypassPermissions" && r.adminToken != "" {
@@ -270,7 +273,7 @@ You are running inside DivineSense, an intelligent assistant system.
 `
 
 // BuildUserContextPrompt builds the user-specific context prompt.
-// This should be passed to hotplex.Config.TaskSystemPrompt on first session creation.
+// This should be passed to hotplex.Config.TaskInstructions on first session creation.
 // Time is excluded as it changes on every request.
 func BuildUserContextPrompt(workDir, sessionID string, userID int32, deviceContext string) string {
 	osName := runtime.GOOS
