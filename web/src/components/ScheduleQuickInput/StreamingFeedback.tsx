@@ -164,11 +164,15 @@ function getCurrentPhase(events: StreamingEvent[]): number {
   let currentPhase = 0;
 
   for (const event of events) {
-    console.log("[Phase] event:", event.type, event.data?.substring(0, 30));
     if (event.type === "tool_use") {
-      const toolMatch = event.data.match(/^(\w+)(?::|$)/);
-      const toolName = toolMatch ? toolMatch[1] : "";
-      console.log("[Phase] toolName:", toolName);
+      let toolName = "";
+      try {
+        const data = JSON.parse(event.data);
+        toolName = data.tool_name || data.name || "";
+      } catch {
+        const toolMatch = event.data.match(/^(\w+)(?::|$)/);
+        toolName = toolMatch ? toolMatch[1] : "";
+      }
       if (toolName === "schedule_add") {
         currentPhase = 3;
       } else if (toolName === "schedule_query" || toolName === "find_free_time") {
@@ -179,11 +183,15 @@ function getCurrentPhase(events: StreamingEvent[]): number {
     } else if (event.type === "task_start") {
       currentPhase = 1;
     } else if (event.type === "tool_result") {
-      if (currentPhase < 2) currentPhase = 2;
+      if (event.data.includes("Created:") || event.data.includes("已创建")) {
+        currentPhase = 3;
+      } else if (currentPhase < 2) {
+        currentPhase = 2;
+      }
     } else if (event.type === "answer") {
       if (currentPhase < 2) currentPhase = 2;
     }
   }
-  console.log("[Phase] final:", currentPhase);
+
   return currentPhase;
 }
