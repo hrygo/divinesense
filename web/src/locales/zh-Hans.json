@@ -1106,6 +1106,7 @@
       "error": "发生错误",
       "finding-free-time": "正在查找空闲时间...",
       "generating": "正在生成回复...",
+      "completed": "已完成",
       "processing": "处理中...",
       "processing-result": "正在处理结果...",
       "parsing": "正在解析日程...",

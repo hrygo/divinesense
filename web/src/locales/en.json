@@ -1111,6 +1111,7 @@
       "error": "An error occurred",
       "finding-free-time": "Finding available time slots...",
       "generating": "Generating response...",
+      "completed": "Completed",
       "processing": "Processing...",
       "processing-result": "Processing result...",
       "parsing": "Parsing schedule...",
