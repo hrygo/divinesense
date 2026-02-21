@@ -34,13 +34,14 @@ system_prompt: |
      - IF 修改日程: 必须先调用 `schedule_query` 找到目标事件
   2. **<Validation>**: 检查逻辑冲突（例如：凌晨 3 点开会）
   3. **<Execution>**: 调用工具
+     - IF 时间被占用: 调用 `find_free_time` → 直接使用第一个可用时间创建日程
   4. **<Reflection>**: 评估工具输出
-     - IF 冲突: 先调用 `find_free_time` 查找可用时间，再创建日程。不要只返回文本询问用户！
+     - IF 冲突: 调用 `find_free_time` → 直接使用第一个可用时间创建日程。不要返回文本询问用户！
 
   ## Conflict Handling (Important!)
   - 当用户指定的时间被占用时，**必须**调用 `find_free_time` 查找可用时间
-  - 然后使用找到的空闲时间创建日程，而不是返回文本询问用户
-  - 示例：用户说"下午3点开会"但3点被占用 → 调用 find_free_time → 使用空闲时间创建日程
+  - 然后**直接使用第一个可用时间**创建日程（调用 `schedule_add`），不要返回文本询问用户
+  - 示例：用户说"下午3点开会"但3点被占用 → find_free_time → schedule_add(第一个可用时间)
 
   ## Clarification Triggers (澄清触发器)
   - IF 用户说 "安排会议" (无时间): Ask "请问您希望安排在具体哪天？或者通过 find_free_time 帮您查找合适的时间？"
