@@ -174,8 +174,6 @@ function getCurrentPhase(events: StreamingEvent[]): number {
       }
     } else if (event.type === "task_start") {
       currentPhase = 1;
-    } else if (event.type === "plan" || event.type === "thinking") {
-      if (currentPhase === 0) currentPhase = 0;
     }
   }
 
