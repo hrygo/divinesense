@@ -1108,6 +1108,7 @@
       "generating": "正在生成回复...",
       "processing": "处理中...",
       "processing-result": "正在处理结果...",
+      "parsing": "正在解析日程...",
       "select-time": "选择时间",
       "status-history": "状态历史",
       "thinking": "思考中...",

@@ -1113,6 +1113,7 @@
       "generating": "Generating response...",
       "processing": "Processing...",
       "processing-result": "Processing result...",
+      "parsing": "Parsing schedule...",
       "select-time": "Select time",
       "status-history": "Status history",
       "thinking": "Thinking...",
