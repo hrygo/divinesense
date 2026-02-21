@@ -92,7 +92,8 @@ func (p *GeekParrot) Execute(
 		DeviceContext:  p.deviceCtx,
 		PermissionMode: "bypassPermissions",
 	}
-	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
+	// TaskSystemPrompt: user-specific context (BaseSystemPrompt is set at engine creation)
+	cfg.SystemPrompt = p.mode.BuildContextPrompt(cfg)
 
 	// Execute via CCRunner
 	if err := p.runner.Execute(ctx, cfg, userInput, callback); err != nil {

@@ -111,7 +111,8 @@ func (p *EvolutionParrot) Execute(
 		DeviceContext:  p.deviceCtx,
 		PermissionMode: "bypassPermissions",
 	}
-	cfg.SystemPrompt = p.mode.BuildSystemPrompt(cfg)
+	// EvolutionMode has no dynamic context, BaseSystemPrompt is set at engine creation
+	cfg.SystemPrompt = ""
 
 	// Execute via CCRunner
 	// 通过 CCRunner 执行

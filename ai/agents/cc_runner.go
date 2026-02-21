@@ -126,21 +126,42 @@ const (
 )
 
 // CCRunnerOption is a functional option for configuring CCRunner.
-type CCRunnerOption func(*CCRunner)
+type CCRunnerOption func(*ccRunnerOptions)
+
+type ccRunnerOptions struct {
+	adminToken       string
+	baseSystemPrompt string
+}
 
 // WithAdminToken sets the admin token for danger bypass mode.
 func WithAdminToken(token string) CCRunnerOption {
-	return func(r *CCRunner) {
-		r.adminToken = token
+	return func(o *ccRunnerOptions) {
+		o.adminToken = token
+	}
+}
+
+// WithBaseSystemPrompt sets the base system prompt for the engine.
+// This is injected at process startup as foundational rules for all sessions.
+func WithBaseSystemPrompt(prompt string) CCRunnerOption {
+	return func(o *ccRunnerOptions) {
+		o.baseSystemPrompt = prompt
 	}
 }
 
 func NewCCRunner(timeout time.Duration, logger *slog.Logger, opts ...CCRunnerOption) (*CCRunner, error) {
+	// Apply options
+	opt := &ccRunnerOptions{}
+	for _, o := range opts {
+		o(opt)
+	}
+
 	engineOpts := hotplex.EngineOptions{
-		Timeout:     timeout,
-		IdleTimeout: 30 * time.Minute,
-		Logger:      logger,
-		Namespace:   "divinesense",
+		Timeout:          timeout,
+		IdleTimeout:      30 * time.Minute,
+		Logger:           logger,
+		Namespace:        "divinesense",
+		BaseSystemPrompt: opt.baseSystemPrompt,
+		AdminToken:       opt.adminToken,
 	}
 
 	engine, err := hotplex.NewEngine(engineOpts)
@@ -148,14 +169,7 @@ func NewCCRunner(timeout time.Duration, logger *slog.Logger, opts ...CCRunnerOpt
 		return nil, err
 	}
 
-	runner := &CCRunner{engine: engine}
-
-	// Apply functional options
-	for _, opt := range opts {
-		opt(runner)
-	}
-
-	return runner, nil
+	return &CCRunner{engine: engine, adminToken: opt.adminToken}, nil
 }
 
 func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt string, callback EventCallback) error {

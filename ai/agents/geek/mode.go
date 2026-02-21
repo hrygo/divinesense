@@ -20,7 +20,13 @@ type CCMode interface {
 	// Name returns the mode identifier.
 	Name() string
 
+	// BaseSystemPrompt returns the fixed part of the system prompt.
+	// This should be passed to hotplex.EngineOptions.BaseSystemPrompt.
+	BaseSystemPrompt() string
+
 	// BuildSystemPrompt constructs the mode-specific system prompt.
+	//
+	// Deprecated: Use BaseSystemPrompt() and BuildContextPrompt() instead.
 	BuildSystemPrompt(cfg *agentpkg.CCRunnerConfig) string
 
 	// GetWorkDir returns the working directory for the mode.
@@ -57,22 +63,33 @@ func (m *GeekMode) Name() string {
 // BuildSystemPrompt builds the Geek Mode system prompt.
 // Geek Mode is a general-purpose assistant for code-related tasks.
 // Adds Output Behavior section (Geek-specific) to base prompt.
+//
+// Deprecated: Use BaseSystemPrompt() and BuildContextPrompt() instead.
 func (m *GeekMode) BuildSystemPrompt(cfg *agentpkg.CCRunnerConfig) string {
-	basePrompt := agentpkg.BuildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
-	return basePrompt + fmt.Sprintf(`
+	return m.BaseSystemPrompt() + "\n" + m.BuildContextPrompt(cfg)
+}
 
-# Output Behavior
+// BaseSystemPrompt returns the fixed part of the Geek Mode system prompt.
+// This should be passed to hotplex.EngineOptions.BaseSystemPrompt.
+func (m *GeekMode) BaseSystemPrompt() string {
+	return `# Output Behavior
 
 You are running in an **embedded web service**, NOT a terminal.
 
 Users can access created files directly via HTTP at:
-  /file/geek/%d/<filename>
+  /file/geek/{user_id}/<filename>
 
 ## Rules
 - DO NOT Read files after creating them
 - Chinese verbs "展示/显示/查看" mean: create file + announce path
 - For files >500 lines: Write only, never Read
-`, cfg.UserID)
+`
+}
+
+// BuildContextPrompt builds the user-specific context prompt.
+// This should be passed to hotplex.Config.TaskSystemPrompt.
+func (m *GeekMode) BuildContextPrompt(cfg *agentpkg.CCRunnerConfig) string {
+	return agentpkg.BuildSystemPrompt(cfg.WorkDir, cfg.SessionID, cfg.UserID, cfg.DeviceContext)
 }
 
 // GetWorkDir returns the user-specific sandbox directory.
@@ -142,7 +159,15 @@ func (m *EvolutionMode) Name() string {
 
 // BuildSystemPrompt builds the Evolution Mode system prompt.
 // Implements a research-first workflow: idea-researcher → Issue → Planning → PR
+//
+// Deprecated: Use BaseSystemPrompt() instead (EvolutionMode has no dynamic context).
 func (m *EvolutionMode) BuildSystemPrompt(cfg *agentpkg.CCRunnerConfig) string {
+	return m.BaseSystemPrompt()
+}
+
+// BaseSystemPrompt returns the Evolution Mode system prompt.
+// This should be passed to hotplex.EngineOptions.BaseSystemPrompt.
+func (m *EvolutionMode) BaseSystemPrompt() string {
 	return `# Evolution Mode 🧬
 
 You are evolving DivineSense's source code through a structured, interactive process.
