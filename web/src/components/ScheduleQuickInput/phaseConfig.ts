@@ -16,15 +16,20 @@ export type SchedulePhaseKey = (typeof SCHEDULE_PHASES)[number]["key"];
 export function getCurrentPhase(events: StreamingEvent[]): number {
   if (events.length === 0) return 0;
 
+  // Find the latest phase-defining event by iterating backwards
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
 
-    if (event.type === "tool_result" || event.type === "answer") {
-      if (event.data.includes("schedule") || event.data.includes("日程") || event.data.includes("Schedule")) {
+    // Create phase: schedule_add tool_use or its result
+    if (event.type === "tool_use") {
+      const toolMatch = event.data.match(/^(\w+)(?::|$)/);
+      const toolName = toolMatch ? toolMatch[1] : "";
+      if (toolName === "schedule_add") {
         return 3;
       }
     }
 
+    // Check phase: schedule_query or find_free_time tool
     if (event.type === "tool_use") {
       const toolMatch = event.data.match(/^(\w+)(?::|$)/);
       const toolName = toolMatch ? toolMatch[1] : "";
@@ -33,15 +38,18 @@ export function getCurrentPhase(events: StreamingEvent[]): number {
       }
     }
 
+    // Parse phase: task_start event
     if (event.type === "task_start") {
       return 1;
     }
 
+    // Understand phase: plan or thinking
     if (event.type === "plan" || event.type === "thinking") {
       return 0;
     }
   }
 
+  // Default to understand phase
   return 0;
 }
 
