@@ -187,8 +187,7 @@ func (r *CCRunner) Execute(ctx context.Context, cfg *CCRunnerConfig, prompt stri
 }
 
 func (r *CCRunner) Close() error {
-	r.engine.Close()
-	return nil
+	return r.engine.Close()
 }
 
 func (r *CCRunner) GetSessionStats() *SessionStats {
