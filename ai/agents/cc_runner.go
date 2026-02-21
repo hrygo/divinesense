@@ -18,6 +18,8 @@ type CCRunner struct {
 	engine *hotplex.Engine
 }
 
+// CCRunnerConfig defines the configuration for CCRunner execution.
+// DeviceContext is used to build SystemPrompt, not passed to hotplex directly.
 type CCRunnerConfig struct {
 	Mode           string
 	WorkDir        string
@@ -25,10 +27,8 @@ type CCRunnerConfig struct {
 	SessionID      string
 	UserID         int32
 	SystemPrompt   string
-	DeviceContext  string
+	DeviceContext  string // Used to build SystemPrompt via BuildSystemPrompt()
 	PermissionMode string
-	AllowedPaths   []string
-	ForbiddenPaths []string
 }
 
 type DangerDetector = hotplex.Detector
@@ -196,6 +196,11 @@ func (r *CCRunner) GetSessionStats() *SessionStats {
 
 func (r *CCRunner) StopSession(sessionID string, reason string) error {
 	return r.engine.StopSession(sessionID, reason)
+}
+
+func (r *CCRunner) StopSessionByConversationID(conversationID int64, reason string) error {
+	sessionID := ConversationIDToSessionID(conversationID)
+	return r.StopSession(sessionID, reason)
 }
 
 func (r *CCRunner) SetDangerAllowPaths(paths []string) {
