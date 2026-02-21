@@ -1105,13 +1105,22 @@
       "creating-schedule": "正在创建日程...",
       "error": "发生错误",
       "finding-free-time": "正在查找空闲时间...",
+      "generating": "正在生成回复...",
       "processing": "处理中...",
+      "processing-result": "正在处理结果...",
       "select-time": "选择时间",
       "status-history": "状态历史",
       "thinking": "思考中...",
       "tool-completed": "完成",
+      "understanding": "正在理解您的请求...",
       "updating-schedule": "正在更新日程...",
       "using-tool": "使用工具"
+    },
+    "phase": {
+      "understand": "理解意图",
+      "parse": "解析时间",
+      "check": "检查冲突",
+      "create": "创建日程"
     },
     "orchestrator": {
       "analysis": "任务分析",

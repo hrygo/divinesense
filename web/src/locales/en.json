@@ -1110,13 +1110,22 @@
       "creating-schedule": "Creating schedule...",
       "error": "An error occurred",
       "finding-free-time": "Finding available time slots...",
+      "generating": "Generating response...",
       "processing": "Processing...",
+      "processing-result": "Processing result...",
       "select-time": "Select time",
       "status-history": "Status history",
       "thinking": "Thinking...",
       "tool-completed": "Done",
+      "understanding": "Understanding your request...",
       "updating-schedule": "Updating schedule...",
       "using-tool": "Using tool"
+    },
+    "phase": {
+      "understand": "Understand",
+      "parse": "Parse",
+      "check": "Check",
+      "create": "Create"
     },
     "orchestrator": {
       "analysis": "Task Analysis",
